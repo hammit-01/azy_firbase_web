@@ -2,85 +2,90 @@
 <html lang="ko">
 
 <head>
-<meta charset="UTF-8">
-<link rel="stylesheet" href="../css/main_page.css">
-<title>재고 시스템</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="../css/main_page.css">
+    <title>재고 시스템</title>
 </head>
 
 <body>
+    <div class="container">
+        <div class="left-panel">
+            <div class="table-wrap">
+                <table>
+                    <colgroup>
+                        <col style="width:70px">
+                        <col>
+                        <col style="width:100px">
+                        <col style="width:100px">
+                        <col style="width:100px">
+                        <col style="width:100px">
+                        <col>
+                        <col style="width:100px">
+                        <col style="width:140px">
+                        <col style="width:100px">
+                        <col style="width:100px">
+                        <col style="width:100px">
+                    </colgroup>
 
-<h1>📦 재고 리스트</h1>
+                    <thead>
+                    <tr>
+                        <th>선택</th>
+                        <th>상품명</th>
+                        <th>브랜드</th>
+                        <th>등급</th>
+                        <th>ESTNO</th>
+                        <th>재고</th>
+                        <th>BL</th>
+                        <th>창고</th>
+                        <th>유통기한</th>
+                        <th>중량</th>
+                        <th>평균</th>
+                        <th>출고일</th>
+                        <th>홀딩</th>
+                    </tr>
+                    </thead>
 
-<div class="controls">
-    <input id="searchInput" placeholder="검색">
-    <select id="searchField">
-        <option value="상품명">상품명</option>
-        <option value="브랜드">브랜드</option>
-        <option value="등급">등급</option>
-        <option value="ESTNO">ESTNO</option>
-        <option value="BL번호">BL번호</option>
-        <option value="창고">창고</option>
-    </select>
-
-    <select id="sortField">
-        <option value="재고수량">재고수량</option>
-        <option value="유통기한">유통기한</option>
-    </select>
-
-    <select id="sortOrder">
-        <option value="asc">오름</option>
-        <option value="desc">내림</option>
-    </select>
-</div>
-
-<div class="container">
-
-    <div class="left-panel">
-        <div class="table-wrap">
-            <table>
-                <colgroup>
-                    <col style="width:70px">
-                    <col>
-                    <col style="width:100px">
-                    <col style="width:100px">
-                    <col style="width:100px">
-                    <col style="width:100px">
-                    <col>
-                    <col style="width:100px">
-                    <col style="width:140px">
-                    <col style="width:100px">
-                    <col style="width:100px">
-                    <col style="width:100px">
-                </colgroup>
-
-                <thead>
-                <tr>
-                    <th>선택</th>
-                    <th>상품명</th>
-                    <th>브랜드</th>
-                    <th>등급</th>
-                    <th>ESTNO</th>
-                    <th>재고</th>
-                    <th>BL</th>
-                    <th>창고</th>
-                    <th>유통기한</th>
-                    <th>중량</th>
-                    <th>평균</th>
-                    <th>출고일</th>
-                    <th>홀딩</th>
-                </tr>
-                </thead>
-
-                <tbody id="list"></tbody>
-            </table>
+                    <tbody id="list"></tbody>
+                </table>
+            </div>
         </div>
+            <div class="left-top-panel">
+                <img src="../css/logo.png" class="logo">
+                <h1>재고 리스트</h1>
+
+                <div class="controls">
+                    <select id="searchField">
+                        <option value="전체">전체</option>
+                        <option value="상품명">상품명</option>
+                        <option value="브랜드">브랜드</option>
+                        <option value="등급">등급</option>
+                        <option value="ESTNO">ESTNO</option>
+                        <option value="BL번호">BL번호</option>
+                        <option value="창고">창고</option>
+                    </select>
+                    <input id="searchInput" placeholder="검색">
+
+                    <select id="sortField">
+                        <option value="재고수량">재고수량</option>
+                        <option value="유통기한">유통기한</option>
+                    </select>
+                    <select id="sortField2">
+                        <option value="전체">전체</option>
+                        <option value="동결">동결</option>
+                        <option value="홀딩">홀딩</option>
+                    </select>
+                    <select id="sortOrder">
+                        <option value="asc">오름차순</option>
+                        <option value="desc">내림차순</option>
+                    </select>
+                </div>
+                <div class="right-panel" id="sideBox"></div>
+            </div>
+        
+
     </div>
 
-    <div class="right-panel" id="sideBox"></div>
-
-</div>
-
-<script type="module" src="app.js"></script>
+    <script type="module" src="main.js"></script>
 
 </body>
 </html>

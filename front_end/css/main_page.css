@@ -5,13 +5,24 @@ body {
     background:#f4f6f8;
 }
 
+.left-top-panel {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+}
+
+.logo{
+    width:180px;
+    height:auto;
+    display:block;
+}
+
 h1 {
-    font-size: 60px;
-    text-align:center;
+    font-size: 40px;
+    margin: 0px auto;
 }
 
 .container {
-    width: 90%;
     margin: 0 auto;          /* 전체 중앙정렬 */
     padding: 30px;
     display: flex;
@@ -50,7 +61,7 @@ h1 {
 }
 
 .container.active .right-panel{
-    width: 360px;
+    width: 450px;
     opacity: 1;
     padding: 20px;
     background: white;
@@ -80,7 +91,7 @@ th, td {
 }
 
 thead {
-    background:black;
+    background:#94d900;
     color:white;
 }
 
@@ -91,13 +102,13 @@ thead {
     align-items: center;
 
     padding: 14px 16px;
-    margin: 20px auto 0px;
+    margin: 10px;
 
     background: #ffffff;
     border-radius: 14px;
     box-shadow: 0 6px 18px rgba(0,0,0,0.06);
 
-    max-width: 324px;
+    width: 450px;
     flex-wrap: wrap;
 }
 
@@ -157,19 +168,40 @@ thead {
     font-weight: 600;
 }
 
-.holding-btn {
+.holding-btn, .cancel-btn {
     margin-top: 10px;
 }
 
+.item-btns{
+    display: flex;
+    gap: 5px;
+    white-space: nowrap;   /* 줄바꿈 금지 */
+    word-break: keep-all; /* 한글 쪼개짐 방지 */
+}
+
 /* 오른쪽 버튼 그룹 */
-.btn-group,.holding-btn {
+.btn-group {
     margin-left: auto;
     display: flex;
     gap: 10px;
 }
 
+.holding-data {
+    margin-left: auto;
+    width: auto;
+    display: flex;
+    gap: 10px;
+    justify-items: center;
+    flex-direction: row;
+    align-content: center;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: center;
+}
+
 /* 공통 버튼 */
 .holding-btn,
+.cancel-btn,
 .clear-btn,
 .all-holding-btn {
     padding: 10px 14px;
@@ -181,65 +213,46 @@ thead {
 }
 
 /* 개별 색 */
-.clear-btn { background: #ef4444; }
+.clear-btn, .cancel-btn { background: #ef4444; }
 .all-holding-btn { background: #3b82f6; }
-.holding-btn { background: #111; }
+.holding-btn { background: #3b82f6; }
 
 /* hover */
 .holding-btn:hover,
 .clear-btn:hover,
+.cancel-btn:hover,
 .all-holding-btn:hover {
     opacity: 0.85;
 }
 
 input {
-    width:92px;
-    margin-top:5px;
-    padding:10px;
+    width: 80px;
+    margin-top: 5px;
+    padding: 10px;
     border-radius: 10px;
 }
 
 /* 홀딩된 행 = 연파랑 */
 .holding-row td{
-    background:#dbeafe !important;
-    color:#166534;
+    color:#007de4;
     font-weight:600;
-}
-
-/* 체크한 행 = 연초록 */
-.selected-row td{
-    background:#dcfce7 !important;
-    color:#1d4ed8;
-    font-weight:700;
-}
-
-/* 둘 다 */
-tbody tr.holding-row.selected-row td{
-    background:#fbcdff !important;
-    color:#f67dff;
 }
 
 /* 동결 */
 .freezed-row td{
-    background:#ede9fe !important;
     color:#6d28d9;
     font-weight:700;
 }
 
 /* 사용불가 */
 .unuse-row td{
-    background:#fef3c7 !important;
     color:#92400e;
     font-weight:700;
 }
 
-/* 둘 다 */
-tbody tr.freezed-row.selected-row td{
-    background:#fbcdff !important;
-    color:#f67dff;
-}
-/* 둘 다 */
-tbody tr.unuse-row.selected-row td{
-    background:#fbcdff !important;
-    color:#f67dff;
+/* 체크한 행 = 연초록 */
+.selected-row td{
+    background:#eaffbd !important;
+    color:#94d900;
+    font-weight:700;
 }
