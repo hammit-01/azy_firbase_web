@@ -1,143 +1,245 @@
-/* 전체 페이지 */
 body {
-    margin: 0;
-    padding: 30px;
-    font-family: "Segoe UI", Arial, sans-serif;
-    background: #f4f6f8;
-    color: #222;
-    text-align: center;
+    margin:0;
+    padding:30px;
+    font-family:Arial;
+    background:#f4f6f8;
 }
 
-/* 제목 */
 h1 {
-    margin-bottom: 50px;
-    font-size: 50px;
-    font-weight: 700;
-    text-align: center;
+    font-size: 60px;
+    text-align:center;
 }
 
-/* 테이블 박스 */
-.table-wrap {
-    display: inline-block;
-    /* 내용 크기만큼 */
-    max-width: 100%;
-    overflow-x: auto;
-    background: white;
-    border-radius: 14px;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-    margin: 0 auto;
-    /* 가운데 정렬 */
+.container {
+    width: 90%;
+    margin: 0 auto;          /* 전체 중앙정렬 */
+    padding: 30px;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    justify-content: center; /* 기본 중앙 */
+    transition: 0.3s;
+    box-sizing: border-box;
 }
 
-/* 테이블 */
-table {
-    border-collapse: collapse;
-    white-space: nowrap;
+.left-panel {
+    flex: 1;
+    min-width: 0;
+    transition: 0.3s;
 }
 
-/* 헤더 */
-thead {
-    background: hsl(0, 0%, 0%);
-    color: #ffffff;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-}
-
-th {
-    padding: 14px 16px;
-    text-align: center;
-    font-size: 20px;
-    font-weight: 600;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* 내용 */
-td {
-    padding: 12px 16px;
-    text-align: center;
-    font-size: 20px;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-/* 줄무늬 */
-tbody tr:nth-child(even) {
-    background: #f9fafb;
-}
-
-/* 마우스 오버 */
-tbody tr:hover {
-    background: #eef6ff;
-    transition: 0.15s;
-}
-
-/* 재고 부족 */
-.low-stock {
-    color: #dc2626;
-    font-weight: bold;
-}
-
-/* 재고 충분 */
-.good-stock {
-    color: #16a34a;
-    font-weight: 600;
-}
-
-/* 상품명 강조 */
-td:first-child {
-    font-weight: 600;
-    color: #111827;
-    font-size: larger;
-}
-
-/* 유통기한 임박 */
-.expire-soon {
-    color: #ea580c;
-    font-weight: bold;
-}
-
-/* 스크롤바 꾸미기 */
-.table-wrap::-webkit-scrollbar {
-    height: 10px;
-}
-
-.table-wrap::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+.right-panel {
+    width:0;
+    opacity:0;
+    overflow:hidden;
+    transition:0.3s;
+    background:white;
     border-radius: 10px;
+
+    display:flex;          /* 추가 */
+    flex-direction:column; /* 추가 */
 }
 
-.table-wrap::-webkit-scrollbar-track {
-    background: #f1f5f9;
+/* 선택 패널 열렸을 때 */
+.container.active{
+    justify-content: space-between;
+}
+
+.container.active .left-panel {
+    width:72%;
+}
+
+.container.active .right-panel{
+    width: 360px;
+    opacity: 1;
+    padding: 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+}
+
+.table-wrap {
+    width:100%;
+    overflow:auto;
+    background:#fff;
+    border-radius:10px;
+}
+
+table {
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed;
+}
+
+th, td {
+    padding:10px;
+    text-align:center;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+thead {
+    background:black;
+    color:white;
 }
 
 .controls {
-    margin-bottom: 20px;
     display: flex;
-    gap: 10px;
+    gap: 12px;
+    justify-content: center;
+    align-items: center;
+
+    padding: 14px 16px;
+    margin: 20px auto 0px;
+
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+
+    max-width: 324px;
     flex-wrap: wrap;
 }
 
+/* input / select 공통 */
 .controls input,
 .controls select {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
+    height: 40px;
+    padding: 0 12px;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+
+    font-size: 14px;
+    background: #f9fafb;
+
+    outline: none;
+    transition: 0.2s;
 }
 
+/* focus 효과 */
+.controls input:focus,
+.controls select:focus {
+    border-color: #3b82f6;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
 
-/* 모바일 대응 */
-@media (max-width: 768px) {
-    body {
-        padding: 15px;
-    }
+/* 검색 input만 살짝 넓게 */
+#searchInput {
+    width: 300px;
+}
 
-    h1 {
-        font-size: 22px;
-    }
+/* select 크기 */
+.controls select {
+    min-width: 100px;
+    cursor: pointer;
+}
 
-    th,
-    td {
-        padding: 10px;
-        font-size: 13px;
-    }
+/* hover 느낌 */
+.controls input:hover,
+.controls select:hover {
+    border-color: #cbd5e1;
+}
+
+.selected-item {
+    font-size:20px;
+    padding:10px 0;
+}
+.btn {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.select-no {
+    margin: 0;
+    font-weight: 600;
+}
+
+.holding-btn {
+    margin-top: 10px;
+}
+
+/* 오른쪽 버튼 그룹 */
+.btn-group,.holding-btn {
+    margin-left: auto;
+    display: flex;
+    gap: 10px;
+}
+
+/* 공통 버튼 */
+.holding-btn,
+.clear-btn,
+.all-holding-btn {
+    padding: 10px 14px;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+/* 개별 색 */
+.clear-btn { background: #ef4444; }
+.all-holding-btn { background: #3b82f6; }
+.holding-btn { background: #111; }
+
+/* hover */
+.holding-btn:hover,
+.clear-btn:hover,
+.all-holding-btn:hover {
+    opacity: 0.85;
+}
+
+input {
+    width:92px;
+    margin-top:5px;
+    padding:10px;
+    border-radius: 10px;
+}
+
+/* 홀딩된 행 = 연파랑 */
+.holding-row td{
+    background:#dbeafe !important;
+    color:#166534;
+    font-weight:600;
+}
+
+/* 체크한 행 = 연초록 */
+.selected-row td{
+    background:#dcfce7 !important;
+    color:#1d4ed8;
+    font-weight:700;
+}
+
+/* 둘 다 */
+tbody tr.holding-row.selected-row td{
+    background:#fbcdff !important;
+    color:#f67dff;
+}
+
+/* 동결 */
+.freezed-row td{
+    background:#ede9fe !important;
+    color:#6d28d9;
+    font-weight:700;
+}
+
+/* 사용불가 */
+.unuse-row td{
+    background:#fef3c7 !important;
+    color:#92400e;
+    font-weight:700;
+}
+
+/* 둘 다 */
+tbody tr.freezed-row.selected-row td{
+    background:#fbcdff !important;
+    color:#f67dff;
+}
+/* 둘 다 */
+tbody tr.unuse-row.selected-row td{
+    background:#fbcdff !important;
+    color:#f67dff;
 }
