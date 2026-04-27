@@ -1,5 +1,6 @@
 import { state } from "./state.js";
 import { dom } from "./dom.js";
+import { addSelectedItem } from "./data_eda.js";
 
 export function renderTable() {
     if (!dom.searchInput) return;

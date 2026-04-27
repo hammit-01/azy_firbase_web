@@ -26,7 +26,7 @@ export function renderPanel() {
         html += `
             <div class="selected-item">
                 <b>${item.name}</b><br>
-                ${item.brand} / ${item.qty} / BL ${item.bl}<br>
+                ${item.brand} / ${item.qty} / ${item.bl}<br>
 
                 <div class="holding-data">
                     <input class="hold-qty" data-key="${key}" placeholder="개수">
