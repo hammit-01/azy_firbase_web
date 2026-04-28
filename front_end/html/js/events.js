@@ -26,18 +26,15 @@ function handleChange(e) {
 
     if (!e.target.classList.contains("row-check")) return;
 
-    const key = e.target.dataset.key;
-    
-    const item = state.allData.find(d =>
-        `${d.상품명}_${d.ESTNO}_${d.BL번호}_${d.창고}` === key
-    );
+    const id = e.target.dataset.id;
+    const item = state.allData.find(d => d.id === id);
 
     if (!item) return;
 
     if (e.target.checked) {
         addSelectedItem(state, key, item);
     } else {
-        state.selectedItems.delete(key);
+        state.selectedItems.delete(id);
     }
 
     renderAll();
@@ -54,9 +51,11 @@ async function handleClick(e) {
 
     // 개별 취소
     if (e.target.classList.contains("cancel-btn")) {
-        const key = e.target.dataset.key;
+        const id = e.target.dataset.id;
+    const item = state.selectedItems.get(id);
 
-        state.selectedItems.delete(key);
+
+        state.selectedItems.delete(id);
 
         renderAll();
         return;
@@ -64,8 +63,8 @@ async function handleClick(e) {
 
     if (e.target.classList.contains("holding-btn")) {
 
-        const key = e.target.dataset.key;
-        const item = state.selectedItems.get(key);
+        const id = e.target.dataset.id;
+        const item = state.selectedItems.get(id);
 
         const qty =
             document.querySelector(`.hold-qty[data-key="${key}"]`).value;

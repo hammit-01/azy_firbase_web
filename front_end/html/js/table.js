@@ -63,21 +63,21 @@ export function renderTable() {
             <td>
                 <input type="checkbox"
                     class="row-check"
-                    data-key="${key}"
+                    data-id="${item.id}"
                     ${checked ? "checked" : ""}>
             </td>
-            <td>${item.상품명 ?? ""}</td>
-            <td>${item.브랜드 ?? ""}</td>
-            <td>${item.등급 ?? ""}</td>
-            <td>${item.ESTNO ?? ""}</td>
-            <td>${item.재고수량 ?? ""}</td>
-            <td>${item.BL번호 ?? ""}</td>
-            <td>${item.창고 ?? ""}</td>
-            <td>${item.유통기한 ?? ""}</td>
-            <td>${item.중량 ?? ""}</td>
-            <td>${item.평균중량 ?? ""}</td>
-            <td>${item.출고예정일 ?? ""}</td>
-            <td>${item.홀딩 ?? ""}</td>
+            <td>${item.상품명 ?? null}</td>
+            <td>${item.브랜드 ?? null}</td>
+            <td>${item.등급 ?? null}</td>
+            <td>${item.ESTNO ?? null}</td>
+            <td>${item.재고수량 ?? null}</td>
+            <td>${item.BL번호 ?? null}</td>
+            <td>${item.창고 ?? null}</td>
+            <td>${item.유통기한 ?? null}</td>
+            <td>${item.중량 ?? null}</td>
+            <td>${item.평균중량 ?? null}</td>
+            <td>${item.출고예정일 ?? null}</td>
+            <td>${item.홀딩 ?? null}</td>
         `;
 
         if (checked) row.classList.add("selected-row");

@@ -73,25 +73,26 @@ def post():
         doc_ref = db.collection("all_data").document()
 
         doc_ref.set({
-            "상품명": str(row.get("수탁품", "")).strip(),
+            "id": doc_ref.id,
+            "상품명": str(row.get("품목", "")).strip(),
             "브랜드": str(row.get("브랜드", "")).strip(),
             "등급": str(row.get("등급", "")).strip(),
-            "ESTNO": str(row.get("ESTNO", "")).strip(),
-            "재고수량": to_int(row.get("재고수량")),
-            "BL번호": str(row.get("BL번호", "")).strip(),
+            "ESTNO": str(row.get("EST", "")).strip(),
+            "재고수량": to_int(row.get("현재고")),
+            "BL번호": str(row.get("BL", "")).strip(),
 
             "창고": str(row.get("창고", "")).strip(),
             "유통기한": to_date(row.get("유통기한")),
-            "중량": True if pd.notna(row.get("중량")) else None,
-            "평균중량": str(row.get("평균중량", "")).strip(),
+            "중량": True if pd.notna(row.get("중량")) else "",
+            "평균중량": str(row.get("평중", "")).strip(),
             "출고예정일": str(row.get("출고예정일")),
-            "홀딩": str(row.get("홀딩")),
+            "홀딩": str(row.get("비고")),
 
-            "이력번호": True if pd.notna(row.get("이력번호")) else None,
-            "가공일자": True if pd.notna(row.get("소비기한")) else None,
+            "이력번호": True if pd.notna(row.get("이력번호")) else "",
+            "가공일자": True if pd.notna(row.get("소비기한")) else "",
             "수집일": str(today),
-            "동결": True if pd.notna(row.get("동결")) else None,
-            "사용불가": True if pd.notna(row.get("사용불가")) else None
+            "동결": True if pd.notna(row.get("동결")) else "",
+            "사용불가": True if pd.notna(row.get("사용불가")) else ""
         })
 
 

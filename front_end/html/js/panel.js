@@ -29,13 +29,13 @@ export function renderPanel() {
                 ${item.brand} / ${item.qty} / ${item.bl}<br>
 
                 <div class="holding-data">
-                    <input class="hold-qty" data-key="${key}" placeholder="개수">
-                    <input class="hold-date" data-key="${key}" placeholder="날짜">
-                    <input class="hold-note" data-key="${key}" placeholder="비고">
+                    <input class="hold-qty" data-id="${id}" placeholder="개수">
+                    <input class="hold-date" data-id="${id}" placeholder="날짜">
+                    <input class="hold-note" data-id="${id}" placeholder="비고">
 
                     <div class="item-btns">
-                        <button class="cancel-btn" data-key="${key}">취소</button>
-                        <button class="holding-btn" data-key="${key}">홀딩</button>
+                        <button class="cancel-btn" data-id="${id}">취소</button>
+                        <button class="holding-btn" data-id="${id}">홀딩</button>
                     </div>
                 </div>
             </div>
