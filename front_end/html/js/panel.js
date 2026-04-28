@@ -16,13 +16,13 @@ export function renderPanel() {
 
     container.classList.add("active");
 
-    state.selectedItems.forEach((item, key) => {
-        console.log(key, item);
+    state.selectedItems.forEach((item, id) => {
+        console.log(id, item);
     });
 
     let html = "";
 
-    selectedItems.forEach((item, key) => {
+    selectedItems.forEach((item, id) => {
         html += `
             <div class="selected-item">
                 <b>${item.name}</b><br>

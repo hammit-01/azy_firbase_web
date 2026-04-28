@@ -2,23 +2,43 @@ import { state } from "./state.js";
 import { dom } from "./dom.js";
 import { addSelectedItem } from "./data_eda.js";
 
+function safeValue(value) {
+    const v = String(value ?? "").trim();
+
+    if (
+        v === "" ||
+        v === "nan" ||
+        v === "NaN" ||
+        v === "null" ||
+        v === "undefined" ||
+        v === "None" ||
+        v === "NaT"
+    ) {
+        return "";
+    }
+
+    return value;
+}
+
+
 export function renderTable() {
     if (!dom.searchInput) return;
 
     let data = [...state.allData];
-
     const keyword = dom.searchInput.value.toLowerCase().trim();
     const field = dom.searchField.value;
+    const sortKey = dom.sortField.value;
+    const order = dom.sortOrder.value;
 
+
+    // 검색
     if (keyword) {
         data = data.filter(item =>
             String(item[field] ?? "").toLowerCase().includes(keyword)
         );
     }
 
-    const sortKey = dom.sortField.value;
-    const order = dom.sortOrder.value;
-
+    // 데이터 정렬
     data.sort((a, b) => {
         let x = a[sortKey] ?? 0;
         let y = b[sortKey] ?? 0;
@@ -34,12 +54,16 @@ export function renderTable() {
         return order === "asc" ? x - y : y - x;
     });
 
+    // div 표시
     dom.listDiv.innerHTML = "";
 
     data.forEach(item => {
-
         const hold = String(item.홀딩 ?? "").trim();
-
+        const isFreeze = item.동결 === true;
+        const isBlocked = item.사용불가 === true;
+        const id = item.id;
+        const checked = state.selectedItems.has(id);
+        const row = document.createElement("tr");
         const isHolding =
             hold !== "" &&
             hold !== "false" &&
@@ -48,17 +72,6 @@ export function renderTable() {
             hold !== "nan" &&
             hold !== "NaT";
 
-        const isFreeze = item.동결 === true;
-        const isBlocked = item.사용불가 === true;
-
-        const key =
-            `${item.상품명}_${item.ESTNO}_${item.BL번호}_${item.창고}`;
-
-        const checked =
-            state.selectedItems.has(key);
-
-        const row = document.createElement("tr");
-
         row.innerHTML = `
             <td>
                 <input type="checkbox"
@@ -66,18 +79,17 @@ export function renderTable() {
                     data-id="${item.id}"
                     ${checked ? "checked" : ""}>
             </td>
-            <td>${item.상품명 ?? null}</td>
-            <td>${item.브랜드 ?? null}</td>
-            <td>${item.등급 ?? null}</td>
-            <td>${item.ESTNO ?? null}</td>
-            <td>${item.재고수량 ?? null}</td>
-            <td>${item.BL번호 ?? null}</td>
-            <td>${item.창고 ?? null}</td>
-            <td>${item.유통기한 ?? null}</td>
-            <td>${item.중량 ?? null}</td>
-            <td>${item.평균중량 ?? null}</td>
-            <td>${item.출고예정일 ?? null}</td>
-            <td>${item.홀딩 ?? null}</td>
+            <td>${safeValue(item.상품명 ?? null)}</td>
+            <td>${safeValue(item.브랜드 ?? null)}</td>
+            <td>${safeValue(item.등급 ?? null)}</td>
+            <td>${safeValue(item.ESTNO ?? null)}</td>
+            <td>${safeValue(item.재고 ?? null)}</td>
+            <td>${safeValue(item.BL ?? null)}</td>
+            <td>${safeValue(item.창고 ?? null)}</td>
+            <td>${safeValue(item.유통기한 ?? null)}</td>
+            <td>${safeValue(item.평중 ?? null)}</td>
+            <td>${safeValue(item.출고일 ?? null)}</td>
+            <td>${safeValue(item.홀딩 ?? null)}</td>
         `;
 
         if (checked) row.classList.add("selected-row");
@@ -88,6 +100,11 @@ export function renderTable() {
             row.classList.add("freezed-row");
         } else if (isHolding) {
             row.classList.add("holding-row");
+        }
+
+        // 홀딩 행 일시 표시 및 포커스
+        if (state.flashIds.has(item.id)) {
+            row.classList.add("flash-row");
         }
 
         dom.listDiv.appendChild(row);

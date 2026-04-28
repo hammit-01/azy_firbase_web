@@ -90,6 +90,15 @@ th, td {
     text-overflow:ellipsis;
 }
 
+tbody tr:nth-child(even) td {
+    background: #efffd3;
+}
+
+tbody tr:hover td {
+    background: #c7ff67 !important;
+}
+
+
 thead {
     background:#94d900;
     color:white;
@@ -252,7 +261,13 @@ input {
 
 /* 체크한 행 = 연초록 */
 .selected-row td{
-    background:#eaffbd !important;
-    color:#94d900;
+    background:#fff9c9 !important;
+    color:hsl(47, 100%, 50%) !important;
     font-weight:700;
+}
+
+/* 홀딩된 행 일시 표시 */
+.flash-row td {
+    background: #fff3a3 !important;
+    transition: 0.3s;
 }

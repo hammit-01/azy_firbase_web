@@ -43,6 +43,7 @@ front_end: html, css, web event, firebase 연동(back_end로 이동 검토 중)
 + front_end 프로그램 흐름
 웹 실행 -> bindEvents() -> firestroe 실시간 구독 -> 데이터 들어오면 state 저장 -> renderTable(), renderPanel()
 + data 흐름
+--> 렌더링 때는 item의 표시값 사용, 백엔드 때는 item.id 사용
 state.allDate 읽음 -> 검색 filter -> 정렬 sort -> HTML 테이블 생성
 + 체크박스 evnet 흐름
 체크박스 클릭 -> state.allData에서 item 찾기 -> addSelectedItem() -> state.selectedItems 저장 -> renderAll()

@@ -32,7 +32,7 @@ function handleChange(e) {
     if (!item) return;
 
     if (e.target.checked) {
-        addSelectedItem(state, key, item);
+        addSelectedItem(state, id, item);
     } else {
         state.selectedItems.delete(id);
     }
@@ -52,7 +52,7 @@ async function handleClick(e) {
     // 개별 취소
     if (e.target.classList.contains("cancel-btn")) {
         const id = e.target.dataset.id;
-    const item = state.selectedItems.get(id);
+        const item = state.selectedItems.get(id);
 
 
         state.selectedItems.delete(id);
@@ -67,14 +67,48 @@ async function handleClick(e) {
         const item = state.selectedItems.get(id);
 
         const qty =
-            document.querySelector(`.hold-qty[data-key="${key}"]`).value;
+            document.querySelector(`.hold-qty[data-id="${id}"]`).value;
 
         const date =
-            document.querySelector(`.hold-date[data-key="${key}"]`).value;
+            document.querySelector(`.hold-date[data-id="${id}"]`).value;
 
         const note =
-            document.querySelector(`.hold-note[data-key="${key}"]`).value;
+            document.querySelector(`.hold-note[data-id="${id}"]`).value;
 
-        await holdingData(item, Number(qty), date, note);
+        // 새 홀딩 행 id 받기
+        const newId = await holdingData(item, Number(qty), date, note);
+
+        // 체크 해제
+        state.selectedItems.delete(id);
+
+        // 강조 대상 저장
+        state.flashIds.add(newId);
+
+        renderAll();
+
+        console.log(newId);
+
+        // 새 행으로 스크롤 이동
+        setTimeout(() => {
+            const targetRow =
+                document.querySelector(`[data-id="${newId}"]`)
+
+
+            if (targetRow) {
+                targetRow.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center"
+                });
+            }
+            state.flashIds.delete(newId);
+        }, 100);
+
+        // 5초 후 강조 제거
+        setTimeout(() => {
+            state.flashId = null;
+            renderTable();
+        }, 5000);
+    
     }
+
 }

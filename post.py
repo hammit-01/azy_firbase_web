@@ -78,14 +78,14 @@ def post():
             "브랜드": str(row.get("브랜드", "")).strip(),
             "등급": str(row.get("등급", "")).strip(),
             "ESTNO": str(row.get("EST", "")).strip(),
-            "재고수량": to_int(row.get("현재고")),
-            "BL번호": str(row.get("BL", "")).strip(),
+            "재고": to_int(row.get("현재고")),
+            "BL": str(row.get("BL", "")).strip(),
 
             "창고": str(row.get("창고", "")).strip(),
             "유통기한": to_date(row.get("유통기한")),
             "중량": True if pd.notna(row.get("중량")) else "",
-            "평균중량": str(row.get("평중", "")).strip(),
-            "출고예정일": str(row.get("출고예정일")),
+            "평중": str(row.get("평중", "")).strip(),
+            "출고일": str(row.get("출고예정일")),
             "홀딩": str(row.get("비고")),
 
             "이력번호": True if pd.notna(row.get("이력번호")) else "",

@@ -10,21 +10,21 @@ export function normalizeItem(raw) {
     return {
         id: raw.id ?? raw._id ?? null,
 
-        // UI 표준 필드 (여기만 render에서 사용)
         name: raw.상품명 ?? raw.name ?? raw.itemName ?? null,
         brand: raw.브랜드 ?? null,
-        qty: raw.재고수량 ?? raw.qty ?? 0,
-        bl: raw.BL번호 ?? raw.bl ?? null,
         grade: raw.등급 ?? null,
+        estNo: raw.ESTNO ?? null,
+        qty: raw.재고 ?? raw.qty ?? 0,
+        bl: raw.BL ?? raw.bl ?? null,
 
-        // 필요 확장 데이터
-        estno: raw.ESTNO ?? null,
         warehouse: raw.창고 ?? null,
-        stockDate: raw.출고예정일 ?? null,
+        dueDate: raw.유통기한 ?? null,
+        weight: raw.평중 ?? null,
+        releaseDate: raw.출고일 ?? null,
+
         holding: raw.홀딩 ?? null,
-        notes: raw.비고 ?? null,
-        dueday: raw.유통기한 ?? null,
-        weight: raw.평균중량 ?? null,
+        frozen: raw.동결 ?? null,
+        unuse: raw.사용불가 ?? null,
 
         // 원본 보존 (디버깅용)
         raw
@@ -44,7 +44,7 @@ export function addSelectedItem(state, id, raw) {
 /**
  * selectedItems 제거
  */
-export function removeSelectedItem(state, kidey) {
+export function removeSelectedItem(state, id) {
     state.selectedItems.delete(id);
 }
 
