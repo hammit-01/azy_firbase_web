@@ -31,6 +31,7 @@ export function renderSelectData() {
                     ${item.brand} / ${item.qty} / ${item.bl}<br>
                 </div>
                 <div class="insert-panel" data-id="${id}"></div>
+                <div class="update-panel" data-id="${id}"></div>
 
                 <!--<div class="holding-data">
                     <input class="hold-qty" data-id="${id}" placeholder="개수">
@@ -52,6 +53,7 @@ export function renderSelectData() {
             <h4 class="select-no">${selectedItems.size}개 선택</h4>
     `;
 }
+
 export function renderInsert() {
 
     state.selectedItems.forEach((item, id) => {
@@ -61,9 +63,49 @@ export function renderInsert() {
         );
 
         if (target) {
-            target.innerHTML = `<h3>hello</h3>`;
+            target.innerHTML = `
+            <input placeholder="상품명">
+            <input placeholder="브랜드">
+            <input placeholder="등급">
+            <input placeholder="ESTNO">
+            <input placeholder="재고">
+            <input placeholder="BL">
+            <input placeholder="창고">
+            <input placeholder="유통기한">
+            <input placeholder="평균">
+            <input placeholder="출고일">
+            <input placeholder="홀딩">
+            <input placeholder="동결">
+            <input placeholder="사용불가">`;
         }
 
     });
 }
 
+export function renderUpdate() {
+
+    state.selectedItems.forEach((item, id) => {
+
+        const target = document.querySelector(
+            `.update-panel[data-id="${id}"]`
+        );
+
+        if (target) {
+            target.innerHTML = `
+            <input value="${item.name}">
+            <input value="${item.brand}">
+            <input value="${item.grade}">
+            <input value="${item.estNo}">
+            <input value="${item.qty}">
+            <input value="${item.bl}">
+            <input value="${item.warehouse}">
+            <input value="${item.dueDate}">
+            <input value="${item.weight}">
+            <input value="${item.releaseDate}">
+            <input value="${item.holding}">
+            <input value="${item.frozen}">
+            <input value="${item.unuse}">`;
+        }
+
+    });
+}
