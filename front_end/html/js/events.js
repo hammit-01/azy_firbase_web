@@ -1,6 +1,7 @@
 import { state } from "./state.js";
 import { renderTable } from "./table.js";
 import { renderSelectData } from "./panel.js";
+import { renderInsert } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData } from "./crud.js";
 import { dom } from "./dom.js";
@@ -41,6 +42,16 @@ function handleChange(e) {
 }
 
 async function handleClick(e) {
+    // crud section btn
+    if (e.target.classList.contains("insert-btn")) {
+        const id = e.target.dataset.id;
+        const item = state.selectedItems.get(id);
+        console.log(id, item, "??");
+
+        renderInsert();
+        return;
+    }
+
 
     // 전체 취소
     if (e.target.classList.contains("clear-btn")) {
