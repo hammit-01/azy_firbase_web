@@ -150,10 +150,6 @@ thead {
     border-color: #cbd5e1;
 }
 
-.selected-item {
-    font-size:20px;
-    padding:10px 0;
-}
 .btn {
     display: flex;
     align-items: center;
@@ -194,8 +190,7 @@ thead {
     gap: 10px;
     flex-direction: row;
     flex-wrap: nowrap;
-    align-items: flex-end;
-    justify-content: flex-end;
+    align-items: center;
 }
 
 /* 공통 버튼 */
@@ -203,7 +198,7 @@ thead {
 .all-holding-btn,
 .all-delete-btn,
 .cancel-btn {
-    padding: 10px 14px;
+    padding: 5px;
     color: white;
     border: none;
     border-radius: 10px;

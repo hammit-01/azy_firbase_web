@@ -29,8 +29,8 @@ export function renderSelectData() {
                     <button class="cancel-btn" data-id="${id}">X</button>
                     <b>${item.name}</b>
                     ${item.brand} / ${item.qty} / ${item.bl}<br>
-                    <div class="insert-panel"></div>
                 </div>
+                <div class="insert-panel" data-id="${id}"></div>
 
                 <!--<div class="holding-data">
                     <input class="hold-qty" data-id="${id}" placeholder="개수">
@@ -52,15 +52,18 @@ export function renderSelectData() {
             <h4 class="select-no">${selectedItems.size}개 선택</h4>
     `;
 }
-
 export function renderInsert() {
-    const target = document.querySelector('.insert-panel');
 
-    if (!target) {
-        return;
-    }
-    target.innerHTML = `
-        <h3>hello</h3>
-    `;
-    console.log("떴어?");
+    state.selectedItems.forEach((item, id) => {
+
+        const target = document.querySelector(
+            `.insert-panel[data-id="${id}"]`
+        );
+
+        if (target) {
+            target.innerHTML = `<h3>hello</h3>`;
+        }
+
+    });
 }
+

@@ -46,7 +46,6 @@ async function handleClick(e) {
     if (e.target.classList.contains("insert-btn")) {
         const id = e.target.dataset.id;
         const item = state.selectedItems.get(id);
-        console.log(id, item, "??");
 
         renderInsert();
         return;
