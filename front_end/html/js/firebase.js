@@ -10,7 +10,7 @@ from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
 import { state } from "./state.js";
 import { renderTable } from "./table.js";
-import { renderPanel } from "./panel.js";
+import { renderSelectData } from "./panel.js";
 
 export let db;
 
@@ -38,6 +38,6 @@ export function subscribeData() {
         }));
 
         renderTable();
-        renderPanel();
+        renderSelectData();
     });
 }

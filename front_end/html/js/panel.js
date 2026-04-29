@@ -1,7 +1,7 @@
 import { state } from "./state.js";
 import { dom } from "./dom.js";
 
-export function renderPanel() {
+export function renderSelectData() {
 
     const { sideBox, container } = dom;
     const { selectedItems } = state;
@@ -20,22 +20,25 @@ export function renderPanel() {
         console.log(id, item);
     });
 
-    let html = '<button class="insert">추가</button>';
+    let html = '';
 
     selectedItems.forEach((item, id) => {
         html += `
             <div class="selected-item">
-                <b>${item.name}</b><br>
-                ${item.brand} / ${item.qty} / ${item.bl}<br>
+                <div class"item-datas">
+                    <button class="cancel-btn" data-id="${id}">X</button>
+                    <b>${item.name}</b>
+                    ${item.brand} / ${item.qty} / ${item.bl}<br>
+                </div>
 
                 <div class="holding-data">
-                    <button class="cancel-btn" data-id="${id}">X</button>
                     <input class="hold-qty" data-id="${id}" placeholder="개수">
                     <input class="hold-date" data-id="${id}" placeholder="날짜">
                     <input class="hold-note" data-id="${id}" placeholder="비고">
 
                     <div class="item-btns">
-                        <button class="holding-btn" data-id="${id}">홀딩</button>
+                        <button class="select-holding-btn" data-id="${id}">홀딩</button>
+                        <button class="select-delete-btn">삭제</button>
                     </div>
                 </div>
             </div>
@@ -46,16 +49,5 @@ export function renderPanel() {
         ${html}
         <div class="btn">
             <h4 class="select-no">${selectedItems.size}개 선택</h4>
-
-            <div class="btn-group">
-                <button class="clear-btn" data-action="clear-selection">전체 취소</button>
-                <button class="all-holding-btn" data-action="all-holding">전체 홀딩</button>
-
-                <div class="crud-selction">
-                    <button class="update">수정</button>
-                    <button class="delete">삭제</button>
-                </div>
-            </div>
-        </div>
     `;
 }

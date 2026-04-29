@@ -1,6 +1,6 @@
 import { state } from "./state.js";
 import { renderTable } from "./table.js";
-import { renderPanel } from "./panel.js";
+import { renderSelectData } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData } from "./crud.js";
 import { dom } from "./dom.js";
@@ -19,7 +19,7 @@ export function bindEvents() {
 
 function renderAll() {
     renderTable();
-    renderPanel();
+    renderSelectData();
 }
 
 function handleChange(e) {
@@ -37,7 +37,7 @@ function handleChange(e) {
         state.selectedItems.delete(id);
     }
 
-    renderAll();
+    renderSelectData();
 }
 
 async function handleClick(e) {

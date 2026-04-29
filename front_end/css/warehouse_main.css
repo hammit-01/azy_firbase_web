@@ -39,18 +39,6 @@ h1 {
     transition: 0.3s;
 }
 
-.right-panel {
-    width:0;
-    opacity:0;
-    overflow:hidden;
-    transition:0.3s;
-    background:white;
-    border-radius: 10px;
-
-    display:flex;          /* 추가 */
-    flex-direction:column; /* 추가 */
-}
-
 /* 선택 패널 열렸을 때 */
 .container.active{
     justify-content: space-between;
@@ -60,7 +48,7 @@ h1 {
     width:72%;
 }
 
-.container.active .right-panel{
+.right-panel{
     width: 450px;
     opacity: 1;
     padding: 20px;
@@ -177,10 +165,6 @@ thead {
     font-weight: 600;
 }
 
-.holding-btn, .cancel-btn {
-    margin-top: 10px;
-}
-
 .item-btns{
     display: flex;
     gap: 5px;
@@ -196,23 +180,29 @@ thead {
 }
 
 .holding-data {
-    margin-left: auto;
-    width: auto;
     display: flex;
     gap: 10px;
-    justify-items: center;
     flex-direction: row;
-    align-content: center;
     flex-wrap: nowrap;
-    align-items: center;
-    justify-content: center;
+    align-items: flex-end;
+    justify-content: flex-end;
+
+}
+
+.item-datas {
+    display: flex;
+    gap: 10px;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: flex-end;
+    justify-content: flex-end;
 }
 
 /* 공통 버튼 */
-.holding-btn,
-.cancel-btn,
 .clear-btn,
-.all-holding-btn, .insert, .delete, .update {
+.all-holding-btn,
+.all-delete-btn,
+.cancel-btn {
     padding: 10px 14px;
     color: white;
     border: none;
@@ -221,23 +211,21 @@ thead {
     transition: 0.2s;
 }
 
-.clear-btn,
-.cancel-btn {
-    color: #000;
-}
-
-.clear-btn {
-    background: #e7fdc1;
+.crud-btn {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 10px;
 }
 
 /* 개별 색 */
-.cancel-btn { background: #fff; }
-.delete { background: #ff4d40;}
-.all-holding-btn, .holding-btn { background: #3b82f6; }
-.update { background: #76f63b; }
+.cancel-btn { background: #bcbcbc; }
+.all-delete-btn { background: #ff4d40;}
+.all-holding-btn { background: #3b82f6; }
+.clear-btn { background: #96e70c;}
 
 /* hover */
-.holding-btn:hover,
+.holding:hover,
 .clear-btn:hover,
 .cancel-btn:hover,
 .all-holding-btn:hover {
