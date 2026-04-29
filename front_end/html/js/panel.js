@@ -20,7 +20,7 @@ export function renderPanel() {
         console.log(id, item);
     });
 
-    let html = "";
+    let html = '<button class="insert">추가</button>';
 
     selectedItems.forEach((item, id) => {
         html += `
@@ -29,12 +29,12 @@ export function renderPanel() {
                 ${item.brand} / ${item.qty} / ${item.bl}<br>
 
                 <div class="holding-data">
+                    <button class="cancel-btn" data-id="${id}">X</button>
                     <input class="hold-qty" data-id="${id}" placeholder="개수">
                     <input class="hold-date" data-id="${id}" placeholder="날짜">
                     <input class="hold-note" data-id="${id}" placeholder="비고">
 
                     <div class="item-btns">
-                        <button class="cancel-btn" data-id="${id}">취소</button>
                         <button class="holding-btn" data-id="${id}">홀딩</button>
                     </div>
                 </div>
@@ -50,6 +50,11 @@ export function renderPanel() {
             <div class="btn-group">
                 <button class="clear-btn" data-action="clear-selection">전체 취소</button>
                 <button class="all-holding-btn" data-action="all-holding">전체 홀딩</button>
+
+                <div class="crud-selction">
+                    <button class="update">수정</button>
+                    <button class="delete">삭제</button>
+                </div>
             </div>
         </div>
     `;

@@ -212,7 +212,7 @@ thead {
 .holding-btn,
 .cancel-btn,
 .clear-btn,
-.all-holding-btn {
+.all-holding-btn, .insert, .delete, .update {
     padding: 10px 14px;
     color: white;
     border: none;
@@ -221,10 +221,20 @@ thead {
     transition: 0.2s;
 }
 
+.clear-btn,
+.cancel-btn {
+    color: #000;
+}
+
+.clear-btn {
+    background: #e7fdc1;
+}
+
 /* 개별 색 */
-.clear-btn, .cancel-btn { background: #ef4444; }
-.all-holding-btn { background: #3b82f6; }
-.holding-btn { background: #3b82f6; }
+.cancel-btn { background: #fff; }
+.delete { background: #ff4d40;}
+.all-holding-btn, .holding-btn { background: #3b82f6; }
+.update { background: #76f63b; }
 
 /* hover */
 .holding-btn:hover,
