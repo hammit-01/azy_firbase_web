@@ -5,7 +5,7 @@ export async function holdingData(item, holdQty, releaseDate, note) {
 
     const remainQty = item.qty - holdQty;
 
-    if (remainQty < 0) {
+    if (remainQty <= 0) {
         alert("수량이 부족합니다.");
         return null;
     }

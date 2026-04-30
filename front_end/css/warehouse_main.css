@@ -156,9 +156,11 @@ thead {
     width: 100%;
 }
 
-.select-no {
+.select-no, .all-crud-btn {
     margin: 0;
     font-weight: 600;
+    width: auto;
+    display: flex;
 }
 
 .item-btns{
@@ -267,8 +269,4 @@ input {
 .flash-row td {
     background: #fff3a3 !important;
     transition: 0.3s;
-}
-
-.panel-footer {
-    display: flex;
 }

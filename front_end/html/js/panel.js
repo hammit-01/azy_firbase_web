@@ -1,6 +1,10 @@
 import { state } from "./state.js";
 import { dom } from "./dom.js";
 
+const { selectedItems } = state;
+let totalQty = 0;
+let totalWeight = 0;
+
 function clearPanels(id) {
     const insert = document.querySelector(`.insert-panel[data-id="${id}"]`);
     const update = document.querySelector(`.update-panel[data-id="${id}"]`);
@@ -14,7 +18,6 @@ function clearPanels(id) {
 export function renderSelectData() {
 
     const { sideBox, container } = dom;
-    const { selectedItems } = state;
 
     if (!sideBox || !container) return;
 
@@ -49,8 +52,6 @@ export function renderSelectData() {
 
     sideBox.innerHTML = `
         ${html}
-        <div class="panel-footer">
-            <h4 class="select-no">${selectedItems.size}개 선택</h4>
     `;
 }
 
@@ -99,14 +100,19 @@ export function renderUpdate() {
             <input value="${item.frozen}">
             <input value="${item.unuse}">`;
         }
+        
+        totalQty += Number(item.qty) || 0;
+        totalWeight += Number(item.weight) || 0;
     });
 
     const sideBox = document.querySelector("#sideBox");
     if (!sideBox.querySelector(".all-crud-btn")) {
         sideBox.insertAdjacentHTML("beforeend", `
-                <button class="all-crud-btn" data-action="all-holding">
-                    전체 홀딩
-                </button>
+            <h4 class="select-no">총 ${totalQty} 박스</h4>
+            <h4 class="select-no">총 ${totalWeight}kg</h4>
+            <button class="all-crud-btn" data-action="all-holding">
+                전체 수정
+            </button>
         `);
     }
 }
@@ -135,15 +141,21 @@ export function renderHolding() {
                 </div>
             </div>
         `;
+        const input = document.querySelector(
+            `.hold-qty[data-id="${id}"]`
+        ).value;
+
+        totalQty += input;
     });
 
     // 🔥 전체 버튼은 따로!
     const sideBox = document.querySelector("#sideBox");
     if (!sideBox.querySelector(".all-crud-btn")) {
         sideBox.insertAdjacentHTML("beforeend", `
-                <button class="all-crud-btn" data-action="all-holding">
-                    전체 홀딩
-                </button>
+            <h4 class="select-no">총 ${totalQty} 박스</h4>
+            <button class="all-crud-btn" data-action="all-holding">
+                전체 홀딩
+            </button>
         `);
     }
 }
