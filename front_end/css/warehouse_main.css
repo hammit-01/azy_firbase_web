@@ -185,19 +185,23 @@ thead {
 
 }
 
-.item-datas {
+.selected-item {
     display: flex;
-    gap: 10px;
+    gap: 5px;
     flex-direction: row;
-    flex-wrap: nowrap;
-    align-items: center;
+    justify-content: flex-start;
+    /* align-content: center; */
+    margin-top: 10px;
+    flex-wrap: wrap;
 }
 
 /* 공통 버튼 */
 .clear-btn,
 .all-holding-btn,
 .all-delete-btn,
-.cancel-btn {
+.cancel-btn,
+.select-delete-btn,
+.select-holding-btn {
     padding: 5px;
     color: white;
     border: none;
@@ -214,10 +218,10 @@ thead {
 }
 
 /* 개별 색 */
-.cancel-btn { background: #bcbcbc; }
-.all-delete-btn { background: #ff4d40;}
-.all-holding-btn { background: #3b82f6; }
-.clear-btn { background: #96e70c;}
+/* .cancel-btn { background: #bcbcbc; } */
+.all-delete-btn, .select-delete-btn { background: #ff4d40;}
+.all-holding-btn, .select-holding-btn { background: #3b82f6; }
+.clear-btn, .cancel-btn { background: #96e70c;}
 
 /* hover */
 .holding:hover,
@@ -263,4 +267,8 @@ input {
 .flash-row td {
     background: #fff3a3 !important;
     transition: 0.3s;
+}
+
+.panel-footer {
+    display: flex;
 }

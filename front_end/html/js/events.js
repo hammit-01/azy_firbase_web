@@ -3,6 +3,7 @@ import { renderTable } from "./table.js";
 import { renderSelectData } from "./panel.js";
 import { renderInsert } from "./panel.js";
 import { renderUpdate } from "./panel.js";
+import { renderHolding } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData } from "./crud.js";
 import { dom } from "./dom.js";
@@ -25,11 +26,11 @@ function renderAll() {
 }
 
 function handleChange(e) {
-
-    if (!e.target.classList.contains("row-check")) return;
-
     const id = e.target.dataset.id;
     const item = state.allData.find(d => d.id === id);
+    const crudData_state = state.crudData.get("crud");
+
+    if (!e.target.classList.contains("row-check")) return;
 
     if (!item) return;
 
@@ -39,27 +40,58 @@ function handleChange(e) {
         state.selectedItems.delete(id);
     }
 
-    renderSelectData();
+    if (crudData_state === "update") {
+        renderAll();
+        renderUpdate();
+    }
+    else if (crudData_state === "holding") {
+        renderAll();
+        renderHolding();
+    } else renderSelectData();
 }
 
 async function handleClick(e) {
-    // crud section btn
+    // crud insert section btn
     if (e.target.classList.contains("insert-btn")) {
+        state.crudData.clear();
+        if (state.selectedItems.size > 0) {
+            const id = e.target.dataset.id;
+            const item = state.allData.find(d => d.id === id);
+            state.selectedItems.delete(id);
+            state.selectedItems.clear();
+        }
+        
+        renderAll();
         renderInsert();
         return;
     }
 
-    if (e.target.classList.contains("select-update-btn")) {
-        const id = e.target.dataset.id;
-        const item = state.selectedItems.get(id);
+    // crud update section btn
+    if (e.target.classList.contains("update-btn")) {
+        state.crudData.clear();
+        if (state.selectedItems.size === 0) alert("수정할 상품을 선택하세요.");
+        else {
+            renderUpdate();
+            state.crudData.set("crud","update")
+            return;
+        }
+    }
 
-        renderUpdate();
-        return;
+    // crud holding section btn
+    if (e.target.classList.contains("holding-btn")) {
+        state.crudData.clear();
+        if (state.selectedItems.size === 0) alert("홀딩할 상품을 선택하세요.");
+        else {
+            renderHolding();
+            state.crudData.set("crud","holding")
+            return;
+        }
     }
 
     // 전체 취소
     if (e.target.classList.contains("clear-btn")) {
         state.selectedItems.clear();
+        state.crudData.clear();
         renderAll();
         return;
     }
@@ -67,16 +99,22 @@ async function handleClick(e) {
     // 개별 취소
     if (e.target.classList.contains("cancel-btn")) {
         const id = e.target.dataset.id;
-        const item = state.selectedItems.get(id);
-
+        const crudData_state = state.crudData.get("crud");
 
         state.selectedItems.delete(id);
 
-        renderAll();
+        if (crudData_state === "update") {
+            renderAll();
+            renderUpdate();
+        }
+        else if (crudData_state === "holding") {
+            renderAll();
+            renderHolding();
+        }
         return;
     }
 
-    if (e.target.classList.contains("holding-btn")) {
+    if (e.target.classList.contains("select-holding-btn")) {
 
         const id = e.target.dataset.id;
         const item = state.selectedItems.get(id);
@@ -100,8 +138,9 @@ async function handleClick(e) {
         state.flashIds.add(newId);
 
         renderAll();
+        renderHolding();
 
-        console.log(newId);
+        console.log("홀딩중!!!!!");
 
         // 새 행으로 스크롤 이동
         setTimeout(() => {
