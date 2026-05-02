@@ -1,5 +1,16 @@
 azy_firebase read me
 
+2026/4/30 code issue
+- update, holding 판넬 전체 수정, 전체 홀딩 버튼
+-> update 버튼 클릭 후 holding 버튼으로 넘어가도 전체 수정 버튼으로 뜸(처음 선택한 판넬 버튼이 전체 취소 or 취소 누르지 않는 이상 유지됨)
+- 전체 추가, 전체 삭제, 전체 수정, 전체 홀딩, 선택 추가, 선택 삭제, 선택 수정 버튼 로직 구현 X
+- holding 판넬 총 박스 수 input에서 value 떠오는거라 아직 이상함
+- 검색창, 정렬 구현 X
+- 전체 취소 눌러야 판넬 초기화됨 X버튼 누르거나 체크박스 취소 누르면 총박스, 총중량 전체버튼 남아있음
+- UI 아직 보기 안좋음
+
+
+
 전체 데이터 흐름
 크롤링 -> data.xlsx 업로드 -> firestore post -> get/post(update/delete/select)
 + issue firestore 구독료 (지금은 무료 버전 사용, get post 하루 천건 넘어가면 막힐 때 있음)

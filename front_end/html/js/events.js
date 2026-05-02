@@ -6,9 +6,11 @@ import { renderUpdate } from "./panel.js";
 import { renderHolding } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData } from "./crud.js";
+import { deleteItem } from "./crud.js";
 import { dom } from "./dom.js";
+import { calculateTotal } from "./input_calculater.js";
 
-
+ 
 export function bindEvents() {
 
     document.addEventListener("change", handleChange);
@@ -40,14 +42,17 @@ function handleChange(e) {
         state.selectedItems.delete(id);
     }
 
-    if (crudData_state === "update") {
+    if (state.selectedItems.size != 0){
         renderAll();
-        renderUpdate();
+        if (crudData_state === "update") {
+            renderUpdate();
+        }
+        else if (crudData_state === "holding") {
+            renderHolding();
+        } else {
+            renderSelectData();
+        }
     }
-    else if (crudData_state === "holding") {
-        renderAll();
-        renderHolding();
-    } else renderSelectData();
 }
 
 async function handleClick(e) {
@@ -88,6 +93,20 @@ async function handleClick(e) {
         }
     }
 
+    // crud delete section btn
+    if (e.target.classList.contains("select-delete-btn")) {
+
+        const id = e.target.dataset.id;
+
+        if (!id) {console.log("뭔가 이상함:", id); return;}
+
+        state.selectedItems.delete(id);
+        await deleteItem(id);
+
+        renderAll();
+        renderHolding();
+    }
+
     // 전체 취소
     if (e.target.classList.contains("clear-btn")) {
         state.selectedItems.clear();
@@ -100,19 +119,34 @@ async function handleClick(e) {
     if (e.target.classList.contains("cancel-btn")) {
         const id = e.target.dataset.id;
         const crudData_state = state.crudData.get("crud");
+        console.log(crudData_state);
 
         state.selectedItems.delete(id);
-
         if (crudData_state === "update") {
-            renderAll();
             renderUpdate();
         }
-        else if (crudData_state === "holding") {
-            renderAll();
+        if (crudData_state === "holding") {
             renderHolding();
         }
+        else renderSelectData();
+        
+        renderTable();
         return;
     }
+
+    document.addEventListener("input", (e) => {
+
+        if (e.target.classList.contains("hold-qty")) {
+
+            const total = calculateTotal();
+
+            const totalBox = document.querySelector("#total-box");
+
+            if (totalBox) {
+                totalBox.innerText = `총 ${total} 박스`;
+            }
+        }
+    });
 
     if (e.target.classList.contains("select-holding-btn")) {
 

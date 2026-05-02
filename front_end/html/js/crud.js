@@ -1,5 +1,7 @@
 // data update, delete, insert to firestore
 import { updateItem, insertItem } from "./firestoreService.js";
+import { doc, deleteDoc }  from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+import { db } from "./firebase.js";
 
 export async function holdingData(item, holdQty, releaseDate, note) {
 
@@ -43,5 +45,18 @@ export async function holdingData(item, holdQty, releaseDate, note) {
     } catch (error) {
         console.error("업데이트 실패:", error);
         return null;
+    }
+}
+
+
+
+export async function deleteItem(id) {
+    try {
+        await deleteDoc(doc(db, "all_data", id)); // 🔥 collection 이름 맞게 수정
+
+        console.log("삭제 완료:", id);
+
+    } catch (error) {
+        console.error("삭제 실패:", error);
     }
 }

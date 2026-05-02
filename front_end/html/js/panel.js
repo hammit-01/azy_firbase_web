@@ -4,6 +4,7 @@ import { dom } from "./dom.js";
 const { selectedItems } = state;
 let totalQty = 0;
 let totalWeight = 0;
+let total = 0;
 
 function clearPanels(id) {
     const insert = document.querySelector(`.insert-panel[data-id="${id}"]`);
@@ -114,6 +115,8 @@ export function renderUpdate() {
                 전체 수정
             </button>
         `);
+        totalQty = 0;
+        totalWeight = 0;
     }
 }
 
@@ -137,25 +140,23 @@ export function renderHolding() {
 
                 <div class="item-btns">
                     <button class="select-holding-btn" data-id="${id}">홀딩</button>
-                    <button class="select-delete-btn">삭제</button>
+                    <button class="select-delete-btn" data-id="${id}">삭제</button>
                 </div>
             </div>
         `;
-        const input = document.querySelector(
-            `.hold-qty[data-id="${id}"]`
-        ).value;
-
-        totalQty += input;
+        
+        
     });
 
     // 🔥 전체 버튼은 따로!
     const sideBox = document.querySelector("#sideBox");
     if (!sideBox.querySelector(".all-crud-btn")) {
         sideBox.insertAdjacentHTML("beforeend", `
-            <h4 class="select-no">총 ${totalQty} 박스</h4>
+            <h4 class="select-no">총 ${total} 박스</h4>
             <button class="all-crud-btn" data-action="all-holding">
                 전체 홀딩
             </button>
         `);
+        total = 0;
     }
 }
