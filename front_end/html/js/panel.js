@@ -60,20 +60,20 @@ export function renderInsert() {
     let html = '';
 
     sideBox.innerHTML = `
-        <input placeholder="상품명">
-        <input placeholder="브랜드">
-        <input placeholder="등급">
-        <input placeholder="ESTNO">
-        <input placeholder="재고">
-        <input placeholder="BL">
-        <input placeholder="창고">
-        <input placeholder="유통기한">
-        <input placeholder="평균">
-        <input placeholder="출고일">
-        <input placeholder="홀딩">
-        <input placeholder="동결">
-        <input placeholder="사용불가">
-        <button class="all-crud-btn" data-action="">전체 추가</button>
+        <input placeholder="상품명" class="insert-name">
+        <input placeholder="브랜드" class="insert-brand">
+        <input placeholder="등급" class="insert-grade">
+        <input placeholder="ESTNO" class="insert-estNo">
+        <input placeholder="수량" class="insert-qty">
+        <input placeholder="BL" class="insert-bl">
+        <input placeholder="창고" class="insert-warehouse">
+        <input placeholder="유통기한" class="insert-dueDate">
+        <input placeholder="평중" class="insert-weight">
+        <input placeholder="출고일" class="insert-releaseDate">
+        <input placeholder="홀딩" class="insert-holding">
+        <input placeholder="동결" class="insert-frozen">
+        <input placeholder="사용불가" class="insert-unuse">
+        <button class="all-insert-btn" data-action="">전체 추가</button>
     `;
 }
 
@@ -87,19 +87,19 @@ export function renderUpdate() {
 
         if (target) {
             target.innerHTML = `
-            <input value="${item.name}">
-            <input value="${item.brand}">
-            <input value="${item.grade}">
-            <input value="${item.estNo}">
-            <input value="${item.qty}">
-            <input value="${item.bl}">
-            <input value="${item.warehouse}">
-            <input value="${item.dueDate}">
-            <input value="${item.weight}">
-            <input value="${item.releaseDate}">
-            <input value="${item.holding}">
-            <input value="${item.frozen}">
-            <input value="${item.unuse}">`;
+            <input value="${item.name}" class="update-name">
+            <input value="${item.brand}" class="update-brand">
+            <input value="${item.grade}" class="update-grade">
+            <input value="${item.estNo}" class="update-estNo">
+            <input value="${item.qty}" class="update-qty">
+            <input value="${item.bl}" class="update-bl">
+            <input value="${item.warehouse}" class="update-warehouse">
+            <input value="${item.dueDate}" class="update-dueDate">
+            <input value="${item.weight}" class="update-weight">
+            <input value="${item.releaseDate}" class="update-releaseDate">
+            <input value="${item.holding}" class="update-holding">
+            <input value="${item.frozen}" class="update-frozen">
+            <input value="${item.unuse}" class="update-unuse">`;
         }
         
         totalQty += Number(item.qty) || 0;
@@ -107,11 +107,11 @@ export function renderUpdate() {
     });
 
     const sideBox = document.querySelector("#sideBox");
-    if (!sideBox.querySelector(".all-crud-btn")) {
+    if (!sideBox.querySelector(".all-update-btn")) {
         sideBox.insertAdjacentHTML("beforeend", `
             <h4 class="select-no">총 ${totalQty} 박스</h4>
             <h4 class="select-no">총 ${totalWeight}kg</h4>
-            <button class="all-crud-btn" data-action="all-holding">
+            <button class="all-update-btn" data-action="all-update">
                 전체 수정
             </button>
         `);
