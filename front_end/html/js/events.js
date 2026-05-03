@@ -7,6 +7,7 @@ import { renderHolding } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData } from "./crud.js";
 import { insertData } from "./crud.js";
+import { updateData } from "./crud.js";
 import { deleteItem } from "./crud.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
@@ -28,37 +29,50 @@ function renderAll() {
 }
 
 function handleChange(e) {
-    const id = e.target.dataset.id;
-    const item = state.allData.find(d => d.id === id);
-    const crudData_state = state.crudData.get("crud");
 
     if (!e.target.classList.contains("row-check")) return;
+
+    const id = e.target.dataset.id;
+    const item = state.allData.find(d => d.id === id);
 
     if (!item) return;
 
     if (e.target.checked) {
         addSelectedItem(state, id, item);
     } else {
+        state.crudMode = null;
         state.selectedItems.delete(id);
     }
 
-    if (state.selectedItems.size != 0){
-        renderAll();
-        if (crudData_state === "update") {
+    // 🔥 선택 없으면 초기화
+    if (state.selectedItems.size === 0) {
+        state.crudMode = null;
+        renderSelectData();
+        return;
+    }
+
+    const mode = state.crudData; // 👉 Map 대신 이거 추천
+
+    console.log(mode)
+    renderAll();
+
+    switch (mode) {
+        case "update":
             renderUpdate();
-        }
-        else if (crudData_state === "holding") {
+            break;
+        case "holding":
             renderHolding();
-        } else {
+            break;
+        default:
             renderSelectData();
-        }
     }
 }
+
 
 async function handleClick(e) {
     // crud menu insert section btn
     if (e.target.classList.contains("insert-btn")) {
-        state.crudData.clear();
+        state.crudMode = null;
         if (state.selectedItems.size > 0) {
             const id = e.target.dataset.id;
             const item = state.allData.find(d => d.id === id);
@@ -73,22 +87,22 @@ async function handleClick(e) {
 
     // crud menu update section btn
     if (e.target.classList.contains("update-btn")) {
-        state.crudData.clear();
+        state.crudMode = null;
         if (state.selectedItems.size === 0) alert("수정할 상품을 선택하세요.");
         else {
             renderUpdate();
-            state.crudData.set("crud","update")
+            state.crudData = "update";
             return;
         }
     }
 
     // crud menu holding section btn
     if (e.target.classList.contains("holding-btn")) {
-        state.crudData.clear();
+        state.crudMode = null;
         if (state.selectedItems.size === 0) alert("홀딩할 상품을 선택하세요.");
         else {
             renderHolding();
-            state.crudData.set("crud","holding")
+            state.crudData = "holding";
             return;
         }
     }
@@ -110,29 +124,44 @@ async function handleClick(e) {
     // 전체 취소
     if (e.target.classList.contains("clear-btn")) {
         state.selectedItems.clear();
-        state.crudData.clear();
+        state.crudMode = null;
         renderAll();
         return;
     }
 
     // 개별 취소
     if (e.target.classList.contains("cancel-btn")) {
+
         const id = e.target.dataset.id;
-        const crudData_state = state.crudData.get("crud");
-        console.log(crudData_state);
 
         state.selectedItems.delete(id);
-        if (crudData_state === "update") {
-            renderUpdate();
+
+        // 🔥 선택 0개면 종료
+        if (state.selectedItems.size === 0) {
+            state.crudMode = null;
+            renderAll();
+            return;
         }
-        if (crudData_state === "holding") {
-            renderHolding();
+
+        const mode = state.crudData;
+
+        console.log(mode)
+        switch (mode) {
+            case "update":
+                renderAll();
+                renderUpdate();
+                break;
+            case "holding":
+                renderAll();
+                renderHolding();
+                break;
+            default:
+                renderAll();
         }
-        else renderSelectData();
-        
-        renderTable();
+
         return;
     }
+
 
     document.addEventListener("input", (e) => {
 
@@ -201,15 +230,14 @@ async function handleClick(e) {
         // 새 홀딩 행 id 받기
         const newId = await insertData(name, brand, grade, estNo, qty, bl, warehouse, dueDate, weight,
     releaseDate, holding, frozen, unuse);
-
+    
+        // 체크 해제
+        state.selectedItems.delete(id);
 
         // 강조 대상 저장
         state.flashIds.add(newId);
 
         renderAll();
-        renderHolding();
-
-        console.log("홀딩중!!!!!");
 
         // 새 행으로 스크롤 이동
         setTimeout(() => {
@@ -235,22 +263,55 @@ async function handleClick(e) {
     }
 
     // 수정 로직
-    if (e.target.classList.contains("select-update-btn")) {
+    if (e.target.classList.contains("all-update-btn")) {
 
         const id = e.target.dataset.id;
         const item = state.selectedItems.get(id);
 
+        console.log("id:", id);
+        console.log(document.querySelector(`.update-name[data-id="${id}"]`));
+        const name =
+            document.querySelector(`.update-name[data-id="${id}"]`).value;
+
+        const brand =
+            document.querySelector(`.update-brand[data-id="${id}"]`).value;
+        
+        const grade =
+            document.querySelector(`.update-grade[data-id="${id}"]`).value;
+        
+        const estNo =
+            document.querySelector(`.update-estNo[data-id="${id}"]`).value;
+
         const qty =
-            document.querySelector(`.hold-qty[data-id="${id}"]`).value;
+            document.querySelector(`.update-qty[data-id="${id}"]`).value;
+        
+        const bl =
+            document.querySelector(`.update-bl[data-id="${id}"]`).value;
 
-        const date =
-            document.querySelector(`.hold-date[data-id="${id}"]`).value;
+        const warehouse =
+            document.querySelector(`.update-warehouse[data-id="${id}"]`).value;
 
-        const note =
-            document.querySelector(`.hold-note[data-id="${id}"]`).value;
+        const dueDate =
+            document.querySelector(`.update-dueDate[data-id="${id}"]`).value;
+        
+        const weight =
+            document.querySelector(`.update-weight[data-id="${id}"]`).value;
+        
+        const releaseDate =
+            document.querySelector(`.update-releaseDate[data-id="${id}"]`).value;
 
+        const holding =
+            document.querySelector(`.update-holding[data-id="${id}"]`).value;
+            
+        const frozen =
+            document.querySelector(`.update-frozen[data-id="${id}"]`).value;
+            
+        const unuse =
+            document.querySelector(`.update-unuse[data-id="${id}"]`).value;
+        
         // 새 홀딩 행 id 받기
-        const newId = await holdingData(item, Number(qty), date, note);
+        const newId = await updateData(item, name, brand, grade, estNo, qty, bl, warehouse, dueDate, weight,
+    releaseDate, holding, frozen, unuse);
 
         // 체크 해제
         state.selectedItems.delete(id);
@@ -259,9 +320,6 @@ async function handleClick(e) {
         state.flashIds.add(newId);
 
         renderAll();
-        renderHolding();
-
-        console.log("홀딩중!!!!!");
 
         // 새 행으로 스크롤 이동
         setTimeout(() => {
@@ -311,7 +369,6 @@ async function handleClick(e) {
         state.flashIds.add(newId);
 
         renderAll();
-        renderHolding();
 
         console.log("홀딩중!!!!!");
 

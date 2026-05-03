@@ -6,7 +6,7 @@ let totalQty = 0;
 let totalWeight = 0;
 let total = 0;
 
-function clearPanels(id) {
+export function clearPanels(id) {
     const insert = document.querySelector(`.insert-panel[data-id="${id}"]`);
     const update = document.querySelector(`.update-panel[data-id="${id}"]`);
     const holding = document.querySelector(`.holding-panel[data-id="${id}"]`);
@@ -17,7 +17,6 @@ function clearPanels(id) {
 }
 
 export function renderSelectData() {
-
     const { sideBox, container } = dom;
 
     if (!sideBox || !container) return;
@@ -73,11 +72,14 @@ export function renderInsert() {
         <input placeholder="홀딩" class="insert-holding">
         <input placeholder="동결" class="insert-frozen">
         <input placeholder="사용불가" class="insert-unuse">
-        <button class="all-insert-btn" data-action="">전체 추가</button>
+        <div class="footer">
+            <button class="all-insert-btn">전체 추가</button>
+        </div>
     `;
 }
 
 export function renderUpdate() {
+    const updateIds = []
     state.selectedItems.forEach((item, id) => {
         clearPanels(id)
 
@@ -87,33 +89,46 @@ export function renderUpdate() {
 
         if (target) {
             target.innerHTML = `
-            <input value="${item.name}" class="update-name">
-            <input value="${item.brand}" class="update-brand">
-            <input value="${item.grade}" class="update-grade">
-            <input value="${item.estNo}" class="update-estNo">
-            <input value="${item.qty}" class="update-qty">
-            <input value="${item.bl}" class="update-bl">
-            <input value="${item.warehouse}" class="update-warehouse">
-            <input value="${item.dueDate}" class="update-dueDate">
-            <input value="${item.weight}" class="update-weight">
-            <input value="${item.releaseDate}" class="update-releaseDate">
-            <input value="${item.holding}" class="update-holding">
-            <input value="${item.frozen}" class="update-frozen">
-            <input value="${item.unuse}" class="update-unuse">`;
+            <input value="${item.name}" class="update-name" data-id="${id}">
+            <input value="${item.brand}" class="update-brand" data-id="${id}">
+            <input value="${item.grade}" class="update-grade" data-id="${id}">
+            <input value="${item.estNo}" class="update-estNo" data-id="${id}">
+            <input value="${item.qty}" class="update-qty" data-id="${id}">
+            <input value="${item.bl}" class="update-bl" data-id="${id}">
+            <input value="${item.warehouse}" class="update-warehouse" data-id="${id}">
+            <input value="${item.dueDate}" class="update-dueDate" data-id="${id}">
+            <input value="${item.weight}" class="update-weight" data-id="${id}">
+            <input value="${item.releaseDate}" class="update-releaseDate" data-id="${id}">
+            <input value="${item.holding}" class="update-holding" data-id="${id}">
+            <input value="${item.frozen}" class="update-frozen" data-id="${id}">
+            <input value="${item.unuse}" class="update-unuse" data-id="${id}">`;
         }
+
+//        const target = document.querySelector(
+//           `.update-panel[data-id="${id}"]`
+//        );
+//
+//        if (!target) return;
+//
+//        target.innerHTML = `
+//                <div class="item-btns">
+//                    <button class="select-update-btn" data-id="${id}">수정</button>
+//                </div>
+//        `;
         
         totalQty += Number(item.qty) || 0;
         totalWeight += Number(item.weight) || 0;
+        updateIds.push(id);
     });
 
     const sideBox = document.querySelector("#sideBox");
-    if (!sideBox.querySelector(".all-update-btn")) {
+    if (!sideBox.querySelector(".all-btn")) {
         sideBox.insertAdjacentHTML("beforeend", `
-            <h4 class="select-no">총 ${totalQty} 박스</h4>
-            <h4 class="select-no">총 ${totalWeight}kg</h4>
-            <button class="all-update-btn" data-action="all-update">
-                전체 수정
-            </button>
+            <div class="footer">
+                <h4 class="select-no">총 ${totalQty} 박스</h4>
+                <h4 class="select-no">총 ${totalWeight}kg</h4>
+                <button class="all-update-btn" data-id="${updateIds[0]}">전체 수정</button>
+            </div>
         `);
         totalQty = 0;
         totalWeight = 0;
@@ -121,9 +136,7 @@ export function renderUpdate() {
 }
 
 export function renderHolding() {
-
     state.selectedItems.forEach((item, id) => {
-
         clearPanels(id);
 
         const target = document.querySelector(
@@ -150,12 +163,12 @@ export function renderHolding() {
 
     // 🔥 전체 버튼은 따로!
     const sideBox = document.querySelector("#sideBox");
-    if (!sideBox.querySelector(".all-crud-btn")) {
+    if (!sideBox.querySelector(".all-btn")) {
         sideBox.insertAdjacentHTML("beforeend", `
-            <h4 class="select-no">총 ${total} 박스</h4>
-            <button class="all-crud-btn" data-action="all-holding">
-                전체 홀딩
-            </button>
+            <div class="footer">
+                <h4 class="select-no">총 ${total} 박스</h4>
+                <button class="all-holding-btn">전체 홀딩</button>
+            </div>
         `);
         total = 0;
     }

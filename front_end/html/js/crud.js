@@ -18,7 +18,7 @@ export async function holdingData(item, holdQty, releaseDate, note) {
     }
 
     try {
-        // 기존 재고 차감
+        // 기존 재고 차감(수정)
         await updateItem(item.id, {
             재고: remainQty
         });
@@ -80,6 +80,42 @@ export async function insertData(name, brand, grade, estNo, qty, bl, warehouse, 
 
     } catch (error) {
         console.error("업데이트 실패:", error);
+        return null;
+    }
+}
+
+export async function updateData(item, name, brand, grade, estNo, qty, bl, warehouse, dueDate, weight,
+    releaseDate, holding, frozen, unuse) {
+
+    if (qty <= 0) {
+        alert("수량을 확인해주세요.");
+        return null;
+    }
+    
+    try {
+        // 행 수정
+        await updateItem(item.id, {
+            상품명: name, // not null
+            브랜드: brand, // not null
+            등급: grade,
+            ESTNO: estNo,
+            재고: qty, // not null
+            BL: bl, // not null
+            창고: warehouse, // not null
+            유통기한: dueDate,
+            평중: weight, // not null
+            출고일: releaseDate,
+            홀딩: holding?.trim(),
+            동결: frozen?.trim(),
+            사용불가: unuse?.trim(),
+        });
+
+        console.log("수정 완료");
+
+        return docRef.id;   // 새 문서 id 반환
+
+    } catch (error) {
+        console.error("수정 실패:", error);
         return null;
     }
 }
