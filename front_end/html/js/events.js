@@ -121,20 +121,6 @@ async function handleClick(e) {
         }
     }
 
-    // crud menu delete section btn
-    if (e.target.classList.contains("select-delete-btn")) {
-
-        const id = e.target.dataset.id;
-
-        if (!id) {console.log("뭔가 이상함:", id); return;}
-
-        state.selectedItems.delete(id);
-        await deleteItem(id);
-
-        renderAll();
-        renderHolding();
-    }
-
     // 전체 취소
     if (e.target.classList.contains("clear-btn")) {
         state.selectedItems.clear();
@@ -409,4 +395,19 @@ async function handleClick(e) {
         }, 5000);
     
     }
+
+    // crud menu delete section btn
+    if (e.target.classList.contains("select-delete-btn")) {
+
+        const id = e.target.dataset.id;
+
+        if (!id) {console.log("뭔가 이상함:", id); return;}
+
+        state.selectedItems.delete(id);
+        await deleteItem(id);
+
+        renderAll();
+        renderHolding();
+    }
+
 }

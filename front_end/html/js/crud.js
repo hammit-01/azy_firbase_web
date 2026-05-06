@@ -52,7 +52,7 @@ export async function insertData(name, brand, grade, estNo, qty, bl, warehouse, 
     releaseDate, holding, frozen, unuse) {
 
     if (qty <= 0) {
-        alert("수량을 확인해주세요.");
+        alert("입력 데이터를 확인해주세요.");
         return null;
     }
 

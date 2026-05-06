@@ -121,6 +121,7 @@ export function renderUpdate() {
             <input value="${item.frozen}" class="update-frozen" data-id="${id}">
             <input value="${item.unuse}" class="update-unuse" data-id="${id}">
             <button class="select-update-btn" data-id="${id}">수정</button>
+            <button class="select-delete-btn" data-id="${id}">삭제</button>
         `;
 
         totalQty += Number(item.qty) || 0;
@@ -151,7 +152,6 @@ export function renderHolding() {
 
                 <div class="item-btns">
                     <button class="select-holding-btn" data-id="${id}">홀딩</button>
-                    <button class="select-delete-btn" data-id="${id}">삭제</button>
                 </div>
             </div>
         `;

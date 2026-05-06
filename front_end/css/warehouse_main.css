@@ -201,9 +201,13 @@ thead {
 .clear-btn,
 .all-holding-btn,
 .all-delete-btn,
+.all-update-btn,
+.all-insert-btn,
 .cancel-btn,
 .select-delete-btn,
-.select-holding-btn {
+.select-holding-btn,
+.select-update-btn,
+.select-insert-btn {
     padding: 5px;
     color: white;
     border: none;
@@ -222,7 +226,8 @@ thead {
 /* 개별 색 */
 /* .cancel-btn { background: #bcbcbc; } */
 .all-delete-btn, .select-delete-btn { background: #ff4d40;}
-.all-holding-btn, .select-holding-btn { background: #3b82f6; }
+.select-insert-btn, .select-holding-btn, .select-update-btn { background: #3b82f6; }
+.all-update-btn, .all-insert-btn, .all-holding-btn { background: #6d28d9; }
 .clear-btn, .cancel-btn { background: #96e70c;}
 
 /* hover */
