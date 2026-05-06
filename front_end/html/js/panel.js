@@ -86,8 +86,8 @@ export function createInsertRow() {
             <input placeholder="홀딩" class="insert-holding">
             <input placeholder="동결" class="insert-frozen">
             <input placeholder="사용불가" class="insert-unuse">
-            <button class="select-insert-btn">추가</button>
         </div>
+            <button class="select-insert-btn">추가</button>
     `;
 }
 
@@ -107,28 +107,29 @@ export function renderUpdate() {
         if (!target) return;
 
         target.innerHTML = `
-            <input value="${item.name}" class="update-name" data-id="${id}">
-            <input value="${item.brand}" class="update-brand" data-id="${id}">
-            <input value="${item.grade}" class="update-grade" data-id="${id}">
-            <input value="${item.estNo}" class="update-estNo" data-id="${id}">
-            <input value="${item.qty}" class="update-qty" data-id="${id}">
-            <input value="${item.bl}" class="update-bl" data-id="${id}">
-            <input value="${item.warehouse}" class="update-warehouse" data-id="${id}">
-            <input value="${item.dueDate}" class="update-dueDate" data-id="${id}">
-            <input value="${item.weight}" class="update-weight" data-id="${id}">
-            <input value="${item.releaseDate}" class="update-releaseDate" data-id="${id}">
-            <input value="${item.holding}" class="update-holding" data-id="${id}">
-            <input value="${item.frozen}" class="update-frozen" data-id="${id}">
-            <input value="${item.unuse}" class="update-unuse" data-id="${id}">
-            <button class="select-update-btn" data-id="${id}">수정</button>
-            <button class="select-delete-btn" data-id="${id}">삭제</button>
+            <div class = "update-row" data-id="${id}">
+                <input value="${item.name}" class="update-name" data-id="${id}">
+                <input value="${item.brand}" class="update-brand" data-id="${id}">
+                <input value="${item.grade}" class="update-grade" data-id="${id}">
+                <input value="${item.estNo}" class="update-estNo" data-id="${id}">
+                <input value="${item.qty}" class="update-qty" data-id="${id}">
+                <input value="${item.bl}" class="update-bl" data-id="${id}">
+                <input value="${item.warehouse}" class="update-warehouse" data-id="${id}">
+                <input value="${item.dueDate}" class="update-dueDate" data-id="${id}">
+                <input value="${item.weight}" class="update-weight" data-id="${id}">
+                <input value="${item.releaseDate}" class="update-releaseDate" data-id="${id}">
+                <input value="${item.holding}" class="update-holding" data-id="${id}">
+                <input value="${item.frozen}" class="update-frozen" data-id="${id}">
+                <input value="${item.unuse}" class="update-unuse" data-id="${id}">
+            </div>
+                <button class="select-update-btn" data-id="${id}">수정</button>
+                <button class="select-delete-btn" data-id="${id}">삭제</button>
         `;
 
         totalQty += Number(item.qty) || 0;
         totalWeight += Number(item.weight) || 0;
     });
 }
-
 
 export function renderHolding() {
 
@@ -145,14 +146,13 @@ export function renderHolding() {
         if (!target) return;
 
         target.innerHTML = `
-            <div class="holding-data">
+            <div class="holding-row" data-id="${id}">
                 <input class="hold-qty" data-id="${id}" placeholder="개수">
-                <input class="hold-date" data-id="${id}" placeholder="날짜">
+                <input class="hold-releaseDate" data-id="${id}" placeholder="출고일자">
                 <input class="hold-note" data-id="${id}" placeholder="비고">
-
-                <div class="item-btns">
-                    <button class="select-holding-btn" data-id="${id}">홀딩</button>
-                </div>
+            </div>
+            <div class="item-btns">
+                <button class="select-holding-btn" data-id="${id}">홀딩</button>
             </div>
         `;
     });

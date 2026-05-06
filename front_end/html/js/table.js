@@ -33,9 +33,28 @@ export function renderTable() {
 
     // 검색
     if (keyword) {
-        data = data.filter(item =>
-            String(item[field] ?? "").toLowerCase().includes(keyword)
-        );
+        data = data.filter(item => {
+
+            // 🔥 전체 검색
+            if (field === "전체") {
+                return Object.values(item).some(value => {
+
+                    if (value === null || value === undefined) return false;
+
+                    // 🔥 객체 제외
+                    if (typeof value === "object") return false;
+
+                    return String(value)
+                        .toLowerCase()
+                        .includes(keyword);
+                });
+            }
+
+            // 🔥 특정 필드 검색
+            return String(item[field] ?? "")
+                .toLowerCase()
+                .includes(keyword);
+        });
     }
 
     // 데이터 정렬
@@ -58,9 +77,9 @@ export function renderTable() {
     dom.listDiv.innerHTML = "";
 
     data.forEach(item => {
-        const hold = String(item.홀딩 ?? "").trim();
-        const isFreeze = item.동결 === true;
-        const isBlocked = item.사용불가 === true;
+        const hold = String(item.holding ?? "").trim();
+        const isFreeze = item.frozen === true;
+        const isBlocked = item.unuse === true;
         const id = item.id;
         const checked = state.selectedItems.has(id);
         const row = document.createElement("tr");
@@ -79,17 +98,17 @@ export function renderTable() {
                     data-id="${item.id}"
                     ${checked ? "checked" : ""}>
             </td>
-            <td>${safeValue(item.상품명 ?? null)}</td>
-            <td>${safeValue(item.브랜드 ?? null)}</td>
-            <td>${safeValue(item.등급 ?? null)}</td>
-            <td>${safeValue(item.ESTNO ?? null)}</td>
-            <td>${safeValue(item.재고 ?? null)}</td>
-            <td>${safeValue(item.BL ?? null)}</td>
-            <td>${safeValue(item.창고 ?? null)}</td>
-            <td>${safeValue(item.유통기한 ?? null)}</td>
-            <td>${safeValue(item.평중 ?? null)}</td>
-            <td>${safeValue(item.출고일 ?? null)}</td>
-            <td>${safeValue(item.홀딩 ?? null)}</td>
+            <td>${safeValue(item.name ?? null)}</td>
+            <td>${safeValue(item.brand ?? null)}</td>
+            <td>${safeValue(item.grade ?? null)}</td>
+            <td>${safeValue(item.estNo ?? null)}</td>
+            <td>${safeValue(item.qty ?? null)}</td>
+            <td>${safeValue(item.bl ?? null)}</td>
+            <td>${safeValue(item.warehouse ?? null)}</td>
+            <td>${safeValue(item.dueDate ?? null)}</td>
+            <td>${safeValue(item.weight ?? null)}</td>
+            <td>${safeValue(item.releaseDate ?? null)}</td>
+            <td>${safeValue(item.holding ?? null)}</td>
         `;
 
         if (checked) row.classList.add("selected-row");

@@ -89,14 +89,13 @@ async function handleClick(e) {
         renderFooter("insert");
         return;
     }
-
+    // 행 추가 로직
     if (e.target.classList.contains("insertRow-btn")) {
 
         const list = document.querySelector(".insert-list");
 
         list.insertAdjacentHTML("beforeend", createInsertRow());
     }
-
     // crud menu update section btn
     if (e.target.classList.contains("update-btn")) {
         if (state.selectedItems.size === 0) alert("수정할 상품을 선택하세요.");
@@ -108,7 +107,6 @@ async function handleClick(e) {
             return;
         }
     }
-
     // crud menu holding section btn
     if (e.target.classList.contains("holding-btn")) {
         if (state.selectedItems.size === 0) alert("홀딩할 상품을 선택하세요.");
@@ -121,6 +119,7 @@ async function handleClick(e) {
         }
     }
 
+    // 선택 취소 로직
     // 전체 취소
     if (e.target.classList.contains("clear-btn")) {
         state.selectedItems.clear();
@@ -128,7 +127,6 @@ async function handleClick(e) {
         renderAll();
         return;
     }
-
     // 개별 취소
     if (e.target.classList.contains("cancel-btn")) {
 
@@ -178,6 +176,8 @@ async function handleClick(e) {
         }
     });
 
+
+    // 개별 로직
     // 데이터 추가 로직
     if (e.target.classList.contains("select-insert-btn")) {
 
@@ -262,7 +262,6 @@ async function handleClick(e) {
         }, 5000);
     
     }
-
     // 수정 로직
     if (e.target.classList.contains("select-update-btn")) {
 
@@ -311,7 +310,7 @@ async function handleClick(e) {
             document.querySelector(`.update-unuse[data-id="${id}"]`).value;
         
         // 새 홀딩 행 id 받기
-        const newId = await updateData(item, name, brand, grade, estNo, qty, bl, warehouse, dueDate, weight,
+        const newId = await updateData(item, null, name, brand, grade, estNo, qty, bl, warehouse, dueDate, weight,
     releaseDate, holding, frozen, unuse);
 
         // 체크 해제
@@ -344,7 +343,6 @@ async function handleClick(e) {
         }, 5000);
     
     }
-
     // 홀딩 로직
     if (e.target.classList.contains("select-holding-btn")) {
 
@@ -355,7 +353,7 @@ async function handleClick(e) {
             document.querySelector(`.hold-qty[data-id="${id}"]`).value;
 
         const date =
-            document.querySelector(`.hold-date[data-id="${id}"]`).value;
+            document.querySelector(`.hold-releaseDate[data-id="${id}"]`).value;
 
         const note =
             document.querySelector(`.hold-note[data-id="${id}"]`).value;
@@ -395,8 +393,7 @@ async function handleClick(e) {
         }, 5000);
     
     }
-
-    // crud menu delete section btn
+    // 삭제 로직
     if (e.target.classList.contains("select-delete-btn")) {
 
         const id = e.target.dataset.id;
@@ -410,4 +407,119 @@ async function handleClick(e) {
         renderHolding();
     }
 
+    // 전체 로직
+    if (e.target.classList.contains("all-insert-btn")) {
+        const rows = document.querySelectorAll(".insert-row");
+
+        rows.forEach(row => {
+
+            const name = row.querySelector(".insert-name")?.value || "";
+            const brand = row.querySelector(".insert-brand")?.value || "";
+            const grade = row.querySelector(".insert-grade")?.value || "";
+            const estNo = row.querySelector(".insert-estNo")?.value || "";
+            const qty = row.querySelector(".insert-qty")?.value || "";
+            const bl = row.querySelector(".insert-bl")?.value || "";
+            const warehouse = row.querySelector(".insert-warehouse")?.value || "";
+            const dueDate = row.querySelector(".insert-dueDate")?.value || "";
+            const weight = row.querySelector(".insert-weight")?.value || "";
+            const releaseDate = row.querySelector(".insert-releaseDate")?.value || "";
+            const holding = row.querySelector(".insert-holding")?.value || "";
+            const frozen = row.querySelector(".insert-frozen")?.value || "";
+            const unuse = row.querySelector(".insert-unuse")?.value || "";
+
+            console.log(row.innerHTML);
+            // 🔥 Firestore insert
+            insertData(
+                name,
+                brand,
+                grade,
+                estNo,
+                qty,
+                bl,
+                warehouse,
+                dueDate,
+                weight,
+                releaseDate,
+                holding,
+                frozen,
+                unuse
+            );
+
+        });
+
+        return;
+    }
+
+    if (e.target.classList.contains("all-update-btn")) {
+        const rows = document.querySelectorAll(".update-row");
+
+        rows.forEach(row => {
+
+            const id = row.dataset.id;
+
+            const name = row.querySelector(".update-name")?.value;
+            const brand = row.querySelector(".update-brand")?.value;
+            const grade = row.querySelector(".update-grade")?.value;
+            const estNo = row.querySelector(".update-estNo")?.value;
+            const qty = row.querySelector(".update-qty")?.value;
+            const bl = row.querySelector(".update-bl")?.value;
+            const warehouse = row.querySelector(".update-warehouse")?.value;
+            const dueDate = row.querySelector(".update-dueDate")?.value;
+            const weight = row.querySelector(".update-weight")?.value;
+            const releaseDate = row.querySelector(".update-releaseDate")?.value;
+            const holding = row.querySelector(".update-holding")?.value;
+            const frozen = row.querySelector(".update-frozen")?.value;
+            const unuse = row.querySelector(".update-unuse")?.value;
+
+            console.log(name, brand, qty, id);
+
+            // 🔥 Firestore update
+            updateData(null,
+                id,
+                name,
+                brand,
+                grade,
+                estNo,
+                qty,
+                bl,
+                warehouse,
+                dueDate,
+                weight,
+                releaseDate,
+                holding,
+                frozen,
+                unuse
+            );
+
+        });
+
+        return;
+    }
+
+    if (e.target.classList.contains("all-holding-btn")) {
+        const rows = document.querySelectorAll(".holding-row");
+
+        rows.forEach(row => {
+                
+            const id = row.dataset.id;
+            const item = state.selectedItems.get(id);
+
+            console.log(id, item)
+
+            const qty = row.querySelector(".hold-qty")?.value;
+            const releaseDate = row.querySelector(".hold-releaseDate")?.value;
+            const holding = row.querySelector(".hold-note")?.value;
+
+
+            // 🔥 Firestore update
+            holdingData(item,
+                qty,
+                releaseDate,
+                holding
+            );
+
+        });
+
+        return;
+    }
 }
