@@ -56,39 +56,57 @@ export function renderSelectData() {
 }
 
 export function renderInsert() {
-    let html = '';
+    const { sideBox } = dom;
+
+    if (!sideBox) return;
 
     sideBox.innerHTML = `
-        <input placeholder="상품명" class="insert-name">
-        <input placeholder="브랜드" class="insert-brand">
-        <input placeholder="등급" class="insert-grade">
-        <input placeholder="ESTNO" class="insert-estNo">
-        <input placeholder="수량" class="insert-qty">
-        <input placeholder="BL" class="insert-bl">
-        <input placeholder="창고" class="insert-warehouse">
-        <input placeholder="유통기한" class="insert-dueDate">
-        <input placeholder="평중" class="insert-weight">
-        <input placeholder="출고일" class="insert-releaseDate">
-        <input placeholder="홀딩" class="insert-holding">
-        <input placeholder="동결" class="insert-frozen">
-        <input placeholder="사용불가" class="insert-unuse">
-        <div class="footer">
-            <button class="all-insert-btn">전체 추가</button>
+        <div class="insert-form">
+            <div class="insert-list"></div>
+        </div>
+    `;
+
+    document.querySelector(".insert-list")
+        .insertAdjacentHTML("beforeend", createInsertRow());
+}
+
+export function createInsertRow() {
+    return `
+        <div class="insert-row">
+            <input placeholder="상품명" class="insert-name">
+            <input placeholder="브랜드" class="insert-brand">
+            <input placeholder="등급" class="insert-grade">
+            <input placeholder="ESTNO" class="insert-estNo">
+            <input placeholder="수량" class="insert-qty">
+            <input placeholder="BL" class="insert-bl">
+            <input placeholder="창고" class="insert-warehouse">
+            <input placeholder="유통기한" class="insert-dueDate">
+            <input placeholder="평중" class="insert-weight">
+            <input placeholder="출고일" class="insert-releaseDate">
+            <input placeholder="홀딩" class="insert-holding">
+            <input placeholder="동결" class="insert-frozen">
+            <input placeholder="사용불가" class="insert-unuse">
+            <button class="select-insert-btn">추가</button>
         </div>
     `;
 }
 
 export function renderUpdate() {
-    const updateIds = []
+
+    let totalQty = 0;
+    let totalWeight = 0;
+
     state.selectedItems.forEach((item, id) => {
-        clearPanels(id)
+
+        clearPanels(id);
 
         const target = document.querySelector(
             `.update-panel[data-id="${id}"]`
         );
 
-        if (target) {
-            target.innerHTML = `
+        if (!target) return;
+
+        target.innerHTML = `
             <input value="${item.name}" class="update-name" data-id="${id}">
             <input value="${item.brand}" class="update-brand" data-id="${id}">
             <input value="${item.grade}" class="update-grade" data-id="${id}">
@@ -101,42 +119,22 @@ export function renderUpdate() {
             <input value="${item.releaseDate}" class="update-releaseDate" data-id="${id}">
             <input value="${item.holding}" class="update-holding" data-id="${id}">
             <input value="${item.frozen}" class="update-frozen" data-id="${id}">
-            <input value="${item.unuse}" class="update-unuse" data-id="${id}">`;
-        }
+            <input value="${item.unuse}" class="update-unuse" data-id="${id}">
+            <button class="select-update-btn" data-id="${id}">수정</button>
+        `;
 
-//        const target = document.querySelector(
-//           `.update-panel[data-id="${id}"]`
-//        );
-//
-//        if (!target) return;
-//
-//        target.innerHTML = `
-//                <div class="item-btns">
-//                    <button class="select-update-btn" data-id="${id}">수정</button>
-//                </div>
-//        `;
-        
         totalQty += Number(item.qty) || 0;
         totalWeight += Number(item.weight) || 0;
-        updateIds.push(id);
     });
-
-    const sideBox = document.querySelector("#sideBox");
-    if (!sideBox.querySelector(".all-btn")) {
-        sideBox.insertAdjacentHTML("beforeend", `
-            <div class="footer">
-                <h4 class="select-no">총 ${totalQty} 박스</h4>
-                <h4 class="select-no">총 ${totalWeight}kg</h4>
-                <button class="all-update-btn" data-id="${updateIds[0]}">전체 수정</button>
-            </div>
-        `);
-        totalQty = 0;
-        totalWeight = 0;
-    }
 }
 
+
 export function renderHolding() {
+
+    let total = 0;
+
     state.selectedItems.forEach((item, id) => {
+
         clearPanels(id);
 
         const target = document.querySelector(
@@ -157,19 +155,51 @@ export function renderHolding() {
                 </div>
             </div>
         `;
-        
-        
+    });
+}
+
+export function renderFooter(type) {
+    console.log("footer 실행됨");
+
+    const { sideBox } = dom;
+
+    sideBox.querySelectorAll(".footer").forEach(el => el.remove());
+
+    let totalQty = 0;
+    let totalWeight = 0;
+
+    state.selectedItems.forEach(item => {
+        totalQty += Number(item.qty) || 0;
+        totalWeight += Number(item.weight) || 0;
     });
 
-    // 🔥 전체 버튼은 따로!
-    const sideBox = document.querySelector("#sideBox");
-    if (!sideBox.querySelector(".all-btn")) {
-        sideBox.insertAdjacentHTML("beforeend", `
+    let html = '';
+
+    if (type === "update") {
+        html = `
             <div class="footer">
-                <h4 class="select-no">총 ${total} 박스</h4>
+                <div>총 ${totalQty} 박스</div>
+                <div>총 ${totalWeight}kg</div>
+                <button class="all-update-btn">전체 수정</button>
+            </div>
+        `;
+    } else if (type === "holding") {
+        html = `
+            <div class="footer">
+                <div>총 ${totalQty} 박스</div>
                 <button class="all-holding-btn">전체 홀딩</button>
             </div>
-        `);
-        total = 0;
+        `;
+    } else if (type === "insert") {
+        html = `
+            <div class="top-bar">
+                <button class="insertRow-btn">행 추가</button>
+            </div>
+            <div class="footer">
+                <button class="all-insert-btn">전체 추가</button>
+            </div>
+        `
     }
+
+    sideBox.insertAdjacentHTML("beforeend", html);
 }

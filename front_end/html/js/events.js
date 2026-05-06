@@ -4,6 +4,8 @@ import { renderSelectData } from "./panel.js";
 import { renderInsert } from "./panel.js";
 import { renderUpdate } from "./panel.js";
 import { renderHolding } from "./panel.js";
+import { renderFooter } from "./panel.js";
+import { createInsertRow } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData } from "./crud.js";
 import { insertData } from "./crud.js";
@@ -59,9 +61,11 @@ function handleChange(e) {
     switch (mode) {
         case "update":
             renderUpdate();
+            renderFooter("update");
             break;
         case "holding":
             renderHolding();
+            renderFooter("holding");
             break;
         default:
             renderSelectData();
@@ -82,27 +86,37 @@ async function handleClick(e) {
         
         renderAll();
         renderInsert();
+        renderFooter("insert");
         return;
+    }
+
+    if (e.target.classList.contains("insertRow-btn")) {
+
+        const list = document.querySelector(".insert-list");
+
+        list.insertAdjacentHTML("beforeend", createInsertRow());
     }
 
     // crud menu update section btn
     if (e.target.classList.contains("update-btn")) {
-        state.crudMode = null;
         if (state.selectedItems.size === 0) alert("수정할 상품을 선택하세요.");
         else {
-            renderUpdate();
             state.crudData = "update";
+            renderSelectData();
+            renderUpdate();
+            renderFooter("update");
             return;
         }
     }
 
     // crud menu holding section btn
     if (e.target.classList.contains("holding-btn")) {
-        state.crudMode = null;
         if (state.selectedItems.size === 0) alert("홀딩할 상품을 선택하세요.");
         else {
-            renderHolding();
             state.crudData = "holding";
+            renderSelectData();
+            renderHolding();
+            renderFooter("holding");
             return;
         }
     }
@@ -150,10 +164,12 @@ async function handleClick(e) {
             case "update":
                 renderAll();
                 renderUpdate();
+                renderFooter("update");
                 break;
             case "holding":
                 renderAll();
                 renderHolding();
+                renderFooter("holding");
                 break;
             default:
                 renderAll();
@@ -161,7 +177,6 @@ async function handleClick(e) {
 
         return;
     }
-
 
     document.addEventListener("input", (e) => {
 
@@ -178,7 +193,7 @@ async function handleClick(e) {
     });
 
     // 데이터 추가 로직
-    if (e.target.classList.contains("all-insert-btn")) {
+    if (e.target.classList.contains("select-insert-btn")) {
 
         const id = e.target.dataset.id;
         const item = state.selectedItems.get(id);
@@ -263,7 +278,7 @@ async function handleClick(e) {
     }
 
     // 수정 로직
-    if (e.target.classList.contains("all-update-btn")) {
+    if (e.target.classList.contains("select-update-btn")) {
 
         const id = e.target.dataset.id;
         const item = state.selectedItems.get(id);
@@ -394,5 +409,4 @@ async function handleClick(e) {
         }, 5000);
     
     }
-
 }
