@@ -63,7 +63,6 @@ def get_data(session, ip_port, path, scustcd, scmdept):
         "pass_fg": "*"
     }
 
-    print(payload)
     res = session.post(url, data=payload)  
 
     # 3️⃣ HTML 파싱
@@ -84,7 +83,7 @@ def get_data(session, ip_port, path, scustcd, scmdept):
 
 def start_crawling():
     # 크롤링
-    warehouse_list = pd.read_excel("warehouse_list.xlsx")
+    warehouse_list = pd.read_excel("back_end/data/warehouse_list.xlsx")
 
     warehouse_list.columns = warehouse_list.iloc[0]   # 첫 행을 컬럼으로 설정
     warehouse_list = warehouse_list[1:].reset_index(drop=True)  # 첫 행 제거
@@ -105,8 +104,6 @@ def start_crawling():
 
             ip_port = str(row["ip포트"])
             path = str(row["약식주소"])
-            
-            print(users)
 
             for user_type, id, pw, scustcd, scmdept in users:
                 session = requests.Session()
@@ -118,13 +115,9 @@ def start_crawling():
                 data = get_data(session, ip_port, path, scustcd, scmdept)
                 
                 data["창고"] = row["창고"]
-                data["수집일"] = pd.Timestamp.now().strftime("%Y%m%d")
                 
                 all_data.append(data)
 
     final_df = pd.concat(all_data, ignore_index=True)
-    final_df.to_excel("final_df.xlsx", index=False)
-
-    print(final_df.head())
     
     return final_df

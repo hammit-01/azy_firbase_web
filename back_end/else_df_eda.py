@@ -140,7 +140,7 @@ def else_df_eda(df):
     # 소비기한제조일자
     s = df["소비기한제조일자"].astype(str)
     # 날짜 분리
-    df[["유통기한", "소비기한"]] = s.str.extract(
+    df[["유통기한", "제조일자"]] = s.str.extract(
         r"(\d{4}\.\d{2}\.\d{2})\D*(\d{4}\.\d{2}\.\d{2})?"
     )
     df = df.drop(columns=["소비기한제조일자"], errors="ignore")

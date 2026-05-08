@@ -19,10 +19,27 @@ export function bindEvents() {
     document.addEventListener("change", handleChange);
     document.addEventListener("click", handleClick);
     
-    dom.searchInput.addEventListener("input", renderTable);
-    dom.searchField.addEventListener("change", renderTable);
-    dom.sortField.addEventListener("change", renderTable);
-    dom.sortOrder.addEventListener("change", renderTable);
+    
+
+    dom.searchInput.addEventListener("input", () => {
+        renderTable();
+    });
+
+    dom.searchField.addEventListener("change", () => {
+        renderTable();
+    });
+
+    dom.sortField.addEventListener("change", () => {
+        renderTable();
+    });
+
+    dom.sortOrder.addEventListener("change", () => {
+        renderTable();
+    });
+    
+    dom.sortField2.addEventListener("change", () => {
+        renderTable();
+    });
 }
 
 function renderAll() {
@@ -55,7 +72,6 @@ function handleChange(e) {
 
     const mode = state.crudData; // 👉 Map 대신 이거 추천
 
-    console.log(mode)
     renderAll();
 
     switch (mode) {
@@ -143,7 +159,6 @@ async function handleClick(e) {
 
         const mode = state.crudData;
 
-        console.log(mode)
         switch (mode) {
             case "update":
                 renderAll();
@@ -268,8 +283,6 @@ async function handleClick(e) {
         const id = e.target.dataset.id;
         const item = state.selectedItems.get(id);
 
-        console.log("id:", id);
-        console.log(document.querySelector(`.update-name[data-id="${id}"]`));
         const name =
             document.querySelector(`.update-name[data-id="${id}"]`).value;
 
@@ -369,8 +382,6 @@ async function handleClick(e) {
 
         renderAll();
 
-        console.log("홀딩중!!!!!");
-
         // 새 행으로 스크롤 이동
         setTimeout(() => {
             const targetRow =
@@ -395,10 +406,7 @@ async function handleClick(e) {
     }
     // 삭제 로직
     if (e.target.classList.contains("select-delete-btn")) {
-
         const id = e.target.dataset.id;
-
-        if (!id) {console.log("뭔가 이상함:", id); return;}
 
         state.selectedItems.delete(id);
         await deleteItem(id);
@@ -427,7 +435,6 @@ async function handleClick(e) {
             const frozen = row.querySelector(".insert-frozen")?.value || "";
             const unuse = row.querySelector(".insert-unuse")?.value || "";
 
-            console.log(row.innerHTML);
             // 🔥 Firestore insert
             insertData(
                 name,
@@ -471,8 +478,6 @@ async function handleClick(e) {
             const frozen = row.querySelector(".update-frozen")?.value;
             const unuse = row.querySelector(".update-unuse")?.value;
 
-            console.log(name, brand, qty, id);
-
             // 🔥 Firestore update
             updateData(null,
                 id,
@@ -500,12 +505,8 @@ async function handleClick(e) {
         const rows = document.querySelectorAll(".holding-row");
 
         rows.forEach(row => {
-                
             const id = row.dataset.id;
             const item = state.selectedItems.get(id);
-
-            console.log(id, item)
-
             const qty = row.querySelector(".hold-qty")?.value;
             const releaseDate = row.querySelector(".hold-releaseDate")?.value;
             const holding = row.querySelector(".hold-note")?.value;

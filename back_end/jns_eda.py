@@ -1,3 +1,4 @@
+# 제니스 창고 eda
 def jns_eda(df):
     df = df.drop_duplicates()
     df = df.drop(columns=["창고", "평균중량", "수집일"], errors="ignore")
@@ -9,7 +10,7 @@ def jns_eda(df):
         "삼진2냉장": "곤삼진2"
     })
     
-    df.rename(columns={"저장구역": "창고", "소비기한제조일자": "소비기한","적재수량": "제조일자", "허용수량": "평균중량"}, inplace=True)
+    df.rename(columns={"저장구역": "창고", "소비기한제조일자": "유통기한","적재수량": "제조일자", "허용수량": "평균중량"}, inplace=True)
     
     # BL / 이력번호
     s = df["B/L NO식별번호"].astype(str)

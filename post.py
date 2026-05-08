@@ -36,6 +36,12 @@ def to_date(x):
     except:
         return ""
 
+def to_float(x):
+
+    if pd.isna(x):
+        return ""
+
+    return float(str(x).replace(",", ""))
 
 
 def to_int(x):
@@ -46,7 +52,22 @@ def to_int(x):
     except:
         return 0
 
-def post():
+def to_str(x):
+
+    # NaN 처리
+    if pd.isna(x):
+        return ""
+
+    # 문자열 변환
+    x = str(x).strip()
+
+    # 엑셀 숫자형 .0 제거
+    if x.endswith(".0"):
+        x = x[:-2]
+
+    return x
+
+def post(df):
     today = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d")
 
     # Firebase 초기화
@@ -56,46 +77,35 @@ def post():
 
     db = firestore.client()
 
-    # 엑셀 읽기
-    # df = pd.read_excel("back_end/jns.xlsx")
-    df = pd.read_excel(
-        "back_end/data/[창고]재고장(전미림).xlsx",
-        sheet_name="재고장"
-    )
-
-    xls = pd.ExcelFile("back_end/data/[창고]재고장(전미림).xlsx")
-    print(xls.sheet_names)
-
-    print(df.head())
-
     # 업로드
     for _, row in df.iterrows():
         doc_ref = db.collection("all_data").document()
 
         doc_ref.set({
             "id": doc_ref.id,
-            "상품명": str(row.get("품목", "")).strip(),
-            "브랜드": str(row.get("브랜드", "")).strip(),
-            "등급": str(row.get("등급", "")).strip(),
-            "ESTNO": str(row.get("EST", "")).strip(),
-            "재고": to_int(row.get("현재고")),
-            "BL": str(row.get("BL", "")).strip(),
+            "상품명": to_str(row.get("수탁품", "")).strip(),
+            "브랜드": to_str(row.get("브랜드", "")).strip(),
+            "등급": to_str(row.get("등급", "")).strip(),
+            "ESTNO": to_str(row.get("ESTNO", "")).strip(),
+            "재고": to_int(row.get("재고수량")),
+            "BL": to_str(row.get("BL번호", "")).strip(),
 
-            "창고": str(row.get("창고", "")).strip(),
+            "창고": to_str(row.get("창고", "")).strip(),
             "유통기한": to_date(row.get("유통기한")),
-            "중량": True if pd.notna(row.get("중량")) else "",
-            "평중": str(row.get("평중", "")).strip(),
-            "출고일": str(row.get("출고예정일")),
-            "홀딩": str(row.get("비고")),
+            "중량": to_float(row.get("중량")),
+            "평중": to_float(row.get("평균중량", "")),
+            "출고일": True if str(to_date(row.get("출고예정일"))) else "",
+            "홀딩": True if str(to_str(row.get("비고"))) else "",
 
-            "이력번호": True if pd.notna(row.get("이력번호")) else "",
-            "가공일자": True if pd.notna(row.get("소비기한")) else "",
+            "이력번호": to_str(row.get("이력번호", "")),
+            "가공일자": True if pd.notna(to_date(row.get("재조일자"))) else "",
             "수집일": str(today),
             "동결": True if pd.notna(row.get("동결")) else "",
             "사용불가": True if pd.notna(row.get("사용불가")) else ""
         })
 
 
-    print("🔥 업로드 완료")
+    print("🔥 DB 업로드 완료")
 
-post()
+df = pd.read_excel("total_data.xlsx")
+post(df)

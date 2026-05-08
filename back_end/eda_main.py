@@ -3,14 +3,15 @@ from back_end.rename_column import rename_column
 from back_end.else_df_eda import else_df_eda
 from back_end.replace_name import replace_name
 from back_end.jns_eda import jns_eda
-
+from back_end.ch_plz_eda import ch_eda
+from back_end.ch_plz_eda import plz_eda
 
 def list_eda(df):
     column = [ # 19컬럼
         "사업부","수탁품","품목코드","규격단위중량","단위",
         "LOT-NO","B/L NO식별번호","ESTNO","저장구역","재고수량",
         "중량","허용수량","담보수량","적재수량","PLT수량",
-        "소비기한제조일자","통관구분원산지","창고","수집일"
+        "소비기한제조일자","통관구분원산지","창고"
     ]
     
     # CS -> 한라동탄, 한라동탄 -> CS, 한라곤지암 -> 한라 로 변경
@@ -20,15 +21,15 @@ def list_eda(df):
         "한라곤지암": "한라"
     })
     
-    # df 창고별 분리
-    new_df = df[df["창고"].isin(["강동1", "강동2","경인","삼진1", "삼진2","대청","한라","한라동탄"])].copy()
-    new_df.columns = column
+    # 열 전처리 필요한 창고
+    six_df = df[df["창고"].isin(["강동1", "강동2","경인","삼진1", "삼진2","대청","한라","한라동탄"])].copy()
+    six_df.columns = column
 
-    new_df = new_df[new_df["사업부"].astype(str).str.strip() != "유통사업부"]
-    new_df = new_df[new_df["사업부"].astype(str).str.strip() != "제니스유통"]
+    six_df = six_df[six_df["사업부"].astype(str).str.strip() != "유통사업부"]
+    six_df = six_df[six_df["사업부"].astype(str).str.strip() != "제니스유통"]
     
     # 열 조정
-    new_df = new_df.drop(columns=["사업부", "품목코드", "단위", "LOT-NO", "저장구역", "PLT수량", "적재수량","통관구분원산지"], errors="ignore")
+    six_df = six_df.drop(columns=["사업부", "품목코드", "단위", "LOT-NO", "저장구역", "PLT수량", "적재수량","통관구분원산지"], errors="ignore")
 
     # 열 전처리 필요없는 창고
     ch = df[df["창고"] == "시에이치물류"].copy()
@@ -43,20 +44,16 @@ def list_eda(df):
     jns = jns.drop(columns=["B/L NO식별번호","품목코드","PLT수량","소비기한제조일자","PLT수량","통관구분원산지"], errors="ignore")
     plz = plz.drop(columns=["사업부", "규격단위중량", "단위", "ESTNO", "담보수량","소비기한제조일자","통관구분원산지","PLT수량", "허용수량"], errors="ignore")
 
-
-
-
     # 함수 적용
-    ch, jns, plz = rename_column(ch, jns, plz) # 이건 아직 전처리 미완성
-    kd,ki,sjn,dch,hlk,hld = else_df_eda(new_df)
+    ch, jns, plz = rename_column(ch, jns, plz)
+    kd,ki,sjn,dch,hlk,hld = else_df_eda(six_df)
 
     columns = [
         "수탁품","브랜드","등급","ESTNO","평균중량","BL번호",
         "이력번호","재고수량",
         "중량","허용수량",
         "담보수량","창고",
-        "유통기한","소비기한",
-        "수집일"
+        "유통기한","제조일자"
     ]
 
     kd = kd.reindex(columns=columns)
@@ -74,12 +71,15 @@ def list_eda(df):
     six_warehouse = six_warehouse.drop(columns=["허용수량", "담보수량"], errors="ignore")
     
     six_warehouse["평균중량"] = six_warehouse["평균중량"].str.replace("KG", "", regex=False)
-    six_warehouse.to_excel("six_warehouse2.xlsx", index=False)
     
     jns = jns_eda(jns)
-    jns = pd.concat([six_warehouse, jns], ignore_index=True)
     jns = jns[jns["수탁품"].notna()]
-    jns.to_excel("C:/Users/OWNER/.streamlit/azy_warehouse/data/jns.xlsx", index=False)
-    jns.to_excel("jns.xlsx", index=False)
+    # jns.to_excel("C:/Users/OWNER/.streamlit/azy_warehouse/data/jns.xlsx", index=False)
 
-    return df
+    ch = ch_eda(ch)
+    plz = plz_eda(plz)
+
+    total_data = pd.concat([six_warehouse, jns, ch, plz], ignore_index=True)
+    total_data.to_excel("total_data.xlsx", index=False)
+
+    return total_data

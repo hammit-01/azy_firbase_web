@@ -29,10 +29,6 @@ export function renderSelectData() {
 
     container.classList.add("active");
 
-    state.selectedItems.forEach((item, id) => {
-        console.log(id, item);
-    });
-
     let html = '';
 
     selectedItems.forEach((item, id) => {
@@ -95,10 +91,11 @@ export function renderUpdate() {
 
     let totalQty = 0;
     let totalWeight = 0;
+    state.selectedItems.forEach((item, id) => {
+        clearPanels(id);
+    });
 
     state.selectedItems.forEach((item, id) => {
-
-        clearPanels(id);
 
         const target = document.querySelector(
             `.update-panel[data-id="${id}"]`
@@ -122,8 +119,10 @@ export function renderUpdate() {
                 <input value="${item.frozen}" class="update-frozen" data-id="${id}">
                 <input value="${item.unuse}" class="update-unuse" data-id="${id}">
             </div>
+            <div class = "item-btns">
                 <button class="select-update-btn" data-id="${id}">수정</button>
                 <button class="select-delete-btn" data-id="${id}">삭제</button>
+            </div>
         `;
 
         totalQty += Number(item.qty) || 0;
@@ -136,8 +135,9 @@ export function renderHolding() {
     let total = 0;
 
     state.selectedItems.forEach((item, id) => {
-
         clearPanels(id);
+    });
+    state.selectedItems.forEach((item, id) => {
 
         const target = document.querySelector(
             `.holding-panel[data-id="${id}"]`
@@ -159,8 +159,6 @@ export function renderHolding() {
 }
 
 export function renderFooter(type) {
-    console.log("footer 실행됨");
-
     const { sideBox } = dom;
 
     sideBox.querySelectorAll(".footer").forEach(el => el.remove());

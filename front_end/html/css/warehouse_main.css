@@ -156,6 +156,25 @@ thead {
     width: 100%;
 }
 
+.footer {
+    padding-left: 10px;
+}
+
+.select-insert-btn, .insertRow-btn,
+.select-update-btn, .select-delete-btn,
+.select-holding-btn,
+.footer {
+    display: flex;
+    justify-self: end;
+    gap: 10px;
+}
+
+.update-panel, .insert-panel, .holding-panel {
+    display: flex;
+    justify-content: space-between;
+    width: stretch;
+}
+
 .select-no, .all-crud-btn {
     margin: 0;
     font-weight: 600;
