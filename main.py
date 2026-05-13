@@ -3,8 +3,14 @@ from back_end.eda_main import list_eda
 from post import post
 
 # 통합 창고 크롤링
-df = start_crawling()
+final_df, warehouse_dfs = start_crawling()
+
+# final_df.to_excel("df.xlsx", index=False)
+
+# for name, df in warehouse_dfs.items():
+#     df.to_excel(f"{name}.xlsx", index=False)
+
 # 창고 데이터 EDA
-total_df = list_eda(df)
+total_df = list_eda(warehouse_dfs)
 # 창고 데이터 DB 업로드
-post(total_df)
+# post(total_df)

@@ -4,7 +4,7 @@ import pandas as pd
 def ch_eda(ch):
     ch = ch.drop_duplicates()
 
-    ch["창고"] = "ch"
+    ch["창고"] = "CH"
 
     ch[["유통기한", "제조일자"]] = (ch["소비기한제조일자"].apply(split_dates))
 

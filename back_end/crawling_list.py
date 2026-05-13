@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+from requests.exceptions import RequestException, Timeout, ConnectionError
 
 def get_users(row):
     users = []
@@ -18,67 +19,165 @@ def get_users(row):
         users.append(("웹출고(통관분)", row["웹출고(통관분)_아이디"], row["웹출고(통관분)_비밀번호"], row["scustcd"], row["scmdept"]))
 
     return users        
-    
-def login(session, ip_port, path, id, pw):
-    base = f"http://211.239.173.{ip_port}"
-    login_url = f"{base}/{path}/login.do"
 
-    # 1️⃣ 먼저 페이지 접근 (쿠키 획득)
-    session.get(login_url)
 
-    # 2️⃣ 헤더 추가
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Referer": login_url
+SPECIAL_SITES = {
+    "베이지박스투": {
+        "login": "http://211.239.173.91:8080/bbtdst/login.do",
+        "data": "http://211.239.173.91:8080/bbtdst/rtv_stock.do"
+    },
+
+    "삼일물류": {
+        "login": "http://nwill.net:8080/sidst/login.do",
+        "data": "http://nwill.net:8080/sidst/rtv_stock.do"
+    },
+
+    "신우냉장": {
+        "login": "http://nwill.net:8080/swdst/login.do",
+        "data": "http://nwill.net:8080/swdst/rtv_stock.do"
+    },
+
+    "오로라CS": {
+        "login": "http://211.239.173.90:8080/aurdst/login.do",
+        "data": "http://211.239.173.90:8080/aurdst/rtv_stock.do"
+    },
+
+    "이스트밸리": {
+        "login": "http://nwill.net:8080/estdst/login.do",
+        "data": "http://nwill.net:8080/estdst/rtv_stock.do"
+    },
+
+    "효성냉장": {
+        "login": "http://coldwms.hyosung.com/login.do",
+        "data": "http://coldwms.hyosung.com/rtv_stock.do"
+    },
+
+    "희창냉장": {
+        "login": "http://nwill.net/hcy1dst/login.do",
+        "data": "http://nwill.net/hcy1dst/rtv_stock.do"
+    },
+
+    "SWC": {
+        "login": "http://nwill.net:8080/nswdst/login.do",
+        "data": "http://nwill.net:8080/nswdst/rtv_stock.do"
     }
+}
 
-    # 3️⃣ 로그인 POST
-    res = session.post(
-        login_url,
-        data={"id": id, "pw": pw},
-        headers=headers
-    )
-
-    return res
+def get_loginUrls(ip_port, path, warehouse):
+    if warehouse in SPECIAL_SITES:
+        return SPECIAL_SITES[warehouse]["login"]
+    else:
+        base = f"http://211.239.173.{ip_port}"
+        return f"{base}/{path}/login.do"
 
 
-def get_data(session, ip_port, path, scustcd, scmdept):
-    # 데이터 요청
-    url = f"http://211.239.173.{ip_port}/{path}/rtv_stock.do"
+def login(session, ip_port, path, id, pw, warehouse):
 
-    dt = pd.Timestamp.now().strftime("%Y%m%d")
+    try:
+        login_url = get_loginUrls(ip_port, path, warehouse)
 
-    if pd.isna(scmdept):
-        scmdept = "00"
-    
-    # 나중에 창고별로 만들어둬야함
-    payload = {
-        "nav_num": "0102",
-        "scmdept": scmdept, #
-        "swms_cd": "",
-        "scustcd": scustcd, #
-        "pmname": "",
-        "blno": "",
-        "dt": dt,
-        "pass_fg": "*"
-    }
+        # 1️⃣ 페이지 접근
+        first_res = session.get(
+            login_url,
+            timeout=10
+        )
 
-    res = session.post(url, data=payload)  
+        first_res.raise_for_status()
 
-    # 3️⃣ HTML 파싱
-    soup = BeautifulSoup(res.text, "html.parser")
+        # 2️⃣ 헤더
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Referer": login_url
+        }
 
-    rows = soup.select("tbody tr")
+        # 3️⃣ 로그인 요청
+        res = session.post(
+            login_url,
+            data={
+                "id": id,
+                "pw": pw
+            },
+            headers=headers,
+            timeout=10
+        )
 
-    data = []
-    for row in rows:
-        cols = [td.get_text(strip=True).replace("\n", " ") for td in row.find_all("td")]
-        if cols:
-            data.append(cols)
-    
-    df = pd.DataFrame(data)
-    
-    return  df
+        res.raise_for_status()
+
+        # 4️⃣ 로그인 성공 여부 체크
+        # 사이트 구조에 맞게 수정 필요
+        if "로그아웃" in res.text or "logout" in res.text.lower():
+            print(f"[{warehouse}] 로그인 성공")
+            return res
+
+        elif "아이디" in res.text and "비밀번호" in res.text:
+            raise Exception("아이디 또는 비밀번호 불일치")
+
+        else:
+            raise Exception("로그인 실패 (원인 불명)")
+
+    except Timeout:
+        print(f"[{warehouse}] 서버 응답 시간 초과")
+
+    except ConnectionError:
+        print(f"[{warehouse}] 서버 연결 실패")
+
+    except RequestException as e:
+        print(f"[{warehouse}] HTTP 오류: {e}")
+
+    except Exception as e:
+        print(f"[{warehouse}] 로그인 오류: {e}")
+
+    return None
+
+
+def get_data(session, ip_port, path, scustcd, scmdept, warehouse):
+    url = ""
+    try:
+        if warehouse in SPECIAL_SITES:
+            url = SPECIAL_SITES[warehouse]["data"]
+        else:
+            url = f"http://211.239.173.{ip_port}/{path}/rtv_stock.do"
+
+        dt = pd.Timestamp.now().strftime("%Y%m%d")
+
+        if pd.isna(scmdept):
+            scmdept = "00"
+
+        payload = {
+            "nav_num": "0102",
+            "scmdept": scmdept,
+            "swms_cd": "",
+            "scustcd": scustcd,
+            "pmname": "",
+            "blno": "",
+            "dt": dt,
+            "pass_fg": "*"
+        }
+
+        res = session.post(url, data=payload, timeout=15)
+
+        res.raise_for_status()
+
+        soup = BeautifulSoup(res.text, "html.parser")
+
+        rows = soup.select("tbody tr")
+
+        data = []
+
+        for row in rows:
+            cols = [
+                td.get_text(strip=True).replace("\n", " ")
+                for td in row.find_all("td")
+            ]
+
+            if cols:
+                data.append(cols)
+
+        return pd.DataFrame(data)
+
+    except Exception as e:
+        print(f"데이터 수집 실패: {e}")
+        return pd.DataFrame()
 
 
 def start_crawling():
@@ -87,14 +186,26 @@ def start_crawling():
 
     warehouse_list.columns = warehouse_list.iloc[0]   # 첫 행을 컬럼으로 설정
     warehouse_list = warehouse_list[1:].reset_index(drop=True)  # 첫 행 제거
-    warehouse_list = warehouse_list[(warehouse_list["타사이트"] != True) &(warehouse_list["주소"].notna())]
 
-    wh_90 = warehouse_list[warehouse_list["ip포트"] == 90]
+    wh_90 = warehouse_list[warehouse_list["ip포트"] == "90"]
     wh_88 = warehouse_list[warehouse_list["ip포트"] == "88:8080"]
     wh_91 = warehouse_list[warehouse_list["ip포트"] == "91:8080"]
+    wh_else = warehouse_list[
+        warehouse_list["창고"].isin([
+            "베이지박스투",
+            "삼일물류",
+            "신우냉장",
+            "오로라CS",
+            "이스트밸리",
+            "효성냉장",
+            "희창냉장",
+            "SWC"
+        ])
+    ]
 
-    dfs = [wh_90, wh_88, wh_91]
-    names = ["wh_90", "wh_88", "wh_91"]
+    for name in warehouse_list["창고"].unique():
+        print(repr(name))
+    dfs = [wh_90, wh_88, wh_91, wh_else]
 
     all_data = []
 
@@ -102,22 +213,40 @@ def start_crawling():
         for _, row in df.iterrows():
             users = get_users(row)
 
+            warehouse = str(row["창고"])
             ip_port = str(row["ip포트"])
             path = str(row["약식주소"])
 
             for user_type, id, pw, scustcd, scmdept in users:
                 session = requests.Session()
 
-                res = login(session, ip_port, path, id, pw)
+                res = login(session, ip_port, path, id, pw, warehouse)
+                if res is None:
+                    continue
 
                 print(f"{user_type} 로그인:", res.status_code, row["창고"])
 
-                data = get_data(session, ip_port, path, scustcd, scmdept)
+                data = get_data(session, ip_port, path, scustcd, scmdept, warehouse)
                 
                 data["창고"] = row["창고"]
+                
+                # 창고 기준으로 중복 행 제거
+                data = data.drop_duplicates()
+
+                # CS -> 한라동탄, 한라동탄 -> CS, 한라곤지암 -> 한라 로 변경
+                data["창고"] = data["창고"].replace({
+                    "CS": "한라 동탄",
+                    "한라동탄": "CS",
+                    "한라곤지암": "한라"
+                })
                 
                 all_data.append(data)
 
     final_df = pd.concat(all_data, ignore_index=True)
+
+    warehouse_dfs = {
+            name: group.copy()
+            for name, group in final_df.groupby("창고")
+        }
     
-    return final_df
+    return final_df, warehouse_dfs

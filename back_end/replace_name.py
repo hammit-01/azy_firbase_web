@@ -1,4 +1,12 @@
 def replace_name(df):
+    df["BL번호"] = df["BL번호"].replace("*", "")
+    df["수탁품"] = df["수탁품"].replace("(우)", "")
+    df["수탁품"] = df["수탁품"].replace("(돈)", "")
+    df["수탁품"] = df["수탁품"].replace("(계)", "")
+    df["수탁품"] = df["수탁품"].replace("♥", "")
+    df["수탁품"] = df["수탁품"].replace("#4-", "")
+    df["수탁품"] = df["수탁품"].replace("☆", "")
+
     df["수탁품"] = df["수탁품"].replace({
         "척빽립": "BBQ탕갈비",
         "다리살": "닭장각정육",

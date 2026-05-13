@@ -158,9 +158,6 @@ def else_df_eda(df):
     df["기타정보"] = df["수탁품"].str.replace(r"[가-힣\s]", "", regex=True)
     df["수탁품"] = df["수탁품"].str.replace(r"[^가-힣\s]", "", regex=True).str.strip()
 
-
-
-
     # 창고별 분리
     kd = df[df["창고"].isin(["강동1", "강동2"])].copy()
     kd = kd_eda(kd)
@@ -171,14 +168,7 @@ def else_df_eda(df):
     
     dch = df[df["창고"] == "대청"].copy()
     hlk = df[df["창고"] == "한라"].copy()
-    hld = df[df["창고"] == "한라동탄"].copy()
+    hld = df[df["창고"] == "한라 동탄"].copy()
     dch, hlk, hld = eda(dch, hlk, hld)
-        
-    kd = kd.drop_duplicates()
-    ki = ki.drop_duplicates()
-    sjn = sjn.drop_duplicates()
-    dch = dch.drop_duplicates()
-    hlk = hlk.drop_duplicates()
-    hld = hld.drop_duplicates()
 
     return kd,ki,sjn,dch,hlk,hld

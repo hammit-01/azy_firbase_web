@@ -16,29 +16,107 @@ import { calculateTotal } from "./input_calculater.js";
 
 export function bindEvents() {
 
+    // =========================
+    // input
+    // =========================
+    dom.searchInput?.addEventListener("input", () => {
+        renderTable();
+    });
+
+    dom.searchField?.addEventListener("change", () => {
+        renderTable();
+    });
+
+    dom.sortField2?.addEventListener("change", () => {
+        renderTable();
+    });
+
+    // =========================
+    // checkbox change
+    // =========================
     document.addEventListener("change", handleChange);
+
+    // =========================
+    // click
+    // =========================
     document.addEventListener("click", handleClick);
-    
-    
 
-    dom.searchInput.addEventListener("input", () => {
+    // =========================
+    // 헤더 정렬
+    // =========================
+    document.addEventListener("click", (e) => {
+
+        const th =
+            e.target.closest("th[data-key]");
+
+        if (!th) return;
+
+        const key =
+            th.dataset.key;
+
+        // 기본 정렬 OFF
+        state.useDefaultOrder = false;
+
+        // 같은 컬럼 클릭
+        if (state.sortKey === key) {
+
+            state.sortOrder =
+                state.sortOrder === "asc"
+                    ? "desc"
+                    : "asc";
+
+        } else {
+
+            state.sortKey = key;
+            state.sortOrder = "asc";
+        }
+
         renderTable();
     });
 
-    dom.searchField.addEventListener("change", () => {
-        renderTable();
-    });
+    // =========================
+    // 기본 정렬 버튼
+    // =========================
+    const orderBtn =
+        document.querySelector(".order-btn");
 
-    dom.sortField.addEventListener("change", () => {
-        renderTable();
-    });
+    if (orderBtn) {
 
-    dom.sortOrder.addEventListener("change", () => {
-        renderTable();
-    });
-    
-    dom.sortField2.addEventListener("change", () => {
-        renderTable();
+        orderBtn.addEventListener("click", () => {
+
+            console.log("기본 정렬");
+
+            // 헤더 정렬 제거
+            state.sortKey = null;
+
+            // 기본 정렬 활성화
+            state.useDefaultOrder = true;
+
+            renderTable();
+        });
+    }
+
+    // =========================
+    // hold qty 계산
+    // =========================
+    document.addEventListener("input", (e) => {
+
+        if (
+            e.target.classList.contains("hold-qty")
+        ) {
+
+            const total =
+                calculateTotal();
+
+            const totalBox =
+                document.querySelector("#total-box");
+
+            if (totalBox) {
+
+                totalBox.innerText =
+                    `총 ${total} 박스`;
+            }
+        }
     });
 }
 
@@ -176,21 +254,6 @@ async function handleClick(e) {
 
         return;
     }
-
-    document.addEventListener("input", (e) => {
-
-        if (e.target.classList.contains("hold-qty")) {
-
-            const total = calculateTotal();
-
-            const totalBox = document.querySelector("#total-box");
-
-            if (totalBox) {
-                totalBox.innerText = `총 ${total} 박스`;
-            }
-        }
-    });
-
 
     // 개별 로직
     // 데이터 추가 로직
@@ -523,4 +586,76 @@ async function handleClick(e) {
 
         return;
     }
+
+    document.addEventListener("click", (e) => {
+
+        const th =
+            e.target.closest("th[data-key]");
+
+        if (!th) return;
+
+        const key = th.dataset.key;
+
+        if (state.sortKey === key) {
+
+            state.sortOrder =
+                state.sortOrder === "asc"
+                    ? "desc"
+                    : "asc";
+
+        } else {
+
+            state.sortKey = key;
+            state.sortOrder = "asc";
+        }
+
+        renderTable();
+
+    });
+
+    document.querySelector(".order-btn")
+        .addEventListener("click", () => {
+
+            state.allData.sort((a, b) => {
+
+                let result = String(a["품목명"] ?? "")
+                    .trim()
+                    .localeCompare(
+                        String(b["품목명"] ?? "").trim(),
+                        "ko-KR",
+                        { numeric: true }
+                    );
+
+                if (result !== 0) return result;
+
+                result = String(a["브랜드"] ?? "")
+                    .trim()
+                    .localeCompare(
+                        String(b["브랜드"] ?? "").trim(),
+                        "ko-KR",
+                        { numeric: true }
+                    );
+
+                if (result !== 0) return result;
+
+                result = String(a["ESTNO"] ?? "")
+                    .trim()
+                    .localeCompare(
+                        String(b["ESTNO"] ?? "").trim(),
+                        "ko-KR",
+                        { numeric: true }
+                    );
+
+                if (result !== 0) return result;
+
+                const x = new Date(a["유통기한"] ?? "9999-12-31");
+                const y = new Date(b["유통기한"] ?? "9999-12-31");
+
+                return x - y;
+
+            });
+
+            renderTable(state.allData);
+
+        });
 }
