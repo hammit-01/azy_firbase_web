@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 from requests.exceptions import RequestException, Timeout, ConnectionError
+from back_end.eda_column import jns,beige,samil,sinu,huichang,aurora,hyosung,eastbelly,swc,ch,daechung,hanladt,hanla,gangdong1,gangdong2,gyungin,plaza,samjin1,samjin2,cs
 
 def get_users(row):
     users = []
@@ -179,6 +180,28 @@ def get_data(session, ip_port, path, scustcd, scmdept, warehouse):
         print(f"데이터 수집 실패: {e}")
         return pd.DataFrame()
 
+PROCESS_MAP = {
+    "베이지박스투": beige,
+    "삼일물류": samil,
+    "신우냉장": sinu,
+    "희창냉장": huichang,
+    "오로라CS": aurora,
+    "효성냉장": hyosung,
+    "이스트밸리": eastbelly,
+    "SWC": swc,
+    "시에이치물류": ch,
+    "대청": daechung,
+    "한라 동탄": hanladt,
+    "한라": hanla,
+    "강동1": gangdong1,
+    "강동2": gangdong2,
+    "경인": gyungin,
+    "프라자로지스": plaza,
+    "삼진1": samjin1,
+    "삼진2": samjin2,
+    "CS": cs,
+    "제니스(곤지암)": jns
+}
 
 def start_crawling():
     # 크롤링
@@ -187,6 +210,11 @@ def start_crawling():
     warehouse_list.columns = warehouse_list.iloc[0]   # 첫 행을 컬럼으로 설정
     warehouse_list = warehouse_list[1:].reset_index(drop=True)  # 첫 행 제거
 
+    warehouse_list["ip포트"] = (
+        warehouse_list["ip포트"]
+        .astype(str)
+        .str.strip()
+    )
     wh_90 = warehouse_list[warehouse_list["ip포트"] == "90"]
     wh_88 = warehouse_list[warehouse_list["ip포트"] == "88:8080"]
     wh_91 = warehouse_list[warehouse_list["ip포트"] == "91:8080"]
@@ -208,6 +236,7 @@ def start_crawling():
     dfs = [wh_90, wh_88, wh_91, wh_else]
 
     all_data = []
+    jns = pd.DataFrame()
 
     for df in dfs:
         for _, row in df.iterrows():
@@ -234,13 +263,24 @@ def start_crawling():
                 data = data.drop_duplicates()
 
                 # CS -> 한라동탄, 한라동탄 -> CS, 한라곤지암 -> 한라 로 변경
-                data["창고"] = data["창고"].replace({
+                warehouse_replace_map = {
                     "CS": "한라 동탄",
                     "한라동탄": "CS",
                     "한라곤지암": "한라"
-                })
-                
-                all_data.append(data)
+                }
+
+                warehouse = warehouse_replace_map.get(warehouse, warehouse)
+
+                data["창고"] = warehouse
+
+                # 여기다 열 전처리 넣을까
+                func = PROCESS_MAP.get(warehouse)
+
+                if func:
+                    data = func(data)
+                    if warehouse == "제니스(곤지암)":
+                        jns = pd.DataFrame(data)
+                    else: all_data.append(data)
 
     final_df = pd.concat(all_data, ignore_index=True)
 
@@ -249,4 +289,4 @@ def start_crawling():
             for name, group in final_df.groupby("창고")
         }
     
-    return final_df, warehouse_dfs
+    return final_df, warehouse_dfs, jns
