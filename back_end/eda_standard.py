@@ -132,6 +132,16 @@ def eda_standard(df):
         (df["등급"] == ""),
         "등급"
     ] = "UN"
+    df.loc[
+        (df["브랜드"] == "TEYS") &
+        (df["등급"] == ""),
+        "등급"
+    ] = "S"
+    df.loc[
+        (df["브랜드"] == "TEYS") &
+        (df["등급"] == "UN"),
+        "등급"
+    ] = "S"
 
     df.loc[df["브랜드"] == "EXCELCH", "등급"] = "CH"
     df.loc[df["브랜드"] == "EXCELCH", "브랜드"] = "EXCEL"

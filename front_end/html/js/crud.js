@@ -3,9 +3,6 @@ import { updateItem, insertItem } from "./firestoreService.js";
 import { doc, deleteDoc }  from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 import { db } from "./firebase.js";
 
-function holdingBranch() {
-
-}
 export async function holdingData(item, holdQty, releaseDate, note) {
 
     const remainQty = item.qty - holdQty;
@@ -30,15 +27,15 @@ export async function holdingData(item, holdQty, releaseDate, note) {
         const docRef = await insertItem({
             상품명: item.name,
             브랜드: item.brand,
-            등급: item.grade || null,
-            ESTNO: item.estNo || null,
+            등급: item.grade || "",
+            ESTNO: item.estNo || "",
             창고: item.warehouse,
             재고: holdQty,
             BL: item.bl,
-            홀딩: note?.trim() || null,
-            출고일: releaseDate || null,
-            유통기한: item.dueDate || null,
-            평중: item.weight || null
+            홀딩: note?.trim() || "",
+            출고일: releaseDate || "",
+            유통기한: item.dueDate || "",
+            평중: item.weight || ""
         });
 
         console.log("홀딩 완료");
@@ -64,17 +61,17 @@ export async function insertData(name, brand, grade, estNo, qty, bl, warehouse, 
         const docRef = await insertItem({
             상품명: name, // not null
             브랜드: brand, // not null
-            등급: grade || null,
-            ESTNO: estNo || null,
+            등급: grade || "",
+            ESTNO: estNo || "",
             재고: qty, // not null
             BL: bl, // not null
             창고: warehouse, // not null
-            유통기한: dueDate || null || null,
+            유통기한: dueDate || "" || "",
             평중: weight, // not null
-            출고일: releaseDate || null,
-            홀딩: holding?.trim() || null,
-            동결: frozen?.trim() || null,
-            사용불가: unuse?.trim() || null,
+            출고일: releaseDate || "",
+            홀딩: holding?.trim() || "",
+            동결: frozen?.trim() || "",
+            사용불가: unuse?.trim() || "",
         });
 
         console.log("추가 완료");
@@ -127,7 +124,6 @@ export async function updateData(item, id, name, brand, grade, estNo, qty, bl, w
         return null;
     }
 }
-
 
 export async function deleteItem(id) {
     try {

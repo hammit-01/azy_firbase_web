@@ -1,32 +1,6 @@
 import { state } from "./state.js";
 import { dom } from "./dom.js";
-
-// =========================
-// render debounce
-// =========================
-let renderTimer = null;
-
-export function requestRender() {
-
-    clearTimeout(renderTimer);
-
-    renderTimer = setTimeout(() => {
-        renderTable();
-    }, 30);
-}
-
-function parseDate(value) {
-
-    if (!value) {
-        return new Date("9999-12-31");
-    }
-
-    return new Date(
-        String(value)
-            .replaceAll(".", "-")
-            .replaceAll(" ", "")
-    );
-}
+import { getItems } from "./firestoreService.js";
 
 // =========================
 // 안전 값
@@ -61,84 +35,9 @@ function cleanText(value) {
 }
 
 // =========================
-// 문자열 비교
-// =========================
-function compareText(a, b, order = "asc") {
-
-    const x = cleanText(a);
-    const y = cleanText(b);
-
-    return order === "asc"
-
-        ? x.localeCompare(
-            y,
-            "ko-KR",
-            {
-                numeric: true,
-                sensitivity: "base"
-            }
-        )
-
-        : y.localeCompare(
-            x,
-            "ko-KR",
-            {
-                numeric: true,
-                sensitivity: "base"
-            }
-        );
-}
-
-// =========================
-// 숫자 비교
-// =========================
-function compareNumber(a, b, order = "asc") {
-
-    const x =
-        Number(
-            cleanText(a)
-                .replaceAll(",", "")
-        );
-
-    const y =
-        Number(
-            cleanText(b)
-                .replaceAll(",", "")
-        );
-
-    return order === "asc"
-        ? x - y
-        : y - x;
-}
-
-// =========================
-// 날짜 비교
-// =========================
-function compareDate(a, b, order = "asc") {
-
-    const x =
-        a
-            ? Date.parse(cleanText(a))
-            : Infinity;
-
-    const y =
-        b
-            ? Date.parse(cleanText(b))
-            : Infinity;
-
-    return order === "asc"
-        ? x - y
-        : y - x;
-}
-
-// =========================
 // 테이블 사이즈
 // =========================
-export function renderTableSize(
-    count,
-    size,
-    mean
-) {
+export function renderTableSize(count, size, mean) {
 
     const target =
         document.querySelector(".table_size");
@@ -165,35 +64,6 @@ export function renderTable() {
 
     const field =
         dom.searchField.value;
-
-    const statusField =
-        dom.sortField2?.value;
-
-    // =========================
-    // 상태 필터
-    // =========================
-    if (
-        statusField &&
-        statusField !== "전체"
-    ) {
-
-        data = data.filter(item => {
-
-            // 동결
-            if (statusField === "동결") {
-
-                return cleanText(item.동결) !== "";
-            }
-
-            // 홀딩
-            if (statusField === "홀딩") {
-
-                return cleanText(item.홀딩) !== "";
-            }
-
-            return true;
-        });
-    }
 
     // =========================
     // 검색 필터
@@ -240,57 +110,47 @@ export function renderTable() {
     // =========================
     // 정렬
     // =========================
+    const sortOrder = [
+        "상품명",
+        "브랜드",
+        "등급",
+        "ESTNO",
+        "창고",
+        "BL",
+        "재고",
+    ];
+
     data.sort((a, b) => {
 
-        // 상품명
-        let result = String(a["상품명"] ?? "")
-            .trim()
-            .localeCompare(
-                String(b["상품명"] ?? "").trim(),
-                "ko-KR",
-                { numeric: true }
-            );
+        for (const key of sortOrder) {
 
-        if (result !== 0) return result;
+            let av = String(a[key] ?? "").trim();
+            let bv = String(b[key] ?? "").trim();
 
-        // 브랜드
-        result = String(a["브랜드"] ?? "")
-            .trim()
-            .localeCompare(
-                String(b["브랜드"] ?? "").trim(),
-                "ko-KR",
-                { numeric: true }
-            );
+            // =========================
+            // 영어로 시작하면 맨 뒤
+            // =========================
+            const aEng = /^[A-Za-z]/.test(av);
+            const bEng = /^[A-Za-z]/.test(bv);
 
-        if (result !== 0) return result;
+            if (aEng && !bEng) return 1;
+            if (!aEng && bEng) return -1;
 
-        // 등급
-        result = String(a["등급"] ?? "")
-            .trim()
-            .localeCompare(
-                String(b["등급"] ?? "").trim(),
-                "ko-KR",
-                { numeric: true }
-            );
+            // 숫자 비교
+            const an = Number(av);
+            const bn = Number(bv);
 
-        if (result !== 0) return result;
+            if (!isNaN(an) && !isNaN(bn)) {
+                av = an;
+                bv = bn;
+            }
 
-        // ESTNO
-        result = String(a["ESTNO"] ?? "")
-            .trim()
-            .localeCompare(
-                String(b["ESTNO"] ?? "").trim(),
-                "ko-KR",
-                { numeric: true }
-            );
+            // 오름차순
+            if (av < bv) return -1;
+            if (av > bv) return 1;
+        }
 
-        if (result !== 0) return result;
-
-        // 유통기한
-        const x = parseDate(a["유통기한"]);
-        const y = parseDate(b["유통기한"]);
-
-        return x - y;
+        return 0;
     });
 
     // =========================
@@ -365,6 +225,7 @@ export function renderTable() {
 
             </tr>
         `;
+
     }
 
     // =========================
@@ -397,3 +258,5 @@ export function renderTable() {
         mean
     );
 }
+
+

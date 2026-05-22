@@ -5,26 +5,26 @@
  * raw Firebase 데이터를 UI에서 쓰기 좋게 변환 (EDA: Extract, Deduplicate, Adapt)
  */
 export function normalizeItem(raw) {
-    if (!raw) return null;
+    if (!raw) return "";
 
     return {
-        id: raw.id ?? raw._id ?? null,
+        id: raw.id ?? raw._id ?? "",
 
-        name: raw.상품명 ?? raw.name ?? raw.itemName ?? null,
-        brand: raw.브랜드 ?? null,
-        grade: raw.등급 ?? null,
-        estNo: raw.ESTNO ?? null,
+        name: raw.상품명 ?? raw.name ?? raw.itemName ?? "",
+        brand: raw.브랜드 ?? "",
+        grade: raw.등급 ?? "",
+        estNo: raw.ESTNO ?? "",
         qty: raw.재고 ?? raw.qty ?? 0,
-        bl: raw.BL ?? raw.bl ?? null,
+        bl: raw.BL ?? raw.bl ?? "",
 
-        warehouse: raw.창고 ?? null,
-        dueDate: raw.유통기한 ?? null,
-        weight: raw.평중 ?? null,
-        releaseDate: raw.출고일 ?? null,
+        warehouse: raw.창고 ?? "",
+        dueDate: raw.유통기한 ?? "",
+        weight: raw.평중 ?? "",
+        releaseDate: raw.출고일 ?? "",
 
-        holding: raw.홀딩 ?? null,
-        frozen: raw.동결 ?? null,
-        unuse: raw.사용불가 ?? null,
+        holding: raw.홀딩 ?? "",
+        frozen: raw.동결 ?? "",
+        unuse: raw.사용불가 ?? "",
 
         // 원본 보존 (디버깅용)
         raw

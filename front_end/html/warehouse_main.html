@@ -9,13 +9,49 @@
 
 <body>
     <div class="container">
+        <div class="left-top-panel">
+            <img src="./css/logo.png" class="logo">
+            <h1>재고 리스트</h1>
+            <div class = "table_size"></div>
+        </div>
+        <div class="controls">
+            <select id="searchField">
+                <option value="전체">전체</option>
+                <option value="상품명">상품명</option>
+                <option value="브랜드">브랜드</option>
+                <option value="등급">등급</option>
+                <option value="ESTNO">ESTNO</option>
+                <option value="BL">BL</option>
+                <option value="창고">창고</option>
+            </select>
+            <input id="searchInput" placeholder="검색">
+        </div>
+        <div class = "top_bar">
+            <div class="right-panel">
+                <div class="crud-btn">
+                    <button class="insert-btn">추가</button>
+                    <button class="update-btn">수정</button>
+                    <button class="holding-btn">홀딩</button>
+                </div>
+                <hr>
+                <div class="btn">
+                    <div class="btn-group">
+                        <div class="crud-selction">
+                            <button class="clear-btn" data-action="clear-selection">전체 취소</button>
+                            <button class="all-delete-btn">전체 삭제</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="sideBox"></div>
+            </div>
+        </div>
         <div class="left-panel">
             <div class="table-wrap">
                 <table>
                     <colgroup>
                         <col style="width:70px">
-                        <col>
-                        <col style="width:100px">
+                        <col style="width:170px">
+                        <col style="width:200px">
                         <col style="width:100px">
                         <col style="width:100px">
                         <col style="width:100px">
@@ -48,55 +84,8 @@
                 </table>
             </div>
         </div>
-            <div class="left-top-panel">
-                <img src="./css/logo.png" class="logo">
-                <h1>재고 리스트</h1>
-                <div class = "table_size"></div>
-                <div class="controls">
-                    <select id="searchField">
-                        <option value="전체">전체</option>
-                        <option value="상품명">상품명</option>
-                        <option value="브랜드">브랜드</option>
-                        <option value="등급">등급</option>
-                        <option value="ESTNO">ESTNO</option>
-                        <option value="BL">BL</option>
-                        <option value="창고">창고</option>
-                    </select>
-                    <input id="searchInput" placeholder="검색">
-                    <select id="sortField2">
-                        <option value="전체">전체</option>
-                        <option value="동결">동결</option>
-                        <option value="홀딩">홀딩</option>
-                    </select>
-                    <select id="sortOrder">
-                        <option value="asc">오름차순</option>
-                        <option value="desc">내림차순</option>
-                    </select>
-                    <button class="order-btn">정렬</button>
-                </div>
-                <div class="right-panel">
-                    <div class="crud-btn">
-                        <button class="insert-btn">추가</button>
-                        <button class="update-btn">수정</button>
-                        <button class="holding-btn">홀딩</button>
-                    </div>
-                    <hr>
-                    <div class="btn">
-                        <div class="btn-group">
-                            <div class="crud-selction">
-                                <button class="clear-btn" data-action="clear-selection">전체 취소</button>
-                                <button class="all-delete-btn">전체 삭제</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="sideBox"></div>
-                </div>
-            </div>
-        
-
     </div>
 
     <script type="module" src="./warehouse_main.js"></script>
-
 </body>
 </html>

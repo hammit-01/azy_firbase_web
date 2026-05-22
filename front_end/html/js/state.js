@@ -6,8 +6,5 @@ export const state = {
     flashIds: new Set(), // 홀딩된 행 일시 표시
     crudData: null, // crud 섹션 표시
 
-    sortKey: "",
-    sortOrder: "asc",
-
-    useDefaulterOrder: true
+    useDefaultOrder: true
 };

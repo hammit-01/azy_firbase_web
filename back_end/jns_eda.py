@@ -26,7 +26,7 @@ def jns_eda(df):
 
     # 불필요 컬럼 제거
     df = df.drop(
-        columns=["기타정보","B/L NO식별번호"],
+        columns=["기타정보","B/L NO식별번호", "제조일자", "이력번호"],
         errors="ignore"
     )
     
