@@ -97,8 +97,6 @@ def post(df):
             "출고일": True if str(to_date(row.get("출고예정일"))) else "",
             "홀딩": True if str(to_str(row.get("비고"))) else "",
 
-            "이력번호": to_str(row.get("이력번호", "")),
-            "가공일자": True if pd.notna(to_date(row.get("재조일자"))) else "",
             "수집일": str(today),
             "동결": True if pd.notna(row.get("동결")) else "",
             "사용불가": True if pd.notna(row.get("사용불가")) else ""
@@ -106,6 +104,3 @@ def post(df):
 
 
     print("🔥 DB 업로드 완료")
-
-df = pd.read_excel("total_data.xlsx")
-post(df)

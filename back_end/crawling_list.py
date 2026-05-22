@@ -1,8 +1,9 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+from back_end.eda_common import eda_common
 from requests.exceptions import RequestException, Timeout, ConnectionError
-from back_end.eda_column import jns,beige,samil,sinu,huichang,aurora,hyosung,eastbelly,swc,ch,daechung,hanladt,hanla,gangdong1,gangdong2,gyungin,plaza,samjin1,samjin2,cs
+from back_end.eda_column import jns,beige,samil,sinu,huichang,aurora,hyosung,eastbelly,swc,ch,daechung,hanladt,hanla,gangdong1,gangdong2,gyungin,plaza,samjin1,samjin2,cs,daejae
 
 def get_users(row):
     users = []
@@ -61,6 +62,10 @@ SPECIAL_SITES = {
     "SWC": {
         "login": "http://nwill.net:8080/nswdst/login.do",
         "data": "http://nwill.net:8080/nswdst/rtv_stock.do"
+    },
+    "대재": {
+        "login": "http://nwill.net:8080/djedst/login.do",
+        "data": "http://nwill.net:8080/djedst/rtv_stock.do"
     }
 }
 
@@ -191,6 +196,7 @@ PROCESS_MAP = {
     "SWC": swc,
     "시에이치물류": ch,
     "대청": daechung,
+    "대재": daejae,
     "한라 동탄": hanladt,
     "한라": hanla,
     "강동1": gangdong1,
@@ -227,7 +233,8 @@ def start_crawling():
             "이스트밸리",
             "효성냉장",
             "희창냉장",
-            "SWC"
+            "SWC",
+            "대재"
         ])
     ]
 
@@ -256,6 +263,11 @@ def start_crawling():
                 print(f"{user_type} 로그인:", res.status_code, row["창고"])
 
                 data = get_data(session, ip_port, path, scustcd, scmdept, warehouse)
+
+                if data is None or data.empty:
+                    print(f"{warehouse}: 재고 없음")
+                    continue
+                else: data = data
                 
                 data["창고"] = row["창고"]
                 
@@ -284,9 +296,4 @@ def start_crawling():
 
     final_df = pd.concat(all_data, ignore_index=True)
 
-    warehouse_dfs = {
-            name: group.copy()
-            for name, group in final_df.groupby("창고")
-        }
-    
-    return final_df, warehouse_dfs, jns
+    return final_df, jns
