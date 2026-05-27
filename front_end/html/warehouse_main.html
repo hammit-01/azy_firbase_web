@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html lang="ko">
-
+<!-- firebase web service upload = /css/...
+ pytjon service upload = ./css/... -->
 <head>
     <meta charset="UTF-8">
-    <link rel="stylesheet" href="./css/warehouse_main.css">
+    <link rel="stylesheet" href="/css/warehouse_main.css">
     <title>재고 시스템</title>
 </head>
 
 <body>
     <div class="container">
         <div class="left-top-panel">
-            <img src="./css/logo.png" class="logo">
+            <img src="/css/logo.png" class="logo">
             <h1>재고 리스트</h1>
             <div class = "table_size"></div>
         </div>
@@ -28,20 +29,19 @@
         </div>
         <div class = "top_bar">
             <div class="right-panel">
-                <div class="crud-btn">
-                    <button class="insert-btn">추가</button>
-                    <button class="update-btn">수정</button>
-                    <button class="holding-btn">홀딩</button>
-                </div>
-                <hr>
-                <div class="btn">
-                    <div class="btn-group">
-                        <div class="crud-selction">
-                            <button class="clear-btn" data-action="clear-selection">전체 취소</button>
-                            <button class="all-delete-btn">전체 삭제</button>
-                        </div>
+                <div class = "btn">
+                    <div class="all-btn">
+                        <button class="rollback-btn">되돌리기</button>
+                        <button class="clear-btn" data-action="clear-selection">전체 취소</button>
+                        <button class="all-delete-btn">전체 삭제</button>
+                    </div>
+                    <div class="crud-btn">
+                        <button class="insert-btn">추가</button>
+                        <button class="update-btn">수정</button>
+                        <button class="holding-btn">홀딩</button>
                     </div>
                 </div>
+                <hr>
                 <div id="sideBox"></div>
             </div>
         </div>
@@ -86,6 +86,6 @@
         </div>
     </div>
 
-    <script type="module" src="./warehouse_main.js"></script>
+    <script type="module" src="/warehouse_main.js"></script>
 </body>
 </html>

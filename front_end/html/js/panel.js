@@ -36,8 +36,9 @@ export function renderSelectData() {
             <div class="selected-item">
                 <div class="item-datas">
                     <button class="cancel-btn" data-id="${id}">X</button>
-                    <b>${item.name}</b>
-                    ${item.brand} / ${item.qty} / ${item.bl}<br>
+                    <div class = "item-data">
+                        <b>${item.brand} ${item.name} ${item.grade} ${item.estNo}</b> 총 ${item.qty}박스 ${item.warehouse} 
+                    </div>
                 </div>
                 <div class="insert-panel" data-id="${id}"></div>
                 <div class="update-panel" data-id="${id}"></div>
@@ -69,21 +70,46 @@ export function renderInsert() {
 export function createInsertRow() {
     return `
         <div class="insert-row">
+            <div class="text">상품명</div>
             <input placeholder="상품명" class="insert-name">
+
+            <div class="text">브랜드</div>
             <input placeholder="브랜드" class="insert-brand">
+
+            <div class="text">등급</div>
             <input placeholder="등급" class="insert-grade">
+
+            <div class="text">ESTNO</div>
             <input placeholder="ESTNO" class="insert-estNo">
-            <input placeholder="수량" class="insert-qty">
+
+            <div class="text">재고</div>
+            <input placeholder="재고" class="insert-qty">
+
+            <div class="text">BL</div>
             <input placeholder="BL" class="insert-bl">
+
+            <div class="text">창고</div>
             <input placeholder="창고" class="insert-warehouse">
+
+            <div class="text">유통기한</div>
             <input placeholder="유통기한" class="insert-dueDate">
+
+            <div class = "text">평중</div>
             <input placeholder="평중" class="insert-weight">
+            
+            <div class = "text">출고일</div>
             <input placeholder="출고일" class="insert-releaseDate">
+            
+            <div class = "text">홀딩</div>
             <input placeholder="홀딩" class="insert-holding">
+
+            <div class = "text">동결</div>
             <input placeholder="동결" class="insert-frozen">
+            
+            <div class = "text">사용불가</div>
             <input placeholder="사용불가" class="insert-unuse">
         </div>
-            <button class="select-insert-btn">추가</button>
+        <button class="select-insert-btn">추가</button>
     `;
 }
 
@@ -104,25 +130,40 @@ export function renderUpdate() {
         if (!target) return;
 
         target.innerHTML = `
-            <div class = "update-row" data-id="${id}">
-                <input value="${item.name}" class="update-name" data-id="${id}">
-                <input value="${item.brand}" class="update-brand" data-id="${id}">
-                <input value="${item.grade}" class="update-grade" data-id="${id}">
-                <input value="${item.estNo}" class="update-estNo" data-id="${id}">
-                <input value="${item.qty}" class="update-qty" data-id="${id}">
-                <input value="${item.bl}" class="update-bl" data-id="${id}">
-                <input value="${item.warehouse}" class="update-warehouse" data-id="${id}">
-                <input value="${item.dueDate}" class="update-dueDate" data-id="${id}">
-                <input value="${item.weight}" class="update-weight" data-id="${id}">
-                <input value="${item.releaseDate}" class="update-releaseDate" data-id="${id}">
-                <input value="${item.holding}" class="update-holding" data-id="${id}">
-                <input value="${item.frozen}" class="update-frozen" data-id="${id}">
-                <input value="${item.unuse}" class="update-unuse" data-id="${id}">
-            </div>
             <div class = "item-btns">
                 <button class="select-update-btn" data-id="${id}">수정</button>
                 <button class="select-delete-btn" data-id="${id}">삭제</button>
             </div>
+            <div class = "update-row" data-id="${id}">
+                <div class="text">상품명</div>
+                <input value="${item.name}" class="update-name" data-id="${id}">
+                <div class="text">브랜드</div>
+                <input value="${item.brand}" class="update-brand" data-id="${id}">
+                <div class="text">등급</div>
+                <input value="${item.grade}" class="update-grade" data-id="${id}">
+                <div class="text">ESTNO</div>
+                <input value="${item.estNo}" class="update-estNo" data-id="${id}">
+                <div class="text">재고</div>
+                <input value="${item.qty}" class="update-qty" data-id="${id}">
+                <div class="text">BL</div>
+                <input value="${item.bl}" class="update-bl" data-id="${id}">
+                <div class="text">창고</div>
+                <input value="${item.warehouse}" class="update-warehouse" data-id="${id}">
+                <div class="text">유통기한</div>
+                <input value="${item.dueDate}" class="update-dueDate" data-id="${id}">
+                <div class="text">평균중량</div>
+                <input value="${item.weight}" class="update-weight" data-id="${id}">
+                <div class="text">출고일</div>
+                <input value="${item.releaseDate}" class="update-releaseDate" data-id="${id}">
+                <div class="text">홀딩</div>
+                <input value="${item.holding}" class="update-holding" data-id="${id}">
+                <div class="text">동결</div>
+                <input value="${item.frozen}" class="update-frozen" data-id="${id}">
+                <div class="text">사용불가</div>
+                <input value="${item.unuse}" class="update-unuse" data-id="${id}">
+                
+            </div>
+            
         `;
 
         totalQty += Number(item.qty) || 0;
@@ -147,12 +188,15 @@ export function renderHolding() {
 
         target.innerHTML = `
             <div class="holding-row" data-id="${id}">
+                <div class="text">홀딩개수</div>
                 <input class="hold-qty" data-id="${id}" placeholder="개수">
+                <div class="text">출고일자</div>
                 <input class="hold-releaseDate" data-id="${id}" placeholder="출고일자">
-                <input class="hold-note" data-id="${id}" placeholder="비고">
-            </div>
-            <div class="item-btns">
-                <button class="select-holding-btn" data-id="${id}">홀딩</button>
+                <div class="text">홀딩자</div>
+                <input class="hold-note" data-id="${id}" placeholder="홀딩자">
+                <div class="item-btns">
+                    <button class="select-holding-btn" data-id="${id}">홀딩</button>
+                </div>
             </div>
         `;
     });

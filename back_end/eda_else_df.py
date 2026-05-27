@@ -244,109 +244,97 @@ def dch_eda(data):
 # =========================================================
 # 한라 곤지암 / 동탄
 # =========================================================
-def hl_eda(data1, data2):
-    if data1 is None or data1.empty or data2 is None or data2.empty:
-        return
+def hl_eda(data1):
 
-    hlk = data1.drop_duplicates().copy()
-    hld = data2.drop_duplicates().copy()
+    if data1 is None or data1.empty:
+        return data1
 
-    dfs = {
-        "hlk": hlk,
-        "hld": hld
-    }
+    hl = data1.drop_duplicates().copy()
 
-    for _, d in dfs.items():
+    # =================================================
+    # 평균중량
+    # =================================================
+    hl["평균중량"] = (
+        hl["규격단위중량"]
+        .astype(str)
+        .str.extract(r"(\d+\.?\d*)")[0]
+    )
 
-        # =================================================
-        # 평균중량
-        # =================================================
-        d["평균중량"] = (
-            d["규격단위중량"]
+    hl["평균중량"] = pd.to_numeric(
+        hl["평균중량"],
+        errors="coerce"
+    )
+
+    # =================================================
+    # 기타정보
+    # =================================================
+    s = hl["기타정보"].astype(str)
+
+    # 앞 괄호 제거
+    s = s.str.replace(
+        r"^\(.*?\)",
+        "",
+        regex=True
+    )
+
+    # =================================================
+    # / 기준 분리
+    # =================================================
+    tmp = s.str.split(
+        "/",
+        n=2,
+        expand=True
+    )
+
+    tmp = tmp.reindex(columns=[0, 1, 2])
+
+    hl["등급"] = tmp[0]
+    hl["ESTNO"] = tmp[1]
+    hl["브랜드"] = tmp[2]
+
+    # =================================================
+    # 정리
+    # =================================================
+    for col in ["등급", "ESTNO", "브랜드"]:
+
+        hl[col] = (
+            hl[col]
+            .fillna("")
             .astype(str)
-            .str.extract(r"(\d+\.?\d*)")[0]
-        )
-
-        d["평균중량"] = pd.to_numeric(
-            d["평균중량"],
-            errors="coerce"
-        )
-
-        # =================================================
-        # 기타정보
-        # =================================================
-        s = d["기타정보"].astype(str)
-
-        # 앞 괄호 제거
-        s = s.str.replace(
-            r"^\(.*?\)",
-            "",
-            regex=True
-        )
-
-        # -------------------------------------------------
-        # / 기준 분리
-        # -------------------------------------------------
-        tmp = s.str.split(
-            "/",
-            n=2,
-            expand=True
-        )
-
-        tmp = tmp.reindex(columns=[0, 1, 2])
-
-        d["등급"] = tmp[0]
-        d["ESTNO"] = tmp[1]
-        d["브랜드"] = tmp[2]
-
-        # =================================================
-        # 정리
-        # =================================================
-        for col in ["등급", "ESTNO", "브랜드"]:
-
-            d[col] = (
-                d[col]
-                .fillna("")
-                .astype(str)
-                .str.replace(
-                    r"\(.*?\)",
-                    "",
-                    regex=True
-                )
-                .str.strip()
-            )
-
-        # =================================================
-        # 브랜드만 있는 경우
-        # =================================================
-        mask = ~s.str.contains("/")
-
-        d.loc[mask, "브랜드"] = (
-            s[mask]
             .str.replace(
-                r"\d+\.?\d*$",
+                r"\(.*?\)",
                 "",
                 regex=True
             )
             .str.strip()
         )
 
-        d.loc[
-            mask,
-            ["등급", "ESTNO"]
-        ] = None
+    # =================================================
+    # 브랜드만 있는 경우
+    # =================================================
+    mask = ~s.str.contains("/")
 
-    hlk = hlk.drop(
+    hl.loc[mask, "브랜드"] = (
+        s[mask]
+        .str.replace(
+            r"\d+\.?\d*$",
+            "",
+            regex=True
+        )
+        .str.strip()
+    )
+
+    hl.loc[
+        mask,
+        ["등급", "ESTNO"]
+    ] = None
+
+    hl = hl.drop(
         columns=["기타정보"],
         errors="ignore"
     )
 
-    hld = hld.drop(
-        columns=["기타정보"],
-        errors="ignore"
-    )
-
-    return hlk, hld
+    return hl
 
 
 # =========================================================
@@ -371,16 +359,20 @@ def else_df_eda(
     dch = dch_eda(dch)
 
     # 한라
-    hlk, hld = hl_eda(
-        hlk,
-        hld
-    )
+    hlk = hl_eda(hlk)
+    hld = hl_eda(hld)
 
     # =====================================================
     # 병합
     # =====================================================
+    dfs = [kd, ki, sjn, dch, hlk, hld]
+    valid_dfs = [
+        d for d in dfs
+        if d is not None and not d.empty
+    ]
+
     df = pd.concat(
-        [kd, ki, sjn, dch, hlk, hld],
+        valid_dfs,
         ignore_index=True
     )
 

@@ -93,6 +93,8 @@ thead {
     background: #ffffff;
     border-radius: 14px;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+    display: flex;
+    align-items: flex-end;
 }
 
 /* input / select 공통 */
@@ -121,7 +123,8 @@ thead {
 
 /* 검색 input만 살짝 넓게 */
 #searchInput {
-    width: 300px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* select 크기 */
@@ -136,10 +139,12 @@ thead {
     border-color: #cbd5e1;
 }
 
+.all-btn {
+    width: 100%;
+}
+
 .btn {
     display: flex;
-    align-items: center;
-    width: 100%;
 }
 
 .footer {
@@ -151,14 +156,14 @@ thead {
 .select-holding-btn,
 .footer {
     display: flex;
-    justify-self: end;
     gap: 10px;
+    align-items: baseline;
 }
 
 .update-panel, .insert-panel, .holding-panel {
     display: flex;
-    justify-content: space-between;
-    width: stretch;
+    align-items: baseline;
+    flex-wrap: wrap;
 }
 
 .select-no, .all-crud-btn {
@@ -171,15 +176,12 @@ thead {
 .item-btns{
     display: flex;
     gap: 5px;
-    white-space: nowrap;   /* 줄바꿈 금지 */
-    word-break: keep-all; /* 한글 쪼개짐 방지 */
 }
 
-/* 오른쪽 버튼 그룹 */
-.btn-group {
-    margin-left: auto;
+.update-panel, .insert-panel, .holding-panel {
     display: flex;
-    gap: 10px;
+    align-items: baseline;
+    flex-wrap: wrap;
 }
 
 .holding-data {
@@ -193,16 +195,15 @@ thead {
 }
 
 .selected-item {
-    display: flex;
-    gap: 5px;
-    flex-direction: row;
-    justify-content: flex-start;
-    /* align-content: center; */
     margin-top: 10px;
-    flex-wrap: wrap;
 }
 
 /* 공통 버튼 */
+.insertRow-btn,
+.rollback-btn,
+.insert-btn,
+.update-btn,
+.holding-btn,
 .clear-btn,
 .all-holding-btn,
 .all-delete-btn,
@@ -213,9 +214,10 @@ thead {
 .select-holding-btn,
 .select-update-btn,
 .select-insert-btn {
+    width: 100px;
     padding: 5px;
-    color: white;
-    border: none;
+    /* color: white; */
+    border: 1px solid #e5e7eb;
     border-radius: 10px;
     cursor: pointer;
     transition: 0.2s;
@@ -223,17 +225,19 @@ thead {
 
 .crud-btn {
     display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin: 10px;
+    gap: 5px;
 }
 
 /* 개별 색 */
-/* .cancel-btn { background: #bcbcbc; } */
-.all-delete-btn, .select-delete-btn { background: #ff4d40;}
-.select-insert-btn, .select-holding-btn, .select-update-btn { background: #3b82f6; }
-.all-update-btn, .all-insert-btn, .all-holding-btn { background: #6d28d9; }
-.clear-btn, .cancel-btn { background: #96e70c;}
+.all-delete-btn, .select-delete-btn,
+.select-insert-btn, .insert-btn,
+.select-update-btn, .update-btn,
+.holding-btn, .select-holding-btn,
+.clear-btn,
+.all-update-btn, .all-insert-btn, .all-holding-btn,
+.rollback-btn, .insertRow-btn { background: #ffffff;}
+
+.cancel-btn { background: #ff4747; color: #ffffff;}
 
 /* hover */
 .holding:hover,
@@ -244,7 +248,6 @@ thead {
 }
 
 input {
-    width: 80px;
     margin-top: 5px;
     padding: 10px;
     border-radius: 10px;
@@ -283,4 +286,40 @@ input {
 
 .top_bar {
     /* display: flex; */
+}
+
+.text {
+    margin: 10px;
+}
+
+.insert-row, .update-row, .holding-row {
+    display: grid;
+    grid-template-columns: 
+        80px 250px
+        80px 250px
+        80px 250px
+        80px 250px;
+
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+}
+
+.insert-row input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.item-data {
+    margin: 10px;
+}
+
+.item-datas {
+    display: flex;
+    align-items: baseline;
+}
+
+.cancel-btn {
+    width: 30px;
+    height: 30px;
 }

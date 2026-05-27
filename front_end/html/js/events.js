@@ -13,6 +13,12 @@ import { updateData } from "./crud.js";
 import { deleteItem } from "./crud.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
+import { undoLastAction } from "./crud_history.js";
+import { undoStack } from "./crud_history.js";
+import { insertItem } from "./firestoreService.js";
+import { updateItem } from "./firestoreService.js";
+import { doc, deleteDoc }  from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+import { db } from "./firebase.js";
 
 export function bindEvents() {
 
@@ -106,7 +112,6 @@ function handleChange(e) {
             renderSelectData();
     }
 }
-
 
 async function handleClick(e) {
     // crud menu insert section btn
@@ -410,10 +415,20 @@ async function handleClick(e) {
     }
     // 삭제 로직
     if (e.target.classList.contains("select-delete-btn")) {
+
         const id = e.target.dataset.id;
 
+        // 삭제할 item 찾기
+        const item = state.allData.find(v => v.id === id);
+
+        if (!item) {
+            alert("데이터를 찾을 수 없습니다.");
+            return;
+        }
+
         state.selectedItems.delete(id);
-        await deleteItem(id);
+
+        await deleteItem(item);
 
         renderAll();
         renderHolding();
@@ -421,9 +436,12 @@ async function handleClick(e) {
 
     // 전체 로직
     if (e.target.classList.contains("all-insert-btn")) {
+
         const rows = document.querySelectorAll(".insert-row");
 
-        rows.forEach(row => {
+        const insertedIds = [];
+
+        for (const row of rows) {
 
             const name = row.querySelector(".insert-name")?.value || "";
             const brand = row.querySelector(".insert-brand")?.value || "";
@@ -439,8 +457,7 @@ async function handleClick(e) {
             const frozen = row.querySelector(".insert-frozen")?.value || "";
             const unuse = row.querySelector(".insert-unuse")?.value || "";
 
-            // 🔥 Firestore insert
-            insertData(
+            const insertedId = await insertData(
                 name,
                 brand,
                 grade,
@@ -456,17 +473,47 @@ async function handleClick(e) {
                 unuse
             );
 
+            if (insertedId) {
+                insertedIds.push(insertedId);
+            }
+        }
+
+        undoStack.push({
+
+            type: "bulk-insert",
+
+            undo: async () => {
+
+                for (const id of insertedIds) {
+
+                    await deleteDoc(
+                        doc(db, "all_data", id)
+                    );
+
+                }
+
+            }
+
         });
+
+        if (undoStack.length > 20) {
+            undoStack.shift();
+        }
+
+        renderAll();
 
         return;
     }
-
     if (e.target.classList.contains("all-update-btn")) {
         const rows = document.querySelectorAll(".update-row");
 
-        rows.forEach(row => {
+        const backups = [];
+
+        for (const row of rows) {
 
             const id = row.dataset.id;
+
+            const item = state.allData.find(v => v.id === id);
 
             const name = row.querySelector(".update-name")?.value;
             const brand = row.querySelector(".update-brand")?.value;
@@ -482,8 +529,8 @@ async function handleClick(e) {
             const frozen = row.querySelector(".update-frozen")?.value;
             const unuse = row.querySelector(".update-unuse")?.value;
 
-            // 🔥 Firestore update
-            updateData(null,
+            const result = await updateData(
+                item,
                 id,
                 name,
                 brand,
@@ -500,32 +547,167 @@ async function handleClick(e) {
                 unuse
             );
 
+            if (result) {
+                backups.push(result);
+            }
+        }
+
+        undoStack.push({
+
+            type: "bulk-update",
+
+            undo: async () => {
+
+                for (const backup of backups) {
+
+                    await updateItem(
+                        backup.id,
+                        backup.prevData
+                    );
+
+                }
+
+            }
+
         });
+
+        if (undoStack.length > 20) {
+            undoStack.shift();
+        }
+
+        renderAll();
 
         return;
     }
-
     if (e.target.classList.contains("all-holding-btn")) {
         const rows = document.querySelectorAll(".holding-row");
 
-        rows.forEach(row => {
+        const backups = [];
+
+        for (const row of rows) {
+
             const id = row.dataset.id;
+
             const item = state.selectedItems.get(id);
+
             const qty = row.querySelector(".hold-qty")?.value;
-            const releaseDate = row.querySelector(".hold-releaseDate")?.value;
-            const holding = row.querySelector(".hold-note")?.value;
 
+            const releaseDate =
+                row.querySelector(".hold-releaseDate")?.value;
 
-            // 🔥 Firestore update
-            holdingData(item,
+            const holding =
+                row.querySelector(".hold-note")?.value;
+
+            const result = await holdingData(
+                item,
                 qty,
                 releaseDate,
                 holding
             );
 
+            if (result) {
+                backups.push(result);
+            }
+        }
+
+        undoStack.push({
+
+            type: "bulk-holding",
+
+            undo: async () => {
+
+                for (const backup of backups) {
+
+                    // 원래 재고 복구
+                    await updateItem(
+                        backup.originalId,
+                        {
+                            재고: backup.originalQty
+                        }
+                    );
+
+                    // 홀딩 row 삭제
+                    await deleteDoc(
+                        doc(db, "all_data", backup.holdingId)
+                    );
+                }
+
+            }
+
         });
 
+        if (undoStack.length > 20) {
+            undoStack.shift();
+        }
+
+        renderAll();
+
         return;
+    }
+    if (e.target.classList.contains("all-delete-btn")) {
+        const backups = [];
+
+        for (const [id, item] of state.selectedItems) {
+
+            backups.push({
+                ...item
+            });
+            
+            await deleteItem(item);
+        }
+        console.log(backups);
+        undoStack.push({
+
+            type: "delete",
+
+            undo: async () => {
+
+                for (const backup of backups) {
+
+                    await insertItem({
+                        상품명: backup.name || "",
+                        브랜드: backup.brand || "",
+                        등급: backup.grade || "",
+                        ESTNO: backup.estNo || "",
+                        재고: backup.qty || 0,
+                        BL: backup.bl || "",
+                        창고: backup.warehouse || "",
+                        유통기한: backup.dueDate || "",
+                        평중: backup.weight || 0,
+                        출고일: backup.releaseDate || "",
+                        홀딩: backup.holding || "",
+                        동결: backup.frozen || "",
+                        사용불가: backup.unuse || ""
+                    });
+
+                }
+
+            }
+
+        });
+
+        if (undoStack.length > 20) {
+            undoStack.shift();
+        }
+
+        state.selectedItems.clear();
+
+        renderAll();
+
+        return;
+    }
+
+    // 되돌리기
+    if (e.target.classList.contains("rollback-btn")) {
+
+        await undoLastAction();
+
+        // 선택 초기화
+        state.selectedItems.clear();
+
+        state.crudMode = null;
+
+        renderAll();
     }
 
 }

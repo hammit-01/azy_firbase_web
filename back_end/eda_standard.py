@@ -143,6 +143,71 @@ def eda_standard(df):
         "등급"
     ] = "S"
 
+    mask = df["수탁품"].astype(str).str.contains(r"\(냉장\)", na=False)
+
+    df["수탁품"] = (
+        df["수탁품"]
+        .astype(str)
+        .str.replace("(냉장)", "", regex=False)
+        .str.strip()
+    )
+
+    df.loc[mask, "수탁품"] = "냉장" + df.loc[mask, "수탁품"]
+
+    product = df["수탁품"].astype(str)
+
+    # =================================================
+    # 새우
+    # =================================================
+    shrimp_mask = product.str.contains("새우", na=False)
+
+    df.loc[shrimp_mask, "수탁품"] = "생칵테일새우"
+    df.loc[shrimp_mask, "등급"] = "9KG"
+
+    # =================================================
+    # 인도
+    # =================================================
+    india_mask = (
+        shrimp_mask
+        & product.str.contains("인도", na=False)
+    )
+
+    df.loc[india_mask, "ESTNO"] = "인도"
+
+    df.loc[
+        india_mask
+        & product.str.contains("26/30", na=False),
+        "브랜드"
+    ] = "26/30"
+
+    df.loc[
+        india_mask
+        & product.str.contains("31/40", na=False),
+        "브랜드"
+    ] = "31/40"
+
+    # =================================================
+    # 페루
+    # =================================================
+    peru_mask = (
+        shrimp_mask
+        & product.str.contains("페루", na=False)
+    )
+
+    df.loc[peru_mask, "ESTNO"] = "페루"
+
+    df.loc[
+        peru_mask
+        & product.str.contains("41/50", na=False),
+        "브랜드"
+    ] = "41/50"
+
+    df.loc[
+        peru_mask
+        & product.str.contains("31/40", na=False),
+        "브랜드"
+    ] = "31/40"
+
     df.loc[df["브랜드"] == "EXCELCH", "등급"] = "CH"
     df.loc[df["브랜드"] == "EXCELCH", "브랜드"] = "EXCEL"
     df.loc[df["브랜드"] == "EXCELSEL", "등급"] = "SEL"
