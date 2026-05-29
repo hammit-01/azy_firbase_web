@@ -144,6 +144,7 @@ def eda_standard(df):
     ] = "S"
 
     mask = df["수탁품"].astype(str).str.contains(r"\(냉장\)", na=False)
+    df["등급"] = (df["등급"].astype(str).str.replace("#", "", regex=False))
 
     df["수탁품"] = (
         df["수탁품"]
@@ -214,6 +215,17 @@ def eda_standard(df):
     df.loc[df["브랜드"] == "EXCELSEL", "브랜드"] = "EXCEL"
     df.loc[df["브랜드"] == "EXCELPRI", "등급"] = "PRI"
     df.loc[df["브랜드"] == "EXCELPRI", "브랜드"] = "EXCEL"
+
+    mask = df["등급"] == "CH-ANGUS"
+    df.loc[mask, "등급"] = "3P"
+    df.loc[mask, "ESTNO"] = "3D"
+
+    mask = df["등급"] == "S-GF"
+    df.loc[mask, "등급"] = "GF"
+    df.loc[mask, "ESTNO"] = "640"
+
+    mask = df["수탁품"] == "우척BBQ빽립A"
+    df.loc[mask, "등급"] = "A"
 
     df.loc[
         df["수탁품"].astype(str).str.contains("PERDI", case=False, na=False),

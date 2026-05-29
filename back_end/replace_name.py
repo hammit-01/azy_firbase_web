@@ -41,6 +41,7 @@ def replace_name(df):
         "정육": "닭장각정육",
         "살치": "살치살",
         "토시": "살치살",
+        "우목심GFYG": "목심",
         "건": "우건",
         # "등갈비": "탕갈비(MEATY)",
         "토시": "토시살",
@@ -60,7 +61,10 @@ def replace_name(df):
         "SEARASIF": "SEARA",
         "PROTEINAANIMAI": "PROAN",
         "SWIFT_S/C": "5STAR",
-        "EX": "EXCEL"
+        "EX": "EXCEL",
+        "놀란": "NOLAN",
+        "EXCEL/CA": "EXCEL",
+        "SMITH/FL": "SMITHFIELD"
 
     })
     df["등급"] = df["등급"].replace({

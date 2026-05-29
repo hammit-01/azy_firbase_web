@@ -13,6 +13,8 @@ from back_end.eda_common import eda_common
 from back_end.eda_added import eda_added
 from back_end.exception_safe import safe_eda
 from back_end.exception_safe import safe_df
+from back_end.crawling_handmade import crawling_handmade
+
 
 warehouses = [
     "베이지박스투",
@@ -115,12 +117,18 @@ def list_eda(final_df, jns):
     jns = safe_eda(jns_eda, jns, "JNS")
     ch = safe_eda(ch_eda, ch, "CH")
     plz = safe_eda(plz_eda, plz, "PLZ")
+    hand_df = crawling_handmade()
 
-    total_data = pd.concat([added_df,six_df,ch,plz,jns], ignore_index=True)
+    total_data = pd.concat([added_df,six_df,ch,plz,jns,hand_df], ignore_index=True)
 
-    # 공통 정리
+    total_data = total_data.drop(columns=["중량"],errors="ignore")
     total_data = replace_name(total_data)
     total_data = eda_standard(total_data)
+
+    total_data = total_data.drop_duplicates().copy()
+    total_data = total_data.drop_duplicates(
+        subset=["BL번호", "재고수량"]
+    ).reset_index(drop=True)
 
     return total_data
 

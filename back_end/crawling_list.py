@@ -278,7 +278,7 @@ def start_crawling():
                 warehouse_replace_map = {
                     "CS": "한라 동탄",
                     "한라동탄": "CS",
-                    "한라곤지암": "한라"
+                    "한라곤지암": "한라",
                 }
 
                 warehouse = warehouse_replace_map.get(warehouse, warehouse)
