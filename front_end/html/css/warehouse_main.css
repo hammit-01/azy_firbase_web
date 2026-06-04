@@ -292,7 +292,7 @@ input {
     margin: 10px;
 }
 
-.insert-row, .update-row, .holding-row {
+.insert-pan, .update-pan, .holding-pan {
     display: grid;
     grid-template-columns: 
         80px 250px

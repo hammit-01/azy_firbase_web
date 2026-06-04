@@ -69,7 +69,7 @@ export function renderInsert() {
 
 export function createInsertRow() {
     return `
-        <div class="insert-row">
+        <div class="insert-pan">
             <div class="text">상품명</div>
             <input placeholder="상품명" class="insert-name">
 
@@ -134,7 +134,7 @@ export function renderUpdate() {
                 <button class="select-update-btn" data-id="${id}">수정</button>
                 <button class="select-delete-btn" data-id="${id}">삭제</button>
             </div>
-            <div class = "update-row" data-id="${id}">
+            <div class = "update-pan" data-id="${id}">
                 <div class="text">상품명</div>
                 <input value="${item.name}" class="update-name" data-id="${id}">
                 <div class="text">브랜드</div>
@@ -187,7 +187,7 @@ export function renderHolding() {
         if (!target) return;
 
         target.innerHTML = `
-            <div class="holding-row" data-id="${id}">
+            <div class="holding-pan" data-id="${id}">
                 <div class="text">홀딩개수</div>
                 <input class="hold-qty" data-id="${id}" placeholder="개수">
                 <div class="text">출고일자</div>

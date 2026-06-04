@@ -112,19 +112,19 @@ export async function updateData(item, id, name, brand, grade, estNo, qty, bl, w
     const numQty = Number(qty);
 
     const prevData = {
-        상품명: item["상품명"] || "",
-        브랜드: item["브랜드"] || "",
-        등급: item["등급"] || "",
-        ESTNO: item["ESTNO"] || "",
-        재고: item["재고"] || 0,
-        BL: item["BL"] || "",
-        창고: item["창고"] || "",
-        유통기한: item["유통기한"] || "",
-        평중: item["평중"] || 0,
-        출고일: item["출고일"] || "",
-        홀딩: item["홀딩"] || "",
-        동결: item["동결"] || "",
-        사용불가: item["사용불가"] || ""
+        상품명: item.name || "",
+        브랜드: item.brand || "",
+        등급: item.grade || "",
+        ESTNO: item.estNo || "",
+        재고: item.qty || 0,
+        BL: item.bl || "",
+        창고: item.warehouse || "",
+        유통기한: item.dueDate || "",
+        평중: item.weight || 0,
+        출고일: item.releaseDate || "",
+        홀딩: item.holding || "",
+        동결: item.frozen || "",
+        사용불가: item.unuse || ""
     };
 
     if (!numQty || numQty <= 0) {

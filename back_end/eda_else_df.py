@@ -69,12 +69,11 @@ def kd_eda(data):
 # =========================================================
 # 경인 / 삼진
 # =========================================================
-def ki_eda(data1, data2):
-    if data1 is None or data1.empty or data2 is None or data2.empty:
-        return
+def ki_eda(data1):
+    if data1 is None or data1.empty:
+        return data1
 
     ki = data1.drop_duplicates().copy()
-    sjn = data2.drop_duplicates().copy()
 
     # =====================================================
     # 1. 경인 (ki)
@@ -113,6 +112,21 @@ def ki_eda(data1, data2):
         .astype(float)
     )
 
+    # -------------------------------------------------
+    # 기타정보 제거
+    # -------------------------------------------------
+    ki = d.drop(
+        columns=["기타정보"],
+        errors="ignore"
+    )
+
+    return ki
+
+def sjn_eda(data1):
+    if data1 is None or data1.empty:
+            return
+
+    sjn = data1.drop_duplicates().copy()
     # =====================================================
     # 2. 삼진 (sjn)
     # =====================================================
@@ -170,17 +184,12 @@ def ki_eda(data1, data2):
     # -------------------------------------------------
     # 기타정보 제거
     # -------------------------------------------------
-    ki = d.drop(
-        columns=["기타정보"],
-        errors="ignore"
-    )
-
     sjn = d2.drop(
         columns=["기타정보"],
         errors="ignore"
     )
 
-    return ki, sjn
+    return sjn
 
 
 # =========================================================
@@ -353,7 +362,8 @@ def else_df_eda(
     kd = kd_eda(kd)
 
     # 경인 / 삼진
-    ki, sjn = ki_eda(ki, sjn)
+    ki = ki_eda(ki)
+    sjn = sjn_eda(sjn)
 
     # 대청
     dch = dch_eda(dch)

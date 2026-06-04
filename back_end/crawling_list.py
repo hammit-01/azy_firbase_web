@@ -276,8 +276,6 @@ def start_crawling():
 
                 # CS -> 한라동탄, 한라동탄 -> CS, 한라곤지암 -> 한라 로 변경
                 warehouse_replace_map = {
-                    "CS": "한라 동탄",
-                    "한라동탄": "CS",
                     "한라곤지암": "한라",
                 }
 
