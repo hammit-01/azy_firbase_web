@@ -42,7 +42,7 @@ export function renderSelectData() {
                 </div>
                 <div class="insert-panel" data-id="${id}"></div>
                 <div class="update-panel" data-id="${id}"></div>
-                <div class="holding-panel" data-id="${id}"></div>
+                <div class="holding-panel" data-id="${id}" style="align-items: flex-end;"></div>
             </div>
         `;
     });
@@ -58,9 +58,10 @@ export function renderInsert() {
     if (!sideBox) return;
 
     sideBox.innerHTML = `
-        <div class="insert-form">
-            <div class="insert-list"></div>
+        <div class="top-bar">
+            <button class="insertRow-btn">행 추가</button>
         </div>
+        <div class="insert-list"></div>
     `;
 
     document.querySelector(".insert-list")
@@ -70,46 +71,77 @@ export function renderInsert() {
 export function createInsertRow() {
     return `
         <div class="insert-pan">
-            <div class="text">상품명</div>
-            <input placeholder="상품명" class="insert-name">
+            <div>
+                <div class="text">상품명</div>
+                <input type="text" placeholder="상품명" class="insert-name" id="input-box" style="background-color: #d6ffc2;">
+            </div>
 
+            <div>
             <div class="text">브랜드</div>
-            <input placeholder="브랜드" class="insert-brand">
+            <input type="text" placeholder="브랜드" class="insert-brand" id="input-box" style="background-color: #d6ffc2;">
+            </div>
 
+            <div style="width:80px;">
             <div class="text">등급</div>
-            <input placeholder="등급" class="insert-grade">
+            <input type="text" placeholder="등급" class="insert-grade" id="input-box" style="background-color: #d6ffc2;">
+            </div>
 
+            <div style="width:80px;">
             <div class="text">ESTNO</div>
-            <input placeholder="ESTNO" class="insert-estNo">
+            <input type="text" placeholder="ESTNO" class="insert-estNo" id="input-box" style="background-color: #d6ffc2;">
+            </div>
 
+            <div style="width:80px;">
             <div class="text">재고</div>
-            <input placeholder="재고" class="insert-qty">
+            <input type="number" placeholder="재고" class="insert-qty" id="input-box" style="background-color: #d6ffc2;">
+            </div>
 
+            <div style="width:170px;">
             <div class="text">BL</div>
-            <input placeholder="BL" class="insert-bl">
+            <input type="text" placeholder="BL" class="insert-bl" id="input-box" style="background-color: #d6ffc2;">
+            </div>
 
+            <div>
             <div class="text">창고</div>
-            <input placeholder="창고" class="insert-warehouse">
+            <input type="text" placeholder="창고" class="insert-warehouse" id="input-box" style="background-color: #d6ffc2;">
+            </div>
 
+            <div>
             <div class="text">유통기한</div>
-            <input placeholder="유통기한" class="insert-dueDate">
+            <input type="date" placeholder="유통기한" class="insert-dueDate" id="input-box" style="background-color: #d6ffc2;">
+            </div>
 
+            <div style="width:80px;">
             <div class = "text">평중</div>
-            <input placeholder="평중" class="insert-weight">
+            <input type="number" placeholder="평중" class="insert-weight" id="input-box" style="background-color: #d6ffc2;">
+            </div>
             
+            <div>
             <div class = "text">출고일</div>
-            <input placeholder="출고일" class="insert-releaseDate">
+            <input type="date" placeholder="출고일" class="insert-releaseDate" id="input-box">
+            </div>
             
+            <div style="width:140px;">
             <div class = "text">홀딩</div>
-            <input placeholder="홀딩" class="insert-holding">
+            <input type="text" placeholder="홀딩" class="insert-holding" id="input-box">
+            </div>
 
-            <div class = "text">동결</div>
-            <input placeholder="동결" class="insert-frozen">
-            
-            <div class = "text">사용불가</div>
-            <input placeholder="사용불가" class="insert-unuse">
+            <div style="width:80px;">
+            <div class = "text">상태</div>
+            <form action="#">
+                <select class="insert-state" id="input-box">
+                    <option value="non">없음</option>
+                    <option value="freeze">동결</option>
+                    <option value="stopped">사용불가</option>
+                    <option value="moving">이고</option>
+                </select>
+            </form>
+            </div>
         </div>
-        <button class="select-insert-btn">추가</button>
+        <div class="note">
+            <input type="text" class="input-note" placeholder="메모">
+            <button class="select-insert-btn">추가</button>
+        </div>
     `;
 }
 
@@ -126,44 +158,87 @@ export function renderUpdate() {
         const target = document.querySelector(
             `.update-panel[data-id="${id}"]`
         );
+        const dataState = item.dataState || "";
+        console.log(item);
+        console.log(item.dataState);
+        console.log(item.상태);
 
         if (!target) return;
 
         target.innerHTML = `
+            <div class = "update-pan" data-id="${id}">
+                <div>
+                    <div class="text">상품명</div>
+                    <input type="text" value="${item.name}" class="update-name" data-id="${id}" id="input-box" style="background-color: #d6ffc2;">
+                </div>
+
+                <div>
+                    <div class="text">브랜드</div>
+                    <input type="text" value="${item.brand}" class="update-brand" data-id="${id}" id="input-box" style="background-color: #d6ffc2;">
+                </div>
+
+                <div style="width:80px;">
+                    <div class="text">등급</div>
+                    <input type="text" value="${item.grade}" class="update-grade" data-id="${id}" id="input-box" style="background-color: #d6ffc2;">
+                </div>
+
+                <div style="width:80px;">
+                    <div class="text">ESTNO</div>
+                    <input type="text" value="${item.estNo}" class="update-estNo" data-id="${id}" id="input-box" style="background-color: #d6ffc2;">
+                </div>
+
+                <div style="width:80px;">
+                    <div class="text">재고</div>
+                    <input type="number" value="${item.qty}" class="update-qty" data-id="${id}" id="input-box" style="background-color: #d6ffc2;">
+                </div>
+                <div style="width:170px;">
+                    <div class="text">BL</div>
+                    <input type="text" value="${item.bl}" class="update-bl" data-id="${id}" id="input-box" style="background-color: #d6ffc2;">
+                </div>
+
+                <div>
+                    <div class="text">창고</div>
+                    <input type="text" value="${item.warehouse}" class="update-warehouse" data-id="${id}" id="input-box" style="background-color: #d6ffc2;">
+                </div>
+
+                <div>
+                    <div class="text">유통기한</div>
+                    <input type="date" value="${item.dueDate}" class="update-dueDate" data-id="${id}" id="input-box" style="background-color: #d6ffc2;">
+                </div>
+
+                <div style="width:80px;">
+                    <div class="text">평중</div>
+                    <input type="number" value="${item.weight}" class="update-weight" data-id="${id}" id="input-box" style="background-color: #d6ffc2;">
+                </div>
+
+                <div>
+                    <div class="text">출고일</div>
+                    <input type="date" value="${item.releaseDate}" class="update-releaseDate" data-id="${id}" id="input-box">
+                </div>
+
+                <div style="width:140px;">
+                    <div class="text">홀딩</div>
+                    <input type="text" value="${item.holding}" class="update-holding" data-id="${id}" id="input-box">
+                </div>
+
+                <div style="width:80px;">
+                    <div class="text">상태</div>
+                    <select class="update-state" data-id="${id}" id="input-box">
+                        <option value="non" ${dataState === "non" ? "selected" : ""}>없음</option>
+                        <option value="freeze" ${dataState === "freeze" ? "selected" : ""}>동결</option>
+                        <option value="stopped" ${dataState === "stopped" ? "selected" : ""}>사용불가</option>
+                        <option value="moving" ${dataState === "moving" ? "selected" : ""}>이고</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="note">
+                <input type="text" class="input-note" data-id="${id}" placeholder="메모" value="${item.memo || ""}">
+            <div>
             <div class = "item-btns">
                 <button class="select-update-btn" data-id="${id}">수정</button>
                 <button class="select-delete-btn" data-id="${id}">삭제</button>
             </div>
-            <div class = "update-pan" data-id="${id}">
-                <div class="text">상품명</div>
-                <input value="${item.name}" class="update-name" data-id="${id}">
-                <div class="text">브랜드</div>
-                <input value="${item.brand}" class="update-brand" data-id="${id}">
-                <div class="text">등급</div>
-                <input value="${item.grade}" class="update-grade" data-id="${id}">
-                <div class="text">ESTNO</div>
-                <input value="${item.estNo}" class="update-estNo" data-id="${id}">
-                <div class="text">재고</div>
-                <input value="${item.qty}" class="update-qty" data-id="${id}">
-                <div class="text">BL</div>
-                <input value="${item.bl}" class="update-bl" data-id="${id}">
-                <div class="text">창고</div>
-                <input value="${item.warehouse}" class="update-warehouse" data-id="${id}">
-                <div class="text">유통기한</div>
-                <input value="${item.dueDate}" class="update-dueDate" data-id="${id}">
-                <div class="text">평균중량</div>
-                <input value="${item.weight}" class="update-weight" data-id="${id}">
-                <div class="text">출고일</div>
-                <input value="${item.releaseDate}" class="update-releaseDate" data-id="${id}">
-                <div class="text">홀딩</div>
-                <input value="${item.holding}" class="update-holding" data-id="${id}">
-                <div class="text">동결</div>
-                <input value="${item.frozen}" class="update-frozen" data-id="${id}">
-                <div class="text">사용불가</div>
-                <input value="${item.unuse}" class="update-unuse" data-id="${id}">
-                
-            </div>
-            
         `;
 
         totalQty += Number(item.qty) || 0;
@@ -187,17 +262,28 @@ export function renderHolding() {
         if (!target) return;
 
         target.innerHTML = `
-            <div class="holding-pan" data-id="${id}">
-                <div class="text">홀딩개수</div>
-                <input class="hold-qty" data-id="${id}" placeholder="개수">
-                <div class="text">출고일자</div>
-                <input class="hold-releaseDate" data-id="${id}" placeholder="출고일자">
-                <div class="text">홀딩자</div>
-                <input class="hold-note" data-id="${id}" placeholder="홀딩자">
-                <div class="item-btns">
+            <div class="holding-pan" data-id="${id}" style="flex-wrap: nowrap;">
+                <div>
+                    <div class="text">홀딩개수</div>
+                    <input type="number" class="hold-qty" data-id="${id}" placeholder="개수" id="input-box">
+                </div>
+
+                <div>
+                    <div class="text">출고일자</div>
+                    <input type="date" class="hold-releaseDate" data-id="${id}" placeholder="출고일자" id="input-box">
+                </div>
+
+                <div>
+                    <div class="text">홀딩자</div>
+                    <input type="text" class="hold-note" data-id="${id}" placeholder="홀딩자" id="input-box">
+                </div>               
+            </div>
+            <div class="note"  style="height: 50%; display: flex; flex-direction: row; align-content: flex-end; justify-content: flex-start; gap: 10px">
+                <input type="text" class="input-note" data-id="${id}" placeholder="메모" value="${item.memo}">
+                <div class="item-btns" style="display: flex; justify-content: flex-start;">
                     <button class="select-holding-btn" data-id="${id}">홀딩</button>
                 </div>
-            </div>
+            </div>     
         `;
     });
 }
@@ -234,9 +320,6 @@ export function renderFooter(type) {
         `;
     } else if (type === "insert") {
         html = `
-            <div class="top-bar">
-                <button class="insertRow-btn">행 추가</button>
-            </div>
             <div class="footer">
                 <button class="all-insert-btn">전체 추가</button>
             </div>

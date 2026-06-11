@@ -4,9 +4,9 @@ sys.path.append(r"C:\Users\ASUS\.vscode\azy_firbase_web")
 import pandas as pd
 from back_end.eda_else_df import else_df_eda
 from back_end.jns_eda import jns_eda
-from back_end.eda_ch_plz import ch_eda
-from back_end.eda_ch_plz import plz_eda
-from back_end.eda_column import column_split
+from back_end.eda_ch_plz_cs import ch_eda
+from back_end.eda_ch_plz_cs import plz_eda
+from back_end.eda_ch_plz_cs import cs_eda
 from back_end.replace_name import replace_name
 from back_end.eda_standard import eda_standard
 from back_end.eda_common import eda_common
@@ -35,7 +35,8 @@ warehouses = [
     "대청",
     "대재",
     "한라",
-    "한라 동탄"
+    "한라 동탄",
+    "CS"
 ]
 
 def list_eda(final_df, jns):
@@ -71,11 +72,8 @@ def list_eda(final_df, jns):
     dch = warehouse_dfs["대청"].copy()
     hlk = warehouse_dfs["한라"].copy()
     hld = warehouse_dfs["한라 동탄"].copy()
-
-    total_data = pd.concat([beige,samil,sinu
-              ,aurora,eastbelly,hyosung,daejae
-              ,huichang,swc,kd,ki,sjn,dch,hlk,hld,ch,plz], ignore_index=True)
-    data = pd.concat([jns], ignore_index=True)
+    cs = warehouse_dfs["CS"].copy()
+    cs.to_excel("cs.xlsx", index=False)
 
     # 함수 적용
     beige = safe_df(beige, "베이지박스투")
@@ -87,39 +85,22 @@ def list_eda(final_df, jns):
     huichang = safe_df(huichang, "희창냉장")
     swc = safe_df(swc, "SWC")
     daejae = safe_df(daejae, "대재")
+    added_df = eda_added(beige, samil, sinu, aurora, eastbelly, hyosung, daejae, huichang, swc)
 
-    added_df = eda_added(
-        beige,
-        samil,
-        sinu,
-        aurora,
-        eastbelly,
-        hyosung,
-        daejae,
-        huichang,
-        swc
-    )
     kd = safe_df(kd, "KD")
     ki = safe_df(ki, "KI")
     sjn = safe_df(sjn, "SJN")
     dch = safe_df(dch, "DCH")
     hlk = safe_df(hlk, "HLK")
     hld = safe_df(hld, "HLD")
+    six_df = else_df_eda(kd, ki, sjn, dch, hlk, hld)
 
-    six_df = else_df_eda(
-        kd,
-        ki,
-        sjn,
-        dch,
-        hlk,
-        hld
-    )
     jns = safe_eda(jns_eda, jns, "JNS")
     ch = safe_eda(ch_eda, ch, "CH")
     plz = safe_eda(plz_eda, plz, "PLZ")
+    cs = safe_eda(cs_eda, cs, "CS")
     hand_df = crawling_handmade()
-
-    total_data = pd.concat([added_df,six_df,ch,plz,jns,hand_df], ignore_index=True)
+    total_data = pd.concat([added_df,six_df,ch,plz,jns,hand_df,cs], ignore_index=True)
 
     total_data = total_data.drop(columns=["중량"],errors="ignore")
     total_data = replace_name(total_data)

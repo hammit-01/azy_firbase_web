@@ -16,7 +16,7 @@
             <div class = "table_size"></div>
         </div>
         <div class="controls">
-            <select id="searchField">
+            <!-- <select id="searchField">
                 <option value="전체">전체</option>
                 <option value="상품명">상품명</option>
                 <option value="브랜드">브랜드</option>
@@ -24,7 +24,69 @@
                 <option value="ESTNO">ESTNO</option>
                 <option value="BL">BL</option>
                 <option value="창고">창고</option>
-            </select>
+            </select> -->
+            <div style="width:80px;">
+                <select class="show-warehouse" data-id="${id}" id="input-box">
+                    <option value="">창고</option>
+                    <option value="CS">CS</option>
+                    <option value="CH">CH</option>
+                    <option value="SWC">SWC</option>
+                    <option value="강동1">강동1</option>
+                    <option value="강동2">강동2</option>
+                    <option value="곤지암">곤지암</option>
+                    <option value="대재">대재</option>
+                    <option value="대청">대청</option>
+                    <option value="삼진1">삼진1</option>
+                    <option value="삼진2">삼진2</option>
+                    <option value="신우">신우</option>
+                    <option value="에이스기흥">에이스기흥</option>
+                    <option value="에이스처인">에이스처인</option>
+                    <option value="오로라">오로라</option>
+                    <option value="용인">용인</option>
+                    <option value="유상">유상</option>
+                    <option value="이스트밸리">이스트밸리</option>
+                    <option value="프라자">프라자</option>
+                    <option value="한라">한라</option>
+                    <option value="효성">효성</option>
+                    <option value="희창">희창</option>
+                </select>
+            </div>
+            <div style="width:80px;">
+                <select class="show-brand" data-id="${id}" id="input-box">
+                    <option value="">브랜드</option>
+                    <option value="AFG">AFG</option>
+                    <option value="AGROSUPER">AGROSUPER</option>
+                    <option value="AMH">AMH</option>
+                    <option value="EXCEL">EXCEL</option>
+                    <option value="GCM">GCM</option>
+                    <option value="GREENHAM">GREENHAM</option>
+                    <option value="IBP">IBP</option>
+                    <option value="KILCOY">KILCOY</option>
+                    <option value="LITERA">LITERA</option>
+                    <option value="LOCKS">LOCKS</option>
+                    <option value="NB">NB</option>
+                    <option value="OLYMEL">OLYMEL</option>
+                    <option value="PATEL">PATEL</option>
+                    <option value="PERDIGAO">PERDIGAO</option>
+                    <option value="PPCS">PPCS</option>
+                    <option value="SADIA">SADIA</option>
+                    <option value="SEARA">SEARA</option>
+                    <option value="SHOWCASE">SHOWCASE</option>
+                    <option value="SMITHFIELD">SMITHFIELD</option>
+                    <option value="SWIFT">SWIFT</option>
+                    <option value="TEYS">TEYS</option>
+                    <option value="TONNIES">TONNIES</option>
+                </select>
+            </div>
+            <div style="width:80px;">
+                <select class="show-state" data-id="${id}" id="input-box">
+                    <option value="">상태</option>
+                    <option value="holding">홀딩</option>
+                    <option value="freeze">동결</option>
+                    <option value="stopped">사용불가</option>
+                    <option value="moving">이고</option>
+                </select>
+            </div>
             <input id="searchInput" placeholder="검색">
         </div>
         <div class = "top_bar">
@@ -50,22 +112,22 @@
                 <table>
                     <colgroup>
                         <col style="width:50px">
-                        <col> <!--상품명-->
-                        <col> <!--브랜드-->
-                        <col> <!--등급-->
-                        <col style="width:100px"> <!--ESTNO-->
+                        <col style="width:150px"> <!--상품명-->
+                        <col style="width:200px"> <!--브랜드-->
+                        <col style="width:100px"> <!--등급-->
+                        <col style="width:120px"> <!--ESTNO-->
                         <col style="width:80px"> <!--재고-->
                         <col> <!--BL번호-->
                         <col style="width:120px"> <!--창고-->
                         <col style="width:120px"> <!--유통기한-->
                         <col style="width:80px"> <!--평균-->
-                        <col style="width:80px"> <!--출고일-->
-                        <col style="width:80px"> <!--홀딩-->
+                        <col style="width:120px"> <!--출고일-->
+                        <col style="width:150px"> <!--홀딩-->
                     </colgroup>
 
                     <thead>
                     <tr>
-                        <th>선택</th>
+                        <th class="select-all">선택</th>
                         <th data-key="상품명">상품명</th>
                         <th data-key="브랜드">브랜드</th>
                         <th data-key="등급">등급</th>

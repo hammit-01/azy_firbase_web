@@ -23,8 +23,8 @@ export function normalizeItem(raw) {
         releaseDate: raw.출고일 ?? "",
 
         holding: raw.홀딩 ?? "",
-        frozen: raw.동결 ?? "",
-        unuse: raw.사용불가 ?? "",
+        dataState: raw.상태 ?? "",
+        memo: raw.메모 ?? "",
 
         // 원본 보존 (디버깅용)
         raw

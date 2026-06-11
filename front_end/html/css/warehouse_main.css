@@ -95,6 +95,7 @@ thead {
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
     display: flex;
     align-items: flex-end;
+    gap: 30px;
 }
 
 /* input / select 공통 */
@@ -147,23 +148,9 @@ thead {
     display: flex;
 }
 
-.footer {
-    padding-left: 10px;
-}
-
-.select-insert-btn, .insertRow-btn,
-.select-update-btn, .select-delete-btn,
-.select-holding-btn,
-.footer {
-    display: flex;
-    gap: 10px;
-    align-items: baseline;
-}
-
 .update-panel, .insert-panel, .holding-panel {
     display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 
 .select-no, .all-crud-btn {
@@ -176,12 +163,8 @@ thead {
 .item-btns{
     display: flex;
     gap: 5px;
-}
-
-.update-panel, .insert-panel, .holding-panel {
-    display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
+    justify-content: flex-end;
+    width: stretch;
 }
 
 .holding-data {
@@ -216,8 +199,7 @@ thead {
 .select-insert-btn {
     width: 100px;
     padding: 5px;
-    /* color: white; */
-    border: 1px solid #e5e7eb;
+    border: 1px solid #e7ebe5;
     border-radius: 10px;
     cursor: pointer;
     transition: 0.2s;
@@ -265,27 +247,45 @@ input {
     font-weight:700;
 }
 
+.footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    align-items: center;
+}
+
+.top-bar {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.insert-list {
+    display: flex;
+}
+
 /* 사용불가 */
-.unuse-row td{
+.stopped-row td{
     color:#92400e;
+    font-weight:700;
+}
+
+/* 이고 */
+.moving-row td{
+    color:#ff8838;
     font-weight:700;
 }
 
 /* 체크한 행 = 연초록 */
 .selected-row td{
-    background:#fff9c9 !important;
-    color:hsl(47, 100%, 50%) !important;
+    background:#baff25 !important;
+    color: #2e9100 !important;
     font-weight:700;
 }
 
 /* 홀딩된 행 일시 표시 */
 .flash-row td {
-    background: #fff3a3 !important;
+    background: #bbffa3 !important;
     transition: 0.3s;
-}
-
-.top_bar {
-    /* display: flex; */
 }
 
 .text {
@@ -293,16 +293,20 @@ input {
 }
 
 .insert-pan, .update-pan, .holding-pan {
-    display: grid;
-    grid-template-columns: 
-        80px 250px
-        80px 250px
-        80px 250px
-        80px 250px;
-
+    display: flex;
     gap: 10px;
     align-items: center;
-    justify-content: center;
+    flex-wrap: wrap;
+}
+
+#input-box {
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
 }
 
 .insert-row input {
@@ -322,4 +326,316 @@ input {
 .cancel-btn {
     width: 30px;
     height: 30px;
+}
+
+.note {
+    display: flex;
+    flex-direction: column;
+    width: 90%;
+    height: stretch;
+    align-items: center;
+}
+
+.input-note {
+    width: stretch;
+    height: stretch;
+}
+
+/* 모바일 */
+@media screen and (max-width: 768px) {
+    
+    body {
+        margin:0;
+        padding:10px;
+        width: fit-content;
+    }
+
+    .left-top-panel {
+        display: flex;
+        align-items: center;
+        flex-direction: initial;
+    }
+
+    .logo{
+        width:30px;
+        height:auto;
+        display:block;
+    }
+
+    h1 {
+        font-size: 40px;
+        margin: 10px;
+    }
+
+    .left-panel {
+        flex: 1;
+        min-width: 0;
+        transition: 0.3s;
+        padding: 10px;
+    }
+
+    /* 선택 패널 열렸을 때 */
+    .container.active{
+        justify-content: space-between;
+    }
+
+    .right-panel{
+        opacity: 1;
+        padding: 20px;
+        margin: 10px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    }
+
+    .table-wrap {
+        width:100%;
+        overflow:auto;
+        background:#fff;
+        border-radius:10px;
+    }
+
+    table {
+        width:100%;
+        border-collapse:collapse;
+        table-layout:fixed;
+    }
+
+    th, td {
+        padding:10px;
+        text-align:center;
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
+    }
+
+    tbody tr:nth-child(even) td {
+        background: #efffd3;
+    }
+
+    tbody tr:hover td {
+        background: #c7ff67 !important;
+    }
+
+
+    thead {
+        background:#94d900;
+        color:white;
+    }
+
+    .controls {
+        padding: 20px 16px;
+        margin: 10px;
+        background: #ffffff;
+        border-radius: 14px;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+        display: flex;
+        align-items: flex-end;
+    }
+
+    /* input / select 공통 */
+    .controls input,
+    .controls select {
+        height: 40px;
+        padding: 0 12px;
+
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+
+        font-size: 14px;
+        background: #f9fafb;
+
+        outline: none;
+        transition: 0.2s;
+    }
+
+    /* focus 효과 */
+    .controls input:focus,
+    .controls select:focus {
+        border-color: #3b82f6;
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+    }
+
+    /* 검색 input만 살짝 넓게 */
+    #searchInput {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* select 크기 */
+    .controls select {
+        min-width: 100px;
+        cursor: pointer;
+    }
+
+    /* hover 느낌 */
+    .controls input:hover,
+    .controls select:hover {
+        border-color: #cbd5e1;
+    }
+
+    .all-btn {
+        width: 100%;
+    }
+
+    .btn {
+        display: flex;
+    }
+
+    .select-no, .all-crud-btn {
+        margin: 0;
+        font-weight: 600;
+        width: auto;
+        display: flex;
+    }
+
+    .item-btns{
+        display: flex;
+        gap: 5px;
+        justify-content: flex-end;
+        width: stretch;
+        
+    }
+
+    .update-panel, .insert-panel, .holding-panel {
+        display: flex;
+        flex-wrap: nowrap;
+    }
+
+    .holding-data {
+        display: flex;
+        gap: 10px;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: flex-end;
+        justify-content: flex-end;
+
+    }
+
+    .selected-item {
+        margin-top: 10px;
+    }
+
+    /* 공통 버튼 */
+    .insertRow-btn,
+    .rollback-btn,
+    .insert-btn,
+    .update-btn,
+    .holding-btn,
+    .clear-btn,
+    .all-holding-btn,
+    .all-delete-btn,
+    .all-update-btn,
+    .all-insert-btn,
+    .cancel-btn,
+    .select-delete-btn,
+    .select-holding-btn,
+    .select-update-btn,
+    .select-insert-btn {
+        width: 100px;
+        padding: 5px;
+        /* color: white; */
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    .crud-btn {
+        display: flex;
+        gap: 5px;
+    }
+
+    /* 개별 색 */
+    .all-delete-btn, .select-delete-btn,
+    .select-insert-btn, .insert-btn,
+    .select-update-btn, .update-btn,
+    .holding-btn, .select-holding-btn,
+    .clear-btn,
+    .all-update-btn, .all-insert-btn, .all-holding-btn,
+    .rollback-btn, .insertRow-btn { background: #ffffff;}
+
+    .cancel-btn { background: #ff4747; color: #ffffff;}
+
+    /* hover */
+    .holding:hover,
+    .clear-btn:hover,
+    .cancel-btn:hover,
+    .all-holding-btn:hover {
+        opacity: 0.85;
+    }
+
+    input {
+        margin-top: 5px;
+        padding: 10px;
+        border-radius: 10px;
+    }
+
+    /* 홀딩된 행 = 연파랑 */
+    .holding-row td{
+        color:#007de4;
+        font-weight:600;
+    }
+
+    /* 동결 */
+    .freezed-row td{
+        color:#6d28d9;
+        font-weight:700;
+    }
+
+    /* 사용불가 */
+    .unuse-row td{
+        color:#92400e;
+        font-weight:700;
+    }
+
+    /* 체크한 행 = 연초록 */
+    .selected-row td{
+        background:#fff9c9 !important;
+        color:hsl(47, 100%, 50%) !important;
+        font-weight:700;
+    }
+
+    /* 홀딩된 행 일시 표시 */
+    .flash-row td {
+        background: #fff3a3 !important;
+        transition: 0.3s;
+    }
+
+    .top_bar {
+        display: flex;
+    }
+
+    .text {
+        margin: 10px;
+    }
+
+    .insert-pan, .update-pan, .holding-pan {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+    }
+
+    .insert-row input {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .item-data {
+        margin: 10px;
+    }
+
+    .item-datas {
+        display: flex;
+        align-items: baseline;
+    }
+
+    .cancel-btn {
+        width: 30px;
+        height: 30px;
+    }
+
 }

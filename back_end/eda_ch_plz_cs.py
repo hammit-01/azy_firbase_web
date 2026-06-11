@@ -77,7 +77,6 @@ def extract_spec_plz(data):
         None
     ])
 
-
 # =========================
 # 부위명 추출
 # =========================
@@ -297,5 +296,54 @@ def plz_eda(data):
         errors="ignore"
     )
 
-
     return plz
+
+def cs_eda(data):
+    if data is None or data.empty:
+        return data
+
+    cs = data.drop_duplicates().copy()
+
+    cs["창고"] = "CS"
+
+    cs["기타정보"] = cs["기타정보"].str.replace("()", "", regex=False)
+    cs["기타정보"] = cs["기타정보"].str.replace("/", "", regex=False)
+    cs["기타정보"] = cs["기타정보"].str.replace("[000000]", "", regex=False)
+
+    cs["평균중량"] = (
+        cs["규격단위중량"]
+        .astype(str)
+        .str.extract(r'(\d+(?:\.\d+)?)')[0]
+        .astype(float)
+    )
+
+    cs[['등급', '브랜드', 'ESTNO']] = cs['기타정보'].apply(split_data)
+
+    # 원본 제거
+    cs = cs.drop(
+        columns=['기타정보', '규격단위중량'],
+        errors='ignore'
+    )
+
+    return cs
+
+def split_data(text):
+    # 등급 추출 ("..." 형태)
+    grade = ''
+    m = re.search(r'"([^"]+)"', text)
+    if m:
+        grade = m.group(1).replace('/', '')
+
+    # 브랜드 추출 (... )
+    brand = ''
+    m = re.search(r'\(([^()]*)\)\[', text)
+    if m:
+        brand = m.group(1)
+
+    # ESTNO 추출 [...]
+    estno = ''
+    m = re.search(r'\[([^\]]+)\]', text)
+    if m:
+        estno = m.group(1)
+
+    return pd.Series([grade, brand, estno])

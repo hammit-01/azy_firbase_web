@@ -62,8 +62,7 @@ export function renderTable() {
             dom.searchInput.value
         ).toLowerCase();
 
-    const field =
-        dom.searchField.value;
+    const field = "전체";
 
     // =========================
     // 검색 필터
@@ -97,6 +96,25 @@ export function renderTable() {
                 .toLowerCase()
                 .includes(keyword);
         });
+    }
+
+    const warehouse =
+        document.querySelector(".show-warehouse").value;
+    const brand =
+        document.querySelector(".show-brand").value;
+    const dataState =
+        document.querySelector(".show-state").value;
+
+    if (warehouse && warehouse !== "non") {
+        data = data.filter(item => item.창고 === warehouse);
+    }
+    
+    if (brand && brand !== "non") {
+        data = data.filter(item => item.브랜드 === brand);
+    }
+    
+    if (dataState && dataState !== "non") {
+        data = data.filter(item => item.상태 === dataState);
     }
 
     // =========================
@@ -168,12 +186,6 @@ export function renderTable() {
         const hold =
             cleanText(item.홀딩);
 
-        const isFreeze =
-            cleanText(item.동결) !== "";
-
-        const isBlocked =
-            cleanText(item.사용불가) !== "";
-
         const isHolding =
             hold !== "";
 
@@ -182,21 +194,29 @@ export function renderTable() {
         if (checked)
             rowClass += " selected-row";
 
-        if (isBlocked) {
-
-            rowClass += " unuse-row";
-
-        } else if (isFreeze) {
-
-            rowClass += " freezed-row";
-
-        } else if (isHolding) {
+        if (isHolding) {
 
             rowClass += " holding-row";
         }
 
         if (state.flashIds.has(id)) {
             rowClass += " flash-row";
+        }
+
+        if (item.상태 === "holding") {
+            rowClass += " holding-row";
+        }
+        
+        if (item.상태 === "freeze") {
+            rowClass += " freezed-row";
+        }
+        
+        if (item.상태 === "stopped") {
+            rowClass += " stopped-row";
+        }
+        
+        if (item.상태 === "moving") {
+            rowClass += " moving-row";
         }
 
         html += `
@@ -222,7 +242,6 @@ export function renderTable() {
                 <td>${safeValue(item.평중)}</td>
                 <td>${safeValue(item.출고일)}</td>
                 <td>${safeValue(item.홀딩)}</td>
-
             </tr>
         `;
 

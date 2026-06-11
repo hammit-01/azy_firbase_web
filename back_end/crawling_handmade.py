@@ -2,10 +2,13 @@ import pandas as pd
 import re
 from back_end.eda_column import column_replace
 
+# 유상만 재고현황(1) 엑셀
+
 # 고려 냉장
 def korea_eda():
     # 엑셀 불러오기
     df = pd.read_excel("./back_end/data/warehouse/고려.xlsx", header=4)
+    
     df = df[df["수탁품명"] != "소     계"]
     df = df[df["수탁품명"] != "합     계"]
     df = df[df["수탁품명"] != "고려종합물류주식회사"]
@@ -18,6 +21,8 @@ def korea_eda():
     korea["유통기한"] = df["유효기간"].copy()
     korea["창고"] = "고려"
     korea = korea.dropna(subset=['수탁품'])
+    if korea.empty:
+        return pd.DataFrame()
     korea[['브랜드', '수탁품', '등급', 'ESTNO']] = (
         korea['수탁품'].apply(parse_koryo_case)
     )
@@ -28,6 +33,10 @@ def korea_eda():
 def aceGH_eda():
     # 엑셀 불러오기
     df = pd.read_excel("./back_end/data/warehouse/에이스기흥.xlsx", header=4)
+    if df.dropna(how="all").empty:
+        print("실제 데이터 없음")
+        return pd.DataFrame()
+    
     df = df[df["수탁품"] != "소     계"]
     df = df[df["수탁품"] != "합     계"]
     df = df[df["수탁품"] != ""]
@@ -40,6 +49,8 @@ def aceGH_eda():
     aceGH["ESTNO"] = df["EST-NO"].copy()
     aceGH["창고"] = "에이스기흥"
     aceGH = aceGH.dropna(subset=['수탁품'])
+    if aceGH.empty:
+        return pd.DataFrame()
     aceGH[['수탁품', '등급']] = (
         aceGH['수탁품'].apply(parse_product_aceGH)
     )
@@ -50,6 +61,10 @@ def aceGH_eda():
 def aceCHIN_eda():
     # 엑셀 불러오기
     df = pd.read_excel("./back_end/data/warehouse/에이스처인.xlsx", header=4)
+    if df.dropna(how="all").empty:
+        print("실제 데이터 없음")
+        return pd.DataFrame()
+    
     df = df[df["수탁품"] != "소     계"]
     df = df[df["수탁품"] != "합     계"]
     df = df[df["수탁품"] != ""]
@@ -62,6 +77,8 @@ def aceCHIN_eda():
     aceCHIN["ESTNO"] = df["EST-NO"].copy()
     aceCHIN["창고"] = "에이스처인"
     aceCHIN = aceCHIN.dropna(subset=['수탁품'])
+    if aceCHIN.empty:
+        return pd.DataFrame()
     aceCHIN[['브랜드', '수탁품', '등급']] = (
         aceCHIN['수탁품'].apply(parse_product_ace)
     )
@@ -72,6 +89,10 @@ def aceCHIN_eda():
 def aceYOGIN_eda():
     # 엑셀 불러오기
     df = pd.read_excel("./back_end/data/warehouse/에이스용인.xlsx", header=4)
+    if df.dropna(how="all").empty:
+        print("실제 데이터 없음")
+        return pd.DataFrame()
+    
     df = df[df["수탁품"] != "소     계"]
     df = df[df["수탁품"] != "합     계"]
     df = df[df["수탁품"] != ""]
@@ -84,6 +105,8 @@ def aceYOGIN_eda():
     aceYOGIN["ESTNO"] = df["EST-NO"].copy()
     aceYOGIN["창고"] = "에이스용인"
     aceYOGIN = aceYOGIN.dropna(subset=['수탁품'])
+    if aceYOGIN.empty:
+        return pd.DataFrame()
     aceYOGIN[['브랜드', '수탁품', '등급']] = (
         aceYOGIN['수탁품'].apply(parse_product_ace)
     )
@@ -94,6 +117,10 @@ def aceYOGIN_eda():
 def yousang_eda():
     # 엑셀 불러오기
     df = pd.read_excel("./back_end/data/warehouse/유상.xlsx", header=[6,7])
+    if df.dropna(how="all").empty:
+        print("실제 데이터 없음")
+        return pd.DataFrame()
+    
     df.columns = [
         '_'.join([str(c) for c in col if 'Unnamed' not in str(c)])
         for col in df.columns
@@ -115,6 +142,8 @@ def yousang_eda():
     yousang["창고"] = "유상"
     
     yousang = yousang.dropna(subset=['수탁품'])
+    if yousang.empty:
+        return pd.DataFrame()
     yousang[['수탁품', 'ESTNO']] = yousang['수탁품'].apply(parse_product_yousang)
 
     return yousang
@@ -123,6 +152,7 @@ def yousang_eda():
 def kyunu_eda():
     # 엑셀 불러오기    
     df = pd.read_excel("./back_end/data/warehouse/견우오아시스.xlsx", header=4)
+    
     df = df[df["수탁품명"] != "소     계"]
     df = df[df["수탁품명"] != "합     계"]
     df = df[df["수탁품명"] != "(주)견우푸드 오아시스지점"]
@@ -137,6 +167,8 @@ def kyunu_eda():
     kyunu["창고"] = "견우오아시스"
 
     kyunu = kyunu.dropna(subset=['수탁품'])
+    if kyunu.empty:
+        return pd.DataFrame()
     kyunu[['수탁품', '등급', 'ESTNO']] = kyunu['수탁품'].apply(parse_product_kyunu)
 
     return kyunu

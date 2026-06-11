@@ -27,6 +27,11 @@ columns_e = [
     "총중량","평균중량","유통기한","제조일자","비고","포괄창고"
 ]
 
+columns_f = [
+    "사업부","수탁품[코드]","규격단위중량","단위","LOT-NO직전화주","B/L NO식별번호","ESTNO","저장구역","재고수량","중량",
+    "허용수량","담보수량","적재수량","유통기한제조일자","통관구분원산지","창고"
+]
+
 drop_cols = [
     "사업부",
     "LOT-NO",
@@ -210,7 +215,7 @@ def cs(df):
     if df is None or df.shape[1] <= 2:
         return print("cs 데이터 없음")  # 또는 return df 그대로
     result = df.copy()
-    result.columns = columns_b
+    result.columns = columns_f
     result = result.drop(columns = drop_cols, errors = "ignore")
     return column_replace(result)
 
@@ -258,51 +263,3 @@ def column_replace(df):
     result.columns = final_column
 
     return result
-
-def column_split(df):
-    added_df_names = [
-        "베이지박스투",
-        "삼일물류",
-        "신우냉장",
-        "오로라CS",
-        "이스트밸리",
-        "효성냉장",
-        "희창냉장",
-        "SWC"
-    ]
-    
-    six_df_names = [
-        "강동1",
-        "강동2",
-        "경인",
-        "삼진1",
-        "삼진2",
-        "대청",
-        "한라",
-        "한라 동탄"
-    ]
-
-    ch_plz_names = [
-        "시에이치물류",
-        "프라자로지스"
-    ]
-
-    added_df = {
-        name: dfs
-        for name, dfs in df.items()
-        if name in added_df_names
-    }
-
-    six_df = {
-        name: dfs
-        for name, dfs in df.items()
-        if name in six_df_names
-    }
-
-    ch_plz = {
-        name: dfs
-        for name, dfs in df.items()
-        if name in ch_plz_names
-    }
-
-    return added_df, six_df, ch_plz

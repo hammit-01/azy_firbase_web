@@ -79,10 +79,28 @@ def post(df):
 
     # 업로드
     for _, row in df.iterrows():
+        bl = to_str(row.get("BL번호", "")).strip()
+        weight = to_str(row.get("평균중량", "")).strip()
+        weight = weight.replace(".", "") if weight else ""
+        expire = to_date(row.get("유통기한"))
+
+        # BL번호 뒤 4자리
+        bl_last4 = bl[-4:] if len(bl) >= 4 else bl
+
+        # 날짜를 문자열로 변환 (2026-06-08 -> 20260608)
+        expire_str = expire.replace("-", "") if expire else ""
+
+        bl_last4 = bl_last4.replace("/", "_")
+        weight = weight.replace("/", "_")
+        expire_str = expire_str.replace("/", "_")
+
+        doc_id = f"{bl_last4}_{expire_str}_{weight}"
+
         doc_ref = db.collection("all_data").document()
 
         doc_ref.set({
             "id": doc_ref.id,
+            "pk": doc_id,
             "상품명": to_str(row.get("수탁품", "")).strip(),
             "브랜드": to_str(row.get("브랜드", "")).strip(),
             "등급": to_str(row.get("등급", "")).strip(),
@@ -98,8 +116,8 @@ def post(df):
             "홀딩": True if str(to_str(row.get("비고"))) else "",
 
             "수집일": str(today),
-            "동결": True if pd.notna(row.get("동결")) else "",
-            "사용불가": True if pd.notna(row.get("사용불가")) else ""
+            "상태": "없음",
+            "메모": ""
         })
 
 

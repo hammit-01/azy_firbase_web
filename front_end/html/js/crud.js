@@ -32,7 +32,9 @@ export async function holdingData(item, holdQty, releaseDate, note) {
             홀딩: note?.trim() || "",
             출고일: releaseDate || "",
             유통기한: item.dueDate || "",
-            평중: item.weight || ""
+            평중: item.weight || "",
+            상태: "holding",
+            메모: item.memo
         });
 
         console.log("홀딩 완료");
@@ -63,8 +65,8 @@ export async function insertData(
     weight,
     releaseDate,
     holding,
-    frozen,
-    unuse
+    dataState,
+    memo
 ) {
 
     if (qty <= 0) {
@@ -87,8 +89,8 @@ export async function insertData(
             평중: weight,
             출고일: releaseDate || "",
             홀딩: holding?.trim() || "",
-            동결: frozen?.trim() || "",
-            사용불가: unuse?.trim() || "",
+            상태: dataState?.trim() || "",
+            메모: memo || ""
 
         });
 
@@ -105,7 +107,7 @@ export async function insertData(
 }
 
 export async function updateData(item, id, name, brand, grade, estNo, qty, bl, warehouse, dueDate, weight,
-    releaseDate, holding, frozen, unuse) {
+    releaseDate, holding, dataState, memo) {
 
     const dataId = item ? item.id : id;
 
@@ -123,8 +125,8 @@ export async function updateData(item, id, name, brand, grade, estNo, qty, bl, w
         평중: item.weight || 0,
         출고일: item.releaseDate || "",
         홀딩: item.holding || "",
-        동결: item.frozen || "",
-        사용불가: item.unuse || ""
+        상태: item.dataState || "",
+        메모: item.memo || ""
     };
 
     if (!numQty || numQty <= 0) {
@@ -144,8 +146,8 @@ export async function updateData(item, id, name, brand, grade, estNo, qty, bl, w
         평중: Number(weight) || 0,
         출고일: releaseDate || "",
         홀딩: holding?.trim() || "",
-        동결: frozen?.trim() || "",
-        사용불가: unuse?.trim() || ""
+        상태: dataState?.trim() || "",
+        메모: memo || ""
     };
 
     try {
