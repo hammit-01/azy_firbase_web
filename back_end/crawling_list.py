@@ -221,29 +221,31 @@ def start_crawling():
         .astype(str)
         .str.strip()
     )
-    wh_90 = warehouse_list[warehouse_list["ip포트"] == "90"]
-    wh_88 = warehouse_list[warehouse_list["ip포트"] == "88:8080"]
-    wh_91 = warehouse_list[warehouse_list["ip포트"] == "91:8080"]
-    wh_else = warehouse_list[
-        warehouse_list["창고"].isin([
-            "베이지박스투",
-            "삼일물류",
-            "신우냉장",
-            "오로라CS",
-            "이스트밸리",
-            "효성냉장",
-            "희창냉장",
-            "SWC",
-            "대재"
-        ])
-    ]
+    # wh_90 = warehouse_list[warehouse_list["ip포트"] == "90"]
+    # wh_88 = warehouse_list[warehouse_list["ip포트"] == "88:8080"]
+    # wh_91 = warehouse_list[warehouse_list["ip포트"] == "91:8080"]
+    # wh_else = warehouse_list[
+    #     warehouse_list["창고"].isin([
+    #         "베이지박스투",
+    #         "삼일물류",
+    #         "신우냉장",
+    #         "오로라CS",
+    #         "이스트밸리",
+    #         "효성냉장",
+    #         "희창냉장",
+    #         "SWC",
+    #         "대재"
+    #     ])
+    # ]
+    jns = warehouse_list[warehouse_list["창고"] == "제니스(곤지암)"]
 
-    for name in warehouse_list["창고"].unique():
-        print(repr(name))
-    dfs = [wh_90, wh_88, wh_91, wh_else]
+    # for name in warehouse_list["창고"].unique():
+    #     print(repr(name))
+    # dfs = [wh_90, wh_88, wh_91, wh_else]
+    dfs = [jns.copy()]
 
     all_data = []
-    jns = pd.DataFrame()
+    # jns = pd.DataFrame()
 
     for df in dfs:
         for _, row in df.iterrows():
@@ -275,11 +277,11 @@ def start_crawling():
                 data = data.drop_duplicates()
 
                 # CS -> 한라동탄, 한라동탄 -> CS, 한라곤지암 -> 한라 로 변경
-                warehouse_replace_map = {
-                    "한라곤지암": "한라",
-                }
+                # warehouse_replace_map = {
+                #     "한라곤지암": "한라",
+                # }
 
-                warehouse = warehouse_replace_map.get(warehouse, warehouse)
+                # warehouse = warehouse_replace_map.get(warehouse, warehouse)
 
                 data["창고"] = warehouse
 
@@ -290,8 +292,9 @@ def start_crawling():
                     data = func(data)
                     if warehouse == "제니스(곤지암)":
                         jns = pd.DataFrame(data)
-                    else: all_data.append(data)
+                    # else: all_data.append(data)
 
-    final_df = pd.concat(all_data, ignore_index=True)
+    # final_df = pd.concat(all_data, ignore_index=True)
+    final_df = pd.DataFrame()
 
     return final_df, jns

@@ -117,6 +117,25 @@ export function renderTable() {
         data = data.filter(item => item.상태 === dataState);
     }
 
+    const diff =
+        document.querySelector(".show-warehouse").value;
+    const new_data =
+        document.querySelector(".show-brand").value;
+    const deleted_data =
+        document.querySelector(".show-state").value;
+
+    if (warehouse && warehouse !== "non") {
+        data = data.filter(item => item.창고 === warehouse);
+    }
+    
+    if (brand && brand !== "non") {
+        data = data.filter(item => item.브랜드 === brand);
+    }
+    
+    if (dataState && dataState !== "non") {
+        data = data.filter(item => item.상태 === dataState);
+    }
+
     // =========================
     // 빈 상품 제거
     // =========================
