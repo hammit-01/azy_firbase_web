@@ -1,70 +1,34 @@
 import { state } from "./state.js";
 import { renderTable } from "./table.js";
-import { renderSelectData } from "./panel.js";
-import { renderInsert } from "./panel.js";
-import { renderUpdate } from "./panel.js";
-import { renderHolding } from "./panel.js";
-import { renderFooter } from "./panel.js";
-import { createInsertRow } from "./panel.js";
+import { renderSelectData, renderInsert, renderUpdate, renderHolding, renderFooter, createInsertRow } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
-import { holdingData } from "./crud.js";
-import { insertData } from "./crud.js";
-import { updateData } from "./crud.js";
-import { deleteItem } from "./crud.js";
+import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
-import { undoLastAction } from "./crud_history.js";
-import { undoStack } from "./crud_history.js";
-import { insertItem } from "./firestoreService.js";
-import { updateItem } from "./firestoreService.js";
-import { doc, deleteDoc }  from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+import { undoLastAction, undoStack } from "./crud_history.js";
+import { insertItem, updateItem } from "./firestoreService.js";
+import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 import { db } from "./firebase.js";
 
 export function bindEvents() {
+    dom.searchInput?.addEventListener("input", () => renderTable());
 
-    // =========================
-    // input
-    // =========================
-    dom.searchInput?.addEventListener("input", () => {
-        renderTable();
+    ["show-warehouse", "show-brand", "show-state"].forEach(cls => {
+        document.querySelector(`.${cls}`)?.addEventListener("change", () => renderTable());
     });
 
-    dom.searchField?.addEventListener("change", () => {
-        renderTable();
+    document.addEventListener("change", (e) => {
+        if (e.target.classList.contains("row-check")) handleChange(e);
     });
 
-    // =========================
-    // checkbox change
-    // =========================
-    document.addEventListener("change", handleChange);
-
-    // =========================
-    // click
-    // =========================
-    document.addEventListener("click", handleClick);
-
-    // =========================
-    // hold qty 계산
-    // =========================
     document.addEventListener("input", (e) => {
-
-        if (
-            e.target.classList.contains("hold-qty")
-        ) {
-
-            const total =
-                calculateTotal();
-
-            const totalBox =
-                document.querySelector("#total-box");
-
-            if (totalBox) {
-
-                totalBox.innerText =
-                    `총 ${total} 박스`;
-            }
-        }
+        if (!e.target.classList.contains("hold-qty")) return;
+        const total = calculateTotal();
+        const totalBox = document.querySelector("#total-box");
+        if (totalBox) totalBox.innerText = `총 ${total} 박스`;
     });
+
+    document.addEventListener("click", handleClick);
 }
 
 function renderAll() {
@@ -73,32 +37,25 @@ function renderAll() {
 }
 
 function handleChange(e) {
-    if (!e.target.classList.contains("row-check")) return;
-
     const id = e.target.dataset.id;
     const item = state.allData.find(d => d.id === id);
-
     if (!item) return;
 
     if (e.target.checked) {
         addSelectedItem(state, id, item);
     } else {
-        state.crudMode = null;
         state.selectedItems.delete(id);
     }
 
-    // 🔥 선택 없으면 초기화
     if (state.selectedItems.size === 0) {
-        state.crudMode = null;
-        renderSelectData();
+        state.crudData = null;
+        renderAll();
         return;
     }
 
-    const mode = state.crudData; // 👉 Map 대신 이거 추천
-
     renderAll();
 
-    switch (mode) {
+    switch (state.crudData) {
         case "update":
             renderUpdate();
             renderFooter("update");
@@ -112,542 +69,339 @@ function handleChange(e) {
     }
 }
 
-document.addEventListener("click", (e) => {
-
+async function handleClick(e) {
+    // 전체 선택 (현재 필터된 행만)
     if (e.target.classList.contains("select-all")) {
-
-        const allChecked =
-            state.selectedItems.size === state.allData.length;
-
+        const visible = state.filteredData.length > 0 ? state.filteredData : state.allData;
+        const allChecked = visible.every(item => state.selectedItems.has(item.id));
         state.selectedItems.clear();
-
         if (!allChecked) {
-            state.allData.forEach(item => {
-                state.selectedItems.set(item.id, item);
-            });
+            visible.forEach(item => addSelectedItem(state, item.id, item));
         }
-
         renderAll();
         renderSelectData();
-
         return;
     }
 
-    if (e.target.classList.contains("show-warehouse")) {
-        renderTable();
+    // 필터 셀렉트 클릭 (change 이벤트 보완용)
+    if (
+        e.target.classList.contains("show-warehouse") ||
+        e.target.classList.contains("show-brand") ||
+        e.target.classList.contains("show-state")
+    ) {
+        setTimeout(() => renderTable(), 0);
         return;
     }
 
-    if (e.target.classList.contains("show-brand")) {
-        renderTable();
-        return;
-    }
-
-    if (e.target.classList.contains("show-state")) {
-        renderTable();
-        return;
-    }
-
-    const row = e.target.closest("tr");
-
-    if (!row) return;
-
-    if (e.target.classList.contains("row-check")) return;
-
-    const checkbox = row.querySelector(".row-check");
-
-    if (checkbox) {
-        checkbox.click();
-    }
-});
-
-async function handleClick(e) {
-    // crud menu insert section btn
+    // 추가 버튼
     if (e.target.classList.contains("insert-btn")) {
-        state.crudMode = null;
-        if (state.selectedItems.size > 0) {
-            const id = e.target.dataset.id;
-            const item = state.allData.find(d => d.id === id);
-            state.selectedItems.delete(id);
-            state.selectedItems.clear();
-        }
-        
+        state.selectedItems.clear();
+        state.crudData = null;
         renderAll();
         renderInsert();
         renderFooter("insert");
         return;
     }
-    // 행 추가 로직
+
+    // 행 추가
     if (e.target.classList.contains("insertRow-btn")) {
-
-        const list = document.querySelector(".insert-list");
-
-        list.insertAdjacentHTML("beforeend", createInsertRow());
+        document.querySelector(".insert-list")?.insertAdjacentHTML("beforeend", createInsertRow());
+        return;
     }
-    // crud menu update section btn
+
+    // 추가 카드 제거
+    const removeBtn = e.target.closest(".remove-insert-btn, .card-close-btn");
+    if (removeBtn && removeBtn.closest(".insert-card")) {
+        removeBtn.closest(".insert-card").remove();
+        // 카드가 모두 없어지면 패널 닫기
+        const remaining = document.querySelectorAll(".insert-card");
+        if (remaining.length === 0) {
+            dom.container?.classList.remove("active");
+            if (dom.sideBox) dom.sideBox.innerHTML = "";
+        }
+        return;
+    }
+
+    // 수정 버튼
     if (e.target.classList.contains("update-btn")) {
-        if (state.selectedItems.size === 0) alert("수정할 상품을 선택하세요.");
-        else {
-            state.crudData = "update";
-            renderSelectData();
-            renderUpdate();
-            renderFooter("update");
-            return;
-        }
-    }
-    // crud menu holding section btn
-    if (e.target.classList.contains("holding-btn")) {
-        if (state.selectedItems.size === 0) alert("홀딩할 상품을 선택하세요.");
-        else {
-            state.crudData = "holding";
-            renderSelectData();
-            renderHolding();
-            renderFooter("holding");
-            return;
-        }
+        if (state.selectedItems.size === 0) { alert("수정할 상품을 선택하세요."); return; }
+        state.crudData = "update";
+        renderSelectData();
+        renderUpdate();
+        renderFooter("update");
+        return;
     }
 
-    // 선택 취소 로직
+    // 홀딩 버튼
+    if (e.target.classList.contains("holding-btn")) {
+        if (state.selectedItems.size === 0) { alert("홀딩할 상품을 선택하세요."); return; }
+        state.crudData = "holding";
+        renderSelectData();
+        renderHolding();
+        renderFooter("holding");
+        return;
+    }
+
     // 전체 취소
     if (e.target.classList.contains("clear-btn")) {
         state.selectedItems.clear();
-        state.crudMode = null;
-        renderAll();
+        state.crudData = null;
+        dom.container?.classList.remove("active");
+        if (dom.sideBox) dom.sideBox.innerHTML = "";
+        renderTable();
         return;
     }
+
     // 개별 취소
     if (e.target.classList.contains("cancel-btn")) {
-
         const id = e.target.dataset.id;
-
         state.selectedItems.delete(id);
-
-        // 🔥 선택 0개면 종료
         if (state.selectedItems.size === 0) {
-            state.crudMode = null;
+            state.crudData = null;
             renderAll();
             return;
         }
-
-        const mode = state.crudData;
-
-        switch (mode) {
-            case "update":
-                renderAll();
-                renderUpdate();
-                renderFooter("update");
-                break;
-            case "holding":
-                renderAll();
-                renderHolding();
-                renderFooter("holding");
-                break;
-            default:
-                renderAll();
+        renderAll();
+        switch (state.crudData) {
+            case "update": renderUpdate(); renderFooter("update"); break;
+            case "holding": renderHolding(); renderFooter("holding"); break;
+            default: renderAll();
         }
-
         return;
     }
 
-    // 개별 로직
-    // 데이터 추가 로직
+    // 개별 추가
     if (e.target.classList.contains("select-insert-btn")) {
-
         const id = e.target.dataset.id;
-        const item = state.selectedItems.get(id);
-        const name =
-            document.querySelector(`.insert-name`).value;
-        const brand =
-            document.querySelector(`.insert-brand`).value;
-        const grade =
-            document.querySelector(`.insert-grade`).value;
-        const estNo =
-            document.querySelector(`.insert-estNo`).value;
-        const qty =
-            document.querySelector(`.insert-qty`).value;
-        const bl =
-            document.querySelector(`.insert-bl`).value;
-        const warehouse =
-            document.querySelector(`.insert-warehouse`).value;
-        const dueDate =
-            document.querySelector(`.insert-dueDate`).value;
-        const weight =
-            document.querySelector(`.insert-weight`).value;
-        const releaseDate =
-            document.querySelector(`.insert-releaseDate`).value;
-        const holding =
-            document.querySelector(`.insert-holding`).value;
-        const dataState =
-            document.querySelector(".insert-state").value;
-        const memo =
-           document.querySelector(`.input-note`).value;
-        // 새 행 id 받기
-        const newId = await insertData(name, brand, grade, estNo, qty, bl, warehouse, dueDate, weight,
-    releaseDate, holding, dataState, memo);
+        const card     = e.target.closest(".insert-card");
+        const name     = card?.querySelector(".insert-name")?.value || "";
+        const brand    = card?.querySelector(".insert-brand")?.value || "";
+        const grade    = card?.querySelector(".insert-grade")?.value || "";
+        const estNo    = card?.querySelector(".insert-estNo")?.value || "";
+        const qty      = card?.querySelector(".insert-qty")?.value || "";
+        const bl       = card?.querySelector(".insert-bl")?.value || "";
+        const warehouse = card?.querySelector(".insert-warehouse")?.value || "";
+        const dueDate  = card?.querySelector(".insert-dueDate")?.value || "";
+        const weight   = card?.querySelector(".insert-weight")?.value || "";
+        const releaseDate = card?.querySelector(".insert-releaseDate")?.value || "";
+        const holding  = card?.querySelector(".insert-holding")?.value || "";
+        const dataState = card?.querySelector(".insert-state")?.value || "";
+        const memo     = card?.querySelector(".input-note")?.value || "";
 
-        undoStack.push({
-            type: "insert",
-            undo: async () => {
-                await deleteDoc(doc(db, "all_data", newId));
-            }
-        });
+        const newId = await insertData(name, brand, grade, estNo, qty, bl, warehouse, dueDate, weight, releaseDate, holding, dataState, memo);
+        if (!newId) return;
 
-        if (undoStack.length > 20) {
-            undoStack.shift();
-        }
-    
-        // 체크 해제
+        undoStack.push({ type: "insert", undo: async () => { await deleteDoc(doc(db, "all_data", newId)); } });
+        if (undoStack.length > 20) undoStack.shift();
+
         state.selectedItems.delete(id);
-
-        // 강조 대상 저장
         state.flashIds.add(newId);
-
         renderAll();
 
-        // 새 행으로 스크롤 이동
         setTimeout(() => {
-            const targetRow =
-                document.querySelector(`[data-id="${newId}"]`)
-            if (targetRow) {
-                targetRow.scrollIntoView({behavior: "smooth",block: "center"});
-            }
+            document.querySelector(`[data-id="${newId}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
             state.flashIds.delete(newId);
         }, 100);
-
-        // 5초 후 강조 제거
-        setTimeout(() => {
-            state.flashId = null;
-            renderTable();
-        }, 5000);
+        setTimeout(() => renderTable(), 5000);
+        return;
     }
-    // 수정 로직
+
+    // 개별 수정
     if (e.target.classList.contains("select-update-btn")) {
         const id = e.target.dataset.id;
         const item = state.selectedItems.get(id);
-        const name = document.querySelector(`.update-name[data-id="${id}"]`).value;
-        const brand = document.querySelector(`.update-brand[data-id="${id}"]`).value;
-        const grade = document.querySelector(`.update-grade[data-id="${id}"]`).value;
-        const estNo = document.querySelector(`.update-estNo[data-id="${id}"]`).value;
-        const qty = document.querySelector(`.update-qty[data-id="${id}"]`).value;
-        const bl = document.querySelector(`.update-bl[data-id="${id}"]`).value;
-        const warehouse = document.querySelector(`.update-warehouse[data-id="${id}"]`).value;
-        const dueDate = document.querySelector(`.update-dueDate[data-id="${id}"]`).value;
-        const weight = document.querySelector(`.update-weight[data-id="${id}"]`).value;
-        const releaseDate = document.querySelector(`.update-releaseDate[data-id="${id}"]`).value;
-        const holding = document.querySelector(`.update-holding[data-id="${id}"]`).value;
-        const dataState = document.querySelector(".update-state").value;
-        const memo = document.querySelector(`.input-note`).value;
-        // 수정 실행
-         const result = await updateData(item,null,name,brand,grade,estNo,qty,bl,warehouse,dueDate,weight,releaseDate,holding,dataState,memo);
+        const name     = document.querySelector(`.update-name[data-id="${id}"]`)?.value;
+        const brand    = document.querySelector(`.update-brand[data-id="${id}"]`)?.value;
+        const grade    = document.querySelector(`.update-grade[data-id="${id}"]`)?.value;
+        const estNo    = document.querySelector(`.update-estNo[data-id="${id}"]`)?.value;
+        const qty      = document.querySelector(`.update-qty[data-id="${id}"]`)?.value;
+        const bl       = document.querySelector(`.update-bl[data-id="${id}"]`)?.value;
+        const warehouse = document.querySelector(`.update-warehouse[data-id="${id}"]`)?.value;
+        const dueDate  = document.querySelector(`.update-dueDate[data-id="${id}"]`)?.value;
+        const weight   = document.querySelector(`.update-weight[data-id="${id}"]`)?.value;
+        const releaseDate = document.querySelector(`.update-releaseDate[data-id="${id}"]`)?.value;
+        const holding  = document.querySelector(`.update-holding[data-id="${id}"]`)?.value;
+        const dataState = document.querySelector(`.update-state[data-id="${id}"]`)?.value;
+        const memo     = document.querySelector(`.input-note[data-id="${id}"]`)?.value || "";
 
-        console.log(dataState)
-
+        const result = await updateData(item, null, name, brand, grade, estNo, qty, bl, warehouse, dueDate, weight, releaseDate, holding, dataState, memo);
         if (!result) return;
 
-        // Undo 저장
-        undoStack.push({
-            type: "update",
-            undo: async () => {
-                await updateItem(result.id,result.prevData);
-            }
-        });
+        undoStack.push({ type: "update", undo: async () => { await updateItem(result.id, result.prevData); } });
+        if (undoStack.length > 20) undoStack.shift();
 
-        if (undoStack.length > 20) {
-            undoStack.shift();
-        }
-
-        const updatedId = result.id;
-
-        // 체크 해제
         state.selectedItems.delete(id);
-
-        // 강조 대상 저장
-        state.flashIds.add(updatedId);
-
+        state.flashIds.add(result.id);
         renderAll();
 
-        // 수정된 행으로 이동
         setTimeout(() => {
-
-            const targetRow =
-                document.querySelector(
-                    `[data-id="${updatedId}"]`
-                );
-
-            if (targetRow) {
-
-                targetRow.scrollIntoView({
-                    behavior: "smooth",
-                    block: "center"
-                });
-
-            }
-
-            state.flashIds.delete(updatedId);
-
+            document.querySelector(`[data-id="${result.id}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+            state.flashIds.delete(result.id);
         }, 100);
-
-        // 5초 후 강조 제거
-        setTimeout(() => {
-            state.flashId = null;
-            renderTable();
-        }, 5000);
-
+        setTimeout(() => renderTable(), 5000);
         return;
     }
-    // 홀딩 로직
+
+    // 개별 홀딩
     if (e.target.classList.contains("select-holding-btn")) {
         const id = e.target.dataset.id;
         const item = state.selectedItems.get(id);
-        const qty = document.querySelector(`.hold-qty[data-id="${id}"]`).value;
-        const date = document.querySelector(`.hold-releaseDate[data-id="${id}"]`).value;
-        const note = document.querySelector(`.hold-note[data-id="${id}"]`).value;
-        const memo = document.querySelector(`.input-note`).value;
-        const result = await holdingData(item,Number(qty),date,note);
+        const qty  = document.querySelector(`.hold-qty[data-id="${id}"]`)?.value;
+        const date = document.querySelector(`.hold-releaseDate[data-id="${id}"]`)?.value;
+        const note = document.querySelector(`.hold-note[data-id="${id}"]`)?.value;
+        const memo = document.querySelector(`.input-note[data-id="${id}"]`)?.value || "";
 
+        const result = await holdingData(item, Number(qty), date, note, memo);
         if (!result) return;
 
-        // Undo 저장
         undoStack.push({
             type: "holding",
             undo: async () => {
-                // 원래 재고 복구
-                await updateItem(
-                    result.originalId,
-                    {
-                        재고: result.originalQty
-                    }
-                );
-
-                // 생성된 홀딩 데이터 삭제
-                await deleteDoc(
-                    doc(
-                        db,
-                        "all_data",
-                        result.holdingId
-                    )
-                );
+                await updateItem(result.originalId, { 재고: result.originalQty });
+                await deleteDoc(doc(db, "all_data", result.holdingId));
             }
         });
+        if (undoStack.length > 20) undoStack.shift();
 
-        if (undoStack.length > 20) {
-            undoStack.shift();
-        }
-
-        // 체크 해제
         state.selectedItems.delete(id);
-
-        // 홀딩으로 생성된 행 ID
-        const holdingId = result.holdingId;
-
-        // 강조 대상 저장
-        state.flashIds.add(holdingId);
-
+        state.flashIds.add(result.holdingId);
         renderAll();
 
         setTimeout(() => {
-            const targetRow =
-                document.querySelector(
-                    `[data-id="${holdingId}"]`
-                );
-
-            if (targetRow) {
-                targetRow.scrollIntoView({
-                    behavior: "smooth",
-                    block: "center"
-                });
-            }
-
-            state.flashIds.delete(holdingId);
+            document.querySelector(`[data-id="${result.holdingId}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+            state.flashIds.delete(result.holdingId);
         }, 100);
-
-        setTimeout(() => {
-            state.flashId = null;
-            renderTable();
-        }, 5000);
-
+        setTimeout(() => renderTable(), 5000);
         return;
     }
-    // 삭제 로직
+
+    // 개별 삭제
     if (e.target.classList.contains("select-delete-btn")) {
         const id = e.target.dataset.id;
-        // 삭제할 item 찾기
         const item = state.allData.find(v => v.id === id);
-        if (!item) {
-            alert("데이터를 찾을 수 없습니다.");
-            return;
-        }
-        // 삭제 전 백업
-        const backup = { ...item };
+        if (!item) { alert("데이터를 찾을 수 없습니다."); return; }
 
+        const backup = { ...item };
         await deleteItem(item);
 
-        // Undo 저장
         undoStack.push({
             type: "delete",
             undo: async () => {
-                const { id, ...restoreData } = backup;
+                const { id: _id, ...restoreData } = backup;
                 await insertItem(restoreData);
             }
         });
-
-        if (undoStack.length > 20) {
-            undoStack.shift();
-        }
+        if (undoStack.length > 20) undoStack.shift();
 
         state.selectedItems.delete(id);
-
         renderAll();
-        renderHolding();
-    }
-
-    // 전체 로직
-    if (e.target.classList.contains("all-insert-btn")) {
-        const rows = document.querySelectorAll(".insert-row");
-        const insertedIds = [];
-        for (const row of rows) {
-            const name = row.querySelector(".insert-name")?.value || "";
-            const brand = row.querySelector(".insert-brand")?.value || "";
-            const grade = row.querySelector(".insert-grade")?.value || "";
-            const estNo = row.querySelector(".insert-estNo")?.value || "";
-            const qty = row.querySelector(".insert-qty")?.value || "";
-            const bl = row.querySelector(".insert-bl")?.value || "";
-            const warehouse = row.querySelector(".insert-warehouse")?.value || "";
-            const dueDate = row.querySelector(".insert-dueDate")?.value || "";
-            const weight = row.querySelector(".insert-weight")?.value || "";
-            const releaseDate = row.querySelector(".insert-releaseDate")?.value || "";
-            const holding = row.querySelector(".insert-holding")?.value || "";
-            const dataState = row.querySelector(".insert-state")?.value || "";
-            const memo = row.querySelector(".input-note")?.value || "";
-
-            const insertedId = await insertData(name,brand,grade,estNo,qty,bl,warehouse,dueDate,weight,releaseDate,holding,dataState,memo);
-
-            if (insertedId) {
-                insertedIds.push(insertedId);
-            }
-        }
-
-        undoStack.push({
-            type: "bulk-insert",
-            undo: async () => {
-                for (const id of insertedIds) {
-                    await deleteDoc(
-                        doc(db, "all_data", id)
-                    );
-                }
-            }
-        });
-
-        if (undoStack.length > 20) {
-            undoStack.shift();
-        }
-
-        renderAll();
-
         return;
     }
+
+    // 전체 추가
+    if (e.target.classList.contains("all-insert-btn")) {
+        const rows = document.querySelectorAll(".insert-card");
+        const insertedIds = [];
+        for (const row of rows) {
+            const newId = await insertData(
+                row.querySelector(".insert-name")?.value || "",
+                row.querySelector(".insert-brand")?.value || "",
+                row.querySelector(".insert-grade")?.value || "",
+                row.querySelector(".insert-estNo")?.value || "",
+                row.querySelector(".insert-qty")?.value || "",
+                row.querySelector(".insert-bl")?.value || "",
+                row.querySelector(".insert-warehouse")?.value || "",
+                row.querySelector(".insert-dueDate")?.value || "",
+                row.querySelector(".insert-weight")?.value || "",
+                row.querySelector(".insert-releaseDate")?.value || "",
+                row.querySelector(".insert-holding")?.value || "",
+                row.querySelector(".insert-state")?.value || "",
+                row.querySelector(".input-note")?.value || ""
+            );
+            if (newId) insertedIds.push(newId);
+        }
+        undoStack.push({
+            type: "bulk-insert",
+            undo: async () => { for (const id of insertedIds) await deleteDoc(doc(db, "all_data", id)); }
+        });
+        if (undoStack.length > 20) undoStack.shift();
+        renderAll();
+        return;
+    }
+
+    // 전체 수정
     if (e.target.classList.contains("all-update-btn")) {
-        const rows = document.querySelectorAll(".update-row");
+        const rows = document.querySelectorAll(".update-pan[data-id]");
         const backups = [];
         for (const row of rows) {
             const id = row.dataset.id;
             const item = state.allData.find(v => v.id === id);
-            const name = row.querySelector(".update-name")?.value;
-            const brand = row.querySelector(".update-brand")?.value;
-            const grade = row.querySelector(".update-grade")?.value;
-            const estNo = row.querySelector(".update-estNo")?.value;
-            const qty = row.querySelector(".update-qty")?.value;
-            const bl = row.querySelector(".update-bl")?.value;
-            const warehouse = row.querySelector(".update-warehouse")?.value;
-            const dueDate = row.querySelector(".update-dueDate")?.value;
-            const weight = row.querySelector(".update-weight")?.value;
-            const releaseDate = row.querySelector(".update-releaseDate")?.value;
-            const holding = row.querySelector(".update-holding")?.value;
-            const dataState = row.querySelector(".update-state")?.value;
-            const memo = row.querySelector(".input-note")?.value || "";
-            const result = await updateData(item,id,name,brand,grade,estNo,qty,bl,warehouse,dueDate,weight,releaseDate,holding,dataState,memo);
-
-            if (result) {
-                backups.push(result);
-            }
+            const result = await updateData(
+                item, id,
+                row.querySelector(".update-name")?.value,
+                row.querySelector(".update-brand")?.value,
+                row.querySelector(".update-grade")?.value,
+                row.querySelector(".update-estNo")?.value,
+                row.querySelector(".update-qty")?.value,
+                row.querySelector(".update-bl")?.value,
+                row.querySelector(".update-warehouse")?.value,
+                row.querySelector(".update-dueDate")?.value,
+                row.querySelector(".update-weight")?.value,
+                row.querySelector(".update-releaseDate")?.value,
+                row.querySelector(".update-holding")?.value,
+                row.querySelector(".update-state")?.value,
+                document.querySelector(`.input-note[data-id="${id}"]`)?.value || ""
+            );
+            if (result) backups.push(result);
         }
-
         undoStack.push({
             type: "bulk-update",
-            undo: async () => {
-                for (const backup of backups) {
-                    console.log(backup.id)
-                    await updateItem(
-                        backup.id,
-                        backup.prevData
-                    );
-                }
-            }
+            undo: async () => { for (const b of backups) await updateItem(b.id, b.prevData); }
         });
-
-        if (undoStack.length > 20) {
-            undoStack.shift();
-        }
-
+        if (undoStack.length > 20) undoStack.shift();
         renderAll();
-
         return;
     }
+
+    // 전체 홀딩
     if (e.target.classList.contains("all-holding-btn")) {
-        const rows = document.querySelectorAll(".holding-row");
+        const rows = document.querySelectorAll(".holding-pan[data-id]");
         const backups = [];
         for (const row of rows) {
             const id = row.dataset.id;
             const item = state.selectedItems.get(id);
-            const qty = row.querySelector(".hold-qty")?.value;
-            const releaseDate = row.querySelector(".hold-releaseDate")?.value;
-            const holding = row.querySelector(".hold-note")?.value;
-            const memo = row.querySelector(".input-note")?.value || "";
-            const result = await holdingData(item,qty,releaseDate,holding);
-
-            if (result) {
-                backups.push(result);
-            }
+            const result = await holdingData(
+                item,
+                Number(row.querySelector(".hold-qty")?.value),
+                row.querySelector(".hold-releaseDate")?.value,
+                row.querySelector(".hold-note")?.value,
+                document.querySelector(`.input-note[data-id="${id}"]`)?.value || ""
+            );
+            if (result) backups.push(result);
         }
-
         undoStack.push({
             type: "bulk-holding",
             undo: async () => {
-                for (const backup of backups) {
-                    // 원래 재고 복구
-                    await updateItem(
-                        backup.originalId,
-                        {
-                            재고: backup.originalQty
-                        }
-                    );
-                    // 홀딩 row 삭제
-                    await deleteDoc(
-                        doc(db, "all_data", backup.holdingId)
-                    );
+                for (const b of backups) {
+                    await updateItem(b.originalId, { 재고: b.originalQty });
+                    await deleteDoc(doc(db, "all_data", b.holdingId));
                 }
             }
         });
-
-        if (undoStack.length > 20) {
-            undoStack.shift();
-        }
-
+        if (undoStack.length > 20) undoStack.shift();
         renderAll();
-
         return;
     }
+
+    // 전체 삭제
     if (e.target.classList.contains("all-delete-btn")) {
         const backups = [];
-        for (const [id, item] of state.selectedItems) {
-            backups.push({
-                ...item
-            });
+        for (const [, item] of state.selectedItems) {
+            backups.push({ ...item });
             await deleteItem(item);
         }
-        
         undoStack.push({
-            type: "delete",
+            type: "bulk-delete",
             undo: async () => {
                 for (const backup of backups) {
                     await insertItem({
@@ -668,27 +422,36 @@ async function handleClick(e) {
                 }
             }
         });
-
-        if (undoStack.length > 20) {
-            undoStack.shift();
-        }
-
+        if (undoStack.length > 20) undoStack.shift();
         state.selectedItems.clear();
-
         renderAll();
-
         return;
     }
 
     // 되돌리기
     if (e.target.classList.contains("rollback-btn")) {
         await undoLastAction();
-
-        // 선택 초기화
         state.selectedItems.clear();
-
-        state.crudMode = null;
-
+        state.crudData = null;
         renderAll();
+        return;
+    }
+
+    // 행 클릭 → 체크박스 토글
+    if (e.target.classList.contains("row-check")) return;
+
+    // 테이블 행
+    const row = e.target.closest("tr");
+    if (row) {
+        const checkbox = row.querySelector(".row-check");
+        if (checkbox) checkbox.click();
+        return;
+    }
+
+    // 모바일 카드
+    const mobileCard = e.target.closest(".mobile-card");
+    if (mobileCard) {
+        const checkbox = mobileCard.querySelector(".row-check");
+        if (checkbox) checkbox.click();
     }
 }

@@ -143,17 +143,20 @@ def eda_standard(df):
         "등급"
     ] = "S"
 
-    mask = df["수탁품"].astype(str).str.contains(r"\(냉장\)", na=False)
     df["등급"] = (df["등급"].astype(str).str.replace("#", "", regex=False))
 
-    df["수탁품"] = (
-        df["수탁품"]
-        .astype(str)
-        .str.replace("(냉장)", "", regex=False)
-        .str.strip()
-    )
-
-    df.loc[mask, "수탁품"] = "냉장" + df.loc[mask, "수탁품"]
+    # 수산물 브랜드: 수탁품의 "31-40/9KG" 형식에서 "31/40"을 브랜드로 추출
+    sunsanmul_mask = df["브랜드"].astype(str).str.strip() == "수산물"
+    if sunsanmul_mask.any():
+        extracted = (
+            df.loc[sunsanmul_mask, "수탁품"]
+            .astype(str)
+            .str.extract(r"(\d+)-(\d+)")
+        )
+        valid = extracted[0].notna()
+        df.loc[sunsanmul_mask & valid, "브랜드"] = (
+            extracted.loc[valid, 0] + "/" + extracted.loc[valid, 1]
+        )
 
     product = df["수탁품"].astype(str)
 

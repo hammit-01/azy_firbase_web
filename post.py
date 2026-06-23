@@ -96,7 +96,7 @@ def post(df):
 
         doc_id = f"{bl_last4}_{expire_str}_{weight}"
 
-        doc_ref = db.collection("all_data").document()
+        doc_ref = db.collection("all_data").document(doc_id)
 
         doc_ref.set({
             "id": doc_ref.id,
@@ -112,13 +112,12 @@ def post(df):
             "유통기한": to_date(row.get("유통기한")),
             "중량": to_float(row.get("중량")),
             "평중": to_float(row.get("평균중량", "")),
-            "출고일": True if str(to_date(row.get("출고예정일"))) else "",
-            "홀딩": True if str(to_str(row.get("비고"))) else "",
+            "출고일": to_date(row.get("출고예정일")),
+            "홀딩": to_str(row.get("비고")),
 
             "수집일": str(today),
             "상태": "없음",
             "메모": "",
-            "상이": to_str(row.get("상이", "")).strip(),
         })
 
 

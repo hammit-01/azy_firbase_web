@@ -1,10 +1,8 @@
-// data update, delete, insert to firestore
 import { updateItem, insertItem } from "./firestoreService.js";
-import { doc, deleteDoc }  from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 import { db } from "./firebase.js";
-import { undoStack } from "./crud_history.js";
 
-export async function holdingData(item, holdQty, releaseDate, note) {
+export async function holdingData(item, holdQty, releaseDate, note, memo = "") {
 
     const remainQty = item.qty - holdQty;
 
@@ -34,10 +32,9 @@ export async function holdingData(item, holdQty, releaseDate, note) {
             유통기한: item.dueDate || "",
             평중: item.weight || "",
             상태: "holding",
-            메모: item.memo
+            메모: memo || item.memo || ""
         });
 
-        console.log("홀딩 완료");
 
         return {
             originalId: item.id,
@@ -94,7 +91,6 @@ export async function insertData(
 
         });
 
-        console.log("추가 완료");
 
         return docRef.id;
 
@@ -154,7 +150,6 @@ export async function updateData(item, id, name, brand, grade, estNo, qty, bl, w
 
         await updateItem(dataId, data);
 
-        console.log("수정 완료");
 
         return {
             id: dataId,
@@ -173,7 +168,6 @@ export async function deleteItem(item) {
     try {
         await deleteDoc(doc(db, "all_data", item.id)); // 🔥 collection 이름 맞게 수정
 
-        console.log("삭제 완료:", item.id);
 
     } catch (error) {
         console.error("삭제 실패:", error);

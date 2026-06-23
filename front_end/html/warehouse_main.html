@@ -2,57 +2,43 @@
 <html lang="ko">
 <!-- firebase web service upload = /css/...
  pytjon service upload = ./css/... -->
+
 <head>
-    <meta charset="UTF-8" name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <link rel="stylesheet" href="./css/warehouse_main.css">
     <title>재고 시스템</title>
 </head>
 
 <body>
     <div class="container">
-        <div class="left-top-panel">
-            <img src="./css/logo.png" class="logo">
-            <h1>재고 리스트</h1>
-            <div class = "table_size"></div>
-        </div>
-        <div class="controls">
-            <!-- <select id="searchField">
-                <option value="전체">전체</option>
-                <option value="상품명">상품명</option>
-                <option value="브랜드">브랜드</option>
-                <option value="등급">등급</option>
-                <option value="ESTNO">ESTNO</option>
-                <option value="BL">BL</option>
-                <option value="창고">창고</option>
-            </select> -->
-            <div style="width:80px;">
-                <select class="show-warehouse" data-id="${id}" id="input-box">
-                    <option value="">창고</option>
-                    <option value="CS">CS</option>
-                    <option value="CH">CH</option>
-                    <option value="SWC">SWC</option>
-                    <option value="강동1">강동1</option>
-                    <option value="강동2">강동2</option>
-                    <option value="곤지암">곤지암</option>
-                    <option value="대재">대재</option>
-                    <option value="대청">대청</option>
-                    <option value="삼진1">삼진1</option>
-                    <option value="삼진2">삼진2</option>
-                    <option value="신우">신우</option>
-                    <option value="에이스기흥">에이스기흥</option>
-                    <option value="에이스처인">에이스처인</option>
-                    <option value="오로라">오로라</option>
-                    <option value="용인">용인</option>
-                    <option value="유상">유상</option>
-                    <option value="이스트밸리">이스트밸리</option>
-                    <option value="프라자">프라자</option>
-                    <option value="한라">한라</option>
-                    <option value="효성">효성</option>
-                    <option value="희창">희창</option>
-                </select>
+
+        <!-- ── 상단 툴바 ── -->
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <img src="./css/logo.png" class="logo">
+                <div class="toolbar-title">
+                    <h1>재고 리스트</h1>
+                    <div class="table_size"></div>
+                </div>
             </div>
-            <div style="width:80px;">
-                <select class="show-brand" data-id="${id}" id="input-box">
+
+            <div class="toolbar-right">
+                <!-- 필터 -->
+                <select class="show-warehouse filter-sel">
+                    <option value="">창고</option>
+                    <option value="곤지암">곤지암</option>
+                    <option value="곤CS">곤CS</option>
+                    <option value="곤SWC">곤SWC</option>
+                    <option value="곤대재">곤대재</option>
+                    <option value="곤대청">곤대청</option>
+                    <option value="곤삼진2">곤삼진2</option>
+                    <option value="곤에이스처인">곤에이스처인</option>
+                </select>
+
+                <select class="show-brand filter-sel">
                     <option value="">브랜드</option>
                     <option value="AFG">AFG</option>
                     <option value="AGROSUPER">AGROSUPER</option>
@@ -75,73 +61,79 @@
                     <option value="SMITHFIELD">SMITHFIELD</option>
                     <option value="SWIFT">SWIFT</option>
                     <option value="TEYS">TEYS</option>
-                    <option value="TONNIES">TONNIES</option>
+                    <option value="TONNIES FLEISCH">TONNIES FLEISCH</option>
                 </select>
-            </div>
-            <div style="width:80px;">
-                <select class="show-state" data-id="${id}" id="input-box">
+
+                <select class="show-state filter-sel">
                     <option value="">상태</option>
                     <option value="holding">홀딩</option>
                     <option value="freeze">동결</option>
                     <option value="stopped">사용불가</option>
                     <option value="moving">이고</option>
                 </select>
+
+                <input id="searchInput" class="search-input" placeholder="검색">
+
+                <div class="tb-sep"></div>
+
+                <!-- CRUD 버튼 -->
+                <button class="insert-btn">추가</button>
+                <button class="update-btn">수정</button>
+                <button class="holding-btn">홀딩</button>
+
+                <div class="tb-sep"></div>
+
+                <!-- 유틸 버튼 -->
+                <button class="rollback-btn">↩ 되돌리기</button>
+                <button class="clear-btn" data-action="clear-selection">전체 취소</button>
+                <button class="all-delete-btn">전체 삭제</button>
             </div>
-            <input id="searchInput" placeholder="검색">
         </div>
-        <div class = "top_bar">
+
+        <!-- ── 선택 패널 ── -->
+        <div class="top_bar">
             <div class="right-panel">
-                <div class = "btn">
-                    <div class="all-btn">
-                        <button class="rollback-btn">되돌리기</button>
-                        <button class="clear-btn" data-action="clear-selection">전체 취소</button>
-                        <button class="all-delete-btn">전체 삭제</button>
-                    </div>
-                    <div class="crud-btn">
-                        <button class="insert-btn">추가</button>
-                        <button class="update-btn">수정</button>
-                        <button class="holding-btn">홀딩</button>
-                    </div>
-                </div>
-                <hr>
                 <div id="sideBox"></div>
             </div>
         </div>
+
+        <!-- ── 테이블 ── -->
         <div class="left-panel">
+            <div id="mobile-list" class="mobile-list"></div>
             <div class="table-wrap">
                 <table>
                     <colgroup>
-                        <col style="width:50px">
-                        <col style="width:150px"> <!--상품명-->
-                        <col style="width:200px"> <!--브랜드-->
-                        <col style="width:100px"> <!--등급-->
-                        <col style="width:120px"> <!--ESTNO-->
-                        <col style="width:80px"> <!--재고-->
-                        <col> <!--BL번호-->
-                        <col style="width:120px"> <!--창고-->
-                        <col style="width:120px"> <!--유통기한-->
-                        <col style="width:80px"> <!--평균-->
-                        <col style="width:120px"> <!--출고일-->
-                        <col style="width:150px"> <!--홀딩-->
+                        <col style="min-width:50px">
+                        <col style="min-width:140px"> <!--상품명-->
+                        <col style="min-width:160px"> <!--브랜드-->
+                        <col style="min-width:80px">  <!--등급-->
+                        <col style="min-width:110px"> <!--ESTNO-->
+                        <col style="min-width:70px">  <!--재고-->
+                        <col style="min-width:160px"> <!--BL번호-->
+                        <col style="min-width:110px"> <!--창고-->
+                        <col style="min-width:120px"> <!--유통기한-->
+                        <col style="min-width:70px">  <!--평균-->
+                        <col style="min-width:110px"> <!--출고일-->
+                        <col style="min-width:140px"> <!--홀딩-->
+                        <col style="min-width:140px"> <!--메모-->
                     </colgroup>
-
                     <thead>
-                    <tr>
-                        <th class="select-all">선택</th>
-                        <th data-key="상품명">상품명</th>
-                        <th data-key="브랜드">브랜드</th>
-                        <th data-key="등급">등급</th>
-                        <th data-key="ESTNO">ESTNO</th>
-                        <th data-key="재고">재고</th>
-                        <th data-key="BL">BL</th>
-                        <th data-key="창고">창고</th>
-                        <th data-key="유통기한">유통기한</th>
-                        <th data-key="평균">평균</th>
-                        <th data-key="출고일">출고일</th>
-                        <th data-key="홀딩">홀딩</th>
-                    </tr>
+                        <tr>
+                            <th class="select-all">선택</th>
+                            <th data-key="상품명">상품명</th>
+                            <th data-key="브랜드">브랜드</th>
+                            <th data-key="등급">등급</th>
+                            <th data-key="ESTNO">ESTNO</th>
+                            <th data-key="재고">재고</th>
+                            <th data-key="BL">BL</th>
+                            <th data-key="창고">창고</th>
+                            <th data-key="유통기한">유통기한</th>
+                            <th data-key="평균">평균</th>
+                            <th data-key="출고일">출고일</th>
+                            <th data-key="홀딩">홀딩</th>
+                            <th data-key="메모">메모</th>
+                        </tr>
                     </thead>
-
                     <tbody id="list"></tbody>
                 </table>
             </div>
@@ -150,4 +142,5 @@
 
     <script type="module" src="./warehouse_main.js"></script>
 </body>
+
 </html>

@@ -1,6 +1,3 @@
-import sys
-sys.path.append(r"C:\Users\ASUS\.vscode\azy_firbase_web")
-
 import pandas as pd
 from back_end.eda_else_df import else_df_eda
 from back_end.jns_eda import jns_eda

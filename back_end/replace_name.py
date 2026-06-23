@@ -17,9 +17,9 @@ def replace_name(df):
         "설도개별": "설도(개별)",
         "돈가부리": "돈가브리",
         "부채": "부채살",
-        "부채(냉장)": "부채살",
+        "부채(냉장)": "부채살(냉장)",
         "삶은곱창(믹스)": "작업삶은곱창",
-        "살치(냉장)": "살치살",
+        "살치(냉장)": "살치살(냉장)",
         "안창": "안창살",
         "갈비토시살": "토시살",
         "알전각": "앞다리",
@@ -43,6 +43,7 @@ def replace_name(df):
         "살치": "살치살",
         "토시": "살치살",
         "우목심GFYG": "목심",
+        "냉장돈목잡": "냉장목살",
         "건": "우건",
         # "등갈비": "탕갈비(MEATY)",
         "토시": "토시살",
@@ -94,7 +95,9 @@ def replace_name(df):
         "EX": "EXCEL",
         "놀란": "NOLAN",
         "EXCEL/CA": "EXCEL",
-        "SMITH/FL": "SMITHFIELD"
+        "SMITH/FL": "SMITHFIELD",
+        "AGRO SUPER": "AGROSUPER",
+        "AGRO SUPPER": "AGROSUPER"
 
     })
     df["등급"] = df["등급"].replace({

@@ -136,7 +136,7 @@ def login(session, ip_port, path, id, pw, warehouse):
     return None
 
 
-def get_data(session, ip_port, path, scustcd, scmdept, warehouse):
+def get_data(session, ip_port, path, scustcd, scmdept, warehouse, date=None):
     url = ""
     try:
         if warehouse in SPECIAL_SITES:
@@ -144,7 +144,7 @@ def get_data(session, ip_port, path, scustcd, scmdept, warehouse):
         else:
             url = f"http://211.239.173.{ip_port}/{path}/rtv_stock.do"
 
-        dt = pd.Timestamp.now().strftime("%Y%m%d")
+        dt = date if date else pd.Timestamp.now().strftime("%Y%m%d")
 
         if pd.isna(scmdept):
             scmdept = "00"
@@ -209,7 +209,7 @@ PROCESS_MAP = {
     "제니스(곤지암)": jns
 }
 
-def start_crawling():
+def start_crawling(date=None):
     # 크롤링
     warehouse_list = pd.read_excel("back_end/data/warehouse_list.xlsx")
 
@@ -264,7 +264,7 @@ def start_crawling():
 
                 print(f"{user_type} 로그인:", res.status_code, row["창고"])
 
-                data = get_data(session, ip_port, path, scustcd, scmdept, warehouse)
+                data = get_data(session, ip_port, path, scustcd, scmdept, warehouse, date=date)
 
                 if data is None or data.empty:
                     print(f"{warehouse}: 재고 없음")
