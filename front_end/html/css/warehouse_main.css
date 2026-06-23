@@ -48,39 +48,43 @@ h1 {
     transition: max-height 0.4s ease, opacity 0.3s ease 0.05s;
 }
 
-.right-panel{
+.right-panel {
     padding: 25px;
     background: white;
     border-radius: 12px;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
     box-sizing: border-box;
     width: 100%;
+    overflow-x: hidden;
 }
 
 .table-wrap {
-    width:100%;
-    overflow:auto;
-    background:#fff;
-    border-radius:10px;
+    width: 100%;
+    overflow: hidden;
+    background: #fff;
+    border-radius: 10px;
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: auto;
+    table-layout: fixed;
 }
 
 th {
-    padding: 12px 16px;
+    padding: 10px 6px;
     text-align: center;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-size: 20px;
 }
 
 td {
-    padding: 10px 16px;
+    padding: 8px 6px;
     text-align: center;
-    white-space: nowrap;
+    word-break: break-word;
+    overflow-wrap: break-word;
     font-size: 20px;
 }
 
@@ -924,6 +928,15 @@ input[type="checkbox"] {
     .right-panel {
         padding: 12px;
         box-sizing: border-box;
+        overflow-x: hidden;
+        max-width: 100%;
+    }
+
+    .selected-grid,
+    .panels-area,
+    .insert-list {
+        max-width: 100%;
+        overflow-x: hidden;
     }
 
     .selected-grid {
