@@ -965,21 +965,25 @@ input[type="checkbox"] {
     .insert-grid,
     .update-pan.insert-grid,
     .holding-pan.insert-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 6px;
+        grid-template-columns: 1fr;
+        gap: 8px;
     }
 
-    .form-field,
+    .form-field {
+        min-width: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
     .form-field input,
     .form-field select,
-    input[type="date"] {
-        min-width: 0;
-        width: 100%;
-        box-sizing: border-box;
-    }
-
-    input[type="date"] {
-        font-size: 13px;
+    input[type="date"],
+    input[type="number"],
+    input[type="text"] {
+        min-width: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        font-size: 14px !important;
     }
 
     .insert-footer,
