@@ -521,11 +521,15 @@ input[type="checkbox"] {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-width: 0;
 }
 
 .form-field input,
 .form-field select {
     margin-top: 0;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .form-label {
@@ -692,6 +696,7 @@ input[type="checkbox"] {
     grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
     gap: 10px;
     max-height: 60vh;
+    overflow-x: hidden;
     overflow-y: auto;
     align-content: start;
 }
@@ -949,6 +954,7 @@ input[type="checkbox"] {
 
     .panels-area.panels-grid {
         grid-template-columns: 1fr;
+        overflow-x: hidden;
     }
 
     .insert-list {
@@ -961,6 +967,19 @@ input[type="checkbox"] {
     .holding-pan.insert-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 6px;
+    }
+
+    .form-field,
+    .form-field input,
+    .form-field select,
+    input[type="date"] {
+        min-width: 0;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    input[type="date"] {
+        font-size: 13px;
     }
 
     .insert-footer,
