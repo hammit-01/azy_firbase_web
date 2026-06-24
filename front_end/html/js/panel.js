@@ -3,11 +3,11 @@ import { dom } from "./dom.js";
 
 function employeeSelect(cls, dataId = "", currentVal = "") {
     const opts = state.employees
-        .map(e => `<option value="${e["이름"]}" ${e["이름"] === currentVal ? "selected" : ""}>${e["번호"]} ${e["이름"]}</option>`)
+        .map(e => `<option value="${e["이름"]}" ${e["이름"] === currentVal ? "selected" : ""}>${e["이름"]}</option>`)
         .join("");
     const id = dataId ? `data-id="${dataId}"` : "";
     return `<select class="${cls} input-box" ${id}>
-                <option value="">홀딩자 선택</option>
+                <option value="">담당자 선택</option>
                 ${opts}
             </select>`;
 }
@@ -237,7 +237,7 @@ export function renderUpdate() {
                         <input type="date" value="${item.releaseDate}" class="update-releaseDate input-box" data-id="${id}">
                     </div>
                     <div class="form-field">
-                        <label class="form-label">홀딩자</label>
+                        <label class="form-label">담당자</label>
                         ${employeeSelect("update-holding", id, item.holding || "")}
                     </div>` : `
                     <input type="hidden" class="update-releaseDate" data-id="${id}" value="${item.releaseDate}">
@@ -296,7 +296,7 @@ export function renderHolding() {
                         <input type="date" class="hold-releaseDate input-box" data-id="${id}">
                     </div>
                     <div class="form-field">
-                        <label class="form-label">홀딩자</label>
+                        <label class="form-label">담당자</label>
                         ${employeeSelect("hold-note", id, item.holding || "")}
                     </div>
                 </div>
