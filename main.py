@@ -8,7 +8,11 @@ final_df, jns = start_crawling()
 _, jns = list_eda(final_df, jns)
 jns = jns.drop_duplicates().copy()
 
-jns.to_excel("jns.xlsx", index=False)
+try:
+    jns.to_excel("jns.xlsx", index=False)
+except PermissionError:
+    print("jns.xlsx 파일이 열려있어 저장 생략 (DB 업로드는 계속 진행)")
+
 
 # 창고 데이터 DB 업로드
 post(jns)
