@@ -18,32 +18,30 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "") {
             재고: remainQty
         });
 
-        // all_data에 홀딩 row 추가 (holdingRecordId로 holding_data와 연결)
-        const docRef = await insertItem({
-            상품명: item.name,
-            브랜드: item.brand,
-            등급: item.grade || "",
-            ESTNO: item.estNo || "",
-            창고: item.warehouse,
-            재고: holdQty,
-            BL: item.bl,
-            홀딩: note?.trim() || "",
-            출고일: releaseDate || "",
-            유통기한: item.dueDate || "",
-            평중: item.weight || "",
-            상태: "holding",
-            메모: memo || item.memo || "",
-            holdingRecordId: holdRef.id
-        });
-
-        // holding_data 테이블에 홀딩 정보 기록
+        // 1. holding_data 먼저 생성 (holdRef.id 확보)
         const pk = item.raw?.pk || item.id;
         const holdRef = await insertHoldingRecord({
-            pk:    pk,
-            수량:  holdQty,
-            홀딩:  note?.trim() || "",
+            pk:     pk,
+            수량:   holdQty,
+            홀딩:   note?.trim() || "",
             출고일: releaseDate || "",
-            메모:  memo || item.memo || ""
+            메모:   memo || item.memo || ""
+        });
+
+        // 2. all_data에 홀딩 row 추가
+        //    홀딩·출고일·메모는 holding_data 단일 관리 (중복 제거)
+        const docRef = await insertItem({
+            상품명:          item.name,
+            브랜드:          item.brand,
+            등급:            item.grade || "",
+            ESTNO:           item.estNo || "",
+            창고:            item.warehouse,
+            재고:            holdQty,
+            BL:              item.bl,
+            유통기한:        item.dueDate || "",
+            평중:            item.weight || "",
+            상태:            "holding",
+            holdingRecordId: holdRef.id
         });
 
         return {
