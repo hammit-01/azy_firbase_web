@@ -85,8 +85,12 @@ def main():
         log.info("종료 신호 수신 - 스케줄러 중지")
         scheduler.shutdown(wait=False)
 
-    signal.signal(signal.SIGTERM, _shutdown)
     signal.signal(signal.SIGINT, _shutdown)
+    # SIGTERM: Linux/NSSM 지원, Windows 환경에 따라 다를 수 있음
+    try:
+        signal.signal(signal.SIGTERM, _shutdown)
+    except (OSError, ValueError):
+        pass
 
     # 시작 즉시 한 번 실행 후 주기 시작
     log.info("즉시 실행 후 1분 주기 시작")
