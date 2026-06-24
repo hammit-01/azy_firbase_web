@@ -232,15 +232,22 @@ async function handleClick(e) {
         undoStack.push({ type: "insert", undo: async () => { await deleteDoc(doc(db, "all_data", newId)); } });
         if (undoStack.length > 20) undoStack.shift();
 
-        state.selectedItems.delete(id);
-        state.flashIds.add(newId);
-        renderAll();
+        // 해당 카드만 제거, 나머지 카드 유지
+        card?.remove();
+        renderTable();
 
+        const remainCards = document.querySelectorAll(".insert-card");
+        if (remainCards.length === 0) {
+            dom.container?.classList.remove("active");
+            if (dom.sideBox) dom.sideBox.innerHTML = "";
+        }
+
+        state.flashIds.add(newId);
         setTimeout(() => {
             document.querySelector(`[data-id="${newId}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
             state.flashIds.delete(newId);
+            renderTable();
         }, 100);
-        setTimeout(() => renderTable(), 5000);
         return;
     }
 
@@ -270,7 +277,15 @@ async function handleClick(e) {
 
         state.selectedItems.delete(id);
         state.flashIds.add(result.id);
-        renderAll();
+
+        if (state.selectedItems.size === 0) {
+            state.crudData = null;
+            renderAll();
+        } else {
+            renderAll();
+            renderUpdate();
+            renderFooter("update");
+        }
 
         setTimeout(() => {
             document.querySelector(`[data-id="${result.id}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -304,7 +319,15 @@ async function handleClick(e) {
 
         state.selectedItems.delete(id);
         state.flashIds.add(result.holdingId);
-        renderAll();
+
+        if (state.selectedItems.size === 0) {
+            state.crudData = null;
+            renderAll();
+        } else {
+            renderAll();
+            renderHolding();
+            renderFooter("holding");
+        }
 
         setTimeout(() => {
             document.querySelector(`[data-id="${result.holdingId}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
