@@ -11,10 +11,18 @@ import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.12.0/fireb
 import { db } from "./firebase.js";
 
 export function bindEvents() {
-    dom.searchInput?.addEventListener("input", () => renderTable());
+    let searchTimer = null;
+    dom.searchInput?.addEventListener("input", () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => renderTable(), 200);
+    });
 
+    let filterTimer = null;
     ["show-warehouse", "show-brand", "show-state"].forEach(cls => {
-        document.querySelector(`.${cls}`)?.addEventListener("change", () => renderTable());
+        document.querySelector(`.${cls}`)?.addEventListener("change", () => {
+            clearTimeout(filterTimer);
+            filterTimer = setTimeout(() => renderTable(), 100);
+        });
     });
 
     document.addEventListener("change", (e) => {

@@ -71,7 +71,7 @@ function cleanText(value) {
 // =========================
 function renderMobileView(data) {
     const el = document.getElementById("mobile-list");
-    if (!el) return;
+    if (!el || window.innerWidth > 768) return; // 데스크톱은 스킵
 
     if (data.length === 0) {
         el.innerHTML = `<p class="mobile-empty">검색된 데이터가 없습니다</p>`;

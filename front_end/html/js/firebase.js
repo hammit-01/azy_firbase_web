@@ -40,6 +40,9 @@ export function subscribeData() {
 
     onSnapshot(collection(db, "all_data"), (snapshot) => {
 
+        // 변경된 문서만 처리 (초기 로드 제외)
+        if (!snapshot.metadata.hasPendingWrites && snapshot.docChanges().length === 0) return;
+
         state.allData = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
