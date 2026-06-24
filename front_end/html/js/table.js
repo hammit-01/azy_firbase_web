@@ -320,7 +320,12 @@ export function renderTable() {
                 <td>${dueDateTag(item.유통기한)}</td>
                 <td>${safeValue(item.평중)}</td>
                 <td>${safeValue(item.출고일)}</td>
-                <td>${safeValue(item.홀딩)}</td>
+                <td>
+                    ${safeValue(item.홀딩)}
+                    ${item.상태 === "holding"
+                        ? `<button class="complete-holding-btn" data-id="${id}" data-record-id="${item.holdingRecordId || ""}">✓ 완료</button>`
+                        : ""}
+                </td>
                 <td>${safeValue(item.메모)}</td>
             </tr>
         `;

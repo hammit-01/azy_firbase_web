@@ -17,5 +17,10 @@ service cloud.firestore {
     match /archive_data/{document} {
       allow read, write: if true;
     }
+
+    // 홀딩 완료/취소 이력 테이블
+    match /holding_history/{document} {
+      allow read, write: if true;
+    }
   }
 }

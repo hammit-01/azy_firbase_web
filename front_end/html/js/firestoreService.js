@@ -4,6 +4,7 @@ import {
   collection,
   addDoc,
   doc,
+  getDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -22,13 +23,20 @@ export async function insertHoldingRecord(data) {
     return await addDoc(collection(db, "holding_data"), data);
 }
 
-// 홀딩 기록 취소 (soft delete)
-export async function cancelHoldingRecord(id) {
+// holding_data → holding_history 이동 (상태: "사용완료" | "취소")
+export async function moveHoldingToHistory(id, status) {
+    if (!id) return;
+    const docRef = doc(db, "holding_data", id);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) return;
+
     const now = new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
-    await updateDoc(doc(db, "holding_data", id), {
-        취소: true,
-        취소일시: now
+    await addDoc(collection(db, "holding_history"), {
+        ...snap.data(),
+        상태: status,
+        처리일시: now
     });
+    await deleteDoc(docRef);
 }
 
 

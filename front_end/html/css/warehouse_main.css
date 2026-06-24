@@ -742,6 +742,25 @@ input[type="checkbox"] {
 }
 
 
+.complete-holding-btn {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    background: #22c55e;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    vertical-align: middle;
+    transition: background 0.15s;
+}
+
+.complete-holding-btn:hover {
+    background: #16a34a;
+}
+
 .cancel-btn {
     flex-shrink: 0;
     width: 22px;

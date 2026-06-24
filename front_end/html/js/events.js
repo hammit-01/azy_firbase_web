@@ -6,7 +6,7 @@ import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, undoStack } from "./crud_history.js";
-import { insertItem, updateItem, cancelHoldingRecord } from "./firestoreService.js";
+import { insertItem, updateItem, moveHoldingToHistory } from "./firestoreService.js";
 import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 import { db } from "./firebase.js";
 
@@ -106,6 +106,26 @@ async function handleClick(e) {
     // 행 추가
     if (e.target.classList.contains("insertRow-btn")) {
         document.querySelector(".insert-list")?.insertAdjacentHTML("beforeend", createInsertRow());
+        return;
+    }
+
+    // 홀딩 사용완료
+    if (e.target.classList.contains("complete-holding-btn")) {
+        const confirmed = confirm("사용 완료 확실함?");
+        if (!confirmed) return;
+
+        const id = e.target.dataset.id;
+        const recordId = e.target.dataset.recordId;
+
+        try {
+            await moveHoldingToHistory(recordId, "사용완료");
+            await deleteDoc(doc(db, "all_data", id));
+            state.selectedItems.delete(id);
+            renderAll();
+        } catch (err) {
+            console.error("사용완료 처리 실패:", err);
+            alert("처리 중 오류가 발생했습니다.");
+        }
         return;
     }
 
@@ -259,7 +279,7 @@ async function handleClick(e) {
             undo: async () => {
                 await updateItem(result.originalId, { 재고: result.originalQty });
                 await deleteDoc(doc(db, "all_data", result.holdingId));
-                if (result.holdingRecordId) await cancelHoldingRecord(result.holdingRecordId);
+                if (result.holdingRecordId) await moveHoldingToHistory(result.holdingRecordId, "취소");
             }
         });
         if (undoStack.length > 20) undoStack.shift();
@@ -386,7 +406,7 @@ async function handleClick(e) {
                 for (const b of backups) {
                     await updateItem(b.originalId, { 재고: b.originalQty });
                     await deleteDoc(doc(db, "all_data", b.holdingId));
-                    if (b.holdingRecordId) await cancelHoldingRecord(b.holdingRecordId);
+                    if (b.holdingRecordId) await moveHoldingToHistory(b.holdingRecordId, "취소");
                 }
             }
         });
