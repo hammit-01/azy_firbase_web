@@ -1,4 +1,4 @@
-import { updateItem, insertItem, insertHoldingRecord } from "./firestoreService.js";
+import { updateItem, insertItem, insertHoldingRecord, updateHoldingRecord } from "./firestoreService.js";
 import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 import { db } from "./firebase.js";
 
@@ -164,6 +164,15 @@ export async function updateData(item, id, name, brand, grade, estNo, qty, bl, w
 
         await updateItem(dataId, data);
 
+        // 홀딩 행이면 holding_data도 동기화
+        const holdingRecordId = item?.raw?.holdingRecordId;
+        if (resolvedState === "holding" && holdingRecordId) {
+            await updateHoldingRecord(holdingRecordId, {
+                홀딩:   holding?.trim() || "",
+                출고일: releaseDate || "",
+                메모:   memo || ""
+            });
+        }
 
         return {
             id: dataId,

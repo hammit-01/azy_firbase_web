@@ -24,6 +24,12 @@ export async function insertHoldingRecord(data) {
     return await addDoc(collection(db, "holding_data"), data);
 }
 
+// 홀딩 기록 수정
+export async function updateHoldingRecord(id, data) {
+    if (!id) return;
+    await updateDoc(doc(db, "holding_data", id), data);
+}
+
 // holding_data → holding_history 이동 (상태: "사용완료" | "취소")
 // { historyId, originalData } 반환 (undo용)
 export async function moveHoldingToHistory(id, status) {
