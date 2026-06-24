@@ -12,5 +12,10 @@ service cloud.firestore {
     match /holding_data/{document} {
       allow read, write: if true;
     }
+
+    // 이전 날짜 재고 보관 테이블
+    match /archive_data/{document} {
+      allow read, write: if true;
+    }
   }
 }

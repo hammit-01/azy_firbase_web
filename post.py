@@ -67,6 +67,32 @@ def to_str(x):
 
     return x
 
+def _archive_old_data(db, today):
+    """수집일이 오늘이 아닌 all_data 문서를 archive_data로 이동"""
+    docs = list(db.collection("all_data").stream())
+    to_archive = [
+        d for d in docs
+        if d.to_dict().get("수집일") and d.to_dict().get("수집일") != today
+    ]
+
+    if not to_archive:
+        print("아카이브할 이전 데이터 없음")
+        return
+
+    archive_ref = db.collection("archive_data")
+    BATCH_LIMIT = 250  # 2 ops/doc × 250 = 500 (Firestore batch 한도)
+
+    for i in range(0, len(to_archive), BATCH_LIMIT):
+        chunk = to_archive[i:i + BATCH_LIMIT]
+        batch = db.batch()
+        for doc in chunk:
+            batch.set(archive_ref.document(doc.id), doc.to_dict())
+            batch.delete(doc.reference)
+        batch.commit()
+
+    print(f"이전 데이터 {len(to_archive)}개 archive_data로 이동 완료")
+
+
 def post(df):
     today = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d")
 
@@ -77,7 +103,10 @@ def post(df):
 
     db = firestore.client()
 
-    # 업로드
+    # 이전 날짜 데이터 아카이브
+    _archive_old_data(db, today)
+
+    # 오늘 데이터 업로드
     for _, row in df.iterrows():
         bl = to_str(row.get("BL번호", "")).strip()
         weight = to_str(row.get("평균중량", "")).strip()
