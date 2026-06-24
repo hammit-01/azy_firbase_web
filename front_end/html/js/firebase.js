@@ -16,7 +16,7 @@ export let db;
 
 export async function initFirebase() {
     const firebaseConfig = {
-        apiKey: "AIza...",
+        apiKey: "AIzaSyBMzVr396MMhlAEwsOfMhVLrOMnRMfWkgQ",
         authDomain: "azy7503-d80d9.firebaseapp.com",
         projectId: "azy7503-d80d9"
     };
