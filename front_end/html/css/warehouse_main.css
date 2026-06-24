@@ -88,6 +88,13 @@ td {
     font-size: 20px;
 }
 
+/* BL번호 열 한 줄 표시 */
+td:nth-child(7) {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 tbody tr:nth-child(even) td {
     background: #efffd3;
 }
