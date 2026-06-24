@@ -121,4 +121,4 @@ def post(df):
         })
 
 
-    print("🔥 DB 업로드 완료")
+    print("DB 업로드 완료")
