@@ -28,8 +28,7 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "") {
             메모:   memo || item.memo || ""
         });
 
-        // 2. all_data에 홀딩 row 추가
-        //    홀딩·출고일·메모는 holding_data 단일 관리 (중복 제거)
+        // 2. all_data에 홀딩 row 추가 (테이블 표시용 필드 포함)
         const docRef = await insertItem({
             상품명:          item.name,
             브랜드:          item.brand,
@@ -38,8 +37,11 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "") {
             창고:            item.warehouse,
             재고:            holdQty,
             BL:              item.bl,
+            홀딩:            note?.trim() || "",
+            출고일:          releaseDate || "",
             유통기한:        item.dueDate || "",
             평중:            item.weight || "",
+            메모:            memo || item.memo || "",
             상태:            "holding",
             holdingRecordId: holdRef.id
         });
