@@ -111,7 +111,7 @@ async function handleClick(e) {
 
     // 홀딩 사용완료
     if (e.target.classList.contains("complete-holding-btn")) {
-        const confirmed = confirm("사용 완료 확실함?");
+        const confirmed = confirm("해당 홀딩분 모두 사용 완료 처리 진행합니다.\n계속하시겠습니까?");
         if (!confirmed) return;
 
         const id = e.target.dataset.id;
