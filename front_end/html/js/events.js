@@ -6,7 +6,7 @@ import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, undoStack } from "./crud_history.js";
-import { insertItem, updateItem, moveHoldingToHistory } from "./firestoreService.js";
+import { insertItem, updateItem, moveHoldingToHistory, deleteHoldingHistory, restoreDoc } from "./firestoreService.js";
 import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 import { db } from "./firebase.js";
 
@@ -114,12 +114,30 @@ async function handleClick(e) {
         const confirmed = confirm("해당 홀딩분 모두 사용 완료 처리 진행합니다.\n계속하시겠습니까?");
         if (!confirmed) return;
 
-        const id = e.target.dataset.id;
+        const id       = e.target.dataset.id;
         const recordId = e.target.dataset.recordId;
 
+        // all_data 홀딩 행 백업
+        const allDataItem = state.allData.find(v => v.id === id);
+        if (!allDataItem) return;
+        const allDataBackup = { ...allDataItem };
+
         try {
-            await moveHoldingToHistory(recordId, "사용완료");
+            const { historyId, originalData } = await moveHoldingToHistory(recordId, "사용완료");
             await deleteDoc(doc(db, "all_data", id));
+
+            // Undo 저장
+            undoStack.push({
+                type: "complete-holding",
+                undo: async () => {
+                    if (historyId) await deleteHoldingHistory(historyId);
+                    if (recordId && originalData) await restoreDoc("holding_data", recordId, originalData);
+                    const { id: _id, ...restoreData } = allDataBackup;
+                    await restoreDoc("all_data", id, restoreData);
+                }
+            });
+            if (undoStack.length > 20) undoStack.shift();
+
             state.selectedItems.delete(id);
             renderAll();
         } catch (err) {

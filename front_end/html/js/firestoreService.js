@@ -5,6 +5,7 @@ import {
   addDoc,
   doc,
   getDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -24,19 +25,33 @@ export async function insertHoldingRecord(data) {
 }
 
 // holding_data → holding_history 이동 (상태: "사용완료" | "취소")
+// { historyId, originalData } 반환 (undo용)
 export async function moveHoldingToHistory(id, status) {
-    if (!id) return;
+    if (!id) return { historyId: null, originalData: null };
     const docRef = doc(db, "holding_data", id);
     const snap = await getDoc(docRef);
-    if (!snap.exists()) return;
+    if (!snap.exists()) return { historyId: null, originalData: null };
 
+    const originalData = snap.data();
     const now = new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
-    await addDoc(collection(db, "holding_history"), {
-        ...snap.data(),
+    const historyRef = await addDoc(collection(db, "holding_history"), {
+        ...originalData,
         상태: status,
         처리일시: now
     });
     await deleteDoc(docRef);
+    return { historyId: historyRef.id, originalData };
+}
+
+// holding_history 삭제 (undo 시 사용)
+export async function deleteHoldingHistory(id) {
+    if (!id) return;
+    await deleteDoc(doc(db, "holding_history", id));
+}
+
+// holding_data / all_data 특정 ID로 복구 (undo 시 사용)
+export async function restoreDoc(collectionName, id, data) {
+    await setDoc(doc(db, collectionName, id), data);
 }
 
 
