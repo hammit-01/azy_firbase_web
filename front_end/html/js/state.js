@@ -2,7 +2,8 @@
 
 export const state = {
     allData: [],
-    filteredData: [], // 현재 필터/검색 후 표시 중인 행
+    filteredData: [],
+    employees: [],      // 사원 목록
     selectedItems: new Map(),
     flashIds: new Set(),
     crudData: null,

@@ -22,5 +22,11 @@ service cloud.firestore {
     match /holding_history/{document} {
       allow read, write: if true;
     }
+
+    // 사원 정보
+    match /employees/{document} {
+      allow read: if true;
+      allow write: if false;
+    }
   }
 }

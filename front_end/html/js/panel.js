@@ -1,6 +1,17 @@
 import { state } from "./state.js";
 import { dom } from "./dom.js";
 
+function employeeSelect(cls, dataId = "", currentVal = "") {
+    const opts = state.employees
+        .map(e => `<option value="${e["이름"]}" ${e["이름"] === currentVal ? "selected" : ""}>${e["번호"]} ${e["이름"]}</option>`)
+        .join("");
+    const id = dataId ? `data-id="${dataId}"` : "";
+    return `<select class="${cls} input-box" ${id}>
+                <option value="">홀딩자 선택</option>
+                ${opts}
+            </select>`;
+}
+
 function whClass(warehouse) {
     const map = {
         "곤지암": "wh-곤지암",
@@ -226,8 +237,8 @@ export function renderUpdate() {
                         <input type="date" value="${item.releaseDate}" class="update-releaseDate input-box" data-id="${id}">
                     </div>
                     <div class="form-field">
-                        <label class="form-label">홀딩</label>
-                        <input type="text" value="${item.holding}" class="update-holding input-box" data-id="${id}">
+                        <label class="form-label">홀딩자</label>
+                        ${employeeSelect("update-holding", id, item.holding || "")}
                     </div>` : `
                     <input type="hidden" class="update-releaseDate" data-id="${id}" value="${item.releaseDate}">
                     <input type="hidden" class="update-holding"     data-id="${id}" value="${item.holding}">`}
@@ -286,7 +297,7 @@ export function renderHolding() {
                     </div>
                     <div class="form-field">
                         <label class="form-label">홀딩자</label>
-                        <input type="text" class="hold-note input-box" data-id="${id}" placeholder="홀딩자">
+                        ${employeeSelect("hold-note", id, item.holding || "")}
                     </div>
                 </div>
                 <div class="update-footer">

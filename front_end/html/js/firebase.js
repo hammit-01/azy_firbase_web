@@ -4,6 +4,7 @@ from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
 import {
     getFirestore,
     collection,
+    getDocs,
     onSnapshot
 }
 from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
@@ -27,6 +28,13 @@ export async function initFirebase() {
     return db;
 }
 
+
+export async function loadEmployees() {
+    const snap = await getDocs(collection(db, "employees"));
+    state.employees = snap.docs
+        .map(d => d.data())
+        .sort((a, b) => a["이름"].localeCompare(b["이름"], "ko"));
+}
 
 export function subscribeData() {
 
