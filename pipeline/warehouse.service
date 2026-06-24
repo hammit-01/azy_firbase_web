@@ -1,0 +1,21 @@
+[Unit]
+Description=창고 재고 파이프라인 서비스
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/warehouse-pipeline
+ExecStart=/opt/warehouse-pipeline/venv/bin/python run_service.py
+Restart=always
+RestartSec=15
+StandardOutput=append:/opt/warehouse-pipeline/pipeline/logs/service.log
+StandardError=append:/opt/warehouse-pipeline/pipeline/logs/service.log
+
+# 메모리 제한 (500MB 초과 시 재시작)
+MemoryMax=500M
+MemorySwapMax=0
+
+[Install]
+WantedBy=multi-user.target
