@@ -167,7 +167,10 @@ export async function updateData(item, id, name, brand, grade, estNo, qty, bl, w
 
     // 변경 사항 없으면 스킵
     const noChange = Object.keys(data).every(k => String(data[k]) === String(prevData[k] ?? ""));
-    if (noChange) return null;
+    if (noChange) {
+        alert("변경된 내용이 없습니다.");
+        return null;
+    }
 
     try {
 
