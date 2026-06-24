@@ -160,9 +160,6 @@ export function createInsertRow() {
 export function renderUpdate() {
     state.selectedItems.forEach((item, id) => clearPanels(id));
 
-    const grid = document.querySelector(".selected-grid");
-    if (grid) grid.style.display = "none";
-
     const panelsArea = document.querySelector(".panels-area");
     if (panelsArea) panelsArea.classList.add("panels-grid");
 
@@ -253,9 +250,6 @@ export function renderUpdate() {
 
 export function renderHolding() {
     state.selectedItems.forEach((item, id) => clearPanels(id));
-
-    const grid = document.querySelector(".selected-grid");
-    if (grid) grid.style.display = "none";
 
     const panelsArea = document.querySelector(".panels-area");
     if (panelsArea) panelsArea.classList.add("panels-grid");
