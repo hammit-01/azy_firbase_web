@@ -217,6 +217,7 @@ export function renderUpdate() {
                         <label class="form-label">평중 *</label>
                         <input type="number" value="${item.weight}" class="update-weight input-box input-required" data-id="${id}">
                     </div>
+                    ${dataState === "holding" ? `
                     <div class="form-field">
                         <label class="form-label">출고일</label>
                         <input type="date" value="${item.releaseDate}" class="update-releaseDate input-box" data-id="${id}">
@@ -227,18 +228,14 @@ export function renderUpdate() {
                     </div>
                     <div class="form-field">
                         <label class="form-label">상태</label>
-                        ${dataState === "holding"
-                            ? `<select class="update-state input-box" data-id="${id}" disabled>
-                                <option value="holding" selected>홀딩</option>
-                               </select>`
-                            : `<select class="update-state input-box" data-id="${id}">
-                                <option value="non"     ${dataState === "non" || dataState === "없음" || dataState === "" ? "selected" : ""}>없음</option>
-                                <option value="freeze"  ${dataState === "freeze"  ? "selected" : ""}>동결</option>
-                                <option value="stopped" ${dataState === "stopped" ? "selected" : ""}>사용불가</option>
-                                <option value="moving"  ${dataState === "moving"  ? "selected" : ""}>이고</option>
-                               </select>`
-                        }
-                    </div>
+                        <select class="update-state input-box" data-id="${id}" disabled>
+                            <option value="holding" selected>홀딩</option>
+                        </select>
+                    </div>` : `
+                    <input type="hidden" class="update-releaseDate" data-id="${id}" value="${item.releaseDate}">
+                    <input type="hidden" class="update-holding"     data-id="${id}" value="${item.holding}">
+                    <input type="hidden" class="update-state"       data-id="${id}" value="${dataState}">`
+                    }
                 </div>
                 <div class="update-footer">
                     <input type="text" class="input-note insert-memo" data-id="${id}" placeholder="메모" value="${item.memo || ""}">
