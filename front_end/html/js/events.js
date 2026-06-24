@@ -6,7 +6,7 @@ import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, undoStack } from "./crud_history.js";
-import { insertItem, updateItem } from "./firestoreService.js";
+import { insertItem, updateItem, deleteHoldingRecord } from "./firestoreService.js";
 import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 import { db } from "./firebase.js";
 
@@ -259,6 +259,7 @@ async function handleClick(e) {
             undo: async () => {
                 await updateItem(result.originalId, { 재고: result.originalQty });
                 await deleteDoc(doc(db, "all_data", result.holdingId));
+                if (result.holdingRecordId) await deleteHoldingRecord(result.holdingRecordId);
             }
         });
         if (undoStack.length > 20) undoStack.shift();
@@ -385,6 +386,7 @@ async function handleClick(e) {
                 for (const b of backups) {
                     await updateItem(b.originalId, { 재고: b.originalQty });
                     await deleteDoc(doc(db, "all_data", b.holdingId));
+                    if (b.holdingRecordId) await deleteHoldingRecord(b.holdingRecordId);
                 }
             }
         });

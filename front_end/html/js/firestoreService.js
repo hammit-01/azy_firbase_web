@@ -17,6 +17,16 @@ export async function insertItem(data) {
     return await addDoc(collection(db, "all_data"), data);
 }
 
+// 홀딩 기록 추가
+export async function insertHoldingRecord(data) {
+    return await addDoc(collection(db, "holding_data"), data);
+}
+
+// 홀딩 기록 삭제
+export async function deleteHoldingRecord(id) {
+    await deleteDoc(doc(db, "holding_data", id));
+}
+
 
 // 수정
 export async function updateItem(id, data) {

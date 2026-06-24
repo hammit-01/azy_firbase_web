@@ -1,4 +1,4 @@
-import { updateItem, insertItem } from "./firestoreService.js";
+import { updateItem, insertItem, insertHoldingRecord } from "./firestoreService.js";
 import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 import { db } from "./firebase.js";
 
@@ -18,7 +18,7 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "") {
             재고: remainQty
         });
 
-        // 홀딩 row 추가
+        // all_data에 홀딩 row 추가
         const docRef = await insertItem({
             상품명: item.name,
             브랜드: item.brand,
@@ -35,11 +35,21 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "") {
             메모: memo || item.memo || ""
         });
 
+        // holding_data 테이블에 홀딩 정보 기록
+        const pk = item.raw?.pk || item.id;
+        const holdRef = await insertHoldingRecord({
+            pk:    pk,
+            수량:  holdQty,
+            홀딩:  note?.trim() || "",
+            출고일: releaseDate || "",
+            메모:  memo || item.memo || ""
+        });
 
         return {
-            originalId: item.id,
-            originalQty: item.qty,
-            holdingId: docRef.id
+            originalId:      item.id,
+            originalQty:     item.qty,
+            holdingId:       docRef.id,
+            holdingRecordId: holdRef.id
         };
 
     } catch (error) {
