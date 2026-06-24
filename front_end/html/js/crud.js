@@ -139,6 +139,9 @@ export async function updateData(item, id, name, brand, grade, estNo, qty, bl, w
         return null;
     }
 
+    // 홀딩 상태는 수정 불가 (holding_data와 연동 중)
+    const resolvedState = item?.dataState === "holding" ? "holding" : (dataState?.trim() || "");
+
     const data = {
         상품명: name || "",
         브랜드: brand || "",
@@ -151,7 +154,7 @@ export async function updateData(item, id, name, brand, grade, estNo, qty, bl, w
         평중: Number(weight) || 0,
         출고일: releaseDate || "",
         홀딩: holding?.trim() || "",
-        상태: dataState?.trim() || "",
+        상태: resolvedState,
         메모: memo || ""
     };
 

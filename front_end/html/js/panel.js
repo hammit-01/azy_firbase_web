@@ -227,12 +227,17 @@ export function renderUpdate() {
                     </div>
                     <div class="form-field">
                         <label class="form-label">상태</label>
-                        <select class="update-state input-box" data-id="${id}">
-                            <option value="non" ${dataState === "non" || dataState === "없음" || dataState === "" ? "selected" : ""}>없음</option>
-                            <option value="freeze" ${dataState === "freeze" ? "selected" : ""}>동결</option>
-                            <option value="stopped" ${dataState === "stopped" ? "selected" : ""}>사용불가</option>
-                            <option value="moving" ${dataState === "moving" ? "selected" : ""}>이고</option>
-                        </select>
+                        ${dataState === "holding"
+                            ? `<select class="update-state input-box" data-id="${id}" disabled>
+                                <option value="holding" selected>홀딩</option>
+                               </select>`
+                            : `<select class="update-state input-box" data-id="${id}">
+                                <option value="non"     ${dataState === "non" || dataState === "없음" || dataState === "" ? "selected" : ""}>없음</option>
+                                <option value="freeze"  ${dataState === "freeze"  ? "selected" : ""}>동결</option>
+                                <option value="stopped" ${dataState === "stopped" ? "selected" : ""}>사용불가</option>
+                                <option value="moving"  ${dataState === "moving"  ? "selected" : ""}>이고</option>
+                               </select>`
+                        }
                     </div>
                 </div>
                 <div class="update-footer">
