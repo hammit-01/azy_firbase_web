@@ -221,25 +221,57 @@ def cs(df):
 
 def jns(df):
     if df is None or df.shape[1] <= 2:
-        return print("jns 데이터 없음")  # 또는 return df 그대로
+        return print("jns 데이터 없음")
     result = df.copy()
-    result.columns = columns_e
-    result = result.drop(columns = drop_cols, errors = "ignore")
-    col = result.pop("창고")
-    result["창고"] = col
-    result["창고"] = result["창고"].replace({
-        "(주)SWC": "곤SWC",
-        "(주)대재냉장": "곤대재",
-        "CS냉장": "곤CS",
-        "대청냉장(주)": "곤대청",
-        "삼진2냉장": "곤삼진2",
-        "에이스냉장(처인)": "곤에이스처인",
-    })
+
+    # 비고 열만 삭제
+    result = result.drop(columns=["비고"], errors="ignore")
+
+    # 창고명 정규화
+    wh_col = next((c for c in result.columns if "창고" in c), None)
+    if wh_col:
+        result[wh_col] = result[wh_col].replace({
+            "(주)SWC":        "곤SWC",
+            "(주)대재냉장":    "곤대재",
+            "CS냉장":         "곤CS",
+            "대청냉장(주)":    "곤대청",
+            "삼진2냉장":       "곤삼진2",
+            "에이스냉장(처인)": "곤에이스처인",
+        })
+        if wh_col != "창고":
+            result = result.rename(columns={wh_col: "창고"})
+
+    # 열 이름 표준화 (사이트 표기 → 파이프라인 표기)
     result = result.rename(columns={
-        "수탁품,[코드]": "수탁품",
-        "B/L NO,식별번호": "B/L NO식별번호",
-        "총중량": "중량"
+        "수탁품,[코드]":     "수탁품",
+        "수탁품[코드]":      "수탁품",
+        "B/L NO,식별번호":   "B/L NO식별번호",
+        "BL NO식별번호":     "B/L NO식별번호",
+        "BL번호":            "B/L NO식별번호",
+        "총중량":            "중량",
+        "평균중량":          "평균중량",
+        "소비기한":          "유통기한",
+        "소비기한제조일자":   "유통기한",
+        "포괄창고":          "포괄창고",
     }, errors="ignore")
+
+    # 수치 정규화: 재고수량, 중량, 평균중량
+    for col in ["재고수량", "중량", "평균중량"]:
+        if col in result.columns:
+            result[col] = (
+                pd.to_numeric(
+                    result[col].astype(str).str.replace(",", "", regex=False),
+                    errors="coerce"
+                )
+            )
+
+    # 유통기한 날짜 정규화
+    for col in ["유통기한", "제조일자"]:
+        if col in result.columns:
+            result[col] = pd.to_datetime(
+                result[col], errors="coerce"
+            ).dt.strftime("%Y-%m-%d")
+
     return result
 
 def column_replace(df):

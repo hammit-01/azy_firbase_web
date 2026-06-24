@@ -59,6 +59,11 @@ SPECIAL_SITES = {
         "data": "http://nwill.net/hcy1dst/rtv_stock.do"
     },
 
+    "제니스(곤지암)": {
+        "login": "http://211.239.173.91:8080/jnsdst3/login.do",
+        "data":  "http://211.239.173.91:8080/jnsdst3/rtv_stock01.do"
+    },
+
     "SWC": {
         "login": "http://nwill.net:8080/nswdst/login.do",
         "data": "http://nwill.net:8080/nswdst/rtv_stock.do"
@@ -142,7 +147,7 @@ def get_data(session, ip_port, path, scustcd, scmdept, warehouse, date=None):
         if warehouse in SPECIAL_SITES:
             url = SPECIAL_SITES[warehouse]["data"]
         else:
-            url = f"http://211.239.173.{ip_port}/{path}/rtv_stock.do"
+            url = f"http://211.239.173.{ip_port}/{path}/rtv_stock01.do"
 
         dt = date if date else pd.Timestamp.now().strftime("%Y%m%d")
 
@@ -150,7 +155,7 @@ def get_data(session, ip_port, path, scustcd, scmdept, warehouse, date=None):
             scmdept = "00"
 
         payload = {
-            "nav_num": "0102",
+            "nav_num": "0103",
             "scmdept": scmdept,
             "swms_cd": "",
             "scustcd": scustcd,
@@ -166,18 +171,35 @@ def get_data(session, ip_port, path, scustcd, scmdept, warehouse, date=None):
 
         soup = BeautifulSoup(res.text, "html.parser")
 
+        # thead 헤더 캡처
+        header_row = soup.select_one("thead tr")
+        headers = []
+        if header_row:
+            headers = [
+                th.get_text(strip=True).replace("\n", " ")
+                for th in header_row.find_all(["th", "td"])
+            ]
+
         rows = soup.select("tbody tr")
-
         data = []
-
         for row in rows:
             cols = [
                 td.get_text(strip=True).replace("\n", " ")
                 for td in row.find_all("td")
             ]
-
             if cols:
                 data.append(cols)
+
+        if not data:
+            return pd.DataFrame()
+
+        if headers:
+            n = len(data[0])
+            if len(headers) > n:
+                headers = headers[:n]
+            elif len(headers) < n:
+                headers += [f"col_{i}" for i in range(len(headers), n)]
+            return pd.DataFrame(data, columns=headers)
 
         return pd.DataFrame(data)
 
