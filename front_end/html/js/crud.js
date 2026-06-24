@@ -4,6 +4,11 @@ import { db } from "./firebase.js";
 
 export async function holdingData(item, holdQty, releaseDate, note, memo = "") {
 
+    if (!holdQty || holdQty <= 0) {
+        alert("홀딩 수량을 1 이상 입력해주세요.");
+        return null;
+    }
+
     const remainQty = item.qty - holdQty;
 
     if (remainQty < 0) {
