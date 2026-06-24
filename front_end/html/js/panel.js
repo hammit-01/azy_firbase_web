@@ -225,25 +225,19 @@ export function renderUpdate() {
                     <div class="form-field">
                         <label class="form-label">홀딩</label>
                         <input type="text" value="${item.holding}" class="update-holding input-box" data-id="${id}">
-                    </div>
-                    <div class="form-field">
-                        <label class="form-label">상태</label>
-                        <select class="update-state input-box" data-id="${id}" disabled>
-                            <option value="holding" selected>홀딩</option>
-                        </select>
                     </div>` : `
                     <input type="hidden" class="update-releaseDate" data-id="${id}" value="${item.releaseDate}">
-                    <input type="hidden" class="update-holding"     data-id="${id}" value="${item.holding}">
+                    <input type="hidden" class="update-holding"     data-id="${id}" value="${item.holding}">`}
                     <div class="form-field">
                         <label class="form-label">상태</label>
                         <select class="update-state input-box" data-id="${id}">
                             <option value="non"     ${dataState === "non" || dataState === "없음" || dataState === "" ? "selected" : ""}>없음</option>
+                            <option value="holding" ${dataState === "holding" ? "selected" : ""}>홀딩</option>
                             <option value="freeze"  ${dataState === "freeze"  ? "selected" : ""}>동결</option>
                             <option value="stopped" ${dataState === "stopped" ? "selected" : ""}>사용불가</option>
                             <option value="moving"  ${dataState === "moving"  ? "selected" : ""}>이고</option>
                         </select>
-                    </div>`
-                    }
+                    </div>
                 </div>
                 <div class="update-footer">
                     <input type="text" class="input-note insert-memo" data-id="${id}" placeholder="메모" value="${item.memo || ""}">

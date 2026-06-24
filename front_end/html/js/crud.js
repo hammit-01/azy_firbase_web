@@ -146,8 +146,7 @@ export async function updateData(item, id, name, brand, grade, estNo, qty, bl, w
         return null;
     }
 
-    // 홀딩 상태는 수정 불가 (holding_data와 연동 중)
-    const resolvedState = item?.dataState === "holding" ? "holding" : (dataState?.trim() || "");
+    const resolvedState = dataState?.trim() || "";
 
     const data = {
         상품명: name || "",
