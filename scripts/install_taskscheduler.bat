@@ -11,12 +11,12 @@ echo === Task Scheduler Registration ===
 :: Remove existing task
 schtasks /delete /tn "%TASK_NAME%" /f >nul 2>&1
 
-:: Register task using wrapper bat (working directory handled inside bat)
+:: Register task using wrapper bat (run as current user)
 schtasks /create ^
   /tn "%TASK_NAME%" ^
   /tr "\"%WRAPPER%\"" ^
   /sc ONSTART ^
-  /ru SYSTEM ^
+  /ru "%USERDOMAIN%\%USERNAME%" ^
   /rl HIGHEST ^
   /f
 
