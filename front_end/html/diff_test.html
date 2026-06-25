@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="./css/warehouse_main.css">
+    <title>변동 색상 테스트</title>
+</head>
+<body>
+<div class="container">
+    <div class="left-top-panel">
+        <h1 style="font-size:24px; margin:20px 0 10px;">변동 색상 테스트</h1>
+    </div>
+    <div class="left-panel">
+        <div class="table-wrap">
+            <table>
+                <colgroup>
+                    <col style="width:50px">
+                    <col style="width:150px">
+                    <col style="width:180px">
+                    <col style="width:80px">
+                    <col style="width:100px">
+                    <col style="width:70px">
+                    <col>
+                    <col style="width:110px">
+                    <col style="width:110px">
+                    <col style="width:70px">
+                    <col style="width:110px">
+                    <col style="width:130px">
+                    <col style="width:90px">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>선택</th>
+                        <th>상품명</th><th>브랜드</th><th>등급</th>
+                        <th>ESTNO</th><th>재고</th><th>BL</th>
+                        <th>창고</th><th>유통기한</th><th>평균</th>
+                        <th>출고일</th><th>홀딩</th><th>변동</th>
+                    </tr>
+                </thead>
+                <tbody id="list"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+const MOCK = [
+    { 상품명:"BBQ탕갈비",  브랜드:"5 STAR 562M", 등급:"SE", ESTNO:"562M", 재고:17,  BL:"HDMUDALA02365400", 창고:"곤삼진2", 유통기한:"2027-08-17", 평중:25.96, 출고일:"", 홀딩:"", 상이:"" },
+    { 상품명:"늑간살",      브랜드:"OAKEY",       등급:"GF", ESTNO:"558",  재고:48,  BL:"AEL1925378",      창고:"곤지암",  유통기한:"2027-07-01", 평중:15.00, 출고일:"", 홀딩:"", 상이:"new" },
+    { 상품명:"토시살",      브랜드:"IBP",         등급:"CH", ESTNO:"245C", 재고:3,   BL:"HDMUDALA22788400",창고:"곤지암",  유통기한:"2026-07-01", 평중:19.26, 출고일:"", 홀딩:"", 상이:"deleted" },
+    { 상품명:"삼겹양지",    브랜드:"SWIFT",       등급:"UN", ESTNO:"969G", 재고:54,  BL:"MAEU266745050",   창고:"곤삼진2", 유통기한:"2028-02-03", 평중:18.50, 출고일:"", 홀딩:"", 상이:"▲10" },
+    { 상품명:"목전지",      브랜드:"SMITHFIELD",  등급:"",   ESTNO:"413",  재고:40,  BL:"OOLU2319830601",  창고:"곤지암",  유통기한:"2028-01-01", 평중:19.14, 출고일:"", 홀딩:"", 상이:"▼15" },
+    { 상품명:"부채살",      브랜드:"5 STAR 562M", 등급:"CH", ESTNO:"562M", 재고:182, BL:"HDMUDALA79128900", 창고:"곤삼진2", 유통기한:"2028-04-02", 평중:20.39, 출고일:"", 홀딩:"메모있음", 상이:"" },
+    { 상품명:"돈목뼈",      브랜드:"SWIFT",       등급:"",   ESTNO:"3W",   재고:50,  BL:"OOLU2325291560",  창고:"곤지암",  유통기한:"2028-03-24", 평중:15.88, 출고일:"", 홀딩:"", 상이:"▲3" },
+    { 상품명:"차돌박이",    브랜드:"EXCEL",       등급:"TCH",ESTNO:"86M",  재고:45,  BL:"ONEYRICGF0044500",창고:"곤지암",  유통기한:"2028-03-01", 평중:22.84, 출고일:"", 홀딩:"홀딩처리", 상이:"" },
+    { 상품명:"생칵테일새우",브랜드:"31/40",       등급:"9KG",ESTNO:"페루", 재고:5,   BL:"20260519",        창고:"곤지암",  유통기한:"",           평중:9,     출고일:"", 홀딩:"", 상이:"deleted" },
+    { 상품명:"곱창",        브랜드:"TEYS",        등급:"S",  ESTNO:"294",  재고:141, BL:"ONEYBNEG02532800",창고:"곤지암",  유통기한:"2028-03-08", 평중:15.00, 출고일:"", 홀딩:"", 상이:"▼30" },
+];
+
+function diffBadge(val) {
+    if (!val || val.toLowerCase() === "nan") return "";
+    if (val === "new")     return `<span class="diff-badge diff-badge-new">신규</span>`;
+    if (val === "deleted") return `<span class="diff-badge diff-badge-deleted">삭제</span>`;
+    if (val.startsWith("▲")) return `<span class="diff-badge diff-badge-up">${val}</span>`;
+    if (val.startsWith("▼")) return `<span class="diff-badge diff-badge-down">${val}</span>`;
+    return val;
+}
+
+let html = "";
+for (const item of MOCK) {
+    const diff = String(item.상이 ?? "").trim();
+    let rowClass = "";
+    if (diff === "new")            rowClass = "diff-new-row";
+    else if (diff === "deleted")   rowClass = "diff-deleted-row";
+    else if (diff.startsWith("▲"))rowClass = "diff-up-row";
+    else if (diff.startsWith("▼"))rowClass = "diff-down-row";
+
+    html += `<tr class="${rowClass}">
+        <td><input type="checkbox"></td>
+        <td>${item.상품명}</td><td>${item.브랜드}</td><td>${item.등급}</td>
+        <td>${item.ESTNO}</td><td>${item.재고}</td><td>${item.BL}</td>
+        <td>${item.창고}</td><td>${item.유통기한}</td><td>${item.평중}</td>
+        <td>${item.출고일}</td><td>${item.홀딩}</td>
+        <td>${diffBadge(diff)}</td>
+    </tr>`;
+}
+document.getElementById("list").innerHTML = html;
+</script>
+</body>
+</html>
