@@ -122,10 +122,16 @@ class FirestoreUpdater:
             log.info("  변경 없음")
             return 0, new_data
 
-        if to_upsert:
-            _batch_upsert(db, to_upsert)
-        if to_delete:
-            _batch_delete(db, to_delete)
+        try:
+            if to_upsert:
+                _batch_upsert(db, to_upsert)
+            if to_delete:
+                _batch_delete(db, to_delete)
+        except Exception as e:
+            if "Quota exceeded" in str(e) or "429" in str(e):
+                log.warning("  Firestore 할당량 초과 - 이번 라운드 쓰기 스킵 (내일 자정 리셋)")
+                return 0, prev_snapshot   # 스냅샷 유지, 다음 라운드 재시도
+            raise
 
         log.info(f"  Firestore ↑{len(to_upsert)}건 업서트 / ✕{len(to_delete)}건 삭제")
         return total, new_data
