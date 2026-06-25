@@ -1,44 +1,41 @@
-# =============================================================
-# 서비스 관리 편의 스크립트
-# 사용: .\manage_service.ps1 [start|stop|restart|status|logs]
-# =============================================================
+# Warehouse Pipeline - Service Management
+# Usage: .\manage_service.ps1 [start|stop|restart|status|logs]
 
 param([string]$Action = "status")
 
 $ServiceName = "WarehousePipeline"
-$LogDir = "C:\warehouse-pipeline\pipeline\logs"
+$LogFile     = "C:\warehouse-pipeline\pipeline\logs\pipeline.log"
 
 switch ($Action) {
     "start"   {
         Start-Service $ServiceName
-        Write-Host "서비스 시작됨" -ForegroundColor Green
+        Write-Host "Service started" -ForegroundColor Green
     }
     "stop"    {
         Stop-Service $ServiceName
-        Write-Host "서비스 중지됨" -ForegroundColor Yellow
+        Write-Host "Service stopped" -ForegroundColor Yellow
     }
     "restart" {
         Restart-Service $ServiceName
-        Write-Host "서비스 재시작됨" -ForegroundColor Cyan
+        Write-Host "Service restarted" -ForegroundColor Cyan
     }
     "status"  {
         $svc = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
         if ($svc) {
             $color = if ($svc.Status -eq 'Running') { 'Green' } else { 'Red' }
-            Write-Host "서비스 상태: $($svc.Status)" -ForegroundColor $color
+            Write-Host "Service status: $($svc.Status)" -ForegroundColor $color
         } else {
-            Write-Host "서비스가 등록되지 않았습니다." -ForegroundColor Red
+            Write-Host "Service not registered" -ForegroundColor Red
         }
     }
     "logs"    {
-        $logFile = "$LogDir\pipeline.log"
-        if (Test-Path $logFile) {
-            Get-Content $logFile -Tail 50 -Wait
+        if (Test-Path $LogFile) {
+            Get-Content $LogFile -Tail 50 -Wait
         } else {
-            Write-Host "로그 파일 없음: $logFile" -ForegroundColor Yellow
+            Write-Host "Log file not found: $LogFile" -ForegroundColor Yellow
         }
     }
     default   {
-        Write-Host "사용법: .\manage_service.ps1 [start|stop|restart|status|logs]"
+        Write-Host "Usage: .\manage_service.ps1 [start|stop|restart|status|logs]"
     }
 }
