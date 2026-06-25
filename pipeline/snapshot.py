@@ -1,6 +1,5 @@
 import pickle
 import logging
-import pandas as pd
 from pathlib import Path
 
 log = logging.getLogger("snapshot")
@@ -24,23 +23,10 @@ class Snapshot:
             log.warning(f"스냅샷 로드 실패 ({e}) - 전체 쓰기로 진행")
             return {}
 
-    def save(self, df: pd.DataFrame):
+    def save(self, mapped_dict: dict):
+        """updater가 반환한 매핑된 dict를 그대로 저장"""
         try:
-            data = self._df_to_dict(df)
             with open(self.path, "wb") as f:
-                pickle.dump(data, f)
+                pickle.dump(mapped_dict, f)
         except Exception as e:
             log.warning(f"스냅샷 저장 실패: {e}")
-
-    @staticmethod
-    def _df_to_dict(df: pd.DataFrame) -> dict:
-        result = {}
-        for _, row in df.iterrows():
-            pk = str(row.get("pk", ""))
-            if not pk:
-                continue
-            result[pk] = {
-                k: (None if pd.isna(v) else v)
-                for k, v in row.to_dict().items()
-            }
-        return result

@@ -50,12 +50,12 @@ def run_pipeline():
             log.warning("정규화 후 데이터 없음 - 이번 라운드 스킵")
             return
 
-        # 3. Firestore diff 업데이트
+        # 3. Firestore diff 업데이트 + 새 스냅샷 반환
         prev = snapshot.load()
-        changed = updater.update_diff(normalized, prev)
+        changed, new_snap = updater.update_diff(normalized, prev)
 
-        # 4. 스냅샷 저장
-        snapshot.save(normalized)
+        # 4. 매핑된 dict를 스냅샷으로 저장 (다음 비교 시 동일 형식 보장)
+        snapshot.save(new_snap)
 
         elapsed = time.time() - start
         log.info(
