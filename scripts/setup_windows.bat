@@ -21,9 +21,31 @@ echo   Done: %PROJECT_DIR% -^> %INSTALL_DIR%
 :: 3. Create virtual environment
 echo [3/5] Creating Python virtual environment...
 cd /d "%INSTALL_DIR%"
-python -m venv venv
+
+:: Try py launcher first, then python, then python3
+set PYTHON_CMD=
+where py >nul 2>&1
+if not errorlevel 1 set PYTHON_CMD=py
+if "%PYTHON_CMD%"=="" (
+    where python >nul 2>&1
+    if not errorlevel 1 set PYTHON_CMD=python
+)
+if "%PYTHON_CMD%"=="" (
+    where python3 >nul 2>&1
+    if not errorlevel 1 set PYTHON_CMD=python3
+)
+if "%PYTHON_CMD%"=="" (
+    echo   ERROR: Python not found in PATH.
+    echo   Solution: Open Python installer, check "Add Python to PATH", reinstall.
+    echo   Or run: setx PATH "%%PATH%%;C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311"
+    pause
+    exit /b 1
+)
+echo   Using: %PYTHON_CMD%
+
+%PYTHON_CMD% -m venv venv
 if errorlevel 1 (
-    echo   ERROR: Python not found. Install Python first.
+    echo   ERROR: Failed to create venv.
     pause
     exit /b 1
 )
