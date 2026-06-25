@@ -30,14 +30,41 @@ def _get_db():
 
 
 def _df_to_dict(df: pd.DataFrame, today: str) -> dict:
+    from post import to_str, to_int, to_float, to_date
     result = {}
     for _, row in df.iterrows():
-        pk = str(row.get("pk", ""))
-        if not pk:
+        bl     = to_str(row.get("BL번호", "")).strip()
+        weight = to_str(row.get("평균중량", "")).strip().replace(".", "")
+        expire = to_date(row.get("유통기한"))
+
+        bl_last4   = (bl[-4:] if len(bl) >= 4 else bl).replace("/", "_")
+        expire_str = (expire.replace("-", "") if expire else "").replace("/", "_")
+        weight_str = weight.replace("/", "_")
+        doc_id     = f"{bl_last4}_{expire_str}_{weight_str}"
+
+        if not doc_id or doc_id == "__":
             continue
-        data = {k: (None if pd.isna(v) else v) for k, v in row.to_dict().items()}
-        data["수집일"] = today
-        result[pk] = data
+
+        data = {
+            "id":     doc_id,
+            "pk":     doc_id,
+            "상품명": to_str(row.get("수탁품", "")).strip(),
+            "브랜드": to_str(row.get("브랜드", "")).strip(),
+            "등급":   to_str(row.get("등급", "")).strip(),
+            "ESTNO":  to_str(row.get("ESTNO", "")).strip(),
+            "재고":   to_int(row.get("재고수량")),
+            "BL":     bl,
+            "창고":   to_str(row.get("창고", "")).strip(),
+            "유통기한": expire,
+            "중량":   to_float(row.get("중량")),
+            "평중":   to_float(row.get("평균중량", "")),
+            "출고일": to_date(row.get("출고일")),
+            "홀딩":   to_str(row.get("홀딩", "")),
+            "수집일": today,
+            "상태":   "없음",
+            "메모":   "",
+        }
+        result[doc_id] = data
     return result
 
 
