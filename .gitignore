@@ -1,3 +1,14 @@
 *.json
 __pycache__/
 .env
+*.pyc
+
+# 크롤링 결과
+jns.xlsx
+
+# 파이프라인 런타임
+pipeline/snapshot.pkl
+pipeline/logs/
+
+# Excel 임시 잠금 파일
+~$*.xlsx
