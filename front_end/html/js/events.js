@@ -11,6 +11,19 @@ import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.12.0/fireb
 import { db } from "./firebase.js";
 
 export function bindEvents() {
+    // 드래그 감지 (드래그 중 행 체크 방지)
+    let _dragStartX = 0, _dragStartY = 0, _isDragging = false;
+    document.addEventListener("mousedown", (e) => {
+        _dragStartX = e.clientX;
+        _dragStartY = e.clientY;
+        _isDragging = false;
+    });
+    document.addEventListener("mousemove", (e) => {
+        if (Math.abs(e.clientX - _dragStartX) > 5 || Math.abs(e.clientY - _dragStartY) > 5) {
+            _isDragging = true;
+        }
+    });
+
     let searchTimer = null;
     dom.searchInput?.addEventListener("input", () => {
         clearTimeout(searchTimer);
@@ -514,15 +527,19 @@ async function handleClick(e) {
     // 테이블 행
     const row = e.target.closest("tr");
     if (row) {
-        const checkbox = row.querySelector(".row-check");
-        if (checkbox) checkbox.click();
+        if (!_isDragging) {
+            const checkbox = row.querySelector(".row-check");
+            if (checkbox) checkbox.click();
+        }
         return;
     }
 
     // 모바일 카드
     const mobileCard = e.target.closest(".mobile-card");
     if (mobileCard) {
-        const checkbox = mobileCard.querySelector(".row-check");
-        if (checkbox) checkbox.click();
+        if (!_isDragging) {
+            const checkbox = mobileCard.querySelector(".row-check");
+            if (checkbox) checkbox.click();
+        }
     }
 }

@@ -212,6 +212,36 @@ def eda_standard(df):
         "브랜드"
     ] = "31/40"
 
+    # 수탁품에 "냉장" 포함 시 앞으로 이동 (예: "부채살(냉장)" → "냉장부채살")
+    냉장_mask = (
+        df["수탁품"].astype(str).str.contains("냉장", na=False)
+        & ~df["수탁품"].astype(str).str.startswith("냉장")
+    )
+    df.loc[냉장_mask, "수탁품"] = (
+        "냉장"
+        + df.loc[냉장_mask, "수탁품"]
+        .astype(str)
+        .str.replace(r"\s*[\(\[]냉장[\)\]]", "", regex=True)
+        .str.replace("냉장", "", regex=False)
+        .str.strip()
+    )
+
+    # 등급에 "냉동" 포함 시 제거
+    df["등급"] = (
+        df["등급"].astype(str)
+        .str.replace("냉동", "", regex=False)
+        .str.strip()
+        .replace({"nan": "", "None": ""})
+    )
+
+    # ESTNO "인도PDTO" → "인도", "페루PDTO" → "페루" 등 PDTO 제거
+    df["ESTNO"] = (
+        df["ESTNO"].astype(str)
+        .str.replace("PDTO", "", regex=False)
+        .str.strip()
+        .replace({"nan": "", "None": ""})
+    )
+
     df.loc[df["브랜드"] == "EXCELCH", "등급"] = "CH"
     df.loc[df["브랜드"] == "EXCELCH", "브랜드"] = "EXCEL"
     df.loc[df["브랜드"] == "EXCELSEL", "등급"] = "SEL"
