@@ -2,10 +2,12 @@ import logging
 import signal
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 from apscheduler.schedulers.blocking import BlockingScheduler
-from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.combining import OrTrigger
 
 from pipeline.crawler import CrawlerPool
 from pipeline.updater import FirestoreUpdater
@@ -66,18 +68,32 @@ def run_pipeline():
         log.error(f"파이프라인 오류: {e}", exc_info=True)
 
 
+def _in_operating_hours(dt: datetime) -> bool:
+    return (dt.hour == 8 and dt.minute == 0) or \
+           (8 < dt.hour < 17) or \
+           (dt.hour == 17 and dt.minute == 0)
+
+
 def main():
     log.info("=" * 50)
     log.info("창고 재고 파이프라인 서비스 시작")
+    log.info("스케줄: 08:00 ~ 17:00, 1분 간격")
     log.info("=" * 50)
 
     scheduler = BlockingScheduler(timezone="Asia/Seoul")
+
+    # 08:00~16:59 매분 실행 + 17:00 마지막 실행
+    trigger = OrTrigger([
+        CronTrigger(hour="8-16", minute="*", timezone="Asia/Seoul"),
+        CronTrigger(hour="17",   minute="0", timezone="Asia/Seoul"),
+    ])
+
     scheduler.add_job(
         run_pipeline,
-        IntervalTrigger(minutes=1),
-        max_instances=1,         # 이전 실행 중이면 새 실행 스킵
-        coalesce=True,           # 밀린 실행은 1번만
-        misfire_grace_time=30,   # 30초 내 지연은 허용
+        trigger,
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=30,
         id="warehouse_pipeline",
     )
 
@@ -92,9 +108,13 @@ def main():
     except (OSError, ValueError):
         pass
 
-    # 시작 즉시 한 번 실행 후 주기 시작
-    log.info("즉시 실행 후 1분 주기 시작")
-    run_pipeline()
+    # 운영 시간 내에 시작하면 즉시 1회 실행
+    now = datetime.now()
+    if _in_operating_hours(now):
+        log.info(f"운영 시간 내 시작({now.strftime('%H:%M')}) - 즉시 1회 실행")
+        run_pipeline()
+    else:
+        log.info(f"현재 시각 {now.strftime('%H:%M')} - 운영 시간(08:00~17:00) 외, 다음 08:00까지 대기")
 
     try:
         scheduler.start()
