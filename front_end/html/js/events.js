@@ -50,6 +50,31 @@ export function bindEvents() {
     });
 
     document.addEventListener("click", handleClick);
+
+    // 더블클릭으로 행 선택
+    document.addEventListener("dblclick", (e) => {
+        if (e.target.classList.contains("row-check")) return;
+
+        const target = e.target.closest("tr") || e.target.closest(".mobile-card");
+        if (!target) return;
+
+        const checkbox = target.querySelector(".row-check");
+        if (!checkbox) return;
+
+        const id = checkbox.dataset.id;
+        const item = state.allData.find(d => d.id === id);
+        if (!item) return;
+
+        if (state.selectedItems.has(id)) {
+            state.selectedItems.delete(id);
+            if (state.selectedItems.size === 0) state.crudData = null;
+        } else {
+            addSelectedItem(state, id, item);
+        }
+
+        renderAll();
+        window.getSelection()?.removeAllRanges();
+    });
 }
 
 function renderAll() {
@@ -521,25 +546,4 @@ async function handleClick(e) {
         return;
     }
 
-    // 행 클릭 → 체크박스 토글
-    if (e.target.classList.contains("row-check")) return;
-
-    // 테이블 행
-    const row = e.target.closest("tr");
-    if (row) {
-        if (!_isDragging) {
-            const checkbox = row.querySelector(".row-check");
-            if (checkbox) checkbox.click();
-        }
-        return;
-    }
-
-    // 모바일 카드
-    const mobileCard = e.target.closest(".mobile-card");
-    if (mobileCard) {
-        if (!_isDragging) {
-            const checkbox = mobileCard.querySelector(".row-check");
-            if (checkbox) checkbox.click();
-        }
-    }
 }

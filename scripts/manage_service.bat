@@ -13,21 +13,21 @@ if "%1"=="logs"    goto LOGS
 goto USAGE
 
 :START
-net start %SERVICE_NAME%
+schtasks /run /tn %SERVICE_NAME%
 goto END
 
 :STOP
-net stop %SERVICE_NAME%
+schtasks /end /tn %SERVICE_NAME%
 goto END
 
 :RESTART
-net stop %SERVICE_NAME%
+schtasks /end /tn %SERVICE_NAME%
 timeout /t 2 /nobreak >nul
-net start %SERVICE_NAME%
+schtasks /run /tn %SERVICE_NAME%
 goto END
 
 :STATUS
-sc query %SERVICE_NAME%
+schtasks /query /tn %SERVICE_NAME% /fo LIST
 goto END
 
 :LOGS

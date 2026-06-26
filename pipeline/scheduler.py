@@ -69,6 +69,8 @@ def run_pipeline():
 
 
 def _in_operating_hours(dt: datetime) -> bool:
+    if dt.weekday() >= 5:  # 토(5), 일(6) 제외
+        return False
     return (dt.hour == 8 and dt.minute == 0) or \
            (8 < dt.hour < 17) or \
            (dt.hour == 17 and dt.minute == 0)
@@ -77,15 +79,15 @@ def _in_operating_hours(dt: datetime) -> bool:
 def main():
     log.info("=" * 50)
     log.info("창고 재고 파이프라인 서비스 시작")
-    log.info("스케줄: 08:00 ~ 17:00, 1분 간격")
+    log.info("스케줄: 평일(월~금) 08:00 ~ 17:00, 1분 간격")
     log.info("=" * 50)
 
     scheduler = BlockingScheduler(timezone="Asia/Seoul")
 
-    # 08:00~16:59 매분 실행 + 17:00 마지막 실행
+    # 평일(월~금) 08:00~16:59 매분 실행 + 17:00 마지막 실행
     trigger = OrTrigger([
-        CronTrigger(hour="8-16", minute="*", timezone="Asia/Seoul"),
-        CronTrigger(hour="17",   minute="0", timezone="Asia/Seoul"),
+        CronTrigger(hour="8-16", minute="*", day_of_week="mon-fri", timezone="Asia/Seoul"),
+        CronTrigger(hour="17",   minute="0", day_of_week="mon-fri", timezone="Asia/Seoul"),
     ])
 
     scheduler.add_job(
@@ -114,7 +116,7 @@ def main():
         log.info(f"운영 시간 내 시작({now.strftime('%H:%M')}) - 즉시 1회 실행")
         run_pipeline()
     else:
-        log.info(f"현재 시각 {now.strftime('%H:%M')} - 운영 시간(08:00~17:00) 외, 다음 08:00까지 대기")
+        log.info(f"현재 시각 {now.strftime('%H:%M')} - 운영 시간(평일 08:00~17:00) 외, 다음 평일 08:00까지 대기")
 
     try:
         scheduler.start()
