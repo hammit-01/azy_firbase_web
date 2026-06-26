@@ -114,10 +114,7 @@ def list_eda(final_df, jns):
     df = replace_name(df)
     df = eda_standard(df)
 
-    df = df.drop_duplicates().copy()
-    df = df.drop_duplicates(
-        subset=["BL번호", "재고수량"]
-    ).reset_index(drop=True)
+    df = df.drop_duplicates().reset_index(drop=True)
 
     return final_df, df
 
