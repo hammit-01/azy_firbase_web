@@ -25,9 +25,9 @@ const PRIMARY_CONFIG = {
 // ★ Secondary: Firebase 콘솔에서 새 프로젝트 생성 후 아래 값을 교체하세요
 //   https://console.firebase.google.com → 프로젝트 설정 → 앱 추가 → 웹
 const SECONDARY_CONFIG = {
-    apiKey: "SECONDARY_API_KEY",
-    authDomain: "SECONDARY_PROJECT_ID.firebaseapp.com",
-    projectId: "SECONDARY_PROJECT_ID"
+    apiKey: "AIzaSyDCdjxL5U0vmEkGQEroPo4-zOP33nrKSBQ",
+    authDomain: "awhw-0001.firebaseapp.com",
+    projectId: "awhw-0001",
 };
 
 // Secondary 설정이 완료됐는지 확인 (placeholder 그대로면 비활성)

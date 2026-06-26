@@ -28,7 +28,7 @@ except ImportError:
 log = logging.getLogger("updater")
 
 CRED_PATH_PRIMARY   = "azy7503-d80d9-firebase-adminsdk-fbsvc-60e8882c5b.json"
-CRED_PATH_SECONDARY = "secondary-firebase-adminsdk.json"   # ★ 파일명 교체 필요
+CRED_PATH_SECONDARY = "awhw-0001-firebase-adminsdk-fbsvc-1af5d17c53.json"
 COLLECTION     = "all_data"
 BATCH_LIMIT    = 250
 ACTIVE_DB_FILE = Path("pipeline/active_db.json")
