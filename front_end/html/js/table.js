@@ -205,8 +205,11 @@ export function renderTable() {
         data = data.filter(item => item.상태 === dataState);
     }
 
+    // 박스 합계는 빈 상품 제거 전 기준으로 계산
+    const dataForTotal = data;
+
     // =========================
-    // 빈 상품 제거
+    // 빈 상품 제거 (화면 표시 전용)
     // =========================
     data = data.filter(item => {
 
@@ -348,10 +351,10 @@ export function renderTable() {
     dom.listDiv.innerHTML = html;
 
     // =========================
-    // 총합
+    // 총합 (빈 상품명 포함 전체 기준)
     // =========================
     const totalWeight =
-        data.reduce((sum, item) => {
+        dataForTotal.reduce((sum, item) => {
 
             return sum +
                 (Number(item.재고) || 0);
@@ -359,7 +362,7 @@ export function renderTable() {
         }, 0);
 
     const mean =
-        data.reduce((sum, item) => {
+        dataForTotal.reduce((sum, item) => {
 
             return sum +
                 (Number(item.평중) || 0);
@@ -367,7 +370,7 @@ export function renderTable() {
         }, 0);
 
     renderTableSize(
-        data.length,
+        dataForTotal.length,
         totalWeight,
         mean
     );

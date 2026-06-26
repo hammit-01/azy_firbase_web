@@ -187,7 +187,11 @@ def _df_to_dict(df: pd.DataFrame, today: str) -> dict:
             "상태":   "없음",
             "메모":   "",
         }
-        result[doc_id] = data
+        if doc_id in result:
+            # pk 충돌(BL뒤4자리+유통기한+평중 동일): 재고 합산
+            result[doc_id]["재고"] = (result[doc_id].get("재고") or 0) + (data.get("재고") or 0)
+        else:
+            result[doc_id] = data
     return result
 
 
