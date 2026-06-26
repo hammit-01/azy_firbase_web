@@ -157,13 +157,12 @@ def _df_to_dict(df: pd.DataFrame, today: str) -> dict:
     result = {}
     for _, row in df.iterrows():
         bl     = to_str(row.get("BL번호", "")).strip()
-        weight = to_str(row.get("평균중량", "")).strip().replace(".", "")
+        code   = to_str(row.get("코드", "")).strip().replace("/", "_").replace(" ", "_")
         expire = to_date(row.get("유통기한"))
 
         bl_last4   = (bl[-4:] if len(bl) >= 4 else bl).replace("/", "_")
         expire_str = (expire.replace("-", "") if expire else "").replace("/", "_")
-        weight_str = weight.replace("/", "_")
-        doc_id     = f"{bl_last4}_{expire_str}_{weight_str}"
+        doc_id     = f"{code}_{bl_last4}_{expire_str}"
 
         if not doc_id or doc_id == "__":
             continue
@@ -188,7 +187,7 @@ def _df_to_dict(df: pd.DataFrame, today: str) -> dict:
             "메모":   "",
         }
         if doc_id in result:
-            # pk 충돌(BL뒤4자리+유통기한+평중 동일): 재고 합산
+            # pk 충돌(코드+BL뒤4자리+유통기한 동일): 재고 합산
             result[doc_id]["재고"] = (result[doc_id].get("재고") or 0) + (data.get("재고") or 0)
         else:
             result[doc_id] = data
