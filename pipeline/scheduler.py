@@ -59,9 +59,19 @@ def run_pipeline():
         # 4. 매핑된 dict를 스냅샷으로 저장 (다음 비교 시 동일 형식 보장)
         snapshot.save(new_snap)
 
+        # 수량 최종 확인: EDA 박스수 vs Firestore 박스수
+        import pandas as _pd
+        if not normalized.empty and "재고수량" in normalized.columns:
+            eda_qty = int(_pd.to_numeric(normalized["재고수량"], errors="coerce").fillna(0).sum())
+        else:
+            eda_qty = 0
+        fs_qty  = sum(v.get("재고", 0) or 0 for v in new_snap.values())
+        qty_diff = eda_qty - fs_qty
+        qty_note = f" ★ {qty_diff}박스 차이" if qty_diff != 0 else ""
+
         elapsed = time.time() - start
         log.info(
-            f"완료 | 총 {len(normalized)}건 조회 | 변경 {changed}건 | {elapsed:.1f}초 소요"
+            f"완료 | EDA {len(normalized)}건/{eda_qty}박스 → Firestore {len(new_snap)}건/{fs_qty}박스{qty_note} | 변경 {changed}건 | {elapsed:.1f}초 소요"
         )
 
     except Exception as e:

@@ -104,5 +104,19 @@ class CrawlerPool:
         others  = [df for w, df in success.items() if w != "제니스(곤지암)"]
         final_df = pd.concat(others, ignore_index=True) if others else pd.DataFrame()
 
+        # 원본 수량 로그
+        if not jns_df.empty and "재고수량" in jns_df.columns:
+            raw_qty = pd.to_numeric(
+                jns_df["재고수량"].astype(str).str.replace(",", "", regex=False),
+                errors="coerce"
+            ).fillna(0).sum()
+            log.info(f"  [정규화 전] 원본: {len(jns_df)}행 / {int(raw_qty)}박스")
+
         _, normalized = list_eda(final_df, jns_df)
-        return normalized.drop_duplicates().reset_index(drop=True)
+        # list_eda 내부에서 pk 기준 중복 합산 처리됨 (drop_duplicates 불필요)
+
+        if not normalized.empty and "재고수량" in normalized.columns:
+            eda_qty = pd.to_numeric(normalized["재고수량"], errors="coerce").fillna(0).sum()
+            log.info(f"  [정규화 후] EDA: {len(normalized)}행 / {int(eda_qty)}박스")
+
+        return normalized

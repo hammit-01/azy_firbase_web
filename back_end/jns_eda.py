@@ -20,15 +20,12 @@ def jns_eda(dfs):
     df["BL번호"] = df["BL번호"].astype(str).str.replace("*",  "", regex=False)
     df["BL번호"] = df["BL번호"].astype(str).str.replace("\\", "", regex=False)
 
-    # PK 생성: 코드_BL뒤4자리_유통기한(YYYYMMDD)
+    # PK 생성: 코드_BL전체_유통기한(YYYYMMDD)  (_df_to_dict와 동일 형식)
     if all(c in df.columns for c in ["코드", "BL번호", "유통기한"]):
-        expire_str = df["유통기한"].astype(str).str.replace("-", "", regex=False)
-        bl_last4   = df["BL번호"].astype(str).str.strip().str[-4:]
-        df["pk"] = (
-            df["코드"].astype(str).str.strip() + "_" +
-            bl_last4 + "_" +
-            expire_str
-        )
+        expire_str  = df["유통기한"].astype(str).str.replace("-", "", regex=False)
+        bl_full     = df["BL번호"].astype(str).str.strip().str.replace("/", "_", regex=False).str.replace(" ", "_", regex=False)
+        code_clean  = df["코드"].astype(str).str.strip().str.replace("/", "_", regex=False).str.replace(" ", "_", regex=False)
+        df["pk"] = code_clean + "_" + bl_full + "_" + expire_str
 
     # 불필요 컬럼 제거
     df = df.drop(

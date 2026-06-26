@@ -48,7 +48,8 @@ def to_int(x):
     try:
         if pd.isna(x):
             return 0
-        return int(str(x).replace(",", "").strip())
+        # float("100.0") 후 int 변환 (str→int 직접 변환은 "100.0" 형식에서 실패)
+        return int(float(str(x).replace(",", "").strip()))
     except:
         return 0
 

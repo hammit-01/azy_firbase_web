@@ -114,7 +114,19 @@ def list_eda(final_df, jns):
     df = replace_name(df)
     df = eda_standard(df)
 
-    df = df.drop_duplicates().reset_index(drop=True)
+    # pk 기준 집계: 같은 pk(코드+BL+유통기한)는 재고수량 합산, 나머지는 첫 번째 값 유지
+    # (replace_name/eda_standard 이후 이름이 동일해진 경우에도 수량 보존)
+    if "pk" in df.columns and "재고수량" in df.columns:
+        before_rows = len(df)
+        before_qty = int(pd.to_numeric(df["재고수량"], errors="coerce").fillna(0).sum())
+        qty_sum = df.groupby("pk", sort=False)["재고수량"].sum().reset_index()
+        first_rows = df.drop_duplicates(subset="pk", keep="first").drop(columns=["재고수량"])
+        df = first_rows.merge(qty_sum, on="pk", how="left").reset_index(drop=True)
+        after_qty = int(pd.to_numeric(df["재고수량"], errors="coerce").fillna(0).sum())
+        if before_rows != len(df):
+            print(f"[EDA] pk 중복 합산: {before_rows}행→{len(df)}행 | 수량 {before_qty}→{after_qty}박스")
+    else:
+        df = df.drop_duplicates().reset_index(drop=True)
 
     return final_df, df
 

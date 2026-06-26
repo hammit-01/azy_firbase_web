@@ -155,16 +155,26 @@ def _should_try_recovery() -> bool:
 def _df_to_dict(df: pd.DataFrame, today: str) -> dict:
     from post import to_str, to_int, to_float, to_date
     result = {}
+    skipped_rows, skipped_qty = 0, 0
+    merged_rows,  merged_qty  = 0, 0
+    raw_total = 0
+
     for _, row in df.iterrows():
         bl     = to_str(row.get("BL번호", "")).strip()
         code   = to_str(row.get("코드", "")).strip().replace("/", "_").replace(" ", "_")
         expire = to_date(row.get("유통기한"))
+        qty    = to_int(row.get("재고수량"))
+        raw_total += qty
 
-        bl_last4   = (bl[-4:] if len(bl) >= 4 else bl).replace("/", "_")
+        # BL 전체 사용 (뒤 4자리만 쓰면 서로 다른 품목이 같은 pk로 합산되는 문제 방지)
+        bl_key     = bl.replace("/", "_").replace(" ", "_")
         expire_str = (expire.replace("-", "") if expire else "").replace("/", "_")
-        doc_id     = f"{code}_{bl_last4}_{expire_str}"
+        doc_id     = f"{code}_{bl_key}_{expire_str}"
 
-        if not doc_id or doc_id == "__":
+        if not doc_id or doc_id.replace("_", "") == "":
+            skipped_rows += 1
+            skipped_qty  += qty
+            log.warning(f"  pk 생성 불가 스킵: 수탁품={to_str(row.get('수탁품','?'))[:20]} / 재고={qty}박스")
             continue
 
         data = {
@@ -174,7 +184,7 @@ def _df_to_dict(df: pd.DataFrame, today: str) -> dict:
             "브랜드": to_str(row.get("브랜드", "")).strip(),
             "등급":   to_str(row.get("등급", "")).strip(),
             "ESTNO":  to_str(row.get("ESTNO", "")).strip(),
-            "재고":   to_int(row.get("재고수량")),
+            "재고":   qty,
             "BL":     bl,
             "창고":   to_str(row.get("창고", "")).strip(),
             "유통기한": expire,
@@ -187,10 +197,22 @@ def _df_to_dict(df: pd.DataFrame, today: str) -> dict:
             "메모":   "",
         }
         if doc_id in result:
-            # pk 충돌(코드+BL뒤4자리+유통기한 동일): 재고 합산
-            result[doc_id]["재고"] = (result[doc_id].get("재고") or 0) + (data.get("재고") or 0)
+            # 동일 pk(코드+BL전체+유통기한): 재고 합산 (정상적으로 같은 품목)
+            merged_rows += 1
+            merged_qty  += qty
+            result[doc_id]["재고"] = (result[doc_id].get("재고") or 0) + qty
         else:
             result[doc_id] = data
+
+    out_total = sum(v.get("재고", 0) or 0 for v in result.values())
+    log.info(
+        f"  [변환] 원본 {len(df)}행 {raw_total}박스 → Firestore {len(result)}건 {out_total}박스"
+    )
+    if skipped_rows:
+        log.warning(f"  [변환] pk없음 스킵: {skipped_rows}행 {skipped_qty}박스 손실")
+    if merged_rows:
+        log.info(f"  [변환] pk병합: {merged_rows}행 → 재고 합산 {merged_qty}박스")
+
     return result
 
 
