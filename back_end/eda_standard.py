@@ -1,115 +1,9 @@
+import pandas as pd
+from datetime import date
+
+
 def eda_standard(df):
-    # 계육
-    df.loc[
-        df["수탁품"] == "닭장각정육",
-        "평균중량"
-    ] = 12
-    df.loc[
-        df["수탁품"] == "닭장각정육(파손)",
-        "평균중량"
-    ] = 12
-    df.loc[
-        (df["브랜드"] == "TEYS") &
-        (df["수탁품"] == "곱창"),
-        "평균중량"
-    ] = 15
-    df.loc[
-        (df["브랜드"] == "TEYS") &
-        (df["수탁품"] == "깐양"),
-        "평균중량"
-    ] = 20
-    df.loc[
-        (df["브랜드"] == "국내산") &
-        (df["수탁품"] == "닭가슴살"),
-        "평균중량"
-    ] = 20
-    df.loc[
-        (df["브랜드"] == "AURORA") &
-        (df["수탁품"] == "닭장각"),
-        "평균중량"
-    ] = 15
-    df.loc[
-        (df["브랜드"] == "SEARA") &
-        (df["수탁품"] == "닭장각"),
-        "평균중량"
-    ] = 15
-
-    df.loc[
-        (df["브랜드"] == "ACC") &
-        (df["수탁품"] == "대창"),
-        "평균중량"
-    ] = 20
-    df.loc[
-        (df["브랜드"] == "ROSDERRA") &
-        (df["수탁품"] == "돈갈매기"),
-        "평균중량"
-    ] = 10
-    df.loc[
-        (df["브랜드"] == "LOCKS") &
-        (df["수탁품"] == "돈단족"),
-        "평균중량"
-    ] = 10
-    df.loc[
-        (df["브랜드"] == "SEARA") &
-        (df["수탁품"] == "돈단족"),
-        "평균중량"
-    ] = 18
-
-    df.loc[
-        (df["브랜드"] == "SEARA") &
-        (df["수탁품"] == "돈목뼈"),
-        "평균중량"
-    ] = 15
-    df.loc[
-        (df["브랜드"] == "SWIFT") &
-        (df["수탁품"] == "돈목뼈"),
-        "평균중량"
-    ] = 15.88
-    df.loc[
-        (df["브랜드"] == "TONNIES") &
-        (df["수탁품"] == "돈목뼈"),
-        "평균중량"
-    ] = 13
-    df.loc[
-        (df["수탁품"] == "새우"),
-        "평균중량"
-    ] = 9
-    df.loc[
-        (df["브랜드"] == "EXCEL") &
-        (df["수탁품"] == "우건"),
-        "평균중량"
-    ] = 6.8
-    df.loc[
-        (df["브랜드"] == "EXCEL") &
-        (df["수탁품"] == "홍창"),
-        "평균중량"
-    ] = 6.8
-    df.loc[
-        (df["브랜드"] == "SWIFT") &
-        (df["수탁품"] == "홍창"),
-        "평균중량"
-    ] = 9.98
-    df.loc[
-        (df["브랜드"] == "COPACAL") &
-        (df["수탁품"] == "통날개"),
-        "평균중량"
-    ] = 15
-    df.loc[
-        (df["브랜드"] == "KEKEN") &
-        (df["수탁품"] == "항정살"),
-        "평균중량"
-    ] = 10
-    df.loc[
-        (df["브랜드"] == "국내산") &
-        (df["수탁품"] == "작업돈껍데기"),
-        "평균중량"
-    ] = 15
-    df.loc[
-        (df["브랜드"] == "INCARLOPSA") &
-        (df["수탁품"] == "돈목살"),
-        "평균중량"
-    ] = 15
-
+    # ── 등급 정규화 ───────────────────────────────────────────────────
     df.loc[
         (df["브랜드"] == "EXCEL") &
         (df["수탁품"] == "조각삼겹양지"),
@@ -122,13 +16,13 @@ def eda_standard(df):
     ] = "2P"
     df.loc[
         (df["브랜드"] == "EXCEL") &
-        (df["수탁품"] == "삼겹양지")&
+        (df["수탁품"] == "삼겹양지") &
         (df["등급"] == ""),
         "등급"
     ] = "UN"
     df.loc[
         (df["브랜드"] == "SWIFT") &
-        (df["수탁품"] == "삼겹양지파손")&
+        (df["수탁품"] == "삼겹양지파손") &
         (df["등급"] == ""),
         "등급"
     ] = "UN"
@@ -143,7 +37,7 @@ def eda_standard(df):
         "등급"
     ] = "S"
 
-    df["등급"] = (df["등급"].astype(str).str.replace("#", "", regex=False))
+    df["등급"] = df["등급"].astype(str).str.replace("#", "", regex=False)
 
     # 수산물 브랜드: 수탁품의 "31-40/9KG" 형식에서 "31/40"을 브랜드로 추출
     sunsanmul_mask = df["브랜드"].astype(str).str.strip() == "수산물"
@@ -160,57 +54,22 @@ def eda_standard(df):
 
     product = df["수탁품"].astype(str)
 
-    # =================================================
     # 새우
-    # =================================================
     shrimp_mask = product.str.contains("새우", na=False)
-
     df.loc[shrimp_mask, "수탁품"] = "생칵테일새우"
-    df.loc[shrimp_mask, "등급"] = "9KG"
+    df.loc[shrimp_mask, "등급"]   = "9KG"
 
-    # =================================================
     # 인도
-    # =================================================
-    india_mask = (
-        shrimp_mask
-        & product.str.contains("인도", na=False)
-    )
-
+    india_mask = shrimp_mask & product.str.contains("인도", na=False)
     df.loc[india_mask, "ESTNO"] = "인도"
+    df.loc[india_mask & product.str.contains("26/30", na=False), "브랜드"] = "26/30"
+    df.loc[india_mask & product.str.contains("31/40", na=False), "브랜드"] = "31/40"
 
-    df.loc[
-        india_mask
-        & product.str.contains("26/30", na=False),
-        "브랜드"
-    ] = "26/30"
-
-    df.loc[
-        india_mask
-        & product.str.contains("31/40", na=False),
-        "브랜드"
-    ] = "31/40"
-
-    # =================================================
     # 페루
-    # =================================================
-    peru_mask = (
-        shrimp_mask
-        & product.str.contains("페루", na=False)
-    )
-
+    peru_mask = shrimp_mask & product.str.contains("페루", na=False)
     df.loc[peru_mask, "ESTNO"] = "페루"
-
-    df.loc[
-        peru_mask
-        & product.str.contains("41/50", na=False),
-        "브랜드"
-    ] = "41/50"
-
-    df.loc[
-        peru_mask
-        & product.str.contains("31/40", na=False),
-        "브랜드"
-    ] = "31/40"
+    df.loc[peru_mask & product.str.contains("41/50", na=False), "브랜드"] = "41/50"
+    df.loc[peru_mask & product.str.contains("31/40", na=False), "브랜드"] = "31/40"
 
     # 수탁품에 "냉장" 포함 시 앞으로 이동 (예: "부채살(냉장)" → "냉장부채살")
     냉장_mask = (
@@ -234,7 +93,7 @@ def eda_standard(df):
         .replace({"nan": "", "None": ""})
     )
 
-    # ESTNO "인도PDTO" → "인도", "페루PDTO" → "페루" 등 PDTO 제거
+    # ESTNO "PDTO" 제거
     df["ESTNO"] = (
         df["ESTNO"].astype(str)
         .str.replace("PDTO", "", regex=False)
@@ -242,47 +101,75 @@ def eda_standard(df):
         .replace({"nan": "", "None": ""})
     )
 
-    df.loc[df["브랜드"] == "EXCELCH", "등급"] = "CH"
-    df.loc[df["브랜드"] == "EXCELCH", "브랜드"] = "EXCEL"
-    df.loc[df["브랜드"] == "EXCELSEL", "등급"] = "SEL"
+    # 브랜드 정규화
+    df.loc[df["브랜드"] == "EXCELCH",  "등급"]   = "CH"
+    df.loc[df["브랜드"] == "EXCELCH",  "브랜드"] = "EXCEL"
+    df.loc[df["브랜드"] == "EXCELSEL", "등급"]   = "SEL"
     df.loc[df["브랜드"] == "EXCELSEL", "브랜드"] = "EXCEL"
-    df.loc[df["브랜드"] == "EXCELPRI", "등급"] = "PRI"
+    df.loc[df["브랜드"] == "EXCELPRI", "등급"]   = "PRI"
     df.loc[df["브랜드"] == "EXCELPRI", "브랜드"] = "EXCEL"
 
     mask = df["등급"] == "CH-ANGUS"
-    df.loc[mask, "등급"] = "3P"
+    df.loc[mask, "등급"]  = "3P"
     df.loc[mask, "ESTNO"] = "3D"
 
     mask = df["등급"] == "S-GF"
-    df.loc[mask, "등급"] = "GF"
+    df.loc[mask, "등급"]  = "GF"
     df.loc[mask, "ESTNO"] = "640"
 
     mask = df["수탁품"] == "우척BBQ빽립A"
     df.loc[mask, "등급"] = "A"
 
-    df.loc[
-        df["수탁품"].astype(str).str.contains("PERDI", case=False, na=False),
-        "브랜드"
-    ] = "PERDIGAO"
-    df.loc[
-        df["수탁품"].astype(str).str.contains("SADIA", case=False, na=False),
-        "브랜드"
-    ] = "SADIA"
-    df.loc[
-        df["수탁품"].astype(str).str.contains("SEARA", case=False, na=False),
-        "브랜드"
-    ] = "SEARA"
+    df.loc[df["수탁품"].astype(str).str.contains("PERDI", case=False, na=False), "브랜드"] = "PERDIGAO"
+    df.loc[df["수탁품"].astype(str).str.contains("SADIA", case=False, na=False), "브랜드"] = "SADIA"
+    df.loc[df["수탁품"].astype(str).str.contains("SEARA", case=False, na=False), "브랜드"] = "SEARA"
 
-    # df.loc[
-    #     df["규격단위중량"].astype(str).str.contains("PERDI", case=False, na=False),
-    #     "브랜드"
-    # ] = "PERDIGAO"
-    # df.loc[
-    #     df["규격단위중량"].astype(str).str.contains("SADIA", case=False, na=False),
-    #     "브랜드"
-    # ] = "SADIA"
-    # df.loc[
-    #     df["규격단위중량"].astype(str).str.contains("SEARA", case=False, na=False),
-    #     "브랜드"
-    # ] = "SEARA"
+    # ── 평균중량: 크롤링 값 무시, 규격 상품만 설정 ──────────────────────
+    # 브랜드·수탁품 정규화 완료 후 적용
+    df["평균중량"] = None
+
+    # 우육
+    df.loc[(df["브랜드"] == "TEYS")  & (df["수탁품"] == "곱창"),     "평균중량"] = 15.0
+    df.loc[(df["브랜드"] == "OAKEY") & (df["수탁품"] == "안창살"),   "평균중량"] = 15.0
+    df.loc[(df["브랜드"] == "OAKEY") & (df["수탁품"] == "늑간살"),   "평균중량"] = 15.0
+    df.loc[(df["브랜드"] == "EXCEL") & (df["수탁품"] == "우건"),     "평균중량"] = 6.8
+    df.loc[(df["브랜드"] == "SWIFT") & (df["수탁품"] == "우건"),     "평균중량"] = 9.98
+    df.loc[(df["브랜드"] == "SWIFT") & (df["수탁품"] == "우건(뒤)"), "평균중량"] = 20.0
+    df.loc[(df["브랜드"] == "TEYS")  & (df["수탁품"] == "우건"),     "평균중량"] = 27.2
+    df.loc[(df["브랜드"] == "TEYS")  & (df["수탁품"] == "우건(뒤)"), "평균중량"] = 27.2
+    df.loc[(df["브랜드"] == "EXCEL") & (df["수탁품"] == "홍창"),     "평균중량"] = 6.8
+    df.loc[(df["브랜드"] == "SWIFT") & (df["수탁품"] == "홍창"),     "평균중량"] = 9.98
+
+    # TEYS 깐양: 등급에서 KG 수치 추출 (예: "20KG" → 20.0, "27.2KG" → 27.2)
+    teys_kang_mask = (df["브랜드"] == "TEYS") & (df["수탁품"] == "깐양")
+    if teys_kang_mask.any():
+        kg_extracted = (
+            df.loc[teys_kang_mask, "등급"]
+            .astype(str)
+            .str.extract(r"(\d+\.?\d*)")
+        )
+        df.loc[teys_kang_mask, "평균중량"] = pd.to_numeric(kg_extracted[0], errors="coerce")
+
+    # 계육 (브라질산: PERDIGAO, SADIA, SEARA)
+    brazil_mask = df["브랜드"].isin(["PERDIGAO", "SADIA", "SEARA"])
+    df.loc[brazil_mask & (df["수탁품"] == "닭장각"),     "평균중량"] = 15.0
+    df.loc[brazil_mask & (df["수탁품"] == "닭장각정육"), "평균중량"] = 12.0
+    df.loc[brazil_mask & (df["수탁품"] == "닭가슴살"),   "평균중량"] = 12.0
+
+    # 돈육
+    df.loc[(df["브랜드"] == "ROSDERRA") & (df["수탁품"] == "돈갈매기"), "평균중량"] = 10.0
+    df.loc[(df["브랜드"] == "LOCKS")    & (df["수탁품"] == "돈단족"),   "평균중량"] = 10.0
+    df.loc[(df["브랜드"] == "SEARA")    & (df["수탁품"] == "돈단족"),   "평균중량"] = 18.0
+    df.loc[(df["브랜드"] == "SWIFT")    & (df["수탁품"] == "돈목뼈"),   "평균중량"] = 15.88
+    df.loc[(df["브랜드"] == "SEARA")    & (df["수탁품"] == "돈목뼈"),   "평균중량"] = 15.0
+    df.loc[(df["브랜드"] == "SEABOARD") & (df["수탁품"] == "돈볼살"),   "평균중량"] = 13.6
+    df.loc[(df["브랜드"] == "SEARA")    & (df["수탁품"] == "돈갈비"),   "평균중량"] = 15.0
+
+    # TONNIES 돈단족: 유통기한 - 730일이 올해인 제품만 적용
+    tonnies_mask = (df["브랜드"] == "TONNIES") & (df["수탁품"] == "돈단족")
+    if tonnies_mask.any():
+        expire = pd.to_datetime(df["유통기한"], errors="coerce")
+        manufactured_year = (expire - pd.Timedelta(days=730)).dt.year
+        df.loc[tonnies_mask & (manufactured_year == date.today().year), "평균중량"] = 10.0
+
     return df
