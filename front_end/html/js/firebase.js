@@ -8,8 +8,7 @@ import {
     onSnapshot,
     doc,
     getDoc
-}
-from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
 import { state } from "./state.js";
 import { renderTable } from "./table.js";
@@ -84,25 +83,21 @@ export async function loadEmployees() {
         .sort((a, b) => a["이름"].localeCompare(b["이름"], "ko"));
 }
 
-export function subscribeData() {
+const POLL_INTERVAL_MS = 5 * 60 * 1000; // 5분
 
-    onSnapshot(collection(db, "all_data"), (snapshot) => {
+export async function subscribeData() {
+    await fetchAllData();
+    setInterval(fetchAllData, POLL_INTERVAL_MS);
+}
 
-        // 내 로컬 쓰기가 서버 확인 전인 중간 상태 → 렌더 스킵 (UI 깜빡임 방지)
-        if (snapshot.metadata.hasPendingWrites) {
-            state.allData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-            return;
-        }
-
-        if (snapshot.docChanges().length === 0) return;
-
-        state.allData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+async function fetchAllData() {
+    try {
+        const snap = await getDocs(collection(db, "all_data"));
+        state.allData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderTable();
-
-        // 패널(홀딩·수정·추가 폼)이 열려있으면 sideBox 재렌더 금지 → 입력 내용 보존
         const panelOpen = !!document.querySelector(".holding-card, .update-card, .insert-card");
-        if (!panelOpen) {
-            renderSelectData();
-        }
-    });
+        if (!panelOpen) renderSelectData();
+    } catch (e) {
+        console.warn("[Firebase] fetchAllData 오류:", e.message);
+    }
 }

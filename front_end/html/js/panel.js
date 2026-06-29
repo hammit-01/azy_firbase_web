@@ -25,6 +25,10 @@ function whClass(warehouse) {
     return map[warehouse] ?? "wh-default";
 }
 
+export function resetCollapsed() {
+    document.querySelector(".top_bar")?.classList.remove("collapsed");
+}
+
 export function clearPanels(id) {
     const insert = document.querySelector(`.insert-panel[data-id="${id}"]`);
     const update = document.querySelector(`.update-panel[data-id="${id}"]`);
@@ -45,8 +49,6 @@ export function renderSelectData() {
         sideBox.innerHTML = "";
         return;
     }
-
-    container.classList.add("active");
 
     let panelsHtml = "";
 
@@ -140,8 +142,11 @@ export function createInsertRow() {
                     </select>
                 </div>
             </div>
+            <div class="card-memo-field">
+                <label class="form-label">메모</label>
+                <input type="text" class="input-note insert-memo" placeholder="메모 입력">
+            </div>
             <div class="insert-footer">
-                <input type="text" class="input-note insert-memo" placeholder="메모">
                 <button class="select-insert-btn insert-submit-btn">추가</button>
             </div>
         </div>
@@ -151,6 +156,7 @@ export function createInsertRow() {
 export function renderUpdate() {
     state.selectedItems.forEach((item, id) => clearPanels(id));
 
+    dom.container?.classList.add("active");
     const panelsArea = document.querySelector(".panels-area");
     if (panelsArea) panelsArea.classList.add("panels-grid");
 
@@ -227,8 +233,11 @@ export function renderUpdate() {
                         </select>
                     </div>
                 </div>
+                <div class="card-memo-field">
+                    <label class="form-label">메모</label>
+                    <input type="text" class="input-note insert-memo" data-id="${id}" placeholder="메모 입력" value="${item.memo || ""}">
+                </div>
                 <div class="update-footer">
-                    <input type="text" class="input-note insert-memo" data-id="${id}" placeholder="메모" value="${item.memo || ""}">
                     <div class="update-actions">
                         <button class="select-update-btn update-confirm-btn" data-id="${id}">수정</button>
                         <button class="select-delete-btn update-delete-btn" data-id="${id}">삭제</button>
@@ -242,6 +251,7 @@ export function renderUpdate() {
 export function renderHolding() {
     state.selectedItems.forEach((item, id) => clearPanels(id));
 
+    dom.container?.classList.add("active");
     const panelsArea = document.querySelector(".panels-area");
     if (panelsArea) panelsArea.classList.add("panels-grid");
 
@@ -263,6 +273,10 @@ export function renderHolding() {
                         <input type="number" class="hold-qty input-box" data-id="${id}" placeholder="개수">
                     </div>
                     <div class="form-field">
+                        <label class="form-label">평균중량</label>
+                        <input type="number" class="hold-weight input-box" data-id="${id}" placeholder="${item.weight || ""}" value="${item.weight || ""}">
+                    </div>
+                    <div class="form-field">
                         <label class="form-label">출고 일자</label>
                         <input type="date" class="hold-releaseDate input-box" data-id="${id}">
                     </div>
@@ -271,8 +285,11 @@ export function renderHolding() {
                         ${employeeSelect("hold-note", id, item.holding || "")}
                     </div>
                 </div>
+                <div class="card-memo-field">
+                    <label class="form-label">메모</label>
+                    <input type="text" class="input-note insert-memo" data-id="${id}" placeholder="메모 입력" value="${item.memo || ""}">
+                </div>
                 <div class="update-footer">
-                    <input type="text" class="input-note insert-memo" data-id="${id}" placeholder="메모" value="${item.memo || ""}">
                     <button class="select-holding-btn holding-confirm-btn" data-id="${id}">홀딩</button>
                 </div>
             </div>

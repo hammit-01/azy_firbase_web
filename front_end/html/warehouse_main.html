@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <!-- firebase web service upload = /css/...
- pytjon service upload = ./css/... -->
+ pytjon service upload = /css/... -->
 
 <head>
     <meta charset="UTF-8">
@@ -15,7 +15,8 @@
 <body>
     <div class="container">
 
-        <!-- ── 상단 툴바 ── -->
+        <!-- ── 고정 헤더 (툴바 + 패널) ── -->
+        <div class="sticky-header">
         <div class="toolbar">
             <div class="toolbar-left">
                 <img src="./css/logo.png" class="logo">
@@ -96,8 +97,10 @@
                 <div id="sideBox"></div>
             </div>
         </div>
+        </div><!-- /.sticky-header -->
 
         <!-- ── 테이블 ── -->
+        <div class="table-container">
         <div class="left-panel">
             <div id="mobile-list" class="mobile-list"></div>
             <div class="table-wrap">
@@ -108,26 +111,26 @@
                         <col style="width:9%">  <!--브랜드-->
                         <col style="width:6%">  <!--등급-->
                         <col style="width:7%">  <!--ESTNO-->
-                        <col style="width:4%">  <!--재고-->
-                        <col style="width:13%"> <!--BL번호-->
+                        <col style="width:6%">  <!--재고-->
+                        <col style="width:14%"> <!--BL번호-->
                         <col style="width:8%">  <!--창고-->
                         <col style="width:9%">  <!--유통기한-->
                         <col style="width:5%">  <!--평균-->
                         <col style="width:8%">  <!--출고일-->
                         <col style="width:9%">  <!--홀딩-->
-                        <col style="width:9%">  <!--메모-->
+                        <col style="width:6%">  <!--메모-->
                     </colgroup>
                     <thead>
                         <tr>
                             <th class="select-all">선택</th>
-                            <th data-key="상품명">상품명</th>
-                            <th data-key="브랜드">브랜드</th>
-                            <th data-key="등급">등급</th>
-                            <th data-key="ESTNO">ESTNO</th>
-                            <th data-key="재고">재고</th>
+                            <th data-key="상품명" class="sortable">상품명</th>
+                            <th data-key="브랜드" class="sortable">브랜드</th>
+                            <th data-key="등급" class="sortable">등급</th>
+                            <th data-key="ESTNO" class="sortable">ESTNO</th>
+                            <th data-key="재고" class="sortable">재고</th>
                             <th data-key="BL">BL</th>
-                            <th data-key="창고">창고</th>
-                            <th data-key="유통기한">유통기한</th>
+                            <th data-key="창고" class="sortable">창고</th>
+                            <th data-key="유통기한" class="sortable">유통기한</th>
                             <th data-key="평균">평균</th>
                             <th data-key="출고일">출고일</th>
                             <th data-key="홀딩">홀딩</th>
@@ -138,6 +141,7 @@
                 </table>
             </div>
         </div>
+        </div><!-- /.table-container -->
     </div>
 
     <script type="module" src="./warehouse_main.js"></script>

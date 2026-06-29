@@ -2,7 +2,7 @@ import { updateItem, insertItem, insertHoldingRecord, updateHoldingRecord, moveH
 import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 import { db } from "./firebase.js";
 
-export async function holdingData(item, holdQty, releaseDate, note, memo = "") {
+export async function holdingData(item, holdQty, releaseDate, note, memo = "", weight = null) {
 
     if (!holdQty || holdQty <= 0) {
         alert("홀딩 수량을 1 이상 입력해주세요.");
@@ -45,7 +45,7 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "") {
             홀딩:            note?.trim() || "",
             출고일:          releaseDate || "",
             유통기한:        item.dueDate || "",
-            평중:            item.weight || "",
+            평중:            weight !== null ? Number(weight) : (item.weight || ""),
             메모:            memo || item.memo || "",
             상태:            "holding",
             holdingRecordId: holdRef.id

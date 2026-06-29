@@ -1,72 +1,153 @@
-azy_firebase read me
+# 창고 재고 관리 시스템
 
-2026/4/30 code issue
-- update, holding 판넬 전체 수정, 전체 홀딩 버튼 - 수정완료
--> update 버튼 클릭 후 holding 버튼으로 넘어가도 전체 수정 버튼으로 뜸(처음 선택한 판넬 버튼이 전체 취소 or 취소 누르지 않는 이상 유지됨) - 수정완료
-- 전체 추가, 전체 삭제, 전체 수정, 전체 홀딩, 선택 추가, 선택 삭제, 선택 수정 버튼 로직 구현 X - 구현완료
-- holding 판넬 총 박스 수 input에서 value 떠오는거라 아직 이상함 - 수정완료
-- 검색창, 정렬 구현 X - 수정완료 + 품목/브랜드/등급/EST/유통기한으로 필터링 기능 추가 예정
-- 전체 취소 눌러야 판넬 초기화됨 X버튼 누르거나 체크박스 취소 누르면 총박스, 총중량 전체버튼 남아있음 - 수정완료
-- UI 아직 보기 안좋음 + 아직도 보기 안좋음
+냉동·냉장 물류 창고의 재고 데이터를 자동 수집하고 웹에서 조회·편집하는 사내 재고 관리 툴.
 
+---
 
+## 전체 구조
 
-전체 데이터 흐름
-크롤링 -> data.xlsx 업로드 -> firestore post -> get/post(update/delete/select)
-+ issue firestore 구독료 (지금은 무료 버전 사용, get post 하루 천건 넘어가면 막힐 때 있음) + 답답해서 카드 결제 때림
+```
+크롤링 (Python) → EDA/정제 (pandas) → Firestore 업로드 (post.py) → 웹 UI (HTML/JS)
+```
 
-file
-back_end
-- data
-- - 웹사이트에 띄울 데이터
-- main.py 메인 실행 프로그램, 사이트 정보 불러오기 -> 크롤링 -> eda -> data 폴더에 띄우는 전 과정
-- crawling_list.py 크롤링 프로그램
-- warehouse_list.py 창고 사이트 정보 가져오는 프로그램
-- list_eda.py
-- rename_column.py 열 이름 재지정
-- replace_name.py 품목 이름 대체
-- data_eda.py(), else_df_eda(), jns_dea(제니스용) 크롤링 데이터 eda 후 data 폴더에 띄우는 프로그램
---> 최종 결과물 통합물류 사이트 2n개 사이트 크롤링 데이터
-(ch, jns, plz/아직 eda 미완성) + (kd,ki,sjn,dch,hlk,hld) = 최종 data
-+ issue: cs냉장 사이트 실종, data_eda.py 빈 프로그램(삭제 처리함)
+---
 
-front_end: html, css, web event, firebase 연동(back_end로 이동 검토 중)
--> 미지의 늪 그 잡채
-내가 코딩했지만 이게 무슨 구조? -> 구조 파악 완료
-데이터 흐름 거의 백그라운드 수준, 안보임 -> 흐름 파악 완료
-+ js를 배운 적이 없지만 일단 js로 전반적인 이벤트 작업 중 + 이걸 해냄
-- main.js 웹 시작점
-- state.js 전역 상태(data 저장 구조)
-- dom.js DOM 요소 모음
-+ 나는 DOM이 뭔지 모름 + 이제 대충 앎
+## 실행 방법
 
-- firebase.js firebse 초기화
-- firestoreService.js DB CRUD
+### 백엔드 — 크롤링 + 업로드
 
-- table.js table rendering
-- panel.js panel rendering
-- evnets.js event 처리
+```bash
+# 크롤링 + EDA 실행 (결과: jns.xlsx)
+python main.py
 
-- data_eda.js 웹 사이트 내 사용 데이터 정규화
-- holding.js 홀딩 로직
-- selection.js 선택 상태 관리
+# Firestore 업로드 포함 실행
+# main.py 마지막 줄 post(jns) 주석 해제 후 실행
+python main.py
+```
 
-+ front_end 프로그램 흐름
-웹 실행 -> bindEvents() -> firestroe 실시간 구독 -> 데이터 들어오면 state 저장 -> renderTable(), renderPanel()
-+ data 흐름
---> 렌더링 때는 item의 표시값 사용, 백엔드 때는 item.id 사용
-state.allDate 읽음 -> 검색 filter -> 정렬 sort -> HTML 테이블 생성
-+ 체크박스 evnet 흐름
-체크박스 클릭 -> state.allData에서 item 찾기 -> addSelectedItem() -> state.selectedItems 저장 -> renderAll()
-+ data eda: UI에서 쓰기 쉽게 변환
-+ 패널출력
-selectedItems 읽음 -> 선택 상품 목록 출력 -> 개수/날짜/비고 + 입력창 생성
-+홀딩 버튼 클릭
-holding btn 클릭 -> handleClick(e) -> 입력값 읽기 -> holdingData(item, qty, date, note)
+> Firebase Admin SDK 키 파일(`azy7503-d80d9-firebase-adminsdk-*.json`)이 루트에 있어야 합니다. `.gitignore` 처리됨.
 
-++ firestoreService.js에 subsribeData(), insertItem(), updateItem(), deleteItem() 등 firestore와 직접 통신하는 함수 추가 예정 - 추가 완료
+### 프론트엔드 — 로컬 서버
 
-.gitignore github upload 시 무시 항목 기재
-post.py Google firebase firestore data post
+```bash
+python -m http.server 8000
+# http://localhost:8000/front_end/html/warehouse_main.html
+```
 
-README.md
+> ES 모듈 import를 사용하므로 로컬 HTTP 서버 필수 (파일 직접 열기 불가).
+
+### 배포 (Firebase Hosting)
+
+```bash
+firebase deploy --only hosting
+```
+
+> 배포 전 HTML 경로를 `./css/` → `/css/`로 변경해야 함. Bash `sed` 사용 권장 (PowerShell Get-Content/Set-Content는 한국어 인코딩 깨짐).
+
+---
+
+## 파일 구조
+
+```
+azy_firbase_web/
+├── main.py                  # 파이프라인 진입점 (크롤링 → EDA → 업로드)
+├── post.py                  # Firestore 업로더
+├── back_end/
+│   ├── crawling_list.py     # 창고 사이트 HTTP 크롤링
+│   ├── crawling_handmade.py # 표준 패턴 외 사이트 크롤링
+│   ├── back_eda_main.py     # EDA 파이프라인 오케스트레이터
+│   ├── eda_ch_plz_cs.py     # CH·PLZ·CS 창고 EDA
+│   ├── eda_else_df.py       # 기타 창고 EDA
+│   ├── jns_eda.py           # 제니스(JNS) EDA
+│   ├── eda_standard.py      # 공통 EDA 유틸
+│   ├── eda_common.py
+│   ├── eda_added.py
+│   ├── eda_column.py
+│   ├── replace_name.py      # 상품명 정규화
+│   ├── equal_df.py          # 신규/삭제/수량변경 행 비교
+│   ├── exception_safe.py    # EDA 안전 래퍼
+│   └── data/                # 출력 엑셀 파일
+└── front_end/html/
+    ├── warehouse_main.html  # 진입점 (SPA)
+    ├── warehouse_main.js    # JS 모듈 로더
+    ├── css/
+    │   └── warehouse_main.css
+    └── js/
+        ├── state.js         # 전역 상태 (allData, selectedItems 등)
+        ├── firebase.js      # Firebase 초기화 + 5분 폴링
+        ├── firestoreService.js  # Firestore CRUD
+        ├── table.js         # 테이블 렌더링 + 정렬/검색
+        ├── panel.js         # 사이드 패널 렌더링 (추가/수정/홀딩 카드)
+        ├── events.js        # DOM 이벤트 바인딩
+        ├── crud.js          # 비즈니스 로직 (holdingData, insertData 등)
+        ├── crud_history.js  # Undo 스택
+        ├── data_eda.js      # Firestore 원본 → UI 정규화
+        ├── dom.js           # DOM 요소 캐시
+        ├── input_calculater.js  # 홀딩 수량 합계 계산
+        └── actions.js       # 패널 모드 상수
+```
+
+---
+
+## Firebase 설정
+
+| 항목 | 값 |
+|---|---|
+| 프로젝트 ID | `azy7503-d80d9` |
+| Firestore 컬렉션 | `all_data`, `holding_data`, `employees` |
+| Firestore 규칙 | `allow read, write: if true` (인증 없음) |
+| Hosting URL | https://azy7503-d80d9.web.app |
+| Secondary DB | `awhw-0001` (장애 대비 이중화, `_meta/active_db` 마커로 자동 전환) |
+
+---
+
+## Firestore 문서 스키마 (`all_data`)
+
+| 필드 | 타입 | 설명 |
+|---|---|---|
+| `상품명` | string | |
+| `브랜드` | string | |
+| `등급` | string | |
+| `ESTNO` | string | |
+| `재고` | int | 박스 수 |
+| `BL` | string | BL 번호 |
+| `창고` | string | |
+| `유통기한` | string | YYYY-MM-DD |
+| `평중` | float | 평균 중량(kg) |
+| `출고일` | string | |
+| `홀딩` | string | 담당자명 |
+| `상태` | string | `""` / `holding` / `freeze` / `stopped` / `moving` |
+| `메모` | string | |
+| `pk` | string | `{BL_last4}_{expire_date}_{weight}` 복합키 |
+| `holdingRecordId` | string | holding_data 연결 ID (홀딩 행만) |
+
+---
+
+## 프론트엔드 동작 흐름
+
+```
+페이지 로드
+  → bindEvents()
+  → initFirebase() → subscribeData()
+      → fetchAllData() (최초 1회 + 5분 간격 폴링)
+          → state.allData 갱신
+          → renderTable() + renderSelectData()
+
+체크박스 클릭
+  → addSelectedItem() → state.selectedItems 갱신
+  → 해당 행 클래스 토글 (테이블 재렌더 없음)
+  → 패널 업데이트 (renderSelectData / renderUpdate / renderHolding)
+
+추가·수정·홀딩 버튼
+  → 같은 버튼 재클릭 시 패널 닫힘 (토글)
+  → crud.js → firestoreService.js → Firestore write
+  → 5분 후 폴링으로 갱신 반영
+```
+
+---
+
+## 주요 제약 사항
+
+- Firestore 무료 티어: 읽기/쓰기 하루 ~1,000건 (현재 5분 폴링으로 절감)
+- `back_eda_main.py`에 `sys.path` 하드코딩 있음 — 다른 PC에서 실행 시 수정 필요
+- Firebase Admin SDK 키 파일은 `.gitignore` 처리 — 배포 환경에 별도 보관

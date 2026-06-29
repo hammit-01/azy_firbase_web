@@ -1,5 +1,5 @@
 import { state } from "./state.js";
-import { renderTable } from "./table.js";
+import { renderTable, updateSortHeaders } from "./table.js";
 import { renderSelectData, renderInsert, renderUpdate, renderHolding, renderFooter, createInsertRow } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
@@ -25,6 +25,7 @@ function showToast(message) {
 }
 
 export function bindEvents() {
+    // sticky-header 높이 변화 감지 → --sticky-h CSS 변수 갱신
     // 드래그 감지 (드래그 중 행 체크 방지)
     let _dragStartX = 0, _dragStartY = 0, _isDragging = false;
     document.addEventListener("mousedown", (e) => {
@@ -36,6 +37,19 @@ export function bindEvents() {
         if (Math.abs(e.clientX - _dragStartX) > 5 || Math.abs(e.clientY - _dragStartY) > 5) {
             _isDragging = true;
         }
+    });
+
+    ["상품명", "브랜드", "등급", "ESTNO", "재고", "창고", "유통기한"].forEach(key => {
+        document.querySelector(`th[data-key="${key}"]`)?.addEventListener("click", () => {
+            if (state.sortColumn === key) {
+                state.sortDir = (state.sortDir + 1) % 3;
+                if (state.sortDir === 0) state.sortColumn = null;
+            } else {
+                state.sortColumn = key;
+                state.sortDir = 1;
+            }
+            renderTable();
+        });
     });
 
     let searchTimer = null;
@@ -79,14 +93,44 @@ export function bindEvents() {
         const item = state.allData.find(d => d.id === id);
         if (!item) return;
 
-        if (state.selectedItems.has(id)) {
+        const nowChecked = !state.selectedItems.has(id);
+        if (nowChecked) {
+            addSelectedItem(state, id, item);
+        } else {
             state.selectedItems.delete(id);
             if (state.selectedItems.size === 0) state.crudData = null;
-        } else {
-            addSelectedItem(state, id, item);
         }
 
-        renderAll();
+        // ① 체크박스·행 클래스만 토글
+        checkbox.checked = nowChecked;
+        if (target.tagName === "TR") {
+            target.classList.toggle("selected-row", nowChecked);
+        } else {
+            target.classList.toggle("mobile-selected", nowChecked);
+        }
+
+        if (state.selectedItems.size === 0) {
+            dom.container?.classList.remove("active");
+            if (dom.sideBox) dom.sideBox.innerHTML = "";
+            window.getSelection()?.removeAllRanges();
+            return;
+        }
+
+        switch (state.crudData) {
+            case "update":
+                renderSelectData();
+                renderUpdate();
+                renderFooter("update");
+                break;
+            case "holding":
+                renderSelectData();
+                renderHolding();
+                renderFooter("holding");
+                break;
+            default:
+                renderSelectData();
+        }
+
         window.getSelection()?.removeAllRanges();
     });
 }
@@ -96,31 +140,44 @@ function renderAll() {
     renderSelectData();
 }
 
+function closePanel() {
+    state.crudData = null;
+    dom.container?.classList.remove("active");
+    if (dom.sideBox) dom.sideBox.innerHTML = "";
+}
+
 function handleChange(e) {
     const id = e.target.dataset.id;
     const item = state.allData.find(d => d.id === id);
     if (!item) return;
 
-    if (e.target.checked) {
+    const checked = e.target.checked;
+    if (checked) {
         addSelectedItem(state, id, item);
     } else {
         state.selectedItems.delete(id);
     }
 
+    // ① 해당 행/카드 클래스만 토글 (전체 테이블 재렌더 안 함)
+    e.target.closest("tr")?.classList.toggle("selected-row", checked);
+    document.querySelector(`.mobile-card[data-id="${id}"]`)?.classList.toggle("mobile-selected", checked);
+
     if (state.selectedItems.size === 0) {
         state.crudData = null;
-        renderAll();
+        dom.container?.classList.remove("active");
+        if (dom.sideBox) dom.sideBox.innerHTML = "";
         return;
     }
 
-    renderAll();
-
+    // ② 패널 업데이트 (중복 renderSelectData 제거)
     switch (state.crudData) {
         case "update":
+            renderSelectData();
             renderUpdate();
             renderFooter("update");
             break;
         case "holding":
+            renderSelectData();
             renderHolding();
             renderFooter("holding");
             break;
@@ -155,8 +212,12 @@ async function handleClick(e) {
 
     // 추가 버튼
     if (e.target.classList.contains("insert-btn")) {
+        if (state.crudData === "insert" && dom.container?.classList.contains("active")) {
+            closePanel();
+            return;
+        }
         state.selectedItems.clear();
-        state.crudData = null;
+        state.crudData = "insert";
         renderAll();
         renderInsert();
         renderFooter("insert");
@@ -214,8 +275,7 @@ async function handleClick(e) {
         // 카드가 모두 없어지면 패널 닫기
         const remaining = document.querySelectorAll(".insert-card");
         if (remaining.length === 0) {
-            dom.container?.classList.remove("active");
-            if (dom.sideBox) dom.sideBox.innerHTML = "";
+            closePanel();
         }
         return;
     }
@@ -223,6 +283,10 @@ async function handleClick(e) {
     // 수정 버튼
     if (e.target.classList.contains("update-btn")) {
         if (state.selectedItems.size === 0) { alert("수정할 상품을 선택하세요."); return; }
+        if (state.crudData === "update" && dom.container?.classList.contains("active")) {
+            closePanel();
+            return;
+        }
         state.crudData = "update";
         renderSelectData();
         renderUpdate();
@@ -233,6 +297,10 @@ async function handleClick(e) {
     // 홀딩 버튼
     if (e.target.classList.contains("holding-btn")) {
         if (state.selectedItems.size === 0) { alert("홀딩할 상품을 선택하세요."); return; }
+        if (state.crudData === "holding" && dom.container?.classList.contains("active")) {
+            closePanel();
+            return;
+        }
         state.crudData = "holding";
         renderSelectData();
         renderHolding();
@@ -298,8 +366,7 @@ async function handleClick(e) {
 
         const remainCards = document.querySelectorAll(".insert-card");
         if (remainCards.length === 0) {
-            dom.container?.classList.remove("active");
-            if (dom.sideBox) dom.sideBox.innerHTML = "";
+            closePanel();
         }
 
         showToast("✓ 추가 완료");
@@ -353,12 +420,13 @@ async function handleClick(e) {
     if (e.target.classList.contains("select-holding-btn")) {
         const id = e.target.dataset.id;
         const item = state.selectedItems.get(id);
-        const qty  = document.querySelector(`.hold-qty[data-id="${id}"]`)?.value;
-        const date = document.querySelector(`.hold-releaseDate[data-id="${id}"]`)?.value;
-        const note = document.querySelector(`.hold-note[data-id="${id}"]`)?.value;
-        const memo = document.querySelector(`.input-note[data-id="${id}"]`)?.value || "";
+        const qty    = document.querySelector(`.hold-qty[data-id="${id}"]`)?.value;
+        const weight = document.querySelector(`.hold-weight[data-id="${id}"]`)?.value;
+        const date   = document.querySelector(`.hold-releaseDate[data-id="${id}"]`)?.value;
+        const note   = document.querySelector(`.hold-note[data-id="${id}"]`)?.value;
+        const memo   = document.querySelector(`.input-note[data-id="${id}"]`)?.value || "";
 
-        const result = await holdingData(item, Number(qty), date, note, memo);
+        const result = await holdingData(item, Number(qty), date, note, memo, weight !== "" ? weight : null);
         if (!result) return;
 
         undoStack.push({
@@ -483,12 +551,14 @@ async function handleClick(e) {
         for (const row of rows) {
             const id = row.dataset.id;
             const item = state.selectedItems.get(id);
+            const holdWeight = row.querySelector(".hold-weight")?.value;
             const result = await holdingData(
                 item,
                 Number(row.querySelector(".hold-qty")?.value),
                 row.querySelector(".hold-releaseDate")?.value,
                 row.querySelector(".hold-note")?.value,
-                document.querySelector(`.input-note[data-id="${id}"]`)?.value || ""
+                document.querySelector(`.input-note[data-id="${id}"]`)?.value || "",
+                holdWeight !== "" ? holdWeight : null
             );
             if (result) backups.push(result);
         }

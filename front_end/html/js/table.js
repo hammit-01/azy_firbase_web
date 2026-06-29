@@ -11,17 +11,14 @@ const WH_CLASS = {
     "곤에이스처인": "wh-곤에이스처인",
 };
 
-function dueDateTag(dateStr) {
+function dueDateTag(dateStr, limitDate) {
     const v = safeValue(dateStr);
     if (!v) return "";
 
     const due = new Date(v);
     if (isNaN(due.getTime())) return v;
 
-    const limit = new Date();
-    limit.setMonth(limit.getMonth() + 6);
-
-    if (due <= limit) {
+    if (due <= limitDate) {
         return `<span class="due-tag-urgent">${v}</span>`;
     }
     return `<span class="due-tag-normal">${v}</span>`;
@@ -110,7 +107,7 @@ function renderMobileView(data) {
                 ${qty ? `<span class="s-tag s-tag-qty">${qty}박스</span>` : ""}
             </div>
             <div class="mc-info">
-                <div class="mc-row"><span class="mc-label">유통기한</span>${dueDateTag(item.유통기한)}</div>
+                <div class="mc-row"><span class="mc-label">유통기한</span>${dueDateTag(item.유통기한, limitDate)}</div>
                 <div class="mc-row"><span class="mc-label">평중</span>${safeValue(item.평중)}</div>
                 ${safeValue(item.BL)     ? `<div class="mc-row mc-full"><span class="mc-label">BL</span>${safeValue(item.BL)}</div>` : ""}
                 ${safeValue(item.출고일) ? `<div class="mc-row"><span class="mc-label">출고일</span>${safeValue(item.출고일)}</div>` : ""}
@@ -120,6 +117,25 @@ function renderMobileView(data) {
         </div>`;
     }
     el.innerHTML = html;
+}
+
+// =========================
+// 정렬 헤더 인디케이터
+// =========================
+const SORT_LABELS = {
+    "상품명": "상품명", "브랜드": "브랜드", "등급": "등급",
+    "ESTNO": "ESTNO", "재고": "재고", "창고": "창고", "유통기한": "유통기한"
+};
+
+export function updateSortHeaders() {
+    Object.keys(SORT_LABELS).forEach(key => {
+        const th = document.querySelector(`th[data-key="${key}"]`);
+        if (!th) return;
+        const isActive = state.sortColumn === key && state.sortDir !== 0;
+        const arrow = isActive ? (state.sortDir === 1 ? " ▼" : " ▲") : "";
+        th.textContent = SORT_LABELS[key] + arrow;
+        th.classList.toggle("sort-active", isActive);
+    });
 }
 
 // =========================
@@ -142,6 +158,9 @@ export function renderTableSize(count, size, mean) {
 export function renderTable() {
 
     if (!dom.searchInput) return;
+
+    const limitDate = new Date();
+    limitDate.setMonth(limitDate.getMonth() + 6);
 
     let data = [...state.allData];
 
@@ -219,48 +238,68 @@ export function renderTable() {
     // =========================
     // 정렬
     // =========================
-    const sortOrder = [
-        "상품명",
-        "브랜드",
-        "등급",
-        "ESTNO",
-        "창고",
-        "BL",
-        "재고",
-    ];
+    if (state.sortColumn && state.sortDir !== 0) {
+        const factor = state.sortDir === 1 ? -1 : 1; // -1=내림차, 1=오름차
+        const col = state.sortColumn;
+        data.sort((a, b) => {
+            const av = String(a[col] ?? "").trim();
+            const bv = String(b[col] ?? "").trim();
+            if (!av && !bv) return 0;
+            if (!av) return 1;
+            if (!bv) return -1;
+            if (col === "재고") {
+                const an = Number(av), bn = Number(bv);
+                if (!isNaN(an) && !isNaN(bn)) return (an - bn) * factor;
+            }
+            return av < bv ? factor : av > bv ? -factor : 0;
+        });
+    } else {
+        const sortOrder = [
+            "상품명",
+            "브랜드",
+            "등급",
+            "ESTNO",
+            "창고",
+            "BL",
+            "재고",
+        ];
 
-    data.sort((a, b) => {
+        data.sort((a, b) => {
 
-        for (const key of sortOrder) {
+            for (const key of sortOrder) {
 
-            let av = String(a[key] ?? "").trim();
-            let bv = String(b[key] ?? "").trim();
+                let av = String(a[key] ?? "").trim();
+                let bv = String(b[key] ?? "").trim();
 
-            // =========================
-            // 영어로 시작하면 맨 뒤
-            // =========================
-            const aEng = /^[A-Za-z]/.test(av);
-            const bEng = /^[A-Za-z]/.test(bv);
+                // =========================
+                // 영어로 시작하면 맨 뒤
+                // =========================
+                const aEng = /^[A-Za-z]/.test(av);
+                const bEng = /^[A-Za-z]/.test(bv);
 
-            if (aEng && !bEng) return 1;
-            if (!aEng && bEng) return -1;
+                if (aEng && !bEng) return 1;
+                if (!aEng && bEng) return -1;
 
-            // 숫자 비교
-            const an = Number(av);
-            const bn = Number(bv);
+                // 숫자 비교
+                const an = Number(av);
+                const bn = Number(bv);
 
-            if (!isNaN(an) && !isNaN(bn)) {
-                av = an;
-                bv = bn;
+                if (!isNaN(an) && !isNaN(bn)) {
+                    av = an;
+                    bv = bn;
+                }
+
+                // 오름차순
+                if (av < bv) return -1;
+                if (av > bv) return 1;
             }
 
-            // 오름차순
-            if (av < bv) return -1;
-            if (av > bv) return 1;
-        }
+            return 0;
+        });
+    }
 
-        return 0;
-    });
+    // 헤더 인디케이터 동기화
+    updateSortHeaders();
 
     // 현재 표시 중인 행 저장 (전체 선택에 사용)
     state.filteredData = data;
@@ -320,7 +359,7 @@ export function renderTable() {
                 <td>${safeValue(item.재고)}</td>
                 <td>${safeValue(item.BL)}</td>
                 <td>${whTag(item.창고)}</td>
-                <td>${dueDateTag(item.유통기한)}</td>
+                <td>${dueDateTag(item.유통기한, limitDate)}</td>
                 <td>${safeValue(item.평중)}</td>
                 <td>${safeValue(item.출고일)}</td>
                 <td>

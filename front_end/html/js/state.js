@@ -7,5 +7,7 @@ export const state = {
     selectedItems: new Map(),
     flashIds: new Set(),
     crudData: null,
-    useDefaultOrder: true
+    useDefaultOrder: true,
+    sortColumn: null,   // 정렬 중인 열 key (null = 없음)
+    sortDir: 0          // 0: 없음, 1: 내림차, 2: 오름차
 };
