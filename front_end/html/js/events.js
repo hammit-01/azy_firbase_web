@@ -10,6 +10,20 @@ import { insertItem, updateItem, moveHoldingToHistory, deleteHoldingHistory, res
 import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 import { db } from "./firebase.js";
 
+function showToast(message) {
+    let toast = document.getElementById("toast-msg");
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "toast-msg";
+        toast.className = "toast";
+        document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.classList.add("show");
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove("show"), 2000);
+}
+
 export function bindEvents() {
     // 드래그 감지 (드래그 중 행 체크 방지)
     let _dragStartX = 0, _dragStartY = 0, _isDragging = false;
@@ -288,12 +302,9 @@ async function handleClick(e) {
             if (dom.sideBox) dom.sideBox.innerHTML = "";
         }
 
+        showToast("✓ 추가 완료");
         state.flashIds.add(newId);
-        setTimeout(() => {
-            document.querySelector(`[data-id="${newId}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-            state.flashIds.delete(newId);
-            renderTable();
-        }, 100);
+        setTimeout(() => { state.flashIds.delete(newId); renderTable(); }, 1500);
         return;
     }
 
@@ -333,11 +344,8 @@ async function handleClick(e) {
             renderFooter("update");
         }
 
-        setTimeout(() => {
-            document.querySelector(`[data-id="${result.id}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-            state.flashIds.delete(result.id);
-        }, 100);
-        setTimeout(() => renderTable(), 5000);
+        showToast("✓ 수정 완료");
+        setTimeout(() => { state.flashIds.delete(result.id); renderTable(); }, 1500);
         return;
     }
 
@@ -375,11 +383,8 @@ async function handleClick(e) {
             renderFooter("holding");
         }
 
-        setTimeout(() => {
-            document.querySelector(`[data-id="${result.holdingId}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-            state.flashIds.delete(result.holdingId);
-        }, 100);
-        setTimeout(() => renderTable(), 5000);
+        showToast("✓ 홀딩 완료");
+        setTimeout(() => { state.flashIds.delete(result.holdingId); renderTable(); }, 1500);
         return;
     }
 
