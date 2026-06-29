@@ -1222,6 +1222,23 @@ tbody tr {
         margin-bottom: 10px;
     }
 
+    /* ── 모바일: 페이지 스크롤 복구 ── */
+    html, body {
+        height: auto;
+        overflow: visible;
+    }
+
+    .container {
+        height: auto;
+    }
+
+    .table-container {
+        flex: none;
+        overflow-y: visible;
+        min-height: unset;
+        height: auto;
+    }
+
     /* ── 테이블 → 숨기고 카드 뷰 ── */
     .table-wrap { display: none; }
 
