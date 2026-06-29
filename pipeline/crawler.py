@@ -118,5 +118,9 @@ class CrawlerPool:
         if not normalized.empty and "재고수량" in normalized.columns:
             eda_qty = pd.to_numeric(normalized["재고수량"], errors="coerce").fillna(0).sum()
             log.info(f"  [정규화 후] EDA: {len(normalized)}행 / {int(eda_qty)}박스")
+            if int(raw_qty) != int(eda_qty):
+                log.warning(
+                    f"  [정규화 경고] 박스 수 변동: {int(raw_qty)} → {int(eda_qty)} ({int(eda_qty) - int(raw_qty):+d}박스)"
+                )
 
         return normalized

@@ -1,4 +1,7 @@
+import logging
 import pandas as pd
+
+log = logging.getLogger("eda")
 from back_end.eda_else_df import else_df_eda
 from back_end.jns_eda import jns_eda
 from back_end.eda_ch_plz_cs import ch_eda
@@ -118,13 +121,31 @@ def list_eda(final_df, jns):
     # (replace_name/eda_standard 이후 이름이 동일해진 경우에도 수량 보존)
     if "pk" in df.columns and "재고수량" in df.columns:
         before_rows = len(df)
-        before_qty = int(pd.to_numeric(df["재고수량"], errors="coerce").fillna(0).sum())
-        qty_sum = df.groupby("pk", sort=False)["재고수량"].sum().reset_index()
+        # 크롤링 데이터는 HTML 문자열로 들어오므로 groupby sum 전에 반드시 numeric 변환
+        # 미변환 시 "100"+"200"="100200" 처럼 문자열 연결되어 박스 수가 폭증함
+        df["재고수량"] = pd.to_numeric(
+            df["재고수량"].astype(str).str.replace(",", "", regex=False),
+            errors="coerce"
+        ).fillna(0).astype(int)
+        before_qty = int(df["재고수량"].sum())
+
+        # pk가 NaN인 행: groupby 기본 동작이 NaN 키를 제외하므로 별도 로깅
+        nan_pk_mask = df["pk"].isna()
+        if nan_pk_mask.any():
+            nan_rows = df[nan_pk_mask][["코드", "BL번호", "유통기한", "재고수량"]]
+            log.warning(f"[EDA] pk=NaN 행 {nan_pk_mask.sum()}개 ({int(df.loc[nan_pk_mask, '재고수량'].sum())}박스):")
+            for _, r in nan_rows.iterrows():
+                log.warning(f"  코드={r.get('코드')} BL={r.get('BL번호')} 유통기한={r.get('유통기한')} 재고={r.get('재고수량')}")
+
+        # dropna=False: NaN pk 그룹도 포함해 수량 합산 (pandas 3.x에서 NaN==NaN merge 지원)
+        qty_sum = df.groupby("pk", sort=False, dropna=False)["재고수량"].sum().reset_index()
         first_rows = df.drop_duplicates(subset="pk", keep="first").drop(columns=["재고수량"])
         df = first_rows.merge(qty_sum, on="pk", how="left").reset_index(drop=True)
-        after_qty = int(pd.to_numeric(df["재고수량"], errors="coerce").fillna(0).sum())
-        if before_rows != len(df):
-            print(f"[EDA] pk 중복 합산: {before_rows}행→{len(df)}행 | 수량 {before_qty}→{after_qty}박스")
+        after_qty = int(df["재고수량"].fillna(0).sum())
+        if before_rows != len(df) or before_qty != after_qty:
+            log.info(f"[EDA] pk 중복 합산: {before_rows}행→{len(df)}행 | 수량 {before_qty}→{after_qty}박스")
+        if before_qty != after_qty:
+            log.warning(f"[EDA] ★ 경고: 박스 수 변동 {before_qty}→{after_qty} ({after_qty - before_qty:+d}박스)")
     else:
         df = df.drop_duplicates().reset_index(drop=True)
 

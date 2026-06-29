@@ -2,7 +2,7 @@ from back_end.eda_standard import eda_standard
 
 # 제니스 창고 eda
 def jns_eda(dfs):
-    df = dfs.drop_duplicates()
+    df = dfs.copy()
 
     # BL / 이력번호
     s = df["B/L NO식별번호"].astype(str)
@@ -22,7 +22,7 @@ def jns_eda(dfs):
 
     # PK 생성: 코드_BL전체_유통기한(YYYYMMDD)  (_df_to_dict와 동일 형식)
     if all(c in df.columns for c in ["코드", "BL번호", "유통기한"]):
-        expire_str  = df["유통기한"].astype(str).str.replace("-", "", regex=False)
+        expire_str  = df["유통기한"].fillna("미상").astype(str).str.replace("-", "", regex=False)
         bl_full     = df["BL번호"].astype(str).str.strip().str.replace("/", "_", regex=False).str.replace(" ", "_", regex=False)
         code_clean  = df["코드"].astype(str).str.strip().str.replace("/", "_", regex=False).str.replace(" ", "_", regex=False)
         df["pk"] = code_clean + "_" + bl_full + "_" + expire_str
