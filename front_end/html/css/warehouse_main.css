@@ -432,7 +432,7 @@ input[type="checkbox"] {
 
 .insert-list {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
     max-height: 60vh;
     overflow-y: auto;
@@ -700,7 +700,7 @@ input[type="checkbox"] {
 
 .panels-area.panels-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
     max-height: 60vh;
     overflow-x: hidden;

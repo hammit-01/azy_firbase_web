@@ -48,26 +48,9 @@ export function renderSelectData() {
 
     container.classList.add("active");
 
-    let gridHtml = "";
     let panelsHtml = "";
 
     state.selectedItems.forEach((item, id) => {
-        gridHtml += `
-            <div class="selected-item">
-                <div class="selected-header">
-                    <div class="selected-info">
-                        <div class="selected-title">${item.brand} ${item.name}</div>
-                        <div class="selected-meta">
-                            ${item.grade     ? `<span class="s-tag">${item.grade}</span>` : ""}
-                            ${item.estNo     ? `<span class="s-tag">${item.estNo}</span>` : ""}
-                            ${item.qty       ? `<span class="s-tag s-tag-qty">${item.qty}박스</span>` : ""}
-                            ${item.warehouse ? `<span class="s-tag ${whClass(item.warehouse)}">${item.warehouse}</span>` : ""}
-                        </div>
-                    </div>
-                    <button class="cancel-btn" data-id="${id}">✕</button>
-                </div>
-            </div>
-        `;
         panelsHtml += `
             <div class="insert-panel" data-id="${id}"></div>
             <div class="update-panel" data-id="${id}"></div>
@@ -75,10 +58,7 @@ export function renderSelectData() {
         `;
     });
 
-    sideBox.innerHTML = `
-        <div class="selected-grid">${gridHtml}</div>
-        <div class="panels-area">${panelsHtml}</div>
-    `;
+    sideBox.innerHTML = `<div class="panels-area">${panelsHtml}</div>`;
 }
 
 export function renderInsert() {
@@ -86,9 +66,6 @@ export function renderInsert() {
     if (!sideBox) return;
 
     container?.classList.add("active");
-
-    const grid = document.querySelector(".selected-grid");
-    if (grid) grid.style.display = "none";
 
     sideBox.innerHTML = `
         <div class="insert-header-wrap">
@@ -173,9 +150,6 @@ export function createInsertRow() {
 
 export function renderUpdate() {
     state.selectedItems.forEach((item, id) => clearPanels(id));
-
-    const grid = document.querySelector(".selected-grid");
-    if (grid) grid.style.display = "none";
 
     const panelsArea = document.querySelector(".panels-area");
     if (panelsArea) panelsArea.classList.add("panels-grid");
@@ -267,9 +241,6 @@ export function renderUpdate() {
 
 export function renderHolding() {
     state.selectedItems.forEach((item, id) => clearPanels(id));
-
-    const grid = document.querySelector(".selected-grid");
-    if (grid) grid.style.display = "none";
 
     const panelsArea = document.querySelector(".panels-area");
     if (panelsArea) panelsArea.classList.add("panels-grid");
