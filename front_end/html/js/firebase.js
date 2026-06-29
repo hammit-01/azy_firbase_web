@@ -88,15 +88,21 @@ export function subscribeData() {
 
     onSnapshot(collection(db, "all_data"), (snapshot) => {
 
-        // 변경된 문서만 처리 (초기 로드 제외)
-        if (!snapshot.metadata.hasPendingWrites && snapshot.docChanges().length === 0) return;
+        // 내 로컬 쓰기가 서버 확인 전인 중간 상태 → 렌더 스킵 (UI 깜빡임 방지)
+        if (snapshot.metadata.hasPendingWrites) {
+            state.allData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            return;
+        }
 
-        state.allData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
+        if (snapshot.docChanges().length === 0) return;
 
+        state.allData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         renderTable();
-        renderSelectData();
+
+        // 패널(홀딩·수정·추가 폼)이 열려있으면 sideBox 재렌더 금지 → 입력 내용 보존
+        const panelOpen = !!document.querySelector(".holding-card, .update-card, .insert-card");
+        if (!panelOpen) {
+            renderSelectData();
+        }
     });
 }

@@ -36,7 +36,8 @@ RECOVERY_HOURS = 23  # Secondary 전환 후 N시간 뒤 Primary 복귀 시도
 
 COMPARE_FIELDS = (
     "상품명", "브랜드", "등급", "ESTNO", "재고",
-    "BL", "창고", "유통기한", "평중", "출고일", "홀딩", "상태",
+    "BL", "창고", "유통기한", "평중", "출고일",
+    # 홀딩·상태·메모는 사용자 설정 필드 → 파이프라인 비교/덮어쓰기 대상 제외
 )
 
 
@@ -191,10 +192,9 @@ def _df_to_dict(df: pd.DataFrame, today: str) -> dict:
             "중량":   to_float(row.get("중량")),
             "평중":   to_float(row.get("평균중량", "")),
             "출고일": to_date(row.get("출고일")),
-            "홀딩":   to_str(row.get("홀딩", "")),
             "수집일": today,
-            "상태":   "없음",
-            "메모":   "",
+            # 홀딩·상태·메모: 사용자 설정 필드 → 파이프라인이 덮어쓰지 않음
+            # 신규 문서 생성 시에만 update_diff에서 기본값 추가
         }
         if doc_id in result:
             # 동일 pk(코드+BL전체+유통기한): 재고 합산 (정상적으로 같은 품목)
@@ -216,12 +216,23 @@ def _df_to_dict(df: pd.DataFrame, today: str) -> dict:
     return result
 
 
-def _batch_upsert(db, items: dict):
+def _batch_set(db, items: dict):
+    """신규 문서 생성 — set() 으로 전체 덮어쓰기 (사용자 기본값 포함)"""
     keys = list(items.keys())
     for i in range(0, len(keys), BATCH_LIMIT):
         batch = db.batch()
         for pk in keys[i:i + BATCH_LIMIT]:
             batch.set(db.collection(COLLECTION).document(pk), items[pk])
+        batch.commit()
+
+
+def _batch_merge(db, items: dict):
+    """기존 문서 업데이트 — set(merge=True) 로 크롤링 필드만 갱신, 사용자 필드 보존"""
+    keys = list(items.keys())
+    for i in range(0, len(keys), BATCH_LIMIT):
+        batch = db.batch()
+        for pk in keys[i:i + BATCH_LIMIT]:
+            batch.set(db.collection(COLLECTION).document(pk), items[pk], merge=True)
         batch.commit()
 
 
@@ -242,19 +253,24 @@ class FirestoreUpdater:
         today    = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d")
         new_data = _df_to_dict(new_df, today)
 
-        to_upsert = {}
+        to_insert = {}   # 신규 문서: 사용자 필드 기본값 포함해 set()
+        to_update = {}   # 변경된 기존 문서: 크롤링 필드만 merge()
         to_delete = []
 
         for pk, data in new_data.items():
             prev = prev_snapshot.get(pk)
-            if prev is None or _row_sig(prev) != _row_sig(data):
-                to_upsert[pk] = data
+            if prev is None:
+                # 신규: 사용자 필드 초기값 함께 생성
+                to_insert[pk] = {**data, "홀딩": "", "상태": "없음", "메모": ""}
+            elif _row_sig(prev) != _row_sig(data):
+                # 변경: 크롤링 필드만 업데이트 (홀딩·상태·메모 보존)
+                to_update[pk] = data
 
         for pk in prev_snapshot:
             if pk not in new_data:
                 to_delete.append(pk)
 
-        total = len(to_upsert) + len(to_delete)
+        total = len(to_insert) + len(to_update) + len(to_delete)
 
         if total == 0:
             log.info("  변경 없음")
@@ -272,11 +288,13 @@ class FirestoreUpdater:
             _get_secondary_db() or _get_primary_db()
         )
         try:
-            if to_upsert:
-                _batch_upsert(db, to_upsert)
+            if to_insert:
+                _batch_set(db, to_insert)
+            if to_update:
+                _batch_merge(db, to_update)
             if to_delete:
                 _batch_delete(db, to_delete)
-            log.info(f"  [{_active.upper()}] ↑{len(to_upsert)}건 / ✕{len(to_delete)}건")
+            log.info(f"  [{_active.upper()}] ↑{len(to_insert)}건(신규) ↻{len(to_update)}건(갱신) ✕{len(to_delete)}건")
             return total, new_data
 
         except Exception as e:
@@ -300,7 +318,7 @@ class FirestoreUpdater:
             return 0, prev_snapshot
 
         try:
-            _batch_upsert(sec, new_data)
+            _batch_merge(sec, new_data)
             log.info(f"  [SECONDARY] 초기 전체 기록 {len(new_data)}건 완료")
             return len(new_data), new_data
         except Exception as e:
@@ -315,7 +333,7 @@ class FirestoreUpdater:
         pri = _get_primary_db()
         try:
             if new_data:
-                _batch_upsert(pri, new_data)
+                _batch_merge(pri, new_data)
             if to_delete:
                 _batch_delete(pri, to_delete)
             _activate_primary()
