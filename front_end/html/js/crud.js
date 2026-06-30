@@ -1,18 +1,20 @@
 import { updateItem, insertItem, insertHoldingRecord, updateHoldingRecord, moveHoldingToHistory } from "./firestoreService.js";
 import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
-import { db } from "./firebase.js";
+import { db, fetchAllData } from "./firebase.js";
+import { pushUndo } from "./crud_history.js";
+import { showError } from "./ui.js";
 
-export async function holdingData(item, holdQty, releaseDate, note, memo = "", weight = null) {
+export async function holdingData(item, holdQty, releaseDate, note, memo = "", weight = null, noUndo = false) {
 
     if (!holdQty || holdQty <= 0) {
-        alert("홀딩 수량을 1 이상 입력해주세요.");
+        showError("홀딩 수량을 1 이상 입력해주세요.");
         return null;
     }
 
     const remainQty = item.qty - holdQty;
 
     if (remainQty < 0) {
-        alert("수량이 부족합니다.");
+        showError("수량이 부족합니다.");
         return null;
     }
 
@@ -51,6 +53,15 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "", w
             holdingRecordId: holdRef.id
         });
 
+        if (!noUndo) pushUndo({
+            type:            "holding",
+            originalId:      item.id,
+            originalQty:     item.qty,
+            holdingId:       docRef.id,
+            holdingRecordId: holdRef.id
+        });
+
+        await fetchAllData();
         return {
             originalId:      item.id,
             originalQty:     item.qty,
@@ -59,38 +70,25 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "", w
         };
 
     } catch (error) {
-
         console.error("업데이트 실패:", error);
-
         return null;
     }
 }
 
 export async function insertData(
-    name,
-    brand,
-    grade,
-    estNo,
-    qty,
-    bl,
-    warehouse,
-    dueDate,
-    weight,
-    releaseDate,
-    holding,
-    dataState,
-    memo
+    name, brand, grade, estNo, qty, bl, warehouse,
+    dueDate, weight, releaseDate, holding, dataState, memo,
+    noUndo = false
 ) {
 
     if (qty <= 0) {
-        alert("입력 데이터를 확인해주세요.");
+        showError("입력 데이터를 확인해주세요.");
         return null;
     }
 
     try {
 
         const docRef = await insertItem({
-
             상품명: name,
             브랜드: brand,
             등급: grade || "",
@@ -104,45 +102,45 @@ export async function insertData(
             홀딩: holding?.trim() || "",
             상태: dataState?.trim() || "",
             메모: memo || ""
-
         });
 
+        if (!noUndo) pushUndo({ type: "insert", newId: docRef.id });
 
+        await fetchAllData();
         return docRef.id;
 
     } catch (error) {
-
         console.error("업데이트 실패:", error);
-
         return null;
     }
 }
 
 export async function updateData(item, id, name, brand, grade, estNo, qty, bl, warehouse, dueDate, weight,
-    releaseDate, holding, dataState, memo) {
+    releaseDate, holding, dataState, memo, noUndo = false) {
 
     const dataId = item ? item.id : id;
 
     const numQty = Number(qty);
 
+    // 정규화(normalized) 또는 raw Firestore 필드 모두 지원
     const prevData = {
-        상품명: item.name || "",
-        브랜드: item.brand || "",
-        등급: item.grade || "",
-        ESTNO: item.estNo || "",
-        재고: item.qty || 0,
-        BL: item.bl || "",
-        창고: item.warehouse || "",
-        유통기한: item.dueDate || "",
-        평중: item.weight || 0,
-        출고일: item.releaseDate || "",
-        홀딩: item.holding || "",
-        상태: item.dataState || "",
-        메모: item.memo || ""
+        상품명: item.name  || item["상품명"]  || "",
+        브랜드: item.brand || item["브랜드"]  || "",
+        등급:   item.grade || item["등급"]    || "",
+        ESTNO:  item.estNo || item["ESTNO"]   || "",
+        재고:   item.qty   ?? item["재고"]    ?? 0,
+        BL:     item.bl    || item["BL"]      || "",
+        창고:   item.warehouse || item["창고"] || "",
+        유통기한: item.dueDate  || item["유통기한"] || "",
+        평중:   item.weight    ?? item["평중"]    ?? 0,
+        출고일: item.releaseDate || item["출고일"] || "",
+        홀딩:   item.holding   || item["홀딩"]   || "",
+        상태:   item.dataState || item["상태"]   || "",
+        메모:   item.memo      || item["메모"]   || ""
     };
 
     if (!numQty || numQty <= 0) {
-        alert("수량을 확인해주세요.");
+        showError("수량을 확인해주세요.");
         return null;
     }
 
@@ -167,7 +165,7 @@ export async function updateData(item, id, name, brand, grade, estNo, qty, bl, w
     // 변경 사항 없으면 스킵
     const noChange = Object.keys(data).every(k => String(data[k]) === String(prevData[k] ?? ""));
     if (noChange) {
-        alert("변경된 내용이 없습니다.");
+        showError("변경된 내용이 없습니다.");
         return null;
     }
 
@@ -179,10 +177,8 @@ export async function updateData(item, id, name, brand, grade, estNo, qty, bl, w
         const wasHolding = item?.dataState === "holding";
 
         if (wasHolding && resolvedState !== "holding") {
-            // 홀딩 → 다른 상태: holding_data → holding_history(취소)
             await moveHoldingToHistory(holdingRecordId, "취소");
         } else if (resolvedState === "holding" && holdingRecordId) {
-            // 여전히 홀딩: holding_data 필드 동기화
             await updateHoldingRecord(holdingRecordId, {
                 홀딩:   holding?.trim() || "",
                 출고일: releaseDate || "",
@@ -190,24 +186,28 @@ export async function updateData(item, id, name, brand, grade, estNo, qty, bl, w
             });
         }
 
+        if (!noUndo) pushUndo({ type: "update", id: dataId, prevData });
+
+        await fetchAllData();
         return {
             id: dataId,
             prevData
         };
 
     } catch (error) {
-
         console.error("수정 실패:", error);
-
         return null;
     }
 }
 
-export async function deleteItem(item) {
+export async function deleteItem(item, noUndo = false, noFetch = false) {
     try {
-        await deleteDoc(doc(db, "all_data", item.id)); // 🔥 collection 이름 맞게 수정
-
-
+        if (!noUndo) {
+            const { id: _id, ...restoreData } = { ...item };
+            pushUndo({ type: "delete", restoreData });
+        }
+        await deleteDoc(doc(db, "all_data", item.id));
+        if (!noFetch) await fetchAllData();
     } catch (error) {
         console.error("삭제 실패:", error);
     }

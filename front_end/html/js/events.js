@@ -5,27 +5,44 @@ import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
-import { undoLastAction, undoStack } from "./crud_history.js";
-import { insertItem, updateItem, moveHoldingToHistory, deleteHoldingHistory, restoreDoc } from "./firestoreService.js";
+import { undoLastAction, pushUndo } from "./crud_history.js";
+import { moveHoldingToHistory } from "./firestoreService.js";
 import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
-import { db } from "./firebase.js";
-
-function showToast(message) {
-    let toast = document.getElementById("toast-msg");
-    if (!toast) {
-        toast = document.createElement("div");
-        toast.id = "toast-msg";
-        toast.className = "toast";
-        document.body.appendChild(toast);
-    }
-    toast.textContent = message;
-    toast.classList.add("show");
-    clearTimeout(toast._timer);
-    toast._timer = setTimeout(() => toast.classList.remove("show"), 2000);
-}
+import { db, fetchAllData } from "./firebase.js";
+import { showToast, showError, showConfirm } from "./ui.js";
 
 export function bindEvents() {
-    // sticky-header 높이 변화 감지 → --sticky-h CSS 변수 갱신
+    // 출고일·홀딩 hover 카드
+    const hoverCard = document.createElement("div");
+    hoverCard.id = "hover-info-card";
+    document.body.appendChild(hoverCard);
+
+    let _hoveredTr = null;
+    const tableEl = document.querySelector(".table-wrap table");
+    if (tableEl) {
+        tableEl.addEventListener("mouseover", (e) => {
+            const tr = e.target.closest("tbody tr");
+            if (tr === _hoveredTr) return;
+            _hoveredTr = tr;
+            if (!tr) { hoverCard.style.display = "none"; return; }
+            const 출고일 = tr.dataset.출고일 || "";
+            const 홀딩   = tr.dataset.홀딩   || "";
+            if (!출고일 && !홀딩) { hoverCard.style.display = "none"; return; }
+            hoverCard.innerHTML =
+                (출고일 ? `<div><span class="hc-label">출고일</span>${출고일}</div>` : "") +
+                (홀딩   ? `<div><span class="hc-label">홀딩</span>${홀딩}</div>`   : "");
+            const rect = tr.getBoundingClientRect();
+            hoverCard.style.top   = (rect.bottom + 4) + "px";
+            hoverCard.style.left  = "auto";
+            hoverCard.style.right = (window.innerWidth - rect.right) + "px";
+            hoverCard.style.display = "block";
+        });
+        tableEl.addEventListener("mouseleave", () => {
+            _hoveredTr = null;
+            hoverCard.style.display = "none";
+        });
+    }
+
     // 드래그 감지 (드래그 중 행 체크 방지)
     let _dragStartX = 0, _dragStartY = 0, _isDragging = false;
     document.addEventListener("mousedown", (e) => {
@@ -232,7 +249,7 @@ async function handleClick(e) {
 
     // 홀딩 사용완료
     if (e.target.classList.contains("complete-holding-btn")) {
-        const confirmed = confirm("해당 홀딩분 모두 사용 완료 처리 진행합니다.\n계속하시겠습니까?");
+        const confirmed = await showConfirm("해당 홀딩분 모두 사용 완료 처리 진행합니다.\n계속하시겠습니까?");
         if (!confirmed) return;
 
         const id       = e.target.dataset.id;
@@ -248,22 +265,15 @@ async function handleClick(e) {
             await deleteDoc(doc(db, "all_data", id));
 
             // Undo 저장
-            undoStack.push({
-                type: "complete-holding",
-                undo: async () => {
-                    if (historyId) await deleteHoldingHistory(historyId);
-                    if (recordId && originalData) await restoreDoc("holding_data", recordId, originalData);
-                    const { id: _id, ...restoreData } = allDataBackup;
-                    await restoreDoc("all_data", id, restoreData);
-                }
-            });
-            if (undoStack.length > 20) undoStack.shift();
+            const { id: _chId, ...chRestoreData } = allDataBackup;
+            pushUndo({ type: "complete-holding", historyId, recordId, originalData, id, restoreData: chRestoreData });
 
             state.selectedItems.delete(id);
-            renderAll();
+            showToast("✓ 사용완료 처리됨");
+            await fetchAllData();
         } catch (err) {
             console.error("사용완료 처리 실패:", err);
-            alert("처리 중 오류가 발생했습니다.");
+            showError("처리 중 오류가 발생했습니다.");
         }
         return;
     }
@@ -282,7 +292,7 @@ async function handleClick(e) {
 
     // 수정 버튼
     if (e.target.classList.contains("update-btn")) {
-        if (state.selectedItems.size === 0) { alert("수정할 상품을 선택하세요."); return; }
+        if (state.selectedItems.size === 0) { showError("수정할 상품을 선택하세요."); return; }
         if (state.crudData === "update" && dom.container?.classList.contains("active")) {
             closePanel();
             return;
@@ -296,7 +306,7 @@ async function handleClick(e) {
 
     // 홀딩 버튼
     if (e.target.classList.contains("holding-btn")) {
-        if (state.selectedItems.size === 0) { alert("홀딩할 상품을 선택하세요."); return; }
+        if (state.selectedItems.size === 0) { showError("홀딩할 상품을 선택하세요."); return; }
         if (state.crudData === "holding" && dom.container?.classList.contains("active")) {
             closePanel();
             return;
@@ -357,9 +367,6 @@ async function handleClick(e) {
         const newId = await insertData(name, brand, grade, estNo, qty, bl, warehouse, dueDate, weight, releaseDate, holding, dataState, memo);
         if (!newId) return;
 
-        undoStack.push({ type: "insert", undo: async () => { await deleteDoc(doc(db, "all_data", newId)); } });
-        if (undoStack.length > 20) undoStack.shift();
-
         // 해당 카드만 제거, 나머지 카드 유지
         card?.remove();
         renderTable();
@@ -396,9 +403,6 @@ async function handleClick(e) {
         const result = await updateData(item, null, name, brand, grade, estNo, qty, bl, warehouse, dueDate, weight, releaseDate, holding, dataState, memo);
         if (!result) return;
 
-        undoStack.push({ type: "update", undo: async () => { await updateItem(result.id, result.prevData); } });
-        if (undoStack.length > 20) undoStack.shift();
-
         state.selectedItems.delete(id);
         state.flashIds.add(result.id);
 
@@ -429,16 +433,6 @@ async function handleClick(e) {
         const result = await holdingData(item, Number(qty), date, note, memo, weight !== "" ? weight : null);
         if (!result) return;
 
-        undoStack.push({
-            type: "holding",
-            undo: async () => {
-                await updateItem(result.originalId, { 재고: result.originalQty });
-                await deleteDoc(doc(db, "all_data", result.holdingId));
-                if (result.holdingRecordId) await moveHoldingToHistory(result.holdingRecordId, "취소");
-            }
-        });
-        if (undoStack.length > 20) undoStack.shift();
-
         state.selectedItems.delete(id);
         state.flashIds.add(result.holdingId);
 
@@ -460,21 +454,13 @@ async function handleClick(e) {
     if (e.target.classList.contains("select-delete-btn")) {
         const id = e.target.dataset.id;
         const item = state.allData.find(v => v.id === id);
-        if (!item) { alert("데이터를 찾을 수 없습니다."); return; }
+        if (!item) { showError("데이터를 찾을 수 없습니다."); return; }
+        if (!await showConfirm("해당 항목을 삭제합니다.\n계속하시겠습니까?")) return;
 
-        const backup = { ...item };
         await deleteItem(item);
 
-        undoStack.push({
-            type: "delete",
-            undo: async () => {
-                const { id: _id, ...restoreData } = backup;
-                await insertItem(restoreData);
-            }
-        });
-        if (undoStack.length > 20) undoStack.shift();
-
         state.selectedItems.delete(id);
+        showToast("✓ 삭제 완료");
         renderAll();
         return;
     }
@@ -497,16 +483,14 @@ async function handleClick(e) {
                 row.querySelector(".insert-releaseDate")?.value || "",
                 row.querySelector(".insert-holding")?.value || "",
                 row.querySelector(".insert-state")?.value || "",
-                row.querySelector(".input-note")?.value || ""
+                row.querySelector(".input-note")?.value || "",
+                true  // noUndo — 전체 undo는 아래 pushUndo(bulk-insert)로 처리
             );
             if (newId) insertedIds.push(newId);
         }
-        undoStack.push({
-            type: "bulk-insert",
-            undo: async () => { for (const id of insertedIds) await deleteDoc(doc(db, "all_data", id)); }
-        });
-        if (undoStack.length > 20) undoStack.shift();
-        renderAll();
+        pushUndo({ type: "bulk-insert", ids: insertedIds });
+        closePanel();
+        showToast("✓ 추가 완료");
         return;
     }
 
@@ -531,15 +515,13 @@ async function handleClick(e) {
                 row.querySelector(".update-releaseDate")?.value,
                 row.querySelector(".update-holding")?.value,
                 row.querySelector(".update-state")?.value,
-                document.querySelector(`.input-note[data-id="${id}"]`)?.value || ""
+                document.querySelector(`.input-note[data-id="${id}"]`)?.value || "",
+                true  // noUndo — 전체 undo는 아래 pushUndo(bulk-update)로 처리
             );
             if (result) backups.push(result);
         }
-        undoStack.push({
-            type: "bulk-update",
-            undo: async () => { for (const b of backups) await updateItem(b.id, b.prevData); }
-        });
-        if (undoStack.length > 20) undoStack.shift();
+        pushUndo({ type: "bulk-update", backups: backups.map(b => ({ id: b.id, prevData: b.prevData })) });
+        showToast("✓ 수정 완료");
         renderAll();
         return;
     }
@@ -558,57 +540,50 @@ async function handleClick(e) {
                 row.querySelector(".hold-releaseDate")?.value,
                 row.querySelector(".hold-note")?.value,
                 document.querySelector(`.input-note[data-id="${id}"]`)?.value || "",
-                holdWeight !== "" ? holdWeight : null
+                holdWeight !== "" ? holdWeight : null,
+                true  // noUndo — 전체 undo는 아래 pushUndo(bulk-holding)로 처리
             );
             if (result) backups.push(result);
         }
-        undoStack.push({
-            type: "bulk-holding",
-            undo: async () => {
-                for (const b of backups) {
-                    await updateItem(b.originalId, { 재고: b.originalQty });
-                    await deleteDoc(doc(db, "all_data", b.holdingId));
-                    if (b.holdingRecordId) await moveHoldingToHistory(b.holdingRecordId, "취소");
-                }
-            }
-        });
-        if (undoStack.length > 20) undoStack.shift();
+        pushUndo({ type: "bulk-holding", backups: backups.map(b => ({ originalId: b.originalId, originalQty: b.originalQty, holdingId: b.holdingId, holdingRecordId: b.holdingRecordId })) });
+        showToast("✓ 홀딩 완료");
         renderAll();
         return;
     }
 
     // 전체 삭제
     if (e.target.classList.contains("all-delete-btn")) {
-        const backups = [];
-        for (const [, item] of state.selectedItems) {
-            backups.push({ ...item });
-            await deleteItem(item);
-        }
-        undoStack.push({
-            type: "bulk-delete",
-            undo: async () => {
-                for (const backup of backups) {
-                    await insertItem({
-                        상품명: backup.name || "",
-                        브랜드: backup.brand || "",
-                        등급: backup.grade || "",
-                        ESTNO: backup.estNo || "",
-                        재고: backup.qty || 0,
-                        BL: backup.bl || "",
-                        창고: backup.warehouse || "",
-                        유통기한: backup.dueDate || "",
-                        평중: backup.weight || 0,
-                        출고일: backup.releaseDate || "",
-                        홀딩: backup.holding || "",
-                        상태: backup.dataState || "",
-                        메모: backup.memo || "",
-                    });
-                }
+        const count = state.selectedItems.size;
+        if (!await showConfirm(`선택한 ${count}건을 삭제합니다.\n계속하시겠습니까?`)) return;
+        try {
+            const backups = [];
+            for (const [, item] of state.selectedItems) {
+                backups.push({ ...item });
+                await deleteItem(item, true, true);  // noUndo=true, noFetch=true (마지막에 한 번만)
             }
-        });
-        if (undoStack.length > 20) undoStack.shift();
-        state.selectedItems.clear();
-        renderAll();
+            pushUndo({ type: "bulk-delete", items: backups.map(b => ({
+                상품명: b.name || "",
+                브랜드: b.brand || "",
+                등급: b.grade || "",
+                ESTNO: b.estNo || "",
+                재고: b.qty || 0,
+                BL: b.bl || "",
+                창고: b.warehouse || "",
+                유통기한: b.dueDate || "",
+                평중: b.weight || 0,
+                출고일: b.releaseDate || "",
+                홀딩: b.holding || "",
+                상태: b.dataState || "",
+                메모: b.memo || "",
+            })) });
+            state.selectedItems.clear();
+            await fetchAllData();
+            showToast("✓ 삭제 완료");
+            renderAll();
+        } catch (err) {
+            console.error("전체 삭제 실패:", err);
+            showError("삭제 중 오류가 발생했습니다: " + err.message);
+        }
         return;
     }
 
@@ -617,7 +592,7 @@ async function handleClick(e) {
         await undoLastAction();
         state.selectedItems.clear();
         state.crudData = null;
-        renderAll();
+        await fetchAllData();
         return;
     }
 
