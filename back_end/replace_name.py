@@ -95,8 +95,10 @@ def replace_name(df):
         "SMITH/FL": "SMITHFIELD",
         "AGRO SUPER": "AGROSUPER",
         "TONNIES FLEISCH": "TONNIES",
-        "AGRO SUPPER": "AGROSUPER"
-
+        "AGRO SUPPER": "AGROSUPER",
+        "5 STAR 267": "5 STAR",
+        "5 STAR 562": "5 STAR",
+        "5 STAR 562M": "5 STAR",
     })
     df["등급"] = df["등급"].replace({
         "CHAN": "UN",
