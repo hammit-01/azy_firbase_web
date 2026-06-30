@@ -7,12 +7,14 @@ import {
     getDocs,
     onSnapshot,
     doc,
-    getDoc
+    getDoc,
+    setDoc
 } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
 import { state } from "./state.js";
 import { renderTable } from "./table.js";
 import { renderSelectData } from "./panel.js";
+import { showToast } from "./ui.js";
 
 // ★ Primary: 현재 운영 프로젝트 (변경 금지)
 const PRIMARY_CONFIG = {
@@ -75,6 +77,30 @@ export async function initFirebase() {
     return db;
 }
 
+// 할당량 초과 시 반대 DB로 자동 전환
+export async function handleQuotaExceeded(err) {
+    if (err?.code !== "resource-exhausted") return false;
+
+    const target = _activeDbName === "primary" ? "secondary" : "primary";
+    console.warn(`[Firebase] ${_activeDbName.toUpperCase()} 할당량 초과 → ${target.toUpperCase()} 전환 시도`);
+
+    if (!SECONDARY_READY || !_secondaryDb) {
+        showToast("⚠ DB 할당량 초과. Secondary DB 미설정.", "error");
+        return true;
+    }
+
+    try {
+        await setDoc(doc(_secondaryDb, "_meta", "active_db"), { active: target });
+        showToast(`⚠ 할당량 초과 — ${target === "secondary" ? "예비" : "주"} DB로 전환 중...`, "info");
+        setTimeout(() => window.location.reload(), 1200);
+    } catch (e2) {
+        console.error("[Firebase] DB 전환 실패:", e2.message);
+        showToast("⚠ DB 할당량 초과. 페이지를 새로고침합니다.", "error");
+        setTimeout(() => window.location.reload(), 3000);
+    }
+    return true;
+}
+
 
 export async function loadEmployees() {
     const snap = await getDocs(collection(db, "employees"));
@@ -98,6 +124,7 @@ export async function fetchAllData() {
         const panelOpen = !!document.querySelector(".holding-card, .update-card, .insert-card");
         if (!panelOpen) renderSelectData();
     } catch (e) {
-        console.warn("[Firebase] fetchAllData 오류:", e.message);
+        const handled = await handleQuotaExceeded(e);
+        if (!handled) console.warn("[Firebase] fetchAllData 오류:", e.message);
     }
 }

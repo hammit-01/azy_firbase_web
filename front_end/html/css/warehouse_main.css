@@ -413,6 +413,22 @@ th.sort-active {
 .all-delete-btn { background: #fee2e2; color: #b91c1c; }
 .all-delete-btn:hover { background: #fca5a5; }
 
+.home-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 42px;
+    width: 42px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 20px;
+    text-decoration: none;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+}
+.home-btn:hover { background: #e2e8f0; color: #1e293b; }
+
 .insert-btn, .all-insert-btn, .select-insert-btn {
     background: #22c55e; color: #fff;
 }
