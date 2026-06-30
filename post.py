@@ -69,29 +69,47 @@ def to_str(x):
     return x
 
 def _archive_old_data(db, today):
-    """수집일이 오늘이 아닌 all_data 문서를 archive_data로 이동"""
+    """수집일이 있는(크롤링) all_data 문서를 처리:
+    - 이전 날짜 → archive_data로 이동
+    - 오늘 날짜  → 그냥 삭제 (같은 날 재실행 시 구 pk 문서 제거)
+    홀딩 행(수집일="")은 절대 건드리지 않음.
+    """
     docs = list(db.collection("all_data").stream())
-    to_archive = [
-        d for d in docs
-        if d.to_dict().get("수집일") and d.to_dict().get("수집일") != today
-    ]
+    to_archive = []
+    to_delete_today = []
 
-    if not to_archive:
+    for d in docs:
+        col_date = d.to_dict().get("수집일")
+        if not col_date:          # 홀딩 행 (수집일 == "")
+            continue
+        if col_date == today:
+            to_delete_today.append(d)   # 오늘 것 → 삭제 후 재업로드
+        else:
+            to_archive.append(d)        # 이전 날짜 → 아카이브
+
+    BATCH_LIMIT = 250
+
+    if to_archive:
+        archive_ref = db.collection("archive_data")
+        for i in range(0, len(to_archive), BATCH_LIMIT):
+            chunk = to_archive[i:i + BATCH_LIMIT]
+            batch = db.batch()
+            for doc in chunk:
+                batch.set(archive_ref.document(doc.id), doc.to_dict())
+                batch.delete(doc.reference)
+            batch.commit()
+        print(f"이전 데이터 {len(to_archive)}개 archive_data로 이동 완료")
+    else:
         print("아카이브할 이전 데이터 없음")
-        return
 
-    archive_ref = db.collection("archive_data")
-    BATCH_LIMIT = 250  # 2 ops/doc × 250 = 500 (Firestore batch 한도)
-
-    for i in range(0, len(to_archive), BATCH_LIMIT):
-        chunk = to_archive[i:i + BATCH_LIMIT]
-        batch = db.batch()
-        for doc in chunk:
-            batch.set(archive_ref.document(doc.id), doc.to_dict())
-            batch.delete(doc.reference)
-        batch.commit()
-
-    print(f"이전 데이터 {len(to_archive)}개 archive_data로 이동 완료")
+    if to_delete_today:
+        for i in range(0, len(to_delete_today), BATCH_LIMIT):
+            chunk = to_delete_today[i:i + BATCH_LIMIT]
+            batch = db.batch()
+            for doc in chunk:
+                batch.delete(doc.reference)
+            batch.commit()
+        print(f"오늘자 기존 크롤링 데이터 {len(to_delete_today)}개 삭제 (재업로드 전 정리)")
 
 
 def post(df):
