@@ -90,7 +90,7 @@ export async function subscribeData() {
     setInterval(fetchAllData, POLL_INTERVAL_MS);
 }
 
-async function fetchAllData() {
+export async function fetchAllData() {
     try {
         const snap = await getDocs(collection(db, "all_data"));
         state.allData = snap.docs.map(d => ({ id: d.id, ...d.data() }));

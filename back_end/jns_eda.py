@@ -20,12 +20,19 @@ def jns_eda(dfs):
     df["BL번호"] = df["BL번호"].astype(str).str.replace("*",  "", regex=False)
     df["BL번호"] = df["BL번호"].astype(str).str.replace("\\", "", regex=False)
 
-    # PK 생성: 코드_BL전체_유통기한(YYYYMMDD)  (_df_to_dict와 동일 형식)
+    # 이력번호 → 식별번호로 보존 (pk 생성 및 Firestore 저장용)
+    if "이력번호" in df.columns:
+        df["식별번호"] = df["이력번호"].fillna("").astype(str).str.strip()
+
+    # PK 생성: 코드_BL뒤4자리_식별번호뒤4자리_유통기한
     if all(c in df.columns for c in ["코드", "BL번호", "유통기한"]):
-        expire_str  = df["유통기한"].fillna("미상").astype(str).str.replace("-", "", regex=False)
-        bl_full     = df["BL번호"].astype(str).str.strip().str.replace("/", "_", regex=False).str.replace(" ", "_", regex=False)
-        code_clean  = df["코드"].astype(str).str.strip().str.replace("/", "_", regex=False).str.replace(" ", "_", regex=False)
-        df["pk"] = code_clean + "_" + bl_full + "_" + expire_str
+        expire_str = df["유통기한"].fillna("미상").astype(str).str.replace("-", "", regex=False)
+        bl_s       = df["BL번호"].astype(str).str.strip()
+        bl_last4   = bl_s.str[-4:].str.replace("/", "_", regex=False).str.replace(" ", "_", regex=False)
+        code_clean = df["코드"].astype(str).str.strip().str.replace("/", "_", regex=False).str.replace(" ", "_", regex=False)
+        id_s       = df["식별번호"].astype(str).str.strip() if "식별번호" in df.columns else ""
+        id_last4   = id_s.str[-4:].where(id_s != "", "").str.replace("/", "_", regex=False).str.replace(" ", "_", regex=False)
+        df["pk"]   = code_clean + "_" + bl_last4 + "_" + id_last4 + "_" + expire_str
 
     # 불필요 컬럼 제거
     df = df.drop(

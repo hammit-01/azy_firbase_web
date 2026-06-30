@@ -107,48 +107,82 @@ def post(df):
     # 이전 날짜 데이터 아카이브
     _archive_old_data(db, today)
 
-    # 오늘 데이터 업로드
+    # ── 업로드 전 집계: (BL번호, 수탁품, 유통기한) 기준으로 재고수량 합산 ──
+    # EDA pk는 코드+BL+유통기한이라 창고 코드가 다르면 별개 row로 들어오지만
+    # 실제로는 같은 상품이므로 여기서 한 번 더 합산해 중복 업로드 방지
+    agg_cols = ["BL번호", "수탁품", "유통기한"]
+    numeric_cols = [c for c in ["재고수량"] if c in df.columns]
+    first_cols   = [c for c in df.columns if c not in agg_cols + numeric_cols]
+
+    df["재고수량"] = pd.to_numeric(
+        df["재고수량"].astype(str).str.replace(",", "", regex=False),
+        errors="coerce"
+    ).fillna(0).astype(int)
+
+    qty_sum  = df.groupby(agg_cols, dropna=False, sort=False)["재고수량"].sum().reset_index()
+    first_df = df.drop_duplicates(subset=agg_cols, keep="first")[agg_cols + first_cols]
+    df = first_df.merge(qty_sum, on=agg_cols, how="left").reset_index(drop=True)
+    # ────────────────────────────────────────────────────────────────────────
+
+    # 기존 홀딩 행 선조회: (BL, 상품명, 유통기한) → 홀딩 수량 합계
+    # 수집일=="" 조건으로 holding 행 식별 (한국어 필드명 서버 쿼리 우회)
+    holding_sum: dict = {}
+    from google.cloud.firestore_v1.base_query import FieldFilter
+    for hdoc in db.collection("all_data").where(filter=FieldFilter("`수집일`", "==", "")).stream():
+        h = hdoc.to_dict()
+        if str(h.get("상태", "")).strip() != "holding":
+            continue
+        key = (
+            str(h.get("BL",    "")).strip(),
+            str(h.get("상품명", "")).strip(),
+            str(h.get("유통기한", "")).strip(),
+        )
+        holding_sum[key] = holding_sum.get(key, 0) + int(h.get("재고", 0) or 0)
+
+    # 오늘 데이터 업로드 — doc_id를 BL+상품명+유통기한 기반으로 생성 (일관성 확보)
+    skipped = 0
     for _, row in df.iterrows():
-        bl = to_str(row.get("BL번호", "")).strip()
-        weight = to_str(row.get("평균중량", "")).strip()
-        weight = weight.replace(".", "") if weight else ""
-        expire = to_date(row.get("유통기한"))
+        code_val   = to_str(row.get("코드", "")).strip()
+        bl_val     = to_str(row.get("BL번호", "")).strip()
+        est_val    = to_str(row.get("식별번호", "")).strip()
+        name_val   = to_str(row.get("수탁품", "")).strip()
+        expire_val = to_date(row.get("유통기한"))
 
-        # BL번호 뒤 4자리
-        bl_last4 = bl[-4:] if len(bl) >= 4 else bl
+        # doc_id: 코드_BL뒤4자리_식별번호뒤4자리_유통기한
+        expire_str = expire_val.replace("-", "") if expire_val else ""
+        bl_last4   = (bl_val[-4:] if len(bl_val) >= 4 else bl_val).replace("/", "_").replace(" ", "_")
+        est_last4  = ((est_val[-4:] if len(est_val) >= 4 else est_val).replace("/", "_").replace(" ", "_")) if est_val else ""
+        code_clean = code_val.replace("/", "_").replace(" ", "_")
+        doc_id = f"{code_clean}_{bl_last4}_{est_last4}_{expire_str}"
 
-        # 날짜를 문자열로 변환 (2026-06-08 -> 20260608)
-        expire_str = expire.replace("-", "") if expire else ""
+        crawled_qty = to_int(row.get("재고수량"))
+        h_qty = holding_sum.get((bl_val, name_val, expire_val), 0)
+        net_qty = crawled_qty - h_qty
 
-        bl_last4 = bl_last4.replace("/", "_")
-        weight = weight.replace("/", "_")
-        expire_str = expire_str.replace("/", "_")
-
-        doc_id = f"{bl_last4}_{expire_str}_{weight}"
+        if net_qty <= 0:
+            # 전량 홀딩 중 → 원본 행 업로드 불필요
+            skipped += 1
+            continue
 
         doc_ref = db.collection("all_data").document(doc_id)
-
         doc_ref.set({
-            "id": doc_ref.id,
-            "pk": doc_id,
-            "상품명": to_str(row.get("수탁품", "")).strip(),
+            "id":    doc_ref.id,
+            "pk":    doc_ref.id,
+            "상품명": name_val,
             "브랜드": to_str(row.get("브랜드", "")).strip(),
-            "등급": to_str(row.get("등급", "")).strip(),
+            "등급":   to_str(row.get("등급", "")).strip(),
             "ESTNO": to_str(row.get("ESTNO", "")).strip(),
-            "재고": to_int(row.get("재고수량")),
-            "BL": to_str(row.get("BL번호", "")).strip(),
-
-            "창고": to_str(row.get("창고", "")).strip(),
-            "유통기한": to_date(row.get("유통기한")),
-            "중량": to_float(row.get("중량")),
-            "평중": to_float(row.get("평균중량", "")),
+            "재고":   net_qty,
+            "BL":    bl_val,
+            "창고":   to_str(row.get("창고", "")).strip(),
+            "유통기한": expire_val,
+            "중량":   to_float(row.get("중량")),
+            "평중":   to_float(row.get("평균중량", "")),
             "출고일": to_date(row.get("출고예정일")),
-            "홀딩": to_str(row.get("비고")),
-
+            "홀딩":   to_str(row.get("비고")),
             "수집일": str(today),
-            "상태": "없음",
-            "메모": "",
+            "상태":   "없음",
+            "메모":   "",
         })
 
-
-    print("DB 업로드 완료")
+    print(f"DB 업로드 완료 (홀딩 차감 스킵: {skipped}건)")

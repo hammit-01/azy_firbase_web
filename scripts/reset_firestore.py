@@ -1,6 +1,7 @@
 """
 Firestore all_data 컬렉션 전체 삭제 + 파이프라인 상태 초기화
 Primary / Secondary 양쪽 모두 처리.
+employees 컬렉션은 절대 삭제하지 않음.
 """
 import json
 import sys
@@ -22,6 +23,8 @@ BATCH_LIMIT    = 500
 
 
 def _delete_collection(db, col_name):
+    """지정 컬렉션 전체 삭제. employees는 절대 건드리지 않음."""
+    assert col_name != "employees", "employees 컬렉션은 삭제 금지"
     col_ref = db.collection(col_name)
     total = 0
     while True:
@@ -37,6 +40,19 @@ def _delete_collection(db, col_name):
         if len(docs) < BATCH_LIMIT:
             break
     return total
+
+
+def _copy_employees(db_src, db_dst, src_label, dst_label):
+    """employees 컬렉션을 src에서 dst로 복사"""
+    docs = list(db_src.collection("employees").stream())
+    if not docs:
+        print(f"  [{src_label}] employees 없음 - 스킵")
+        return
+    batch = db_dst.batch()
+    for d in docs:
+        batch.set(db_dst.collection("employees").document(d.id), d.to_dict())
+    batch.commit()
+    print(f"  [{dst_label}] employees {len(docs)}명 복사 완료")
 
 
 def reset_db(cred_path, label, app_name):
@@ -83,6 +99,18 @@ if __name__ == "__main__":
     reset_db(CRED_PRIMARY,   "PRIMARY",   "[DEFAULT]")
     print()
     reset_db(CRED_SECONDARY, "SECONDARY", "secondary")
+    print()
+
+    # Primary employees → Secondary 동기화 (Secondary 전환 시 직원 목록 유지)
+    print("=" * 50)
+    print("employees 동기화 (Primary → Secondary)")
+    print("=" * 50)
+    try:
+        pri_app = firebase_admin.get_app("[DEFAULT]")
+        sec_app = firebase_admin.get_app("secondary")
+        _copy_employees(firestore.client(pri_app), firestore.client(sec_app), "PRIMARY", "SECONDARY")
+    except Exception as e:
+        print(f"  employees 동기화 실패 (무시): {e}")
 
     print()
     print("=" * 50)

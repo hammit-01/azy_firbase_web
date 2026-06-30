@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <!-- firebase web service upload = /css/...
  pytjon service upload = /css/... -->
@@ -62,7 +62,7 @@
                     <option value="SMITHFIELD">SMITHFIELD</option>
                     <option value="SWIFT">SWIFT</option>
                     <option value="TEYS">TEYS</option>
-                    <option value="TONNIES FLEISCH">TONNIES FLEISCH</option>
+                    <option value="TONNIES">TONNIES</option>
                 </select>
 
                 <select class="show-state filter-sel">
@@ -107,18 +107,17 @@
                 <table>
                     <colgroup>
                         <col style="width:3%">  <!--선택-->
-                        <col style="width:10%"> <!--상품명-->
-                        <col style="width:9%">  <!--브랜드-->
-                        <col style="width:6%">  <!--등급-->
-                        <col style="width:7%">  <!--ESTNO-->
-                        <col style="width:6%">  <!--재고-->
-                        <col style="width:14%"> <!--BL번호-->
-                        <col style="width:8%">  <!--창고-->
-                        <col style="width:9%">  <!--유통기한-->
+                        <col style="width:12%"> <!--상품명-->
+                        <col style="width:12%"> <!--브랜드-->
+                        <col style="width:7%">  <!--등급-->
+                        <col style="width:8%">  <!--ESTNO-->
+                        <col style="width:7%">  <!--재고-->
+                        <col style="width:16%"> <!--BL번호-->
+                        <col style="width:10%"> <!--창고-->
+                        <col style="width:8%">  <!--유통기한-->
                         <col style="width:5%">  <!--평균-->
-                        <col style="width:8%">  <!--출고일-->
-                        <col style="width:9%">  <!--홀딩-->
-                        <col style="width:6%">  <!--메모-->
+                        <col style="width:10%"> <!--메모-->
+                        <col style="width:3%">  <!--사용-->
                     </colgroup>
                     <thead>
                         <tr>
@@ -132,9 +131,8 @@
                             <th data-key="창고" class="sortable">창고</th>
                             <th data-key="유통기한" class="sortable">유통기한</th>
                             <th data-key="평균">평균</th>
-                            <th data-key="출고일">출고일</th>
-                            <th data-key="홀딩">홀딩</th>
                             <th data-key="메모">메모</th>
+                            <th data-key="사용">사용</th>
                         </tr>
                     </thead>
                     <tbody id="list"></tbody>

@@ -11,6 +11,7 @@ Firestore 이중화 업데이터  (Primary + Secondary 폴백)
 """
 import json
 import logging
+import re
 import threading
 from datetime import datetime
 from pathlib import Path
@@ -153,39 +154,57 @@ def _should_try_recovery() -> bool:
         return True
 
 
-def _df_to_dict(df: pd.DataFrame, today: str) -> dict:
+def _clean(s: str) -> str:
+    return re.sub(r"[/\s]", "_", s.strip())
+
+
+def _df_to_dict(df: pd.DataFrame, today: str, holding_sum: dict = None) -> dict:
     from post import to_str, to_int, to_float, to_date
+    if holding_sum is None:
+        holding_sum = {}
     result = {}
     skipped_rows, skipped_qty = 0, 0
     merged_rows,  merged_qty  = 0, 0
     raw_total = 0
 
     for _, row in df.iterrows():
+        code   = to_str(row.get("코드", "")).strip()
         bl     = to_str(row.get("BL번호", "")).strip()
-        code   = to_str(row.get("코드", "")).strip().replace("/", "_").replace(" ", "_")
+        est    = to_str(row.get("식별번호", "")).strip()
+        name   = to_str(row.get("수탁품", "")).strip()
         expire = to_date(row.get("유통기한"))
         qty    = to_int(row.get("재고수량"))
         raw_total += qty
 
-        # BL 전체 사용 (뒤 4자리만 쓰면 서로 다른 품목이 같은 pk로 합산되는 문제 방지)
-        bl_key     = bl.replace("/", "_").replace(" ", "_")
-        expire_str = (expire.replace("-", "") if expire else "").replace("/", "_")
-        doc_id     = f"{code}_{bl_key}_{expire_str}"
+        # doc_id: 코드_BL뒤4자리_식별번호뒤4자리_유통기한
+        expire_str = expire.replace("-", "") if expire else ""
+        bl_last4   = _clean(bl[-4:] if len(bl) >= 4 else bl)
+        est_last4  = _clean(est[-4:] if len(est) >= 4 else est) if est else ""
+        doc_id     = f"{_clean(code)}_{bl_last4}_{est_last4}_{expire_str}"
 
         if not doc_id or doc_id.replace("_", "") == "":
             skipped_rows += 1
             skipped_qty  += qty
-            log.warning(f"  pk 생성 불가 스킵: 수탁품={to_str(row.get('수탁품','?'))[:20]} / 재고={qty}박스")
+            log.warning(f"  pk 생성 불가 스킵: 수탁품={name[:20]} / 재고={qty}박스")
+            continue
+
+        # 홀딩 차감
+        h_qty   = holding_sum.get((bl, name, expire), 0)
+        net_qty = qty - h_qty
+        if net_qty <= 0:
+            skipped_rows += 1
+            skipped_qty  += qty
+            log.info(f"  홀딩 전량 차감 스킵: {name[:20]} / 크롤={qty} 홀딩={h_qty}")
             continue
 
         data = {
             "id":     doc_id,
             "pk":     doc_id,
-            "상품명": to_str(row.get("수탁품", "")).strip(),
+            "상품명": name,
             "브랜드": to_str(row.get("브랜드", "")).strip(),
             "등급":   to_str(row.get("등급", "")).strip(),
             "ESTNO":  to_str(row.get("ESTNO", "")).strip(),
-            "재고":   qty,
+            "재고":   net_qty,
             "BL":     bl,
             "창고":   to_str(row.get("창고", "")).strip(),
             "유통기한": expire,
@@ -193,14 +212,12 @@ def _df_to_dict(df: pd.DataFrame, today: str) -> dict:
             "평중":   to_float(row.get("평균중량", "")),
             "출고일": to_date(row.get("출고일")),
             "수집일": today,
-            # 홀딩·상태·메모: 사용자 설정 필드 → 파이프라인이 덮어쓰지 않음
-            # 신규 문서 생성 시에만 update_diff에서 기본값 추가
         }
         if doc_id in result:
-            # 동일 pk(코드+BL전체+유통기한): 재고 합산 (정상적으로 같은 품목)
+            # 동일 pk: 창고 코드 달라도 같은 상품 → 재고 합산
             merged_rows += 1
-            merged_qty  += qty
-            result[doc_id]["재고"] = (result[doc_id].get("재고") or 0) + qty
+            merged_qty  += net_qty
+            result[doc_id]["재고"] = (result[doc_id].get("재고") or 0) + net_qty
         else:
             result[doc_id] = data
 
@@ -209,7 +226,7 @@ def _df_to_dict(df: pd.DataFrame, today: str) -> dict:
         f"  [변환] 원본 {len(df)}행 {raw_total}박스 → Firestore {len(result)}건 {out_total}박스"
     )
     if skipped_rows:
-        log.warning(f"  [변환] pk없음 스킵: {skipped_rows}행 {skipped_qty}박스 손실")
+        log.warning(f"  [변환] pk없음/홀딩차감 스킵: {skipped_rows}행 {skipped_qty}박스")
     if merged_rows:
         log.info(f"  [변환] pk병합: {merged_rows}행 → 재고 합산 {merged_qty}박스")
 
@@ -250,8 +267,35 @@ class FirestoreUpdater:
         log.info(f"FirestoreUpdater 시작 - 활성 DB: {_active.upper()}")
 
     def update_diff(self, new_df: pd.DataFrame, prev_snapshot: dict) -> tuple:
-        today    = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d")
-        new_data = _df_to_dict(new_df, today)
+        today = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d")
+
+        # 활성 DB 결정
+        db = _get_primary_db() if _active == "primary" else (
+            _get_secondary_db() or _get_primary_db()
+        )
+
+        # 홀딩 행 선조회: (BL, 상품명, 유통기한) → 홀딩 수량 합계
+        # holding 행은 수집일이 빈 문자열 (크롤링 원본 행만 수집일 존재)
+        holding_sum: dict = {}
+        try:
+            from google.cloud.firestore_v1.base_query import FieldFilter
+            # 백틱 인용으로 한국어 필드명 Firestore 쿼리 가능
+            for hdoc in db.collection(COLLECTION).where(filter=FieldFilter("`수집일`", "==", "")).stream():
+                h = hdoc.to_dict()
+                if str(h.get("상태", "")).strip() != "holding":
+                    continue
+                key = (
+                    str(h.get("BL",    "")).strip(),
+                    str(h.get("상품명", "")).strip(),
+                    str(h.get("유통기한", "")).strip(),
+                )
+                holding_sum[key] = holding_sum.get(key, 0) + int(h.get("재고", 0) or 0)
+            if holding_sum:
+                log.info(f"  홀딩 데이터 {len(holding_sum)}건 조회 완료")
+        except Exception as e:
+            log.warning(f"  홀딩 데이터 조회 실패 (무시하고 진행): {e}")
+
+        new_data = _df_to_dict(new_df, today, holding_sum)
 
         to_insert = {}   # 신규 문서: 사용자 필드 기본값 포함해 set()
         to_update = {}   # 변경된 기존 문서: 크롤링 필드만 merge()
@@ -284,9 +328,6 @@ class FirestoreUpdater:
                 return total, new_data
 
         # ── 활성 DB에 쓰기 ─────────────────────────────────────
-        db = _get_primary_db() if _active == "primary" else (
-            _get_secondary_db() or _get_primary_db()
-        )
         try:
             if to_insert:
                 _batch_set(db, to_insert)
@@ -318,7 +359,9 @@ class FirestoreUpdater:
             return 0, prev_snapshot
 
         try:
-            _batch_merge(sec, new_data)
+            # 신규 doc에 사용자 필드 기본값 포함해 생성 (merge=True이므로 기존 홀딩·메모는 보존)
+            enriched = {pk: {**d, "상태": "없음", "홀딩": "", "메모": ""} for pk, d in new_data.items()}
+            _batch_merge(sec, enriched)
             log.info(f"  [SECONDARY] 초기 전체 기록 {len(new_data)}건 완료")
             return len(new_data), new_data
         except Exception as e:
@@ -338,6 +381,20 @@ class FirestoreUpdater:
                 _batch_delete(pri, to_delete)
             _activate_primary()
             log.info(f"  [PRIMARY] 복귀 성공 - {len(new_data)}건 동기화 / {len(to_delete)}건 삭제")
+            # Primary 복귀 성공 시 employees를 Secondary에 동기화
+            # (다음 Secondary 전환 대비)
+            try:
+                sec = _get_secondary_db()
+                if sec:
+                    emp_docs = list(pri.collection("employees").stream())
+                    if emp_docs:
+                        batch = sec.batch()
+                        for d in emp_docs:
+                            batch.set(sec.collection("employees").document(d.id), d.to_dict())
+                        batch.commit()
+                        log.info(f"  employees {len(emp_docs)}명 Secondary 동기화 완료")
+            except Exception as e:
+                log.warning(f"  employees Secondary 동기화 실패 (무시): {e}")
             return True
         except Exception as e:
             if _is_quota_error(e):

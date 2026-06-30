@@ -70,6 +70,9 @@ function renderMobileView(data) {
     const el = document.getElementById("mobile-list");
     if (!el || window.innerWidth > 768) return; // 데스크톱은 스킵
 
+    const limitDate = new Date();
+    limitDate.setMonth(limitDate.getMonth() + 6);
+
     if (data.length === 0) {
         el.innerHTML = `<p class="mobile-empty">검색된 데이터가 없습니다</p>`;
         return;
@@ -341,7 +344,7 @@ export function renderTable() {
         if (item.상태 === "moving")  rowClass += " moving-row";
 
         html += `
-            <tr class="${rowClass}">
+            <tr class="${rowClass}" data-id="${id}" data-출고일="${safeValue(item.출고일)}" data-홀딩="${safeValue(item.홀딩)}">
 
                 <td>
                     <input
@@ -361,14 +364,10 @@ export function renderTable() {
                 <td>${whTag(item.창고)}</td>
                 <td>${dueDateTag(item.유통기한, limitDate)}</td>
                 <td>${safeValue(item.평중)}</td>
-                <td>${safeValue(item.출고일)}</td>
-                <td>
-                    ${safeValue(item.홀딩)}
-                    ${item.상태 === "holding"
-                        ? `<button class="complete-holding-btn" data-id="${id}" data-record-id="${item.holdingRecordId || ""}">✓ 완료</button>`
-                        : ""}
-                </td>
                 <td>${safeValue(item.메모)}</td>
+                <td>${item.상태 === "holding"
+                        ? `<button class="complete-holding-btn" data-id="${id}" data-record-id="${item.holdingRecordId || ""}">✓</button>`
+                        : ""}</td>
             </tr>
         `;
 

@@ -76,10 +76,7 @@ def replace_name(df):
         "뒷왕사골" : "사골(뒤왕)",
         "작업 삼겹양지" : "작업삼겹양지",
         "알목심(T)" : "동결알목심",
-        # "생칵테일새우 26-30/9KG":
-        # "생칵테일새우 31-40/9KG":
-        # "생칵테일새우 31-40/9KG":
-        # "생칵테일새우 41-50 9KG":
+        "루돌프" : "RUDOLF",
     })
     df["브랜드"] = df["브랜드"].replace({
         "G/H": "GREENHAM",
@@ -97,6 +94,7 @@ def replace_name(df):
         "EXCEL/CA": "EXCEL",
         "SMITH/FL": "SMITHFIELD",
         "AGRO SUPER": "AGROSUPER",
+        "TONNIES FLEISCH": "TONNIES",
         "AGRO SUPPER": "AGROSUPER"
 
     })

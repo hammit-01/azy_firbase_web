@@ -117,7 +117,7 @@ def list_eda(final_df, jns):
     df = replace_name(df)
     df = eda_standard(df)
 
-    # pk 기준 집계: 같은 pk(코드+BL+유통기한)는 재고수량 합산, 나머지는 첫 번째 값 유지
+    # pk 기준 집계: 같은 pk(코드_BL뒤4자리_식별번호뒤4자리_유통기한)는 재고수량 합산, 나머지는 첫 번째 값 유지
     # (replace_name/eda_standard 이후 이름이 동일해진 경우에도 수량 보존)
     if "pk" in df.columns and "재고수량" in df.columns:
         before_rows = len(df)
