@@ -125,10 +125,9 @@ def post(df):
     # 이전 날짜 데이터 아카이브
     _archive_old_data(db, today)
 
-    # ── 업로드 전 집계: (BL번호, 수탁품, 유통기한) 기준으로 재고수량 합산 ──
-    # EDA pk는 코드+BL+유통기한이라 창고 코드가 다르면 별개 row로 들어오지만
-    # 실제로는 같은 상품이므로 여기서 한 번 더 합산해 중복 업로드 방지
-    agg_cols = ["BL번호", "수탁품", "유통기한"]
+    # ── 업로드 전 집계: (BL번호, 수탁품, 유통기한, 창고) 기준으로 재고수량 합산 ──
+    # 같은 창고 내 동일 상품 중복 행은 합산, 창고가 다르면 별개 행으로 유지
+    agg_cols = ["BL번호", "수탁품", "유통기한", "창고"]
     numeric_cols = [c for c in ["재고수량"] if c in df.columns]
     first_cols   = [c for c in df.columns if c not in agg_cols + numeric_cols]
 
@@ -143,10 +142,9 @@ def post(df):
     # ────────────────────────────────────────────────────────────────────────
 
     # 기존 홀딩 행 선조회: (BL, 상품명, 유통기한) → 홀딩 수량 합계
-    # 수집일=="" 조건으로 holding 행 식별 (한국어 필드명 서버 쿼리 우회)
+    # _archive_old_data 이후에는 all_data에 홀딩 문서만 남으므로 전체 스캔
     holding_sum: dict = {}
-    from google.cloud.firestore_v1.base_query import FieldFilter
-    for hdoc in db.collection("all_data").where(filter=FieldFilter("`수집일`", "==", "")).stream():
+    for hdoc in db.collection("all_data").stream():
         h = hdoc.to_dict()
         if str(h.get("상태", "")).strip() != "holding":
             continue
@@ -154,10 +152,11 @@ def post(df):
             str(h.get("BL",    "")).strip(),
             str(h.get("상품명", "")).strip(),
             str(h.get("유통기한", "")).strip(),
+            str(h.get("창고",   "")).strip(),
         )
         holding_sum[key] = holding_sum.get(key, 0) + int(h.get("재고", 0) or 0)
 
-    # 오늘 데이터 업로드 — doc_id를 BL+상품명+유통기한 기반으로 생성 (일관성 확보)
+    # 오늘 데이터 업로드 — doc_id: 코드_BL뒤4자리_식별번호뒤4자리_유통기한_창고
     skipped = 0
     for _, row in df.iterrows():
         code_val   = to_str(row.get("코드", "")).strip()
@@ -165,16 +164,18 @@ def post(df):
         est_val    = to_str(row.get("식별번호", "")).strip()
         name_val   = to_str(row.get("수탁품", "")).strip()
         expire_val = to_date(row.get("유통기한"))
+        wh_val     = to_str(row.get("창고", "")).strip()
 
-        # doc_id: 코드_BL뒤4자리_식별번호뒤4자리_유통기한
+        # doc_id: 코드_BL뒤4자리_식별번호뒤4자리_유통기한_창고
         expire_str = expire_val.replace("-", "") if expire_val else ""
         bl_last4   = (bl_val[-4:] if len(bl_val) >= 4 else bl_val).replace("/", "_").replace(" ", "_")
         est_last4  = ((est_val[-4:] if len(est_val) >= 4 else est_val).replace("/", "_").replace(" ", "_")) if est_val else ""
         code_clean = code_val.replace("/", "_").replace(" ", "_")
-        doc_id = f"{code_clean}_{bl_last4}_{est_last4}_{expire_str}"
+        wh_clean   = wh_val.replace("/", "_").replace(" ", "_")
+        doc_id = f"{code_clean}_{bl_last4}_{est_last4}_{expire_str}_{wh_clean}"
 
         crawled_qty = to_int(row.get("재고수량"))
-        h_qty = holding_sum.get((bl_val, name_val, expire_val), 0)
+        h_qty = holding_sum.get((bl_val, name_val, expire_val, wh_val), 0)
         net_qty = crawled_qty - h_qty
 
         if net_qty <= 0:
