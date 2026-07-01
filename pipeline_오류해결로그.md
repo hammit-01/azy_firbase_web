@@ -230,8 +230,8 @@ schtasks /run /tn WarehousePipeline
 
 ## #009 — 파이프라인 로그 한글 깨짐
 
-**발생일**: 2026-06-26  
-**발생 위치**: PowerShell에서 로그 조회 시
+**발생일**: 2026-06-26 (최초), 2026-07-01 (근본 해결)  
+**발생 위치**: PowerShell에서 로그 조회 시 / `pipeline/logs/pipeline.log`
 
 **증상**
 ```
@@ -239,15 +239,21 @@ schtasks /run /tn WarehousePipeline
 ```
 
 **원인**  
-`pipeline.log`는 UTF-8로 저장되나, PowerShell `Get-Content` 기본값이 시스템 코드페이지(CP949) 사용.
+`pipeline.log`는 UTF-8(BOM 없음)로 저장되나, PowerShell `Get-Content` 기본값이 시스템 코드페이지(CP949) 사용.
 
-**해결**  
+**해결 1 (임시)**: 조회 시 `-Encoding UTF8` 옵션 지정
 ```powershell
-# 올바른 조회 방법
-Get-Content "C:\warehouse-pipeline\pipeline\logs\pipeline.log" -Encoding UTF8 -Tail 50
+Get-Content ".\pipeline\logs\pipeline.log" -Encoding UTF8 -Tail 50
+Get-Content ".\pipeline\logs\pipeline.log" -Encoding UTF8 -Wait -Tail 20
+```
 
-# 실시간 모니터링
-Get-Content "C:\warehouse-pipeline\pipeline\logs\pipeline.log" -Encoding UTF8 -Wait -Tail 20
+**해결 2 (근본, 2026-07-01 적용)**: `scheduler.py` FileHandler 인코딩을 `utf-8-sig`(BOM 포함)로 변경  
+→ Windows 도구가 BOM을 보고 UTF-8로 자동 인식
+```python
+# 변경 전
+logging.FileHandler(LOG_DIR / "pipeline.log", encoding="utf-8"),
+# 변경 후
+logging.FileHandler(LOG_DIR / "pipeline.log", encoding="utf-8-sig"),
 ```
 
 **현재 상태**: 해결됨 ✓
@@ -364,6 +370,95 @@ JNS 단독 모드 실행 시 비JNS final_df가 빈 DataFrame → 열 접근 즉
 
 ---
 
+## #014 — 브랜드 non-breaking space로 인한 치환 미적용 (5 STAR 267 등)
+
+**발생일**: 2026-07-01 (조사) — 잠복 기간 불명  
+**발생 위치**: `back_end/replace_name.py`
+
+**증상**  
+`replace_name.py`에 `"5 STAR 267": "5 STAR"`, `"5 STAR 562": "5 STAR"` 등 매핑이 존재하나 Firestore에 여전히 `"5 STAR 267"` 그대로 업로드됨.
+
+**원인**  
+BeautifulSoup `get_text(strip=True)`가 HTML `&nbsp;`를 `\xa0`(U+00A0, non-breaking space)으로 변환.  
+JNS 사이트 브랜드명에 `\xa0`이 포함되어 `"5 STAR\xa0267"` 형태로 저장됨.  
+`pandas Series.replace()`는 정확한 문자열 일치만 적용하므로 일반 공백 `\x20`으로 작성된 키와 불일치.
+
+**해결**  
+`replace_name.py`에서 `.replace()` 호출 전 브랜드 컬럼 정규화 추가:
+```python
+df["브랜드"] = (
+    df["브랜드"]
+    .astype(str)
+    .str.replace(' ', ' ', regex=False)  # non-breaking space → 일반 공백
+    .str.replace(r'\s+', ' ', regex=True)     # 연속 공백 정리
+    .str.strip()
+    .replace({"nan": "", "None": ""})
+)
+```
+
+**주의**: Edit 도구로 `\xa0` 문자 삽입 시 일반 공백으로 저장될 수 있음.  
+파일 수정 후 hex 검증 필수:
+```powershell
+$bytes = [System.IO.File]::ReadAllBytes("back_end\replace_name.py")
+$idx = 2700  # 해당 줄의 바이트 위치
+($bytes[$idx..($idx+10)] | ForEach-Object { $_.ToString("X2") }) -join " "
+# C2 A0 이 보여야 정상
+```
+→ 안전한 방법: Write 도구로 파일 전체 재작성 후 `' '` Python 유니코드 이스케이프 사용.
+
+**현재 상태**: 해결됨 ✓
+
+---
+
+## #015 — 다중 run_service.py 동시 실행 → 박스 수 과다 기재
+
+**발생일**: 2026-07-01 16:31 ~ 17:00  
+**발생 위치**: 시스템 전체 (9개 프로세스 동시 실행)
+
+**증상**  
+원본 JNS 크롤링 데이터 ~43,684박스인데 웹에 47,978박스 표시.  
+로그에 매 라운드 `[정규화 경고] 박스 수 변동: 43684 → 47421 (+3737박스)` 반복.
+
+**로그 패턴**
+```
+[정규화 후] EDA: 393행 / 47421박스         ← 잘못된 프로세스 (정상: 373행 / 43684박스)
+[정규화 경고] 박스 수 변동: 43684 → 47421 (+3737박스)
+[SECONDARY] ↑20건(신규) ↻0건(갱신) ✕0건   ← 매 라운드 20건 추가 삽입
+완료 | EDA 393건/47421박스 → Firestore 387건/47360박스 ★ 61박스 차이 | 변경 20건
+```
+
+**원인**  
+1. PID 락 파일(`pipeline/.service.lock`) 구현 이전부터 실행 중이던 `run_service.py` 프로세스가 9개 동시 실행 중.  
+2. `_acquire_lock()`은 새 프로세스만 차단하고 기존 프로세스를 종료하지 않음.  
+3. 9개 중 1개 프로세스가 매 라운드 20행 +3,737박스를 여분으로 생성해 Firestore에 삽입.  
+4. 다른 정상 프로세스들과 충돌하며 Firestore가 47,000박스대에서 수렴.
+
+**해결**  
+실행 중인 모든 파이프라인 프로세스 확인 → 전체 종료 → 1개만 재시작:
+```powershell
+# 현재 실행 중 프로세스 확인
+Get-WmiObject Win32_Process -Filter "name='python.exe'" | Where-Object { $_.CommandLine -like "*run_service*" } | Select-Object ProcessId, CommandLine
+
+# 전체 종료 (PID 목록 수집 후)
+$procIds = @(<pid1>, <pid2>, ...)
+foreach ($procId in $procIds) { Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue }
+
+# 1개만 재시작
+Start-Process python -ArgumentList "run_service.py" -WorkingDirectory "C:\Users\OWNER\.vscode\azy_firbase_web" -WindowStyle Hidden
+```
+
+**재발 방지**  
+- 서비스 재시작 전 항상 위 `Get-WmiObject` 명령으로 기존 프로세스 수 확인.  
+- PID 락은 새 프로세스 중복 실행만 막으므로, 강제 종료(`Stop-Process -Force`) 후 락 파일이 남아있으면 수동 삭제:
+  ```powershell
+  Remove-Item "C:\Users\OWNER\.vscode\azy_firbase_web\pipeline\.service.lock" -ErrorAction SilentlyContinue
+  ```
+- Firestore 박스 수는 다음 크롤링 라운드(최대 1분)에 자동 정상화됨.
+
+**현재 상태**: 해결됨 ✓ (2026-07-01 17:26, 단일 프로세스 PID 14528 실행 중)
+
+---
+
 ## 상태 요약 (2026-07-01 기준)
 
 | # | 오류 | 상태 |
@@ -381,6 +476,8 @@ JNS 단독 모드 실행 시 비JNS final_df가 빈 DataFrame → 열 접근 즉
 | 011 | JNS 다중 계정 덮어쓰기 → 3,578박스 손실 | ✓ 해결 |
 | 012 | drop_duplicates → 유효 데이터 700박스 손실 | ✓ 해결 |
 | 013 | JNS 단독 모드 시 빈 DataFrame KeyError | ✓ 해결 |
+| 014 | 브랜드 NBSP → 치환 미적용 (5 STAR 267 등) | ✓ 해결 |
+| 015 | 다중 프로세스 동시 실행 → 박스 수 과다 (+3,737박스) | ✓ 해결 |
 
 ---
 
