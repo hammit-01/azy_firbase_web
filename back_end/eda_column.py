@@ -125,13 +125,27 @@ def ch(df):
     result = result.drop(columns = drop_cols, errors = "ignore")
     return column_replace(result)
 
-def daechung(df):
+# 강동/삼진/대청 신규 웹사이트 컬럼 구조 (2026년~)
+# raw: 소비기한, 잔여일수, 수탁품, EST NO, 수량, 중량, PLT, B/L NO식별번호, 원산지, 통관구분, 규격, 단위, LOT-NO[직전화주], [저장구역], 담보수량, 사업부, 창고
+_wms_rename = {
+    "소비기한":  "유통기한제조일자",
+    "EST NO":    "ESTNO",
+    "수량":      "재고수량",
+    "규격":      "규격단위중량",
+}
+
+def _wms_new_style(df, name):
     if df is None or df.shape[1] <= 2:
-        return print("daechung 데이터 없음")  # 또는 return df 그대로
-    result = df.copy()
-    result.columns = columns_b
-    result = result.drop(columns = drop_cols, errors = "ignore")
-    return column_replace(result)
+        print(f"{name} 데이터 없음")
+        return pd.DataFrame()
+    result = df.rename(columns=_wms_rename, errors="ignore")
+    for col in final_column:
+        if col not in result.columns:
+            result[col] = None
+    return result[list(final_column)]
+
+def daechung(df):
+    return _wms_new_style(df, "daechung")
 
 def daejae(df):
     if df is None or df.shape[1] <= 2:
@@ -142,42 +156,16 @@ def daejae(df):
     return column_replace(result)
 
 def hanladt(df):
-    if df is None or df.shape[1] <= 2:
-        return print("hanladt 데이터 없음")  # 또는 return df 그대로
-    result = df.copy()
-    while len(result.columns) < len(columns_b):
-        result[len(result.columns)] = None
+    return _wms_new_style(df, "hanladt")
 
-    result.columns = columns_b
-
-    result = result.drop(columns=drop_cols, errors="ignore")
-    return column_replace(result)
-    
 def hanla(df):
-    if df is None or df.shape[1] <= 2:
-        return print("hanla 데이터 없음")  # 또는 return df 그대로
-    result = df.copy()
-    while len(result.columns) < len(columns_b):
-        result[len(result.columns)] = None
-    result.columns = columns_b
-    result = result.drop(columns = drop_cols, errors = "ignore")
-    return column_replace(result)
+    return _wms_new_style(df, "hanla")
     
 def gangdong1(df):
-    if df is None or df.shape[1] <= 2:
-        return print("gangdong1 데이터 없음")  # 또는 return df 그대로
-    result = df.copy()
-    result.columns = columns_b
-    result = result.drop(columns = drop_cols, errors = "ignore")
-    return column_replace(result)
+    return _wms_new_style(df, "gangdong1")
 
 def gangdong2(df):
-    if df is None or df.shape[1] <= 2:
-        return print("gangdong2 데이터 없음")  # 또는 return df 그대로
-    result = df.copy()
-    result.columns = columns_b
-    result = result.drop(columns = drop_cols, errors = "ignore")
-    return column_replace(result)
+    return _wms_new_style(df, "gangdong2")
 
 def gyungin(df):
     if df is None or df.shape[1] <= 2:
@@ -196,20 +184,10 @@ def plaza(df):
     return column_replace(result)
 
 def samjin1(df):
-    if df is None or df.shape[1] <= 2:
-        return print("samjin1 데이터 없음")  # 또는 return df 그대로
-    result = df.copy()
-    result.columns = columns_b
-    result = result.drop(columns = drop_cols, errors = "ignore")
-    return column_replace(result)
+    return _wms_new_style(df, "samjin1")
 
 def samjin2(df):
-    if df is None or df.shape[1] <= 2:
-        return print("samjin2 데이터 없음")  # 또는 return df 그대로
-    result = df.copy()
-    result.columns = columns_b
-    result = result.drop(columns = drop_cols, errors = "ignore")
-    return column_replace(result)
+    return _wms_new_style(df, "samjin2")
 
 def cs(df):
     if df is None or df.shape[1] <= 2:

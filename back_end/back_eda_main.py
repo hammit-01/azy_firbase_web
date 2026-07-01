@@ -34,8 +34,8 @@ warehouses = [
     "경인",
     "대청",
     "대재",
-    "한라",
-    "한라 동탄",
+    "한라곤지암",
+    "한라동탄",
     "CS"
 ]
 
@@ -68,8 +68,8 @@ def list_eda(final_df, jns):
     sjn = pd.concat([warehouse_dfs["삼진1"], warehouse_dfs["삼진2"]], ignore_index=True)
     ki = warehouse_dfs["경인"].copy()
     dch = warehouse_dfs["대청"].copy()
-    hlk = warehouse_dfs["한라"].copy()
-    hld = warehouse_dfs["한라 동탄"].copy()
+    hlk = warehouse_dfs["한라곤지암"].copy()
+    hld = warehouse_dfs["한라동탄"].copy()
     cs = warehouse_dfs["CS"].copy()
 
     beige = safe_df(beige, "베이지박스투")
@@ -110,30 +110,29 @@ def list_eda(final_df, jns):
         subset=["BL번호", "재고수량"]
     ).reset_index(drop=True)
 
-    # pk 기준 집계: 같은 pk는 재고수량 합산, 나머지는 첫 번째 값 유지
+    # pk 기준 집계: 같은 pk는 재고수량 합산 (JNS 전용)
+    # pk=NaN 행(비JNS 창고)은 개별 행 그대로 유지
     if "pk" in total_data.columns and "재고수량" in total_data.columns:
-        before_rows = len(total_data)
         total_data["재고수량"] = pd.to_numeric(
             total_data["재고수량"].astype(str).str.replace(",", "", regex=False),
             errors="coerce"
         ).fillna(0).astype(int)
-        before_qty = int(total_data["재고수량"].sum())
 
         nan_pk_mask = total_data["pk"].isna()
-        if nan_pk_mask.any():
-            nan_rows = total_data[nan_pk_mask][["코드", "BL번호", "유통기한", "재고수량"]]
-            log.warning(f"[EDA] pk=NaN 행 {nan_pk_mask.sum()}개 ({int(total_data.loc[nan_pk_mask, '재고수량'].sum())}박스):")
-            for _, r in nan_rows.iterrows():
-                log.warning(f"  코드={r.get('코드')} BL={r.get('BL번호')} 유통기한={r.get('유통기한')} 재고={r.get('재고수량')}")
+        no_pk_data = total_data[nan_pk_mask].copy()   # 비JNS: 그대로 유지
+        pk_data    = total_data[~nan_pk_mask].copy()  # JNS: pk 기준 합산
 
-        qty_sum = total_data.groupby("pk", sort=False, dropna=False)["재고수량"].sum().reset_index()
-        first_rows = total_data.drop_duplicates(subset="pk", keep="first").drop(columns=["재고수량"])
-        total_data = first_rows.merge(qty_sum, on="pk", how="left").reset_index(drop=True)
-        after_qty = int(total_data["재고수량"].fillna(0).sum())
-        if before_rows != len(total_data) or before_qty != after_qty:
-            log.info(f"[EDA] pk 중복 합산: {before_rows}행→{len(total_data)}행 | 수량 {before_qty}→{after_qty}박스")
-        if before_qty != after_qty:
-            log.warning(f"[EDA] ★ 경고: 박스 수 변동 {before_qty}→{after_qty} ({after_qty - before_qty:+d}박스)")
+        if not pk_data.empty:
+            before_rows = len(pk_data)
+            before_qty  = int(pk_data["재고수량"].sum())
+            qty_sum    = pk_data.groupby("pk", sort=False)["재고수량"].sum().reset_index()
+            first_rows = pk_data.drop_duplicates(subset="pk", keep="first").drop(columns=["재고수량"])
+            pk_data    = first_rows.merge(qty_sum, on="pk", how="left").reset_index(drop=True)
+            after_qty  = int(pk_data["재고수량"].fillna(0).sum())
+            if before_rows != len(pk_data) or before_qty != after_qty:
+                log.info(f"[EDA] pk 중복 합산: {before_rows}행→{len(pk_data)}행 | {before_qty}→{after_qty}박스")
+
+        total_data = pd.concat([pk_data, no_pk_data], ignore_index=True)
     else:
         total_data = total_data.drop_duplicates().reset_index(drop=True)
 
