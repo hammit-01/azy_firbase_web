@@ -1,4 +1,4 @@
-import { updateItem, insertItem, moveHoldingToHistory, deleteHoldingHistory, restoreDoc } from "./firestoreService.js";
+import { updateItem, insertItem, moveHoldingToHistory, restoreDoc } from "./firestoreService.js";
 import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 import { db } from "./firebase.js";
 import { showToast, showError } from "./ui.js";
@@ -56,13 +56,6 @@ function _buildFn(desc) {
 
         case "bulk-delete":
             return async () => { for (const d of desc.items) await insertItem(d); };
-
-        case "complete-holding":
-            return async () => {
-                if (desc.historyId) await deleteHoldingHistory(desc.historyId);
-                if (desc.recordId && desc.originalData) await restoreDoc("holding_data", desc.recordId, desc.originalData);
-                await restoreDoc("all_data", desc.id, desc.restoreData);
-            };
 
         default:
             return null;

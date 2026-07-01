@@ -115,7 +115,7 @@ function renderMobileView(data) {
                 ${safeValue(item.BL)     ? `<div class="mc-row mc-full"><span class="mc-label">BL</span>${safeValue(item.BL)}</div>` : ""}
                 ${safeValue(item.출고일) ? `<div class="mc-row"><span class="mc-label">출고일</span>${safeValue(item.출고일)}</div>` : ""}
                 ${safeValue(item.홀딩)   ? `<div class="mc-row mc-full"><span class="mc-label">홀딩</span>${safeValue(item.홀딩)}</div>` : ""}
-                ${safeValue(item.메모)   ? `<div class="mc-row mc-full"><span class="mc-label">메모</span>${safeValue(item.메모)}</div>` : ""}
+                ${safeValue(item.메모)   ? `<div class="mc-row mc-full"><span class="mc-label">비고</span>${safeValue(item.메모)}</div>` : ""}
             </div>
         </div>`;
     }
@@ -365,9 +365,6 @@ export function renderTable() {
                 <td>${dueDateTag(item.유통기한, limitDate)}</td>
                 <td>${safeValue(item.평중)}</td>
                 <td>${safeValue(item.메모)}</td>
-                <td>${item.상태 === "holding"
-                        ? `<button class="complete-holding-btn" data-id="${id}" data-record-id="${item.holdingRecordId || ""}">✓</button>`
-                        : ""}</td>
             </tr>
         `;
 
@@ -379,7 +376,7 @@ export function renderTable() {
     if (data.length === 0) {
         html = `
             <tr>
-                <td colspan="13" style="text-align:center; padding:40px; color:#9ca3af; font-size:15px;">
+                <td colspan="12" style="text-align:center; padding:40px; color:#9ca3af; font-size:15px;">
                     검색된 데이터가 없습니다
                 </td>
             </tr>

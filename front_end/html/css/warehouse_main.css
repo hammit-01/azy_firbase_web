@@ -373,7 +373,8 @@ th.sort-active {
 
 /* ── 툴바 액션 버튼 ── */
 .rollback-btn, .clear-btn, .all-delete-btn,
-.insert-btn, .update-btn, .holding-btn {
+.insert-btn, .update-btn, .holding-btn,
+.changes-tab-btn {
     height: 42px;
     padding: 0 18px;
     border: none;
@@ -386,6 +387,191 @@ th.sort-active {
     width: auto;
     flex-shrink: 0;
 }
+
+/* ── 변경사항 탭 버튼 ── */
+.changes-tab-btn {
+    background: #f1f5f9;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.changes-tab-btn:hover { background: #e2e8f0; }
+.changes-tab-btn.tab-active {
+    background: #0f172a;
+    color: #fff;
+}
+.changes-tab-btn.has-issues .changes-badge {
+    animation: pulse-badge 1.5s infinite;
+}
+.changes-badge {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: #ef4444;
+    color: #fff;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+}
+@keyframes pulse-badge {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.5; }
+}
+
+/* ── 변경사항 컨테이너 ── */
+.changes-container {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    scrollbar-width: none;
+    padding: 4px 0;
+}
+.changes-container::-webkit-scrollbar { display: none; }
+
+.changes-empty {
+    text-align: center;
+    padding: 60px 0;
+    color: #94a3b8;
+    font-size: 18px;
+}
+
+/* ── 변경사항 카드 ── */
+.change-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    padding: 16px 20px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border-left: 5px solid #e2e8f0;
+}
+.change-card.over-qty  { border-left-color: #f59e0b; }
+.change-card.no-origin { border-left-color: #ef4444; }
+
+.change-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 2;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+.change-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+.change-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    background: #f1f5f9;
+    color: #475569;
+    border-radius: 20px;
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.change-issue-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.badge-over {
+    background: #fef3c7;
+    color: #92400e;
+}
+.badge-none {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.change-qty-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    font-size: 17px;
+    color: #334155;
+    white-space: nowrap;
+}
+.change-qty-row strong { color: #1e293b; font-size: 18px; }
+.arrow-sep { color: #94a3b8; }
+.no-origin-text { color: #ef4444; font-size: 15px; }
+
+.change-action {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.change-qty-label {
+    font-size: 15px;
+    color: #64748b;
+    white-space: nowrap;
+}
+.change-qty-input {
+    width: 80px;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 16px;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.15s;
+}
+.change-qty-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+
+.change-done-btn {
+    height: 36px;
+    padding: 0 18px;
+    background: #22c55e;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+.change-done-btn:disabled {
+    background: #d1fae5;
+    color: #6ee7b7;
+    cursor: not-allowed;
+}
+.change-done-btn:not(:disabled):hover { background: #16a34a; }
+
+.change-cancel-btn {
+    height: 36px;
+    padding: 0 18px;
+    background: #fee2e2;
+    color: #b91c1c;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+.change-cancel-btn:hover { background: #fca5a5; }
 
 /* ── footer / 카드 내부 버튼 ── */
 .all-insert-btn, .all-update-btn, .all-holding-btn,

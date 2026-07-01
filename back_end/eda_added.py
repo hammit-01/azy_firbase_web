@@ -3,7 +3,7 @@ import re
 
 def huichang(data):
     if data is None or data.empty:
-        return
+        return pd.DataFrame()
     df = data.drop_duplicates().copy()
     # 문자 = 브랜드
     df["브랜드"] = df["규격단위중량"].str.extract(r"([A-Za-z\s]+)")
@@ -27,7 +27,7 @@ def huichang(data):
 
 def hyosung(data):
     if data is None or data.empty:
-        return
+        return pd.DataFrame()
     df = data.drop_duplicates().copy()
     # 평균중량
     s = (
@@ -57,7 +57,7 @@ def hyosung(data):
 
 def eastbelly(data):
     if data is None or data.empty:
-        return
+        return pd.DataFrame()
     df = data.drop_duplicates().copy()
     # 평균중량
     s = (
@@ -88,7 +88,7 @@ def eastbelly(data):
 
 def aurora(data):
     if data is None or data.empty:
-        return
+        return pd.DataFrame()
     df = data.drop_duplicates().copy()
     # 앞 숫자 = ESTNO
     df["ESTNO"] = (
@@ -128,7 +128,7 @@ def aurora(data):
 
 def daejae(data):
     if data is None or data.empty:
-        return
+        return pd.DataFrame()
 
     df = data.drop_duplicates().copy()
 
@@ -180,7 +180,7 @@ def daejae(data):
 
 def sinu(data):
     if data is None or data.empty:
-        return
+        return pd.DataFrame()
 
     # =================================================
     # 중복 제거
@@ -268,7 +268,7 @@ def sinu(data):
 
 def samil(data):
     if data is None or data.empty:
-        return
+        return pd.DataFrame()
     df = data.drop_duplicates().copy()
     # ESTNO
     df["ESTNO"] = df["규격단위중량"].str.extract(r"\((.*?)\)")
@@ -309,7 +309,7 @@ def samil(data):
 
 def beige(data):
     if data is None or data.empty:
-        return
+        return pd.DataFrame()
     df = data.drop_duplicates().copy()
     
     # 평균중량
@@ -337,6 +337,8 @@ def beige(data):
     return df
 
 def swc(data):
+    if data is None or data.empty:
+        return pd.DataFrame()
     df = data.drop_duplicates().copy()
 
     # =========================

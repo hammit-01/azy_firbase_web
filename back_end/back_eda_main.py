@@ -99,16 +99,13 @@ def list_eda(final_df, jns):
     ch = safe_eda(ch_eda, ch, "CH")
     plz = safe_eda(plz_eda, plz, "PLZ")
     cs = safe_eda(cs_eda, cs, "CS")
-    hand_df = crawling_handmade()
-    total_data = pd.concat([added_df, six_df, ch, plz, jns, hand_df, cs], ignore_index=True)
+    # hand_df = crawling_handmade()
+    total_data = pd.concat([added_df, six_df, ch, plz, jns, cs], ignore_index=True)
 
     total_data = total_data.drop(columns=["중량"], errors="ignore")
     total_data = replace_name(total_data)
     total_data = eda_standard(total_data)
-    total_data = total_data.drop_duplicates().copy()
-    total_data = total_data.drop_duplicates(
-        subset=["BL번호", "재고수량"]
-    ).reset_index(drop=True)
+    total_data = total_data.reset_index(drop=True)
 
     # pk 기준 집계: 같은 pk는 재고수량 합산 (JNS 전용)
     # pk=NaN 행(비JNS 창고)은 개별 행 그대로 유지

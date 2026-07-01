@@ -39,6 +39,9 @@ let _primaryDb;
 let _secondaryDb;
 let _activeDbName = "primary";
 
+const _renderHooks = [];
+export function addRenderHook(fn) { _renderHooks.push(fn); }
+
 
 export async function initFirebase() {
     const primaryApp = initializeApp(PRIMARY_CONFIG, "primary");
@@ -123,6 +126,7 @@ export async function fetchAllData() {
         renderTable();
         const panelOpen = !!document.querySelector(".holding-card, .update-card, .insert-card");
         if (!panelOpen) renderSelectData();
+        _renderHooks.forEach(fn => { try { fn(); } catch(e) {} });
     } catch (e) {
         const handled = await handleQuotaExceeded(e);
         if (!handled) console.warn("[Firebase] fetchAllData 오류:", e.message);

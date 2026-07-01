@@ -6,12 +6,34 @@ import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
-import { moveHoldingToHistory } from "./firestoreService.js";
-import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
-import { db, fetchAllData } from "./firebase.js";
+import { db, fetchAllData, addRenderHook } from "./firebase.js";
 import { showToast, showError, showConfirm } from "./ui.js";
+import { renderChanges, bindChangesEvents } from "./changes.js";
 
 export function bindEvents() {
+    // 변경사항 탭 렌더 훅 등록
+    addRenderHook(renderChanges);
+    bindChangesEvents();
+
+    // 변경사항 탭 스위칭
+    document.querySelector(".changes-tab-btn")?.addEventListener("click", () => {
+        const changesEl = document.querySelector(".changes-container");
+        const tableEl   = document.querySelector(".table-container");
+        const tabBtn    = document.querySelector(".changes-tab-btn");
+        const isOpen    = changesEl?.style.display !== "none";
+
+        if (isOpen) {
+            changesEl.style.display = "none";
+            tableEl.style.display   = "";
+            tabBtn.classList.remove("tab-active");
+        } else {
+            changesEl.style.display = "";
+            tableEl.style.display   = "none";
+            tabBtn.classList.add("tab-active");
+            renderChanges();
+        }
+    });
+
     // 출고일·홀딩 hover 카드
     const hoverCard = document.createElement("div");
     hoverCard.id = "hover-info-card";
@@ -244,37 +266,6 @@ async function handleClick(e) {
     // 행 추가
     if (e.target.classList.contains("insertRow-btn")) {
         document.querySelector(".insert-list")?.insertAdjacentHTML("beforeend", createInsertRow());
-        return;
-    }
-
-    // 홀딩 사용완료
-    if (e.target.classList.contains("complete-holding-btn")) {
-        const confirmed = await showConfirm("해당 홀딩분 모두 사용 완료 처리 진행합니다.\n계속하시겠습니까?");
-        if (!confirmed) return;
-
-        const id       = e.target.dataset.id;
-        const recordId = e.target.dataset.recordId;
-
-        // all_data 홀딩 행 백업
-        const allDataItem = state.allData.find(v => v.id === id);
-        if (!allDataItem) return;
-        const allDataBackup = { ...allDataItem };
-
-        try {
-            const { historyId, originalData } = await moveHoldingToHistory(recordId, "사용완료");
-            await deleteDoc(doc(db, "all_data", id));
-
-            // Undo 저장
-            const { id: _chId, ...chRestoreData } = allDataBackup;
-            pushUndo({ type: "complete-holding", historyId, recordId, originalData, id, restoreData: chRestoreData });
-
-            state.selectedItems.delete(id);
-            showToast("✓ 사용완료 처리됨");
-            await fetchAllData();
-        } catch (err) {
-            console.error("사용완료 처리 실패:", err);
-            showError("처리 중 오류가 발생했습니다.");
-        }
         return;
     }
 

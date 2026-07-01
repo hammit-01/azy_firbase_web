@@ -1,6 +1,8 @@
 import re
 
 def eda_common(df):
+    if df.empty or "B/L NO식별번호" not in df.columns:
+        return df
     # BL열 정제
     # BL / 이력번호
     s = df["B/L NO식별번호"].astype(str)

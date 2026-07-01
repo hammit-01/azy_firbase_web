@@ -91,6 +91,7 @@
                 <button class="all-delete-btn">전체 삭제</button>
 
                 <div class="tb-sep"></div>
+                <button class="changes-tab-btn">변경사항<span class="changes-badge" style="display:none"></span></button>
                 <a href="/main.html" class="home-btn" title="메인으로">⌂</a>
             </div>
         </div>
@@ -120,8 +121,7 @@
                         <col style="width:10%"> <!--창고-->
                         <col style="width:8%">  <!--유통기한-->
                         <col style="width:5%">  <!--평균-->
-                        <col style="width:10%"> <!--메모-->
-                        <col style="width:3%">  <!--사용-->
+                        <col style="width:10%"> <!--비고-->
                     </colgroup>
                     <thead>
                         <tr>
@@ -135,8 +135,7 @@
                             <th data-key="창고" class="sortable">창고</th>
                             <th data-key="유통기한" class="sortable">유통기한</th>
                             <th data-key="평균">평균</th>
-                            <th data-key="메모">메모</th>
-                            <th data-key="사용">사용</th>
+                            <th data-key="메모">비고</th>
                         </tr>
                     </thead>
                     <tbody id="list"></tbody>
@@ -144,6 +143,12 @@
             </div>
         </div>
         </div><!-- /.table-container -->
+
+        <!-- ── 변경사항 탭 ── -->
+        <div class="changes-container" style="display:none">
+            <div id="changes-list"></div>
+        </div>
+
     </div>
 
     <script type="module" src="./warehouse_main.js"></script>

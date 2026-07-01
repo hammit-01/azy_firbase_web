@@ -3,12 +3,14 @@ import { db, handleQuotaExceeded } from "./firebase.js";
 import {
   collection,
   addDoc,
+  getDocs,
   doc,
   getDoc,
   setDoc,
   updateDoc,
   deleteDoc,
   query,
+  where,
   orderBy,
   onSnapshot
 } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
@@ -27,9 +29,28 @@ export async function insertItem(data) {
     return await _wrap(() => addDoc(collection(db, "all_data"), data));
 }
 
-// 홀딩 기록 추가
+// 홀딩 기록 추가 (자동 ID)
 export async function insertHoldingRecord(data) {
     return await _wrap(() => addDoc(collection(db, "holding_data"), data));
+}
+
+// 홀딩 기록 추가 (지정 ID: {pk}hold01 형식)
+export async function insertHoldingRecordWithId(holdId, data) {
+    await _wrap(() => setDoc(doc(db, "holding_data", holdId), data));
+    return { id: holdId };
+}
+
+// pk 기준 기존 홀딩 건수 조회 (다음 번호 결정용)
+export async function getHoldingCountByPk(pk) {
+    const q = query(collection(db, "holding_data"), where("pk", "==", pk));
+    const snap = await _wrap(() => getDocs(q));
+    return snap?.size ?? 0;
+}
+
+// holdingRecordId에서 원본 pk 추출 ({pk}hold01 → pk)
+export function extractPkFromHoldingId(holdingRecordId) {
+    if (!holdingRecordId) return null;
+    return holdingRecordId.replace(/hold\d+$/, "");
 }
 
 // 홀딩 기록 수정

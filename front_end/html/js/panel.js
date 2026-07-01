@@ -143,8 +143,8 @@ export function createInsertRow() {
                 </div>
             </div>
             <div class="card-memo-field">
-                <label class="form-label">메모</label>
-                <input type="text" class="input-note insert-memo" placeholder="메모 입력">
+                <label class="form-label">비고</label>
+                <input type="text" class="input-note insert-memo" placeholder="비고 입력">
             </div>
             <div class="insert-footer">
                 <button class="select-insert-btn insert-submit-btn">추가</button>
@@ -234,8 +234,8 @@ export function renderUpdate() {
                     </div>
                 </div>
                 <div class="card-memo-field">
-                    <label class="form-label">메모</label>
-                    <input type="text" class="input-note insert-memo" data-id="${id}" placeholder="메모 입력" value="${item.memo || ""}">
+                    <label class="form-label">비고</label>
+                    <input type="text" class="input-note insert-memo" data-id="${id}" placeholder="비고 입력" value="${item.memo || ""}">
                 </div>
                 <div class="update-footer">
                     <div class="update-actions">
@@ -286,8 +286,8 @@ export function renderHolding() {
                     </div>
                 </div>
                 <div class="card-memo-field">
-                    <label class="form-label">메모</label>
-                    <input type="text" class="input-note insert-memo" data-id="${id}" placeholder="메모 입력" value="${item.memo || ""}">
+                    <label class="form-label">비고</label>
+                    <input type="text" class="input-note insert-memo" data-id="${id}" placeholder="비고 입력" value="${item.memo || ""}">
                 </div>
                 <div class="update-footer">
                     <button class="select-holding-btn holding-confirm-btn" data-id="${id}">홀딩</button>

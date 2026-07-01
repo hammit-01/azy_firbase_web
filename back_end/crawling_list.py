@@ -264,6 +264,7 @@ def start_crawling(date=None):
     dfs = [jns.copy()]
 
     all_data = []
+    jns_list = []
 
     for df in dfs:
         for _, row in df.iterrows():
@@ -288,22 +289,14 @@ def start_crawling(date=None):
                     print(f"{warehouse}: 재고 없음")
                     continue
                 else: data = data
-                
+
                 data["창고"] = row["창고"]
-                
+
                 # 창고 기준으로 중복 행 제거
                 data = data.drop_duplicates()
 
-                # CS -> 한라동탄, 한라동탄 -> CS, 한라곤지암 -> 한라 로 변경
-                # warehouse_replace_map = {
-                #     "한라곤지암": "한라",
-                # }
-
-                # warehouse = warehouse_replace_map.get(warehouse, warehouse)
-
                 data["창고"] = warehouse
 
-                # 여기다 열 전처리 넣을까
                 func = PROCESS_MAP.get(warehouse)
 
                 if func:
@@ -313,10 +306,11 @@ def start_crawling(date=None):
                         print(f"[{warehouse}] EDA 오류 (스킵): {e}")
                         continue
                     if warehouse == "제니스(곤지암)":
-                        jns = pd.DataFrame(data)
+                        jns_list.append(data)
                     else:
                         all_data.append(data)
 
     final_df = pd.concat(all_data, ignore_index=True) if all_data else pd.DataFrame()
+    jns = pd.concat(jns_list, ignore_index=True) if jns_list else pd.DataFrame()
 
     return final_df, jns

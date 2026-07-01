@@ -158,11 +158,14 @@ def _clean(s: str) -> str:
     return re.sub(r"[/\s]", "_", s.strip())
 
 
-def _df_to_dict(df: pd.DataFrame, today: str, holding_sum: dict = None) -> dict:
+def _df_to_dict(df: pd.DataFrame, today: str, holding_sum: dict = None) -> tuple:
+    """Returns (result_dict, crawled_key_totals) where crawled_key_totals maps
+    (bl, name, expire) → total raw qty BEFORE holding deduction."""
     from post import to_str, to_int, to_float, to_date
     if holding_sum is None:
         holding_sum = {}
     result = {}
+    crawled_key_totals = {}   # 홀딩 이상 감지용: 차감 전 원본 수량
     skipped_rows, skipped_qty = 0, 0
     merged_rows,  merged_qty  = 0, 0
     raw_total = 0
@@ -188,8 +191,12 @@ def _df_to_dict(df: pd.DataFrame, today: str, holding_sum: dict = None) -> dict:
             log.warning(f"  pk 생성 불가 스킵: 수탁품={name[:20]} / 재고={qty}박스")
             continue
 
+        # 홀딩 이상 감지: 차감 전 원본 수량 누적
+        key = (bl, name, expire)
+        crawled_key_totals[key] = crawled_key_totals.get(key, 0) + qty
+
         # 홀딩 차감
-        h_qty   = holding_sum.get((bl, name, expire), 0)
+        h_qty   = holding_sum.get(key, 0)
         net_qty = qty - h_qty
         if net_qty <= 0:
             skipped_rows += 1
@@ -230,7 +237,7 @@ def _df_to_dict(df: pd.DataFrame, today: str, holding_sum: dict = None) -> dict:
     if merged_rows:
         log.info(f"  [변환] pk병합: {merged_rows}행 → 재고 합산 {merged_qty}박스")
 
-    return result
+    return result, crawled_key_totals
 
 
 def _batch_set(db, items: dict):
@@ -261,6 +268,15 @@ def _batch_delete(db, pks: list):
         batch.commit()
 
 
+def _batch_flag(db, updates: list):
+    """holding doc의 이상/원본재고 필드 부분 업데이트"""
+    for i in range(0, len(updates), BATCH_LIMIT):
+        batch = db.batch()
+        for (doc_id, fields) in updates[i:i + BATCH_LIMIT]:
+            batch.update(db.collection(COLLECTION).document(doc_id), fields)
+        batch.commit()
+
+
 class FirestoreUpdater:
     def __init__(self):
         _load_active_state()
@@ -277,6 +293,7 @@ class FirestoreUpdater:
         # 홀딩 행 선조회: (BL, 상품명, 유통기한) → 홀딩 수량 합계
         # holding 행은 수집일이 빈 문자열 (크롤링 원본 행만 수집일 존재)
         holding_sum: dict = {}
+        holding_doc_map: dict = {}   # key → [(doc_id, cur_이상), ...] — 이상 감지용
         try:
             from google.cloud.firestore_v1.base_query import FieldFilter
             # 백틱 인용으로 한국어 필드명 Firestore 쿼리 가능
@@ -290,12 +307,15 @@ class FirestoreUpdater:
                     str(h.get("유통기한", "")).strip(),
                 )
                 holding_sum[key] = holding_sum.get(key, 0) + int(h.get("재고", 0) or 0)
+                holding_doc_map.setdefault(key, []).append(
+                    (hdoc.id, str(h.get("이상", "") or ""))
+                )
             if holding_sum:
                 log.info(f"  홀딩 데이터 {len(holding_sum)}건 조회 완료")
         except Exception as e:
             log.warning(f"  홀딩 데이터 조회 실패 (무시하고 진행): {e}")
 
-        new_data = _df_to_dict(new_df, today, holding_sum)
+        new_data, crawled_key_totals = _df_to_dict(new_df, today, holding_sum)
 
         to_insert = {}   # 신규 문서: 사용자 필드 기본값 포함해 set()
         to_update = {}   # 변경된 기존 문서: 크롤링 필드만 merge()
@@ -336,6 +356,10 @@ class FirestoreUpdater:
             if to_delete:
                 _batch_delete(db, to_delete)
             log.info(f"  [{_active.upper()}] ↑{len(to_insert)}건(신규) ↻{len(to_update)}건(갱신) ✕{len(to_delete)}건")
+
+            # ── 홀딩 이상 감지 및 플래그 ──────────────────────────
+            self._flag_holding_issues(db, holding_doc_map, holding_sum, crawled_key_totals)
+
             return total, new_data
 
         except Exception as e:
@@ -343,6 +367,38 @@ class FirestoreUpdater:
                 raise
             log.warning(f"  [{_active.upper()}] 할당량 초과")
             return self._fallback_to_secondary(new_data, prev_snapshot)
+
+    def _flag_holding_issues(self, db, holding_doc_map: dict, holding_sum: dict, crawled_key_totals: dict):
+        """홀딩 doc에 이상/원본재고 필드를 기록하거나 해소 시 클리어한다."""
+        if not holding_doc_map:
+            return
+        flag_updates = []
+        for key, doc_list in holding_doc_map.items():
+            h_total    = holding_sum.get(key, 0)
+            crawled_qty = crawled_key_totals.get(key, 0)
+
+            if crawled_qty == 0:
+                issue, orig_qty = "원본없음", 0
+            elif crawled_qty < h_total:
+                issue, orig_qty = "수량초과", crawled_qty
+            else:
+                issue, orig_qty = "", ""
+
+            for (doc_id, cur_issue) in doc_list:
+                if cur_issue != issue:
+                    flag_updates.append((doc_id, {"이상": issue, "원본재고": orig_qty}))
+
+        if flag_updates:
+            try:
+                _batch_flag(db, flag_updates)
+                issues = [f for _, f in flag_updates if f.get("이상")]
+                clears = len(flag_updates) - len(issues)
+                if issues:
+                    log.warning(f"  [홀딩이상] 신규/변경 {len(issues)}건 플래그")
+                if clears:
+                    log.info(f"  [홀딩이상] 해소 클리어 {clears}건")
+            except Exception as e:
+                log.warning(f"  홀딩 이상 플래그 실패 (무시): {e}")
 
     def _fallback_to_secondary(self, new_data: dict, prev_snapshot: dict) -> tuple:
         if _active != "primary":

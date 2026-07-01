@@ -1,4 +1,4 @@
-import { updateItem, insertItem, insertHoldingRecord, updateHoldingRecord, moveHoldingToHistory } from "./firestoreService.js";
+import { updateItem, insertItem, insertHoldingRecordWithId, getHoldingCountByPk, updateHoldingRecord, moveHoldingToHistory } from "./firestoreService.js";
 import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 import { db, fetchAllData } from "./firebase.js";
 import { pushUndo } from "./crud_history.js";
@@ -25,9 +25,18 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "", w
             재고: remainQty
         });
 
-        // 1. holding_data 먼저 생성 (holdRef.id 확보)
+        // 1. holding_data 생성
+        //    전량 홀딩(remainQty=0): holdId = pk 그대로
+        //    부분 홀딩(remainQty>0): holdId = {pk}hold01, hold02, ...
         const pk = item.raw?.pk || item.id;
-        const holdRef = await insertHoldingRecord({
+        let holdId;
+        if (remainQty === 0) {
+            holdId = pk;
+        } else {
+            const count = await getHoldingCountByPk(pk);
+            holdId = `${pk}hold${String(count + 1).padStart(2, "0")}`;
+        }
+        const holdRef = await insertHoldingRecordWithId(holdId, {
             pk:     pk,
             수량:   holdQty,
             홀딩:   note?.trim() || "",
@@ -36,6 +45,7 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "", w
         });
 
         // 2. all_data에 홀딩 row 추가 (테이블 표시용 필드 포함)
+        // 수집일: "" → updater.py의 where(수집일 == "") 쿼리로 홀딩 row 식별 가능
         const docRef = await insertItem({
             상품명:          item.name,
             브랜드:          item.brand,
@@ -50,6 +60,7 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "", w
             평중:            weight !== null ? Number(weight) : (item.weight || ""),
             메모:            memo || item.memo || "",
             상태:            "holding",
+            수집일:          "",
             holdingRecordId: holdRef.id
         });
 
