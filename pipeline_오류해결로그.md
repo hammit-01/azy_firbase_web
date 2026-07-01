@@ -254,7 +254,117 @@ Get-Content "C:\warehouse-pipeline\pipeline\logs\pipeline.log" -Encoding UTF8 -W
 
 ---
 
-## 상태 요약 (2026-06-26 기준)
+## #010 — Secondary DB 활성 상태 미복구 → 웹이 구버전 데이터 표시
+
+**발생일**: 2026-06-30 14:55 → 발견 2026-07-01  
+**발생 위치**: `front_end/html/js/firebase.js` / Secondary Firestore `_meta/active_db`
+
+**증상**  
+웹에 총 58행 / 5,802박스만 표시. Firestore Primary에는 491건 / 66,359박스 정상 존재.
+
+**원인**  
+2026-06-30 14:55에 Primary 할당량 초과 → `handleQuotaExceeded()`가 Secondary로 자동 전환.  
+Secondary의 `_meta/active_db.active = "secondary"` 기록됨.  
+이후 Primary에 새 데이터가 정상 업로드됐으나 웹은 Secondary(56건/5,309박스)를 계속 읽음.  
+**Primary 복구 후 마커를 수동으로 되돌리는 운영 절차가 없었음.**
+
+**해결**  
+```python
+db2.collection("_meta").document("active_db").set({
+    "active": "primary",
+    "switched_at": datetime.now(ZoneInfo("Asia/Seoul")).isoformat()
+})
+```
+
+**재발 방지**  
+Primary 복귀 확인 후 Secondary `_meta/active_db.active`를 "primary"로 되돌리는 절차 운영에 추가.
+
+**현재 상태**: 해결됨 ✓
+
+---
+
+## #011 — JNS 다중 계정 크롤링 데이터 덮어쓰기 버그
+
+**발생일**: 코드 작성 시점부터 (오랫동안 잠복)  
+**발생 위치**: `back_end/crawling_list.py` 316번째 줄
+
+**증상**  
+JNS 크롤링 결과 40,630박스. 실제 창고 합계 44,208박스. 약 3,578박스 손실.
+
+**원인**  
+```python
+# 버그 코드
+if warehouse == "제니스(곤지암)":
+    jns = pd.DataFrame(data)  # 매 계정 반복마다 덮어쓰기
+```
+JNS는 계정이 여러 개(일반, 통관분, 웹출고, 웹출고(통관분))이고, 각 계정이 서로 다른 서브창고(곤지암, 곤CS, 곤SWC, 곤대재 등)를 크롤링함.  
+반복할 때마다 이전 결과를 덮어써서 마지막 계정 데이터만 남았음.  
+
+**왜 오래 잠복했나**  
+손실분(~3,578박스)을 `crawling_handmade()`의 Excel 수동 창고 데이터가 우연히 메워주고 있었음.  
+총합이 비슷하게 유지되면서 버그가 가려짐. Excel 수동 창고를 주석처리하자 비로소 드러남.
+
+**해결**  
+```python
+jns_list = []
+# 반복 내부
+if warehouse == "제니스(곤지암)":
+    jns_list.append(data)  # 누적
+# 반복 후
+jns = pd.concat(jns_list, ignore_index=True) if jns_list else pd.DataFrame()
+```
+
+**현재 상태**: 해결됨 ✓
+
+---
+
+## #012 — drop_duplicates(BL번호, 재고수량)로 유효 데이터 700박스 손실
+
+**발생일**: #011 수정 직후 발견  
+**발생 위치**: `back_end/back_eda_main.py`
+
+**증상**  
+크롤링 44,132박스 → EDA 후 43,432박스. -700박스 손실.
+
+**원인**  
+```python
+total_data.drop_duplicates(subset=["BL번호", "재고수량"])
+```
+원래 완전 중복 행 제거 목적이었으나, 여러 JNS 계정에서 동일 BL번호에 동일 재고수량이 다른 서브창고로 나오는 경우 유효 데이터가 삭제됨.  
+#011 수정 전에는 계정 하나만 남았으므로 이 문제가 드러나지 않았음.
+
+**해결**  
+두 줄 모두 제거. pk 기준 합산(JNS 전용)이 이미 있으므로 별도 중복 제거 불필요.
+
+**현재 상태**: 해결됨 ✓
+
+---
+
+## #013 — JNS 단독 모드 실행 시 eda_common / eda_added 빈 DataFrame 오류
+
+**발생일**: 2026-07-01  
+**발생 위치**: `back_end/eda_common.py`, `back_end/eda_added.py`
+
+**증상**
+```
+KeyError: 'B/L NO식별번호'   # eda_common.py
+KeyError: '규격단위중량'      # eda_added.py swc()
+```
+
+**원인**  
+원래 설계: "항상 여러 창고를 크롤링하므로 final_df가 절대 비어있지 않다"는 암묵적 가정.  
+JNS 단독 모드 실행 시 비JNS final_df가 빈 DataFrame → 열 접근 즉시 KeyError.  
+`eda_added.py`의 각 창고 함수는 빈 때 `return`(None 반환)해서 `pd.concat` 시 TypeError 위험.
+
+**해결**  
+- `eda_common()`: 함수 진입부에 `if df.empty or "B/L NO식별번호" not in df.columns: return df` 추가  
+- `eda_added.py` 9개 함수 전체: `return` → `return pd.DataFrame()` 로 통일
+
+**현재 상태**: 해결됨 ✓
+
+---
+
+## 상태 요약 (2026-07-01 기준)
 
 | # | 오류 | 상태 |
 |---|------|------|
@@ -267,6 +377,10 @@ Get-Content "C:\warehouse-pipeline\pipeline\logs\pipeline.log" -Encoding UTF8 -W
 | 007 | Secondary 크레덴셜 누락 | ✓ 해결 |
 | 008 | 작업 스케줄러 Access Denied | ⚠️ 관리자 권한 필요 |
 | 009 | 로그 한글 깨짐 | ✓ 해결 (UTF8 옵션) |
+| 010 | Secondary 활성 미복구 → 웹 구버전 표시 | ✓ 해결 |
+| 011 | JNS 다중 계정 덮어쓰기 → 3,578박스 손실 | ✓ 해결 |
+| 012 | drop_duplicates → 유효 데이터 700박스 손실 | ✓ 해결 |
+| 013 | JNS 단독 모드 시 빈 DataFrame KeyError | ✓ 해결 |
 
 ---
 

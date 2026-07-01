@@ -78,6 +78,14 @@ def replace_name(df):
         "알목심(T)" : "동결알목심",
         "루돌프" : "RUDOLF",
     })
+    df["브랜드"] = (
+        df["브랜드"]
+        .astype(str)
+        .str.replace(' ', ' ', regex=False)  # non-breaking space → 일반 공백
+        .str.replace(r'\s+', ' ', regex=True)     # 연속 공백 정리
+        .str.strip()
+        .replace({"nan": "", "None": ""})
+    )
     df["브랜드"] = df["브랜드"].replace({
         "G/H": "GREENHAM",
         "S/F": "SMITHFIELD",
