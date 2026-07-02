@@ -105,6 +105,8 @@ def list_eda(final_df, jns):
     total_data = total_data.drop(columns=["중량"], errors="ignore")
     total_data = replace_name(total_data)
     total_data = eda_standard(total_data)
+    # eda_standard가 "X(냉장)" → "냉장X" 변환 후 생성된 패턴을 잡기 위해 2차 replace
+    total_data = replace_name(total_data)
     total_data = total_data.reset_index(drop=True)
 
     # pk 기준 집계: 같은 pk는 재고수량 합산 (JNS 전용)

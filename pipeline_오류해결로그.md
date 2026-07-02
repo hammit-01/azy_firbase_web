@@ -1,4 +1,4 @@
-# 파이프라인 오류 해결 로그
+﻿# 파이프라인 오류 해결 로그
 
 > 실제 발생한 오류만 기록. 발생일시 · 증상 · 원인 · 해결 순서로 정리.
 
@@ -459,10 +459,10 @@ Start-Process python -ArgumentList "run_service.py" -WorkingDirectory "C:\Users\
 
 ---
 
-## #016 — 수탁품 컬럼 trailing whitespace/NBSP → replace_name 치환 미적용
+## #016 — eda_standard 이후 생성된 "냉장돈목잡" → replace_name 치환 미적용
 
 **발생일**: 2026-07-02  
-**발생 위치**: `back_end/replace_name.py`, JNS 크롤 데이터
+**발생 위치**: `back_end/back_eda_main.py` (list_eda 실행 순서), 비JNS 창고 데이터
 
 **증상**  
 `replace_name`에 `"냉장돈목잡": "냉장목살"` 매핑이 있음에도 Firestore에 계속 "냉장돈목잡"으로 저장됨.  
