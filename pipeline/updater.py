@@ -38,6 +38,7 @@ RECOVERY_HOURS = 23  # Secondary 전환 후 N시간 뒤 Primary 복귀 시도
 COMPARE_FIELDS = (
     "상품명", "브랜드", "등급", "ESTNO", "재고",
     "BL", "창고", "유통기한", "평중", "출고일",
+    "holdingTotal",
     # 홀딩·상태·메모는 사용자 설정 필드 → 파이프라인 비교/덮어쓰기 대상 제외
 )
 
@@ -218,6 +219,7 @@ def _df_to_dict(df: pd.DataFrame, today: str, holding_sum: dict = None) -> tuple
             "평중":   to_float(row.get("평균중량", "")),
             "출고일": to_date(row.get("출고일")),
             "수집일": today,
+            "holdingTotal": h_qty,
         }
         if doc_id in result:
             # 동일 pk: 창고 코드 달라도 같은 상품 → 재고 합산
