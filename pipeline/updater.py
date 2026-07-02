@@ -235,26 +235,22 @@ def _df_to_dict(
                     sheet_entry is not None
                     and sheet_entry.get("remark", "") == "홀딩분 사용"
                 )
-                manager_ok = (
-                    not employees_names  # employees 로드 실패 시 검증 스킵
-                    or sheet_entry is not None
-                    and sheet_entry.get("manager", "") in employees_names
-                )
                 if is_holding_use:
                     matched_rows, matched_records = _match_sheet_holding(
                         bl, estno, grade, holding_rows_by_bl, holding_records_by_key
                     )
                 sheet_customer = sheet_entry.get("customer", "") if sheet_entry else ""
-                date_ok = (
-                    any(r.get("출고일") == today for r in matched_records)
-                    or any(r.get("출고일") == today for r in matched_rows)
-                ) if (matched_rows or matched_records) else False
-                customer_ok = (
-                    any(r.get("홀딩") == sheet_customer for r in matched_records)
-                    or any(r.get("홀딩") == sheet_customer for r in matched_rows)
-                ) if (matched_rows or matched_records) else False
+                all_matched = matched_records + matched_rows
+                # 출고일 없으면 언제든 출고 가능, 있으면 오늘과 일치해야 함
+                date_ok = any(
+                    not (r.get("출고일") or "").strip() or r.get("출고일") == today
+                    for r in all_matched
+                ) if all_matched else False
+                customer_ok = any(
+                    (r.get("홀딩") or "") == sheet_customer for r in all_matched
+                ) if all_matched else False
 
-                if is_holding_use and manager_ok and (matched_rows or matched_records) and date_ok and customer_ok:
+                if is_holding_use and all_matched and date_ok and customer_ok:
                     # 네 조건 모두 충족 → hold 자동 차감
                     net_qty = prev_nonhold
                     auto_list[doc_id] = {
@@ -277,14 +273,12 @@ def _df_to_dict(
                         reason = "시트 기록 없음"
                     elif not is_holding_use:
                         reason = "수정사항 불일치"
-                    elif not manager_ok:
-                        reason = f"담당자 미등록({sheet_entry.get('manager')})"
-                    elif not (matched_rows or matched_records):
+                    elif not all_matched:
                         reason = "holding 레코드 없음"
                     elif not date_ok:
-                        reason = f"출고일 불일치(holding={[r.get('출고일') for r in matched_records]}, today={today})"
+                        reason = f"출고일 불일치(holding={[r.get('출고일') for r in all_matched]}, today={today})"
                     else:
-                        reason = f"매출처 불일치(sheet={sheet_customer}, holding={[r.get('홀딩') for r in matched_records]})"
+                        reason = f"매출처 불일치(sheet={sheet_customer}, holding={[r.get('홀딩') for r in all_matched]})"
                     pending_list[doc_id] = {
                         "pk":           doc_id,
                         "상품명":       name,
