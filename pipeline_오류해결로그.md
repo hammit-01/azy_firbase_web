@@ -508,7 +508,7 @@ for _col in ("수탁품", "상품명"):
 | 013 | JNS 단독 모드 시 빈 DataFrame KeyError | ✓ 해결 |
 | 014 | 브랜드 NBSP → 치환 미적용 (5 STAR 267 등) | ✓ 해결 |
 | 015 | 다중 프로세스 동시 실행 → 박스 수 과다 (+3,737박스) | ✓ 해결 |
-| 016 | 수탁품 NBSP/whitespace → replace_name 치환 미적용 ("냉장돈목잡" 등) | ✓ 해결 |
+| 016 | eda_standard 냉장_mask가 replace_name 이후 "냉장돈목잡" 생성 → 치환 미적용 | ✓ 해결 |
 
 ---
 
