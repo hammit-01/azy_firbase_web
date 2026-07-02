@@ -166,6 +166,7 @@ def _df_to_dict(
     holding_rows_by_bl: dict = None,
     holding_records_by_key: dict = None,
     sheet_records: dict = None,
+    employees_names: set = None,
 ) -> tuple:
     """Returns (result_dict, crawled_key_totals, pending_list, auto_list)."""
     from post import to_str, to_int, to_float, to_date
@@ -174,6 +175,7 @@ def _df_to_dict(
     if holding_rows_by_bl     is None: holding_rows_by_bl     = {}
     if holding_records_by_key is None: holding_records_by_key = {}
     if sheet_records          is None: sheet_records          = {}
+    if employees_names        is None: employees_names        = set()
     result = {}
     crawled_key_totals = {}   # 홀딩 이상 감지용: 차감 전 원본 수량
     pending_list = {}          # 재고 감소: 시트 미매칭 → 수동 처리
@@ -233,13 +235,22 @@ def _df_to_dict(
                     sheet_entry is not None
                     and sheet_entry.get("remark", "") == "홀딩분 사용"
                 )
+                manager_ok = (
+                    not employees_names  # employees 로드 실패 시 검증 스킵
+                    or sheet_entry is not None
+                    and sheet_entry.get("manager", "") in employees_names
+                )
                 if is_holding_use:
                     matched_rows, matched_records = _match_sheet_holding(
                         bl, estno, grade, holding_rows_by_bl, holding_records_by_key
                     )
+                date_ok = (
+                    any(r.get("출고일") == today for r in matched_records)
+                    or any(r.get("출고일") == today for r in matched_rows)
+                ) if (matched_rows or matched_records) else False
 
-                if is_holding_use and (matched_rows or matched_records):
-                    # 세 조건 모두 충족 → hold 자동 차감
+                if is_holding_use and manager_ok and (matched_rows or matched_records) and date_ok:
+                    # 네 조건 모두 충족 → hold 자동 차감
                     net_qty = prev_nonhold
                     auto_list[doc_id] = {
                         "pk":              doc_id,
@@ -257,11 +268,16 @@ def _df_to_dict(
                 else:
                     # 하나라도 실패 → 수동 처리
                     net_qty = qty - h_qty
-                    reason = (
-                        "시트 기록 없음" if not sheet_entry else
-                        "수정사항 불일치" if not is_holding_use else
-                        "holding 레코드 없음"
-                    )
+                    if not sheet_entry:
+                        reason = "시트 기록 없음"
+                    elif not is_holding_use:
+                        reason = "수정사항 불일치"
+                    elif not manager_ok:
+                        reason = f"담당자 미등록({sheet_entry.get('manager')})"
+                    elif not (matched_rows or matched_records):
+                        reason = "holding 레코드 없음"
+                    else:
+                        reason = f"출고일 불일치(holding={[r.get('출고일') for r in matched_records]}, today={today})"
                     pending_list[doc_id] = {
                         "pk":           doc_id,
                         "상품명":       name,
@@ -412,9 +428,9 @@ class FirestoreUpdater:
                         "grade":           str(h.get("등급", "") or "").strip(),
                         "qty":             int(h.get("재고", 0) or 0),
                         "holdingRecordId": str(h.get("holdingRecordId", "") or ""),
+                        "출고일":          str(h.get("출고일", "") or "").strip(),
                     })
             # holding_data 컬렉션: (BL, ESTNO, 등급) → [record] 인덱스
-            # all_data 홀딩행 BL 누락 레코드 보완 + 차감 시 holding_data.수량 업데이트용
             holding_records_by_key: dict = {}
             for hd in db.collection("holding_data").stream():
                 hdata = hd.to_dict()
@@ -424,9 +440,10 @@ class FirestoreUpdater:
                 key = (bl, str(hdata.get("ESTNO", "") or "").strip(),
                            str(hdata.get("등급", "") or "").strip())
                 holding_records_by_key.setdefault(key, []).append({
-                    "id":  hd.id,
-                    "pk":  str(hdata.get("pk", "") or "").strip(),
-                    "qty": int(hdata.get("수량", 0) or 0),
+                    "id":    hd.id,
+                    "pk":    str(hdata.get("pk", "") or "").strip(),
+                    "qty":   int(hdata.get("수량", 0) or 0),
+                    "출고일": str(hdata.get("출고일", "") or "").strip(),
                 })
 
             if holding_sum:
@@ -434,6 +451,17 @@ class FirestoreUpdater:
         except Exception as e:
             log.warning(f"  홀딩 데이터 조회 실패 (무시하고 진행): {e}")
             holding_records_by_key = {}
+
+        # employees 이름 목록 로드 (담당자 유효성 검증용)
+        employees_names: set = set()
+        try:
+            for edoc in db.collection("employees").stream():
+                name = str(edoc.to_dict().get("이름", "") or "").strip()
+                if name:
+                    employees_names.add(name)
+            log.info(f"  employees {len(employees_names)}명 로드")
+        except Exception as e:
+            log.warning(f"  employees 로드 실패 (담당자 검증 스킵): {e}")
 
         # 오늘자 출고 시트 로드
         try:
@@ -448,6 +476,7 @@ class FirestoreUpdater:
             holding_rows_by_bl=holding_rows_by_bl,
             holding_records_by_key=holding_records_by_key,
             sheet_records=sheet_records,
+            employees_names=employees_names,
         )
 
         to_insert = {}   # 신규 문서: 사용자 필드 기본값 포함해 set()
