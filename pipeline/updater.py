@@ -165,13 +165,15 @@ def _df_to_dict(
     prev_snapshot: dict = None,
     holding_rows_by_bl: dict = None,
     holding_records_by_key: dict = None,
+    sheet_records: dict = None,
 ) -> tuple:
     """Returns (result_dict, crawled_key_totals, pending_list, auto_list)."""
     from post import to_str, to_int, to_float, to_date
-    if holding_sum           is None: holding_sum           = {}
-    if prev_snapshot         is None: prev_snapshot         = {}
-    if holding_rows_by_bl    is None: holding_rows_by_bl    = {}
+    if holding_sum            is None: holding_sum            = {}
+    if prev_snapshot          is None: prev_snapshot          = {}
+    if holding_rows_by_bl     is None: holding_rows_by_bl     = {}
     if holding_records_by_key is None: holding_records_by_key = {}
+    if sheet_records          is None: sheet_records          = {}
     result = {}
     crawled_key_totals = {}   # 홀딩 이상 감지용: 차감 전 원본 수량
     pending_list = {}          # 재고 감소: 시트 미매칭 → 수동 처리
@@ -215,29 +217,44 @@ def _df_to_dict(
                 net_qty = prev_nonhold + diff
                 log.info(f"  [재고증가] {name[:15]} | 크롤 {prev_raw}→{qty} (+{diff}) | non-hold {prev_nonhold}→{net_qty}")
             elif qty < prev_raw:
-                diff = prev_raw - qty  # 양수: 감소량
-                estno = to_str(row.get("ESTNO", "") or row.get("식별번호", "")).strip()
+                diff  = prev_raw - qty  # 양수: 감소량
+                estno = to_str(row.get("ESTNO", "")).strip()
                 grade = to_str(row.get("등급", "")).strip()
-                matched_rows, matched_records = _match_sheet_holding(
-                    bl, estno, grade, holding_rows_by_bl, holding_records_by_key
+
+                # ① 시트에서 (BL, ESTNO, 등급) 출고 기록 확인
+                sheet_entry = next(
+                    (e for e in (sheet_records or {}).get(bl, [])
+                     if e["estno"] == estno and e["grade"] == grade),
+                    None,
                 )
-                if matched_rows or matched_records:
-                    # holding 매칭 확인됨 → hold 자동 차감 대상
-                    net_qty = prev_nonhold  # 원본 행 재고 불변
-                    auto_list[doc_id] = {
-                        "pk":              doc_id,
-                        "상품명":          name,
-                        "BL":              bl,
-                        "창고":            to_str(row.get("창고", "")).strip(),
-                        "유통기한":        expire,
-                        "diff":            diff,
-                        "prev_nonhold":    prev_nonhold,
-                        "matched_rows":    matched_rows,
-                        "matched_records": matched_records,
-                    }
-                    log.info(f"  [재고감소-자동] {name[:15]} | -{diff}박스 | hold 매칭 {len(matched_rows)}행")
+
+                if sheet_entry:
+                    # ② holding 레코드 조회
+                    matched_rows, matched_records = _match_sheet_holding(
+                        bl, estno, grade, holding_rows_by_bl, holding_records_by_key
+                    )
+                    if matched_rows or matched_records:
+                        # hold 출고 → 원본 행 재고 불변, holding 자동 차감
+                        net_qty = prev_nonhold
+                        auto_list[doc_id] = {
+                            "pk":              doc_id,
+                            "상품명":          name,
+                            "BL":              bl,
+                            "창고":            to_str(row.get("창고", "")).strip(),
+                            "유통기한":        expire,
+                            "diff":            diff,
+                            "prev_nonhold":    prev_nonhold,
+                            "matched_rows":    matched_rows,
+                            "matched_records": matched_records,
+                            "sheet_entry":     sheet_entry,
+                        }
+                        log.info(f"  [재고감소-자동] {name[:15]} | -{diff}박스 | hold 매칭 {len(matched_rows)}행 (시트: {sheet_entry['customer']})")
+                    else:
+                        # 시트엔 있으나 holding 없음 → non-hold 출고 확인
+                        net_qty = qty - h_qty
+                        log.info(f"  [재고감소-non-hold] {name[:15]} | -{diff}박스 | 시트 확인, holding 없음")
                 else:
-                    # holding 없음 → 수동 판단
+                    # 시트 기록 없음 → 수동 판단
                     net_qty = qty - h_qty
                     pending_list[doc_id] = {
                         "pk":           doc_id,
@@ -253,7 +270,7 @@ def _df_to_dict(
                         "curr_nonhold": max(net_qty, 0),
                         "수집일":       today,
                     }
-                    log.info(f"  [재고감소-pending] {name[:15]} | 크롤 {prev_raw}→{qty} (-{diff}) | holding 없음")
+                    log.info(f"  [재고감소-pending] {name[:15]} | 크롤 {prev_raw}→{qty} (-{diff}) | 시트 기록 없음")
             else:
                 net_qty = qty - h_qty
         else:
@@ -412,10 +429,19 @@ class FirestoreUpdater:
             log.warning(f"  홀딩 데이터 조회 실패 (무시하고 진행): {e}")
             holding_records_by_key = {}
 
+        # 오늘자 출고 시트 로드
+        try:
+            from pipeline.sheets_reader import load_sheet_records
+            sheet_records = load_sheet_records()
+        except Exception as e:
+            log.warning(f"시트 로드 실패 (전체 pending 처리): {e}")
+            sheet_records = {}
+
         new_data, crawled_key_totals, pending_list, auto_list = _df_to_dict(
             new_df, today, holding_sum, prev_snapshot,
             holding_rows_by_bl=holding_rows_by_bl,
             holding_records_by_key=holding_records_by_key,
+            sheet_records=sheet_records,
         )
 
         to_insert = {}   # 신규 문서: 사용자 필드 기본값 포함해 set()
