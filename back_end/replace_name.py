@@ -1,5 +1,5 @@
 def replace_name(df):
-    df["수탁품"] = df["수탁품"].replace({
+    _name_map = {
         "척빽립": "BBQ탕갈비",
         "백립": "탕갈비",
         "다리살": "닭장각정육",
@@ -76,8 +76,10 @@ def replace_name(df):
         "뒷왕사골" : "사골(뒤왕)",
         "작업 삼겹양지" : "작업삼겹양지",
         "알목심(T)" : "동결알목심",
-        "루돌프" : "RUDOLF",
-    })
+    }
+    for _col in ("수탁품", "상품명"):
+        if _col in df.columns:
+            df[_col] = df[_col].replace(_name_map)
     df["브랜드"] = (
         df["브랜드"]
         .astype(str)
@@ -107,6 +109,7 @@ def replace_name(df):
         "5 STAR 267": "5 STAR",
         "5 STAR 562": "5 STAR",
         "5 STAR 562M": "5 STAR",
+        "루돌프" : "RUDOLF",
     })
     df["등급"] = df["등급"].replace({
         "CHAN": "UN",
