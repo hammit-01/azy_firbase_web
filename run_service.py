@@ -13,20 +13,29 @@ LOCK_FILE = os.path.join(os.path.dirname(__file__), "pipeline", ".service.lock")
 
 
 def _acquire_lock():
-    """이미 실행 중인 프로세스가 있으면 종료."""
+    """기존 프로세스가 살아 있으면 종료 후 락 획득."""
     if os.path.exists(LOCK_FILE):
         try:
             with open(LOCK_FILE) as f:
                 old_pid = int(f.read().strip())
-            # Windows: pid 존재 여부 확인
-            import ctypes
-            handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, old_pid)
+            import ctypes, signal
+            handle = ctypes.windll.kernel32.OpenProcess(0x1001, False, old_pid)  # PROCESS_QUERY+TERMINATE
             if handle:
                 ctypes.windll.kernel32.CloseHandle(handle)
-                print(f"[LOCK] 이미 실행 중인 프로세스 감지 (PID {old_pid}). 종료합니다.")
-                sys.exit(1)
+                print(f"[LOCK] 기존 프로세스 종료 중 (PID {old_pid})...")
+                try:
+                    os.kill(old_pid, signal.SIGTERM)
+                    import time; time.sleep(2)
+                except Exception:
+                    pass
+                # 여전히 살아 있으면 강제 종료
+                handle2 = ctypes.windll.kernel32.OpenProcess(0x1001, False, old_pid)
+                if handle2:
+                    ctypes.windll.kernel32.TerminateProcess(handle2, 1)
+                    ctypes.windll.kernel32.CloseHandle(handle2)
+                    print(f"[LOCK] PID {old_pid} 강제 종료 완료")
         except Exception:
-            pass  # 이전 프로세스가 없거나 읽기 실패 → 덮어쓰기
+            pass  # 락 파일 없거나 읽기 실패 → 무시
     with open(LOCK_FILE, "w") as f:
         f.write(str(os.getpid()))
     atexit.register(_release_lock)
