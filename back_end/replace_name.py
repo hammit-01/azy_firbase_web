@@ -79,7 +79,7 @@ def replace_name(df):
     }
     for _col in ("수탁품", "상품명"):
         if _col in df.columns:
-            df[_col] = df[_col].replace(_name_map)
+            df[_col] = df[_col].astype(str).str.strip().replace(_name_map)
     df["브랜드"] = (
         df["브랜드"]
         .astype(str)

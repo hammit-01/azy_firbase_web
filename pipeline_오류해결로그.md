@@ -459,7 +459,37 @@ Start-Process python -ArgumentList "run_service.py" -WorkingDirectory "C:\Users\
 
 ---
 
-## 상태 요약 (2026-07-01 기준)
+## #016 — 수탁품 컬럼 trailing whitespace/NBSP → replace_name 치환 미적용
+
+**발생일**: 2026-07-02  
+**발생 위치**: `back_end/replace_name.py`, JNS 크롤 데이터
+
+**증상**  
+`replace_name`에 `"냉장돈목잡": "냉장목살"` 매핑이 있음에도 Firestore에 계속 "냉장돈목잡"으로 저장됨.  
+파이프라인을 재시작하고 코드 배포 후에도 snapshot/Firestore 모두 "냉장돈목잡" 유지.
+
+**원인**  
+JNS 사이트 크롤 결과의 `수탁품` 값이 "냉장돈목잡\xa0"(NBSP) 또는 " 냉장돈목잡 " 형태의 trailing/leading whitespace를 포함.  
+`pandas Series.replace(dict)` 는 exact match → "냉장돈목잡\xa0" ≠ "냉장돈목잡" → 치환 실패.  
+이후 `_df_to_dict`의 `.strip()` 이 whitespace를 제거하므로 snapshot/Firestore에는 "냉장돈목잡"으로 저장되어, 언제나 prev == new → diff 미감지.
+
+**해결**  
+`replace_name.py` 수탁품/상품명 컬럼 replace 전에 `.astype(str).str.strip()` 추가:
+```python
+for _col in ("수탁품", "상품명"):
+    if _col in df.columns:
+        df[_col] = df[_col].astype(str).str.strip().replace(_name_map)
+```
+
+**재발 방지**  
+- `replace_name` 내 모든 컬럼 치환은 strip 후 replace.
+- 브랜드 컬럼은 이미 `.str.replace(' ', ...)` 처리 중.
+
+**현재 상태**: 해결됨 ✓ (2026-07-02, 파이프라인 재시작 후 적용)
+
+---
+
+## 상태 요약 (2026-07-02 기준)
 
 | # | 오류 | 상태 |
 |---|------|------|
@@ -478,6 +508,7 @@ Start-Process python -ArgumentList "run_service.py" -WorkingDirectory "C:\Users\
 | 013 | JNS 단독 모드 시 빈 DataFrame KeyError | ✓ 해결 |
 | 014 | 브랜드 NBSP → 치환 미적용 (5 STAR 267 등) | ✓ 해결 |
 | 015 | 다중 프로세스 동시 실행 → 박스 수 과다 (+3,737박스) | ✓ 해결 |
+| 016 | 수탁품 NBSP/whitespace → replace_name 치환 미적용 ("냉장돈목잡" 등) | ✓ 해결 |
 
 ---
 
