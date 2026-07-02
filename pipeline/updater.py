@@ -228,54 +228,40 @@ def _df_to_dict(
                     None,
                 )
 
-                if sheet_entry:
-                    is_holding_use = sheet_entry.get("remark", "") == "홀딩분 사용"
+                matched_rows, matched_records = [], []
+                is_holding_use = (
+                    sheet_entry is not None
+                    and sheet_entry.get("remark", "") == "홀딩분 사용"
+                )
+                if is_holding_use:
+                    matched_rows, matched_records = _match_sheet_holding(
+                        bl, estno, grade, holding_rows_by_bl, holding_records_by_key
+                    )
 
-                    if is_holding_use:
-                        # ② 수정사항="홀딩분 사용" → holding 레코드 조회 후 자동 차감
-                        matched_rows, matched_records = _match_sheet_holding(
-                            bl, estno, grade, holding_rows_by_bl, holding_records_by_key
-                        )
-                        if matched_rows or matched_records:
-                            net_qty = prev_nonhold  # 원본 행 재고 불변
-                            auto_list[doc_id] = {
-                                "pk":              doc_id,
-                                "상품명":          name,
-                                "BL":              bl,
-                                "창고":            to_str(row.get("창고", "")).strip(),
-                                "유통기한":        expire,
-                                "diff":            diff,
-                                "prev_nonhold":    prev_nonhold,
-                                "matched_rows":    matched_rows,
-                                "matched_records": matched_records,
-                                "sheet_entry":     sheet_entry,
-                            }
-                            log.info(f"  [재고감소-자동] {name[:15]} | -{diff}박스 | 홀딩분 사용, hold 매칭 {len(matched_rows)}행")
-                        else:
-                            # 홀딩분 사용인데 holding 레코드 없음 → pending
-                            net_qty = qty - h_qty
-                            pending_list[doc_id] = {
-                                "pk":           doc_id,
-                                "상품명":       name,
-                                "BL":           bl,
-                                "창고":         to_str(row.get("창고", "")).strip(),
-                                "유통기한":     expire,
-                                "prev_raw":     prev_raw,
-                                "curr_raw":     qty,
-                                "diff":         -diff,
-                                "holdQty":      h_qty,
-                                "prev_nonhold": prev_nonhold,
-                                "curr_nonhold": max(net_qty, 0),
-                                "수집일":       today,
-                            }
-                            log.info(f"  [재고감소-pending] {name[:15]} | 홀딩분 사용이나 holding 레코드 없음")
-                    else:
-                        # 수정사항이 "홀딩분 사용" 아님 → non-hold 출고 확인
-                        net_qty = qty - h_qty
-                        log.info(f"  [재고감소-non-hold] {name[:15]} | -{diff}박스 | 수정사항={sheet_entry.get('remark') or '없음'}")
+                if is_holding_use and (matched_rows or matched_records):
+                    # 세 조건 모두 충족 → hold 자동 차감
+                    net_qty = prev_nonhold
+                    auto_list[doc_id] = {
+                        "pk":              doc_id,
+                        "상품명":          name,
+                        "BL":              bl,
+                        "창고":            to_str(row.get("창고", "")).strip(),
+                        "유통기한":        expire,
+                        "diff":            diff,
+                        "prev_nonhold":    prev_nonhold,
+                        "matched_rows":    matched_rows,
+                        "matched_records": matched_records,
+                        "sheet_entry":     sheet_entry,
+                    }
+                    log.info(f"  [재고감소-자동] {name[:15]} | -{diff}박스 | hold {len(matched_rows)}행 자동 차감")
                 else:
-                    # 시트 기록 없음 → 수동 판단
+                    # 하나라도 실패 → 수동 처리
                     net_qty = qty - h_qty
+                    reason = (
+                        "시트 기록 없음" if not sheet_entry else
+                        "수정사항 불일치" if not is_holding_use else
+                        "holding 레코드 없음"
+                    )
                     pending_list[doc_id] = {
                         "pk":           doc_id,
                         "상품명":       name,
@@ -290,7 +276,7 @@ def _df_to_dict(
                         "curr_nonhold": max(net_qty, 0),
                         "수집일":       today,
                     }
-                    log.info(f"  [재고감소-pending] {name[:15]} | 크롤 {prev_raw}→{qty} (-{diff}) | 시트 기록 없음")
+                    log.info(f"  [재고감소-pending] {name[:15]} | 크롤 {prev_raw}→{qty} (-{diff}) | {reason}")
             else:
                 net_qty = qty - h_qty
         else:
