@@ -159,12 +159,14 @@ def _clean(s: str) -> str:
     return re.sub(r"[/\s]", "_", s.strip())
 
 
-def _df_to_dict(df: pd.DataFrame, today: str, holding_sum: dict = None) -> tuple:
+def _df_to_dict(df: pd.DataFrame, today: str, holding_sum: dict = None, prev_snapshot: dict = None) -> tuple:
     """Returns (result_dict, crawled_key_totals) where crawled_key_totals maps
-    (bl, name, expire) → total raw qty BEFORE holding deduction."""
+    pk → total raw qty BEFORE holding deduction."""
     from post import to_str, to_int, to_float, to_date
     if holding_sum is None:
         holding_sum = {}
+    if prev_snapshot is None:
+        prev_snapshot = {}
     result = {}
     crawled_key_totals = {}   # 홀딩 이상 감지용: 차감 전 원본 수량
     skipped_rows, skipped_qty = 0, 0
@@ -195,9 +197,19 @@ def _df_to_dict(df: pd.DataFrame, today: str, holding_sum: dict = None) -> tuple
         # 홀딩 이상 감지: 차감 전 원본 수량 누적
         crawled_key_totals[doc_id] = crawled_key_totals.get(doc_id, 0) + qty
 
-        # 홀딩 차감
-        h_qty   = holding_sum.get(doc_id, 0)
-        net_qty = qty - h_qty
+        # 홀딩 차감 + 재고 증가 감지
+        h_qty = holding_sum.get(doc_id, 0)
+        prev  = prev_snapshot.get(doc_id)
+        if prev is not None and "holdingTotal" in prev:
+            prev_raw = (prev.get("재고") or 0) + (prev.get("holdingTotal") or 0)
+            if qty > prev_raw:
+                diff    = qty - prev_raw
+                net_qty = (prev.get("재고") or 0) + diff
+                log.info(f"  [재고증가] {name[:15]} | 크롤 {prev_raw}→{qty} (+{diff}) | non-hold {prev.get('재고',0)}→{net_qty}")
+            else:
+                net_qty = qty - h_qty
+        else:
+            net_qty = qty - h_qty
         if net_qty <= 0:
             skipped_rows += 1
             skipped_qty  += qty
@@ -314,7 +326,7 @@ class FirestoreUpdater:
         except Exception as e:
             log.warning(f"  홀딩 데이터 조회 실패 (무시하고 진행): {e}")
 
-        new_data, crawled_key_totals = _df_to_dict(new_df, today, holding_sum)
+        new_data, crawled_key_totals = _df_to_dict(new_df, today, holding_sum, prev_snapshot)
 
         to_insert = {}   # 신규 문서: 사용자 필드 기본값 포함해 set()
         to_update = {}   # 변경된 기존 문서: 크롤링 필드만 merge()
