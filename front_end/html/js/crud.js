@@ -47,6 +47,7 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "", w
         // 2. all_data에 홀딩 row 추가 (테이블 표시용 필드 포함)
         // 수집일: "" → updater.py의 where(수집일 == "") 쿼리로 홀딩 row 식별 가능
         const docRef = await insertItem({
+            pk:              pk,
             상품명:          item.name,
             브랜드:          item.brand,
             등급:            item.grade || "",

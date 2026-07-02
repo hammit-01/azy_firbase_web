@@ -192,11 +192,10 @@ def _df_to_dict(df: pd.DataFrame, today: str, holding_sum: dict = None) -> tuple
             continue
 
         # 홀딩 이상 감지: 차감 전 원본 수량 누적
-        key = (bl, name, expire)
-        crawled_key_totals[key] = crawled_key_totals.get(key, 0) + qty
+        crawled_key_totals[doc_id] = crawled_key_totals.get(doc_id, 0) + qty
 
         # 홀딩 차감
-        h_qty   = holding_sum.get(key, 0)
+        h_qty   = holding_sum.get(doc_id, 0)
         net_qty = qty - h_qty
         if net_qty <= 0:
             skipped_rows += 1
@@ -301,11 +300,9 @@ class FirestoreUpdater:
                 h = hdoc.to_dict()
                 if str(h.get("상태", "")).strip() != "holding":
                     continue
-                key = (
-                    str(h.get("BL",    "")).strip(),
-                    str(h.get("상품명", "")).strip(),
-                    str(h.get("유통기한", "")).strip(),
-                )
+                key = str(h.get("pk", "")).strip()
+                if not key:
+                    continue  # pk 없는 구형 홀딩 doc 무시
                 holding_sum[key] = holding_sum.get(key, 0) + int(h.get("재고", 0) or 0)
                 holding_doc_map.setdefault(key, []).append(
                     (hdoc.id, str(h.get("이상", "") or ""))
