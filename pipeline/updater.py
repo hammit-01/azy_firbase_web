@@ -244,12 +244,17 @@ def _df_to_dict(
                     matched_rows, matched_records = _match_sheet_holding(
                         bl, estno, grade, holding_rows_by_bl, holding_records_by_key
                     )
+                sheet_customer = sheet_entry.get("customer", "") if sheet_entry else ""
                 date_ok = (
                     any(r.get("출고일") == today for r in matched_records)
                     or any(r.get("출고일") == today for r in matched_rows)
                 ) if (matched_rows or matched_records) else False
+                customer_ok = (
+                    any(r.get("홀딩") == sheet_customer for r in matched_records)
+                    or any(r.get("홀딩") == sheet_customer for r in matched_rows)
+                ) if (matched_rows or matched_records) else False
 
-                if is_holding_use and manager_ok and (matched_rows or matched_records) and date_ok:
+                if is_holding_use and manager_ok and (matched_rows or matched_records) and date_ok and customer_ok:
                     # 네 조건 모두 충족 → hold 자동 차감
                     net_qty = prev_nonhold
                     auto_list[doc_id] = {
@@ -276,8 +281,10 @@ def _df_to_dict(
                         reason = f"담당자 미등록({sheet_entry.get('manager')})"
                     elif not (matched_rows or matched_records):
                         reason = "holding 레코드 없음"
-                    else:
+                    elif not date_ok:
                         reason = f"출고일 불일치(holding={[r.get('출고일') for r in matched_records]}, today={today})"
+                    else:
+                        reason = f"매출처 불일치(sheet={sheet_customer}, holding={[r.get('홀딩') for r in matched_records]})"
                     pending_list[doc_id] = {
                         "pk":           doc_id,
                         "상품명":       name,
@@ -429,6 +436,7 @@ class FirestoreUpdater:
                         "qty":             int(h.get("재고", 0) or 0),
                         "holdingRecordId": str(h.get("holdingRecordId", "") or ""),
                         "출고일":          str(h.get("출고일", "") or "").strip(),
+                        "홀딩":            str(h.get("홀딩", "") or "").strip(),
                     })
             # holding_data 컬렉션: (BL, ESTNO, 등급) → [record] 인덱스
             holding_records_by_key: dict = {}
@@ -444,6 +452,7 @@ class FirestoreUpdater:
                     "pk":    str(hdata.get("pk", "") or "").strip(),
                     "qty":   int(hdata.get("수량", 0) or 0),
                     "출고일": str(hdata.get("출고일", "") or "").strip(),
+                    "홀딩":   str(hdata.get("홀딩", "") or "").strip(),
                 })
 
             if holding_sum:
