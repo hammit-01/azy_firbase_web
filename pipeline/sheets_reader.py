@@ -57,7 +57,9 @@ def load_sheet_records() -> dict:
     result: dict = {}
     skipped = 0
     for row in rows:
-        if str(row.get(_COL["cancel"], "") or "").strip():
+        # 체크박스 TRUE인 행만 스킵 ("FALSE" / 빈값은 정상 처리)
+        cancel_val = str(row.get(_COL["cancel"], "") or "").strip().upper()
+        if cancel_val in ("TRUE", "1", "Y", "예", "취소"):
             skipped += 1
             continue
 
