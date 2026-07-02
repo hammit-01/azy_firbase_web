@@ -9,5 +9,6 @@ export const state = {
     crudData: null,
     useDefaultOrder: true,
     sortColumn: null,   // 정렬 중인 열 key (null = 없음)
-    sortDir: 0          // 0: 없음, 1: 내림차, 2: 오름차
+    sortDir: 0,         // 0: 없음, 1: 내림차, 2: 오름차
+    pendingChanges: [], // 재고 감소 미확인 항목
 };

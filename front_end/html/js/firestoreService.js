@@ -98,6 +98,18 @@ export async function deleteItem(id) {
     await _wrap(() => deleteDoc(doc(db, "all_data", id)));
 }
 
+// pending_changes 구독
+export function subscribePendingChanges(callback) {
+    return onSnapshot(collection(db, "pending_changes"), (snap) => {
+        callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+}
+
+// pending_changes 삭제
+export async function deletePendingChange(id) {
+    await _wrap(() => deleteDoc(doc(db, "pending_changes", id)));
+}
+
 // 조회 + 정렬
 export function getItems(callback) {
     const q = query(

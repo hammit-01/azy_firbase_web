@@ -452,8 +452,17 @@ th.sort-active {
     gap: 20px;
     border-left: 5px solid #e2e8f0;
 }
-.change-card.over-qty  { border-left-color: #f59e0b; }
-.change-card.no-origin { border-left-color: #ef4444; }
+.change-card.over-qty    { border-left-color: #f59e0b; }
+.change-card.no-origin   { border-left-color: #ef4444; }
+.change-card.decrease-card { border-left-color: #6366f1; }
+.badge-decrease { background: #ede9fe; color: #4338ca; }
+.diff-label { color: #6366f1; font-weight: 600; }
+.confirm-nonhold-btn, .confirm-hold-btn {
+    padding: 6px 14px; border-radius: 8px; border: none;
+    font-size: 13px; cursor: pointer; font-weight: 600;
+}
+.confirm-nonhold-btn { background: #e0f2fe; color: #0369a1; }
+.confirm-hold-btn    { background: #ede9fe; color: #4338ca; }
 
 .change-info {
     display: flex;

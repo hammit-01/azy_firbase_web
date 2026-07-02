@@ -169,6 +169,7 @@ def _df_to_dict(df: pd.DataFrame, today: str, holding_sum: dict = None, prev_sna
         prev_snapshot = {}
     result = {}
     crawled_key_totals = {}   # 홀딩 이상 감지용: 차감 전 원본 수량
+    pending_list = {}          # 재고 감소 감지: pk → pending doc
     skipped_rows, skipped_qty = 0, 0
     merged_rows,  merged_qty  = 0, 0
     raw_total = 0
@@ -197,15 +198,34 @@ def _df_to_dict(df: pd.DataFrame, today: str, holding_sum: dict = None, prev_sna
         # 홀딩 이상 감지: 차감 전 원본 수량 누적
         crawled_key_totals[doc_id] = crawled_key_totals.get(doc_id, 0) + qty
 
-        # 홀딩 차감 + 재고 증가 감지
+        # 홀딩 차감 + 재고 증감 감지
         h_qty = holding_sum.get(doc_id, 0)
         prev  = prev_snapshot.get(doc_id)
         if prev is not None and "holdingTotal" in prev:
-            prev_raw = (prev.get("재고") or 0) + (prev.get("holdingTotal") or 0)
+            prev_raw     = (prev.get("재고") or 0) + (prev.get("holdingTotal") or 0)
+            prev_nonhold = prev.get("재고") or 0
             if qty > prev_raw:
                 diff    = qty - prev_raw
-                net_qty = (prev.get("재고") or 0) + diff
-                log.info(f"  [재고증가] {name[:15]} | 크롤 {prev_raw}→{qty} (+{diff}) | non-hold {prev.get('재고',0)}→{net_qty}")
+                net_qty = prev_nonhold + diff
+                log.info(f"  [재고증가] {name[:15]} | 크롤 {prev_raw}→{qty} (+{diff}) | non-hold {prev_nonhold}→{net_qty}")
+            elif qty < prev_raw:
+                diff    = qty - prev_raw  # 음수
+                net_qty = qty - h_qty
+                pending_list[doc_id] = {
+                    "pk":           doc_id,
+                    "상품명":       name,
+                    "BL":           bl,
+                    "창고":         to_str(row.get("창고", "")).strip(),
+                    "유통기한":     expire,
+                    "prev_raw":     prev_raw,
+                    "curr_raw":     qty,
+                    "diff":         diff,
+                    "holdQty":      h_qty,
+                    "prev_nonhold": prev_nonhold,
+                    "curr_nonhold": max(net_qty, 0),
+                    "수집일":       today,
+                }
+                log.info(f"  [재고감소] {name[:15]} | 크롤 {prev_raw}→{qty} ({diff}) | pending 등록")
             else:
                 net_qty = qty - h_qty
         else:
@@ -250,7 +270,7 @@ def _df_to_dict(df: pd.DataFrame, today: str, holding_sum: dict = None, prev_sna
     if merged_rows:
         log.info(f"  [변환] pk병합: {merged_rows}행 → 재고 합산 {merged_qty}박스")
 
-    return result, crawled_key_totals
+    return result, crawled_key_totals, pending_list
 
 
 def _batch_set(db, items: dict):
@@ -326,7 +346,7 @@ class FirestoreUpdater:
         except Exception as e:
             log.warning(f"  홀딩 데이터 조회 실패 (무시하고 진행): {e}")
 
-        new_data, crawled_key_totals = _df_to_dict(new_df, today, holding_sum, prev_snapshot)
+        new_data, crawled_key_totals, pending_list = _df_to_dict(new_df, today, holding_sum, prev_snapshot)
 
         to_insert = {}   # 신규 문서: 사용자 필드 기본값 포함해 set()
         to_update = {}   # 변경된 기존 문서: 크롤링 필드만 merge()
@@ -371,6 +391,10 @@ class FirestoreUpdater:
             # ── 홀딩 이상 감지 및 플래그 ──────────────────────────
             self._flag_holding_issues(db, holding_doc_map, holding_sum, crawled_key_totals)
 
+            # ── 재고 감소 pending 기록 ─────────────────────────────
+            if pending_list:
+                self._write_pending_changes(db, pending_list)
+
             return total, new_data
 
         except Exception as e:
@@ -378,6 +402,18 @@ class FirestoreUpdater:
                 raise
             log.warning(f"  [{_active.upper()}] 할당량 초과")
             return self._fallback_to_secondary(new_data, prev_snapshot)
+
+    def _write_pending_changes(self, db, pending_list: dict):
+        """재고 감소 항목을 pending_changes 컬렉션에 upsert."""
+        try:
+            batch = db.batch()
+            for pk, data in pending_list.items():
+                ref = db.collection("pending_changes").document(pk)
+                batch.set(ref, data)
+            batch.commit()
+            log.info(f"  [재고감소] pending_changes {len(pending_list)}건 기록")
+        except Exception as e:
+            log.warning(f"  pending_changes 기록 실패 (무시): {e}")
 
     def _flag_holding_issues(self, db, holding_doc_map: dict, holding_sum: dict, crawled_key_totals: dict):
         """홀딩 doc에 이상/원본재고 필드를 기록하거나 해소 시 클리어한다."""

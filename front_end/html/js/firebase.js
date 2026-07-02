@@ -117,6 +117,16 @@ const POLL_INTERVAL_MS = 5 * 60 * 1000; // 5분
 export async function subscribeData() {
     await fetchAllData();
     setInterval(fetchAllData, POLL_INTERVAL_MS);
+    _subscribePendingChanges();
+}
+
+function _subscribePendingChanges() {
+    onSnapshot(collection(db, "pending_changes"), (snap) => {
+        state.pendingChanges = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        _renderHooks.forEach(fn => { try { fn(); } catch(e) {} });
+    }, (err) => {
+        console.warn("[Firebase] pending_changes 구독 오류:", err.message);
+    });
 }
 
 export async function fetchAllData() {
