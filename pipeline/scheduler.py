@@ -13,6 +13,10 @@ from pipeline.crawler import CrawlerPool
 from pipeline.updater import FirestoreUpdater
 from pipeline.snapshot import Snapshot
 
+# stdout UTF-8 강제 (Windows 콘솔 CP949 대응)
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 # ── 로깅 설정 ───────────────────────────────────────────
 LOG_DIR = Path("pipeline/logs")
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -21,7 +25,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
     handlers=[
-        logging.FileHandler(LOG_DIR / "pipeline.log", encoding="utf-8-sig"),
+        logging.FileHandler(LOG_DIR / "pipeline.log", encoding="utf-8"),
         logging.StreamHandler(sys.stdout),
     ],
 )
