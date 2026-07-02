@@ -17,6 +17,7 @@ _COL = {
     "qty":      "수량",
     "manager":  "담당자",
     "customer": "매출처",
+    "remark":   "수정사항",
     "note":     "비고",
     "cancel":   "취소",
 }
@@ -81,6 +82,7 @@ def load_sheet_records() -> dict:
             "qty":      qty,
             "manager":  str(row.get(_COL["manager"],  "") or "").strip(),
             "customer": str(row.get(_COL["customer"], "") or "").strip(),
+            "remark":   str(row.get(_COL["remark"],   "") or "").strip(),
             "note":     str(row.get(_COL["note"],     "") or "").strip(),
         })
 
