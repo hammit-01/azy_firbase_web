@@ -159,17 +159,23 @@ def _clean(s: str) -> str:
     return re.sub(r"[/\s]", "_", s.strip())
 
 
-def _df_to_dict(df: pd.DataFrame, today: str, holding_sum: dict = None, prev_snapshot: dict = None) -> tuple:
-    """Returns (result_dict, crawled_key_totals) where crawled_key_totals maps
-    pk → total raw qty BEFORE holding deduction."""
+def _df_to_dict(
+    df: pd.DataFrame, today: str,
+    holding_sum: dict = None,
+    prev_snapshot: dict = None,
+    holding_rows_by_bl: dict = None,
+    holding_records_by_key: dict = None,
+) -> tuple:
+    """Returns (result_dict, crawled_key_totals, pending_list, auto_list)."""
     from post import to_str, to_int, to_float, to_date
-    if holding_sum is None:
-        holding_sum = {}
-    if prev_snapshot is None:
-        prev_snapshot = {}
+    if holding_sum           is None: holding_sum           = {}
+    if prev_snapshot         is None: prev_snapshot         = {}
+    if holding_rows_by_bl    is None: holding_rows_by_bl    = {}
+    if holding_records_by_key is None: holding_records_by_key = {}
     result = {}
     crawled_key_totals = {}   # 홀딩 이상 감지용: 차감 전 원본 수량
-    pending_list = {}          # 재고 감소 감지: pk → pending doc
+    pending_list = {}          # 재고 감소: 시트 미매칭 → 수동 처리
+    auto_list    = {}          # 재고 감소: 시트 매칭 → 자동 차감
     skipped_rows, skipped_qty = 0, 0
     merged_rows,  merged_qty  = 0, 0
     raw_total = 0
@@ -209,23 +215,45 @@ def _df_to_dict(df: pd.DataFrame, today: str, holding_sum: dict = None, prev_sna
                 net_qty = prev_nonhold + diff
                 log.info(f"  [재고증가] {name[:15]} | 크롤 {prev_raw}→{qty} (+{diff}) | non-hold {prev_nonhold}→{net_qty}")
             elif qty < prev_raw:
-                diff    = qty - prev_raw  # 음수
-                net_qty = qty - h_qty
-                pending_list[doc_id] = {
-                    "pk":           doc_id,
-                    "상품명":       name,
-                    "BL":           bl,
-                    "창고":         to_str(row.get("창고", "")).strip(),
-                    "유통기한":     expire,
-                    "prev_raw":     prev_raw,
-                    "curr_raw":     qty,
-                    "diff":         diff,
-                    "holdQty":      h_qty,
-                    "prev_nonhold": prev_nonhold,
-                    "curr_nonhold": max(net_qty, 0),
-                    "수집일":       today,
-                }
-                log.info(f"  [재고감소] {name[:15]} | 크롤 {prev_raw}→{qty} ({diff}) | pending 등록")
+                diff = prev_raw - qty  # 양수: 감소량
+                estno = to_str(row.get("ESTNO", "") or row.get("식별번호", "")).strip()
+                grade = to_str(row.get("등급", "")).strip()
+                matched_rows, matched_records = _match_sheet_holding(
+                    bl, estno, grade, holding_rows_by_bl, holding_records_by_key
+                )
+                if matched_rows or matched_records:
+                    # holding 매칭 확인됨 → hold 자동 차감 대상
+                    net_qty = prev_nonhold  # 원본 행 재고 불변
+                    auto_list[doc_id] = {
+                        "pk":              doc_id,
+                        "상품명":          name,
+                        "BL":              bl,
+                        "창고":            to_str(row.get("창고", "")).strip(),
+                        "유통기한":        expire,
+                        "diff":            diff,
+                        "prev_nonhold":    prev_nonhold,
+                        "matched_rows":    matched_rows,
+                        "matched_records": matched_records,
+                    }
+                    log.info(f"  [재고감소-자동] {name[:15]} | -{diff}박스 | hold 매칭 {len(matched_rows)}행")
+                else:
+                    # holding 없음 → 수동 판단
+                    net_qty = qty - h_qty
+                    pending_list[doc_id] = {
+                        "pk":           doc_id,
+                        "상품명":       name,
+                        "BL":           bl,
+                        "창고":         to_str(row.get("창고", "")).strip(),
+                        "유통기한":     expire,
+                        "prev_raw":     prev_raw,
+                        "curr_raw":     qty,
+                        "diff":         -diff,
+                        "holdQty":      h_qty,
+                        "prev_nonhold": prev_nonhold,
+                        "curr_nonhold": max(net_qty, 0),
+                        "수집일":       today,
+                    }
+                    log.info(f"  [재고감소-pending] {name[:15]} | 크롤 {prev_raw}→{qty} (-{diff}) | holding 없음")
             else:
                 net_qty = qty - h_qty
         else:
@@ -270,7 +298,19 @@ def _df_to_dict(df: pd.DataFrame, today: str, holding_sum: dict = None, prev_sna
     if merged_rows:
         log.info(f"  [변환] pk병합: {merged_rows}행 → 재고 합산 {merged_qty}박스")
 
-    return result, crawled_key_totals, pending_list
+    return result, crawled_key_totals, pending_list, auto_list
+
+
+def _match_sheet_holding(bl: str, estno: str, grade: str,
+                          holding_rows_by_bl: dict,
+                          holding_records_by_key: dict) -> tuple:
+    """BL → ESTNO → 등급 순으로 holding 레코드 매칭.
+    Returns (matched_all_data_rows, matched_holding_data_records) or ([], [])."""
+    key = (bl, estno, grade)
+    rows    = [r for r in holding_rows_by_bl.get(bl, [])
+               if r["estno"] == estno and r["grade"] == grade]
+    records = holding_records_by_key.get(key, [])
+    return rows, records
 
 
 def _batch_set(db, items: dict):
@@ -323,13 +363,12 @@ class FirestoreUpdater:
             _get_secondary_db() or _get_primary_db()
         )
 
-        # 홀딩 행 선조회: (BL, 상품명, 유통기한) → 홀딩 수량 합계
-        # holding 행은 수집일이 빈 문자열 (크롤링 원본 행만 수집일 존재)
+        # 홀딩 행 선조회: 수집일=="" && 상태=="holding" 인 all_data 행
         holding_sum: dict = {}
-        holding_doc_map: dict = {}   # key → [(doc_id, cur_이상), ...] — 이상 감지용
+        holding_doc_map: dict = {}   # pk → [(doc_id, cur_이상), ...] — 이상 감지용
+        holding_rows_by_bl: dict = {}  # BL → [holding row dict, ...] — 시트 매칭용
         try:
             from google.cloud.firestore_v1.base_query import FieldFilter
-            # 백틱 인용으로 한국어 필드명 Firestore 쿼리 가능
             for hdoc in db.collection(COLLECTION).where(filter=FieldFilter("`수집일`", "==", "")).stream():
                 h = hdoc.to_dict()
                 if str(h.get("상태", "")).strip() != "holding":
@@ -341,12 +380,43 @@ class FirestoreUpdater:
                 holding_doc_map.setdefault(key, []).append(
                     (hdoc.id, str(h.get("이상", "") or ""))
                 )
+                bl = str(h.get("BL", "") or "").strip()
+                if bl:
+                    holding_rows_by_bl.setdefault(bl, []).append({
+                        "doc_id":          hdoc.id,
+                        "pk":              key,
+                        "estno":           str(h.get("ESTNO", "") or "").strip(),
+                        "grade":           str(h.get("등급", "") or "").strip(),
+                        "qty":             int(h.get("재고", 0) or 0),
+                        "holdingRecordId": str(h.get("holdingRecordId", "") or ""),
+                    })
+            # holding_data 컬렉션: (BL, ESTNO, 등급) → [record] 인덱스
+            # all_data 홀딩행 BL 누락 레코드 보완 + 차감 시 holding_data.수량 업데이트용
+            holding_records_by_key: dict = {}
+            for hd in db.collection("holding_data").stream():
+                hdata = hd.to_dict()
+                bl = str(hdata.get("BL", "") or "").strip()
+                if not bl:
+                    continue
+                key = (bl, str(hdata.get("ESTNO", "") or "").strip(),
+                           str(hdata.get("등급", "") or "").strip())
+                holding_records_by_key.setdefault(key, []).append({
+                    "id":  hd.id,
+                    "pk":  str(hdata.get("pk", "") or "").strip(),
+                    "qty": int(hdata.get("수량", 0) or 0),
+                })
+
             if holding_sum:
-                log.info(f"  홀딩 데이터 {len(holding_sum)}건 조회 완료")
+                log.info(f"  홀딩 데이터 {len(holding_sum)}건 / BL인덱스 {len(holding_rows_by_bl)}건 조회 완료")
         except Exception as e:
             log.warning(f"  홀딩 데이터 조회 실패 (무시하고 진행): {e}")
+            holding_records_by_key = {}
 
-        new_data, crawled_key_totals, pending_list = _df_to_dict(new_df, today, holding_sum, prev_snapshot)
+        new_data, crawled_key_totals, pending_list, auto_list = _df_to_dict(
+            new_df, today, holding_sum, prev_snapshot,
+            holding_rows_by_bl=holding_rows_by_bl,
+            holding_records_by_key=holding_records_by_key,
+        )
 
         to_insert = {}   # 신규 문서: 사용자 필드 기본값 포함해 set()
         to_update = {}   # 변경된 기존 문서: 크롤링 필드만 merge()
@@ -391,7 +461,9 @@ class FirestoreUpdater:
             # ── 홀딩 이상 감지 및 플래그 ──────────────────────────
             self._flag_holding_issues(db, holding_doc_map, holding_sum, crawled_key_totals)
 
-            # ── 재고 감소 pending 기록 ─────────────────────────────
+            # ── 재고 감소 처리 ────────────────────────────────────
+            if auto_list:
+                self._apply_auto_deductions(db, auto_list)
             if pending_list:
                 self._write_pending_changes(db, pending_list)
 
@@ -402,6 +474,39 @@ class FirestoreUpdater:
                 raise
             log.warning(f"  [{_active.upper()}] 할당량 초과")
             return self._fallback_to_secondary(new_data, prev_snapshot)
+
+    def _apply_auto_deductions(self, db, auto_list: dict):
+        """시트-holding 매칭 확인된 재고 감소를 holding 행에 자동 차감."""
+        try:
+            batch = db.batch()
+            count = 0
+            for pk, info in auto_list.items():
+                diff = info["diff"]
+                remaining = diff
+                # all_data 홀딩 행 차감 (수량 큰 순)
+                for row in sorted(info["matched_rows"], key=lambda r: r["qty"], reverse=True):
+                    if remaining <= 0:
+                        break
+                    deduct  = min(row["qty"], remaining)
+                    new_qty = row["qty"] - deduct
+                    batch.update(db.collection(COLLECTION).document(row["doc_id"]),
+                                 {"재고": new_qty})
+                    remaining -= deduct
+                    count += 1
+                # holding_data 레코드 차감
+                remaining2 = diff
+                for rec in sorted(info["matched_records"], key=lambda r: r["qty"], reverse=True):
+                    if remaining2 <= 0:
+                        break
+                    deduct  = min(rec["qty"], remaining2)
+                    new_qty = rec["qty"] - deduct
+                    batch.update(db.collection("holding_data").document(rec["id"]),
+                                 {"수량": new_qty})
+                    remaining2 -= deduct
+            batch.commit()
+            log.info(f"  [자동차감] {len(auto_list)}건 처리 / holding행 {count}건 업데이트")
+        except Exception as e:
+            log.warning(f"  자동차감 실패 (무시): {e}")
 
     def _write_pending_changes(self, db, pending_list: dict):
         """재고 감소 항목을 pending_changes 컬렉션에 upsert."""

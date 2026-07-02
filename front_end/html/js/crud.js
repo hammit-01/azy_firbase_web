@@ -38,6 +38,9 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "", w
         }
         const holdRef = await insertHoldingRecordWithId(holdId, {
             pk:     pk,
+            BL:     item.bl    || "",
+            ESTNO:  item.estNo || "",
+            등급:   item.grade  || "",
             수량:   holdQty,
             홀딩:   note?.trim() || "",
             출고일: releaseDate || "",
