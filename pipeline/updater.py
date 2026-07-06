@@ -422,12 +422,10 @@ class FirestoreUpdater:
                 if str(h.get("상태", "")).strip() != "holding":
                     continue
                 key = str(h.get("pk", "")).strip()
-                if not key:
-                    continue  # pk 없는 구형 홀딩 doc 무시
-                holding_sum[key] = holding_sum.get(key, 0) + int(h.get("재고", 0) or 0)
-                holding_doc_map.setdefault(key, []).append(
-                    (hdoc.id, str(h.get("이상", "") or ""))
-                )
+                if key:
+                    holding_doc_map.setdefault(key, []).append(
+                        (hdoc.id, str(h.get("이상", "") or ""))
+                    )
                 bl = str(h.get("BL", "") or "").strip()
                 if bl:
                     holding_rows_by_bl.setdefault(bl, []).append({
@@ -440,10 +438,20 @@ class FirestoreUpdater:
                         "출고일":          str(h.get("출고일", "") or "").strip(),
                         "홀딩":            str(h.get("홀딩", "") or "").strip(),
                     })
-            # holding_data 컬렉션: (BL, ESTNO, 등급) → [record] 인덱스
-            holding_records_by_key: dict = {}
+        except Exception as e:
+            log.warning(f"  all_data 홀딩행 조회 실패 (무시): {e}")
+
+        # holding_data 컬렉션: holding_sum(pk 기준 합산) + holding_records_by_key(BL 매칭용)
+        # holding_sum은 all_data 홀딩행 pk가 비어있어도 holding_data에서 정확하게 빌드됨
+        # all_data 쿼리 실패(할당량 초과)와 독립적으로 별도 try 블록에서 처리
+        holding_records_by_key: dict = {}
+        try:
             for hd in db.collection("holding_data").stream():
                 hdata = hd.to_dict()
+                pk_val = str(hdata.get("pk", "") or "").strip()
+                if pk_val:
+                    qty_val = int(hdata.get("수량", 0) or 0)
+                    holding_sum[pk_val] = holding_sum.get(pk_val, 0) + qty_val
                 bl = str(hdata.get("BL", "") or "").strip()
                 if not bl:
                     continue
@@ -451,17 +459,25 @@ class FirestoreUpdater:
                            str(hdata.get("등급", "") or "").strip())
                 holding_records_by_key.setdefault(key, []).append({
                     "id":    hd.id,
-                    "pk":    str(hdata.get("pk", "") or "").strip(),
+                    "pk":    pk_val,
                     "qty":   int(hdata.get("수량", 0) or 0),
                     "출고일": str(hdata.get("출고일", "") or "").strip(),
                     "홀딩":   str(hdata.get("홀딩", "") or "").strip(),
                 })
-
             if holding_sum:
                 log.info(f"  홀딩 데이터 {len(holding_sum)}건 / BL인덱스 {len(holding_rows_by_bl)}건 조회 완료")
         except Exception as e:
-            log.warning(f"  홀딩 데이터 조회 실패 (무시하고 진행): {e}")
-            holding_records_by_key = {}
+            log.warning(f"  holding_data 조회 실패 (무시): {e}")
+
+        # holding_sum 로드 실패(할당량 초과 등) 시 prev_snapshot holdingTotal을 fallback으로 사용
+        # → holdingTotal이 0으로 덮어쓰여 크롤행 재고가 부풀려지는 현상 방지
+        if not holding_sum:
+            fallback_sum = {pk: int(snap.get("holdingTotal") or 0)
+                            for pk, snap in prev_snapshot.items()
+                            if (snap.get("holdingTotal") or 0) > 0}
+            if fallback_sum:
+                holding_sum = fallback_sum
+                log.warning(f"  holding_sum fallback: prev_snapshot holdingTotal {len(fallback_sum)}건 사용")
 
         # employees 이름 목록 로드 (담당자 유효성 검증용)
         employees_names: set = set()
