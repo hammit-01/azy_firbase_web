@@ -233,7 +233,7 @@ def _df_to_dict(
                 matched_rows, matched_records = [], []
                 is_holding_use = (
                     sheet_entry is not None
-                    and sheet_entry.get("remark", "") == "홀딩분 사용"
+                    and sheet_entry.get("holding_checked", False)
                 )
                 if is_holding_use:
                     matched_rows, matched_records = _match_sheet_holding(

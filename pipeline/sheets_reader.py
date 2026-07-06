@@ -11,15 +11,15 @@ WEEKDAYS  = ["월", "화", "수", "목", "금", "토", "일"]
 
 # 시트 컬럼명 → 내부 키 매핑
 _COL = {
-    "bl":       "BL/매입처",
-    "estno":    "EST",
-    "grade":    "등급",
-    "qty":      "수량",
-    "manager":  "담당자",
-    "customer": "매출처",
-    "remark":   "수정사항",
-    "note":     "비고",
-    "cancel":   "취소",
+    "bl":      "BL/매입처",
+    "estno":   "EST",
+    "grade":   "등급",
+    "qty":     "수량",
+    "manager": "담당자",
+    "customer":"매출처",
+    "holding": "홀딩",
+    "note":    "비고",
+    "cancel":  "취소",
 }
 
 
@@ -76,14 +76,15 @@ def load_sheet_records() -> dict:
         if qty <= 0:
             continue
 
+        holding_val = str(row.get(_COL["holding"], "") or "").strip().upper()
         result.setdefault(bl, []).append({
-            "estno":    str(row.get(_COL["estno"],    "") or "").strip(),
-            "grade":    str(row.get(_COL["grade"],    "") or "").strip(),
-            "qty":      qty,
-            "manager":  str(row.get(_COL["manager"],  "") or "").strip(),
-            "customer": str(row.get(_COL["customer"], "") or "").strip(),
-            "remark":   str(row.get(_COL["remark"],   "") or "").strip(),
-            "note":     str(row.get(_COL["note"],     "") or "").strip(),
+            "estno":           str(row.get(_COL["estno"],    "") or "").strip(),
+            "grade":           str(row.get(_COL["grade"],    "") or "").strip(),
+            "qty":             qty,
+            "manager":         str(row.get(_COL["manager"],  "") or "").strip(),
+            "customer":        str(row.get(_COL["customer"], "") or "").strip(),
+            "holding_checked": holding_val in ("TRUE", "1", "Y", "예"),
+            "note":            str(row.get(_COL["note"],     "") or "").strip(),
         })
 
     total_rows = sum(len(v) for v in result.values())
