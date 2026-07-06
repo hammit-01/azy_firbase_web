@@ -80,12 +80,13 @@ export function bindEvents() {
 
     ["상품명", "브랜드", "등급", "ESTNO", "재고", "BL", "창고", "유통기한", "평중", "메모"].forEach(key => {
         document.querySelector(`th[data-key="${key}"]`)?.addEventListener("click", () => {
-            if (state.sortColumn === key) {
-                state.sortDir = (state.sortDir + 1) % 3;
-                if (state.sortDir === 0) state.sortColumn = null;
+            const idx = state.sortColumns.findIndex(s => s.key === key);
+            if (idx === -1) {
+                state.sortColumns.push({ key, dir: 1 });       // 없으면 추가(오름차)
+            } else if (state.sortColumns[idx].dir === 1) {
+                state.sortColumns[idx].dir = 2;                 // 오름차 → 내림차
             } else {
-                state.sortColumn = key;
-                state.sortDir = 1;
+                state.sortColumns.splice(idx, 1);               // 내림차 → 제거
             }
             renderTable();
         });

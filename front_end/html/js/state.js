@@ -8,7 +8,6 @@ export const state = {
     flashIds: new Set(),
     crudData: null,
     useDefaultOrder: true,
-    sortColumn: null,   // 정렬 중인 열 key (null = 없음)
-    sortDir: 0,         // 0: 없음, 1: 내림차, 2: 오름차
+    sortColumns: [],    // [{key, dir}] dir: 1=오름차, 2=내림차
     pendingChanges: [], // 재고 감소 미확인 항목
 };

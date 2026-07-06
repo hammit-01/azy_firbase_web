@@ -135,10 +135,10 @@ export function updateSortHeaders() {
     Object.keys(SORT_LABELS).forEach(key => {
         const th = document.querySelector(`th[data-key="${key}"]`);
         if (!th) return;
-        const isActive = state.sortColumn === key && state.sortDir !== 0;
-        const arrow = isActive ? (state.sortDir === 1 ? " ▲" : " ▼") : "";
+        const entry = state.sortColumns.find(s => s.key === key);
+        const arrow = entry ? (entry.dir === 1 ? " ▲" : " ▼") : "";
         th.textContent = SORT_LABELS[key] + arrow;
-        th.classList.toggle("sort-active", isActive);
+        th.classList.toggle("sort-active", !!entry);
     });
 }
 
@@ -242,20 +242,27 @@ export function renderTable() {
     // =========================
     // 정렬
     // =========================
-    if (state.sortColumn && state.sortDir !== 0) {
-        const factor = state.sortDir === 1 ? -1 : 1; // -1=내림차, 1=오름차
-        const col = state.sortColumn;
+    if (state.sortColumns.length > 0) {
         data.sort((a, b) => {
-            const av = String(a[col] ?? "").trim();
-            const bv = String(b[col] ?? "").trim();
-            if (!av && !bv) return 0;
-            if (!av) return 1;
-            if (!bv) return -1;
-            if (col === "재고" || col === "평중") {
-                const an = Number(av), bn = Number(bv);
-                if (!isNaN(an) && !isNaN(bn)) return (an - bn) * factor;
+            for (const { key, dir } of state.sortColumns) {
+                const factor = dir === 1 ? 1 : -1;
+                const av = String(a[key] ?? "").trim();
+                const bv = String(b[key] ?? "").trim();
+                if (!av && !bv) continue;
+                if (!av) return 1;
+                if (!bv) return -1;
+                if (key === "재고" || key === "평중") {
+                    const an = Number(av), bn = Number(bv);
+                    if (!isNaN(an) && !isNaN(bn)) {
+                        const r = (an - bn) * factor;
+                        if (r !== 0) return r;
+                        continue;
+                    }
+                }
+                if (av < bv) return -factor;
+                if (av > bv) return factor;
             }
-            return av < bv ? factor : av > bv ? -factor : 0;
+            return 0;
         });
     } else {
         const sortOrder = [
