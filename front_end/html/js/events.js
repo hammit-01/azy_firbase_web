@@ -324,23 +324,17 @@ async function handleClick(e) {
     if (e.target.classList.contains("cancel-btn")) {
         const id = e.target.dataset.id;
         state.selectedItems.delete(id);
-
         if (state.selectedItems.size === 0) {
             state.crudData = null;
-            dom.container?.classList.remove("active");
-            if (dom.sideBox) dom.sideBox.innerHTML = "";
-            renderTable();
+            renderAll();
             return;
         }
-
-        // 해당 아이템 패널만 제거 — 다른 항목의 입력값 보존
-        ["insert-panel", "update-panel", "holding-panel"].forEach(cls => {
-            document.querySelector(`.${cls}[data-id="${id}"]`)?.remove();
-        });
-        const cb = document.querySelector(`.row-check[data-id="${id}"]`);
-        if (cb) cb.checked = false;
-        cb?.closest("tr")?.classList.remove("selected-row");
-        renderFooter(state.crudData);
+        renderAll();
+        switch (state.crudData) {
+            case "update": renderUpdate(); renderFooter("update"); break;
+            case "holding": renderHolding(); renderFooter("holding"); break;
+            default: renderAll();
+        }
         return;
     }
 
@@ -398,12 +392,10 @@ async function handleClick(e) {
         const dataState = document.querySelector(`.update-state[data-id="${id}"]`)?.value;
         const memo     = document.querySelector(`.input-note[data-id="${id}"]`)?.value || "";
 
-        // fetchAllData가 updateData 내부에서 실행되기 전에 선택 해제 → 체크박스 즉시 해제
-        state.selectedItems.delete(id);
-
         const result = await updateData(item, null, name, brand, grade, estNo, qty, bl, warehouse, dueDate, weight, releaseDate, holding, dataState, memo);
-        if (!result) { state.selectedItems.set(id, item); return; }
+        if (!result) return;
 
+        state.selectedItems.delete(id);
         state.flashIds.add(result.id);
 
         if (state.selectedItems.size === 0) {
@@ -430,12 +422,10 @@ async function handleClick(e) {
         const note   = document.querySelector(`.hold-note[data-id="${id}"]`)?.value;
         const memo   = document.querySelector(`.input-note[data-id="${id}"]`)?.value || "";
 
-        // fetchAllData가 holdingData 내부에서 실행되기 전에 선택 해제 → 체크박스 즉시 해제
-        state.selectedItems.delete(id);
-
         const result = await holdingData(item, Number(qty), date, note, memo, weight !== "" ? weight : null);
-        if (!result) { state.selectedItems.set(id, item); return; }
+        if (!result) return;
 
+        state.selectedItems.delete(id);
         state.flashIds.add(result.holdingId);
 
         if (state.selectedItems.size === 0) {
@@ -523,10 +513,8 @@ async function handleClick(e) {
             if (result) backups.push(result);
         }
         pushUndo({ type: "bulk-update", backups: backups.map(b => ({ id: b.id, prevData: b.prevData })) });
-        state.selectedItems.clear();
-        state.crudData = null;
         showToast("✓ 수정 완료");
-        await fetchAllData();
+        renderAll();
         return;
     }
 
@@ -550,10 +538,8 @@ async function handleClick(e) {
             if (result) backups.push(result);
         }
         pushUndo({ type: "bulk-holding", backups: backups.map(b => ({ originalId: b.originalId, originalQty: b.originalQty, holdingId: b.holdingId, holdingRecordId: b.holdingRecordId })) });
-        state.selectedItems.clear();
-        state.crudData = null;
         showToast("✓ 홀딩 완료");
-        await fetchAllData();
+        renderAll();
         return;
     }
 

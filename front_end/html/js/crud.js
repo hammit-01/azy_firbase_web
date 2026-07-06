@@ -19,12 +19,10 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "", w
 
     try {
 
-        // 전량 홀딩이면 0박스 행이 남지 않도록 삭제, 부분 홀딩이면 차감
-        if (remainQty === 0) {
-            await _deleteItem(item.id);
-        } else {
-            await updateItem(item.id, { 재고: remainQty });
-        }
+        // 기존 재고 차감
+        await updateItem(item.id, {
+            재고: remainQty
+        });
 
         // 1. holding_data 생성
         //    전량 홀딩(remainQty=0): holdId = pk 그대로
