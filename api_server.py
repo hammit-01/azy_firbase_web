@@ -3,6 +3,7 @@ import uuid
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from typing import Any
 import sys, os
@@ -153,6 +154,10 @@ def count_holding_by_pk(pk: str):
 
 
 # ── 정적 파일 (프론트엔드) ───────────────────────────────────
+@app.get("/")
+def root():
+    return RedirectResponse(url="/warehouse_main.html")
+
 app.mount("/", StaticFiles(directory="front_end/html", html=True), name="static")
 
 if __name__ == "__main__":

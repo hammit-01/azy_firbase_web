@@ -65,6 +65,16 @@ def delete_inventory(conn, ids: list[str]):
         cur.execute(f"DELETE FROM inventory WHERE id IN ({placeholders})", ids)
 
 
+_HR_INT_COLS = {"수량"}
+
+def _hr_val(col, rec):
+    v = rec.get(col)
+    if col in _HR_INT_COLS:
+        try: return int(v or 0)
+        except: return 0
+    return v if v is not None else ""
+
+
 def upsert_holding_record(conn, rec: dict):
     cols = ["id","pk","BL","ESTNO","등급","수량","홀딩","출고일","메모"]
     placeholders = ", ".join(["%s"] * len(cols))
@@ -73,7 +83,7 @@ def upsert_holding_record(conn, rec: dict):
     sql = (f"INSERT INTO holding_records ({col_names}) VALUES ({placeholders}) "
            f"ON DUPLICATE KEY UPDATE {update_part}")
     with conn.cursor() as cur:
-        cur.execute(sql, [rec.get(c, "") or "" for c in cols])
+        cur.execute(sql, [_hr_val(c, rec) for c in cols])
 
 
 def delete_holding_record(conn, rec_id: str):

@@ -8,26 +8,34 @@ from pipeline.mysql_db import (
     get_holding_sum, get_holding_records_by_key,
     get_holding_rows_by_bl, get_employees, get_snapshot,
 )
-# _df_to_dict, _match_sheet_holding, _normalize_holding 재사용
-from pipeline.updater import _df_to_dict, _row_sig, COMPARE_FIELDS
+from pipeline.updater import _df_to_dict, _row_sig
 
 log = logging.getLogger("mysql_updater")
 
 
 class MySQLUpdater:
     def update_diff(self, new_df, prev_snapshot: dict) -> tuple:
+        """
+        prev_snapshot (pickle): 마지막 파이프라인 실행 시점 상태 → _df_to_dict 비교용
+        db_snapshot (MySQL):    현재 DB 실제 상태              → INSERT/UPDATE/DELETE 결정용
+
+        두 snapshot을 분리해야 홀딩 후 파이프라인이 "재고증가"로 오인식하지 않음.
+        """
         today = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d")
 
         with get_conn() as conn:
-            holding_sum             = get_holding_sum(conn)
-            holding_records_by_key  = get_holding_records_by_key(conn)
-            holding_rows_by_bl      = get_holding_rows_by_bl(conn)
-            employees_names         = get_employees(conn)
-            # MySQL가 정보의 원천 — pickle 스냅샷 무시하고 MySQL에서 직접 로드
-            prev_snapshot           = get_snapshot(conn)
+            holding_sum            = get_holding_sum(conn)
+            holding_records_by_key = get_holding_records_by_key(conn)
+            holding_rows_by_bl     = get_holding_rows_by_bl(conn)
+            employees_names        = get_employees(conn)
+            db_snapshot            = get_snapshot(conn)  # 현재 MySQL 상태
 
         if holding_sum:
             log.info(f"  홀딩 데이터 {len(holding_sum)}건 / BL인덱스 {len(holding_rows_by_bl)}건 조회 완료")
+
+        # 첫 실행(MySQL 비어 있음): pickle도 비워서 전량 INSERT 유도
+        if not db_snapshot:
+            prev_snapshot = {}
 
         try:
             from pipeline.sheets_reader import load_sheet_records
@@ -36,6 +44,7 @@ class MySQLUpdater:
             log.warning(f"  시트 로드 실패: {e}")
             sheet_records = {}
 
+        # _df_to_dict: pickle prev_snapshot 기준으로 재고 증감 감지
         new_data, crawled_key_totals, pending_list, auto_list = _df_to_dict(
             new_df, today, holding_sum, prev_snapshot,
             holding_rows_by_bl=holding_rows_by_bl,
@@ -44,18 +53,19 @@ class MySQLUpdater:
             employees_names=employees_names,
         )
 
+        # INSERT/UPDATE/DELETE: db_snapshot(현재 MySQL) 기준으로 결정
         to_insert = {}
         to_update = {}
         to_delete = []
 
         for pk, data in new_data.items():
-            prev = prev_snapshot.get(pk)
-            if prev is None:
+            db_prev = db_snapshot.get(pk)
+            if db_prev is None:
                 to_insert[pk] = {**data, "홀딩": "", "상태": "없음", "메모": ""}
-            elif _row_sig(prev) != _row_sig(data):
+            elif _row_sig(db_prev) != _row_sig(data):
                 to_update[pk] = data
 
-        for pk in prev_snapshot:
+        for pk in db_snapshot:
             if pk not in new_data:
                 to_delete.append(pk)
 
