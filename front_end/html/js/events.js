@@ -78,7 +78,7 @@ export function bindEvents() {
         }
     });
 
-    ["상품명", "브랜드", "등급", "ESTNO", "재고", "창고", "유통기한"].forEach(key => {
+    ["상품명", "브랜드", "등급", "ESTNO", "재고", "BL", "창고", "유통기한", "평중", "메모"].forEach(key => {
         document.querySelector(`th[data-key="${key}"]`)?.addEventListener("click", () => {
             if (state.sortColumn === key) {
                 state.sortDir = (state.sortDir + 1) % 3;

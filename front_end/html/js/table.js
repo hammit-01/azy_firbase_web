@@ -127,7 +127,8 @@ function renderMobileView(data) {
 // =========================
 const SORT_LABELS = {
     "상품명": "상품명", "브랜드": "브랜드", "등급": "등급",
-    "ESTNO": "ESTNO", "재고": "재고", "창고": "창고", "유통기한": "유통기한"
+    "ESTNO": "ESTNO", "재고": "재고", "BL": "BL",
+    "창고": "창고", "유통기한": "유통기한", "평중": "평균", "메모": "비고"
 };
 
 export function updateSortHeaders() {
@@ -135,7 +136,7 @@ export function updateSortHeaders() {
         const th = document.querySelector(`th[data-key="${key}"]`);
         if (!th) return;
         const isActive = state.sortColumn === key && state.sortDir !== 0;
-        const arrow = isActive ? (state.sortDir === 1 ? " ▼" : " ▲") : "";
+        const arrow = isActive ? (state.sortDir === 1 ? " ▲" : " ▼") : "";
         th.textContent = SORT_LABELS[key] + arrow;
         th.classList.toggle("sort-active", isActive);
     });
@@ -250,7 +251,7 @@ export function renderTable() {
             if (!av && !bv) return 0;
             if (!av) return 1;
             if (!bv) return -1;
-            if (col === "재고") {
+            if (col === "재고" || col === "평중") {
                 const an = Number(av), bn = Number(bv);
                 if (!isNaN(an) && !isNaN(bn)) return (an - bn) * factor;
             }
