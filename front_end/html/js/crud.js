@@ -1,6 +1,5 @@
-import { updateItem, insertItem, insertHoldingRecordWithId, getHoldingCountByPk, updateHoldingRecord, moveHoldingToHistory } from "./firestoreService.js";
-import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
-import { db, fetchAllData } from "./firebase.js";
+import { updateItem, insertItem, insertHoldingRecordWithId, getHoldingCountByPk, updateHoldingRecord, moveHoldingToHistory, deleteItem as _deleteItem } from "./firestoreService.js";
+import { fetchAllData } from "./firebase.js";
 import { pushUndo } from "./crud_history.js";
 import { showError } from "./ui.js";
 
@@ -221,7 +220,7 @@ export async function deleteItem(item, noUndo = false, noFetch = false) {
             const { id: _id, ...restoreData } = { ...item };
             pushUndo({ type: "delete", restoreData });
         }
-        await deleteDoc(doc(db, "all_data", item.id));
+        await _deleteItem(item.id);
         if (!noFetch) await fetchAllData();
     } catch (error) {
         console.error("삭제 실패:", error);

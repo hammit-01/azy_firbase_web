@@ -6,7 +6,7 @@ import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
-import { db, fetchAllData, addRenderHook } from "./firebase.js";
+import { fetchAllData, addRenderHook } from "./firebase.js";
 import { showToast, showError, showConfirm } from "./ui.js";
 import { renderChanges, bindChangesEvents } from "./changes.js";
 

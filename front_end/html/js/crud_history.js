@@ -1,6 +1,4 @@
-import { updateItem, insertItem, moveHoldingToHistory, restoreDoc } from "./firestoreService.js";
-import { doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
-import { db } from "./firebase.js";
+import { updateItem, insertItem, moveHoldingToHistory, deleteItem as _deleteItem } from "./firestoreService.js";
 import { showToast, showError } from "./ui.js";
 
 const STORAGE_KEY = "undo_stack";
@@ -24,7 +22,7 @@ function _save(stack) {
 function _buildFn(desc) {
     switch (desc.type) {
         case "insert":
-            return async () => deleteDoc(doc(db, "all_data", desc.newId));
+            return async () => _deleteItem(desc.newId);
 
         case "update":
             return async () => updateItem(desc.id, desc.prevData);
@@ -32,7 +30,7 @@ function _buildFn(desc) {
         case "holding":
             return async () => {
                 await updateItem(desc.originalId, { 재고: desc.originalQty });
-                await deleteDoc(doc(db, "all_data", desc.holdingId));
+                await _deleteItem(desc.holdingId);
                 if (desc.holdingRecordId) await moveHoldingToHistory(desc.holdingRecordId, "취소");
             };
 
@@ -40,7 +38,7 @@ function _buildFn(desc) {
             return async () => insertItem(desc.restoreData);
 
         case "bulk-insert":
-            return async () => { for (const id of desc.ids) await deleteDoc(doc(db, "all_data", id)); };
+            return async () => { for (const id of desc.ids) await _deleteItem(id); };
 
         case "bulk-update":
             return async () => { for (const b of desc.backups) await updateItem(b.id, b.prevData); };
@@ -49,7 +47,7 @@ function _buildFn(desc) {
             return async () => {
                 for (const b of desc.backups) {
                     await updateItem(b.originalId, { 재고: b.originalQty });
-                    await deleteDoc(doc(db, "all_data", b.holdingId));
+                    await _deleteItem(b.holdingId);
                     if (b.holdingRecordId) await moveHoldingToHistory(b.holdingRecordId, "취소");
                 }
             };

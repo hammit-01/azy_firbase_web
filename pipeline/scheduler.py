@@ -10,7 +10,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.combining import OrTrigger
 
 from pipeline.crawler import CrawlerPool
-from pipeline.updater import FirestoreUpdater
+from pipeline.mysql_updater import MySQLUpdater
 from pipeline.snapshot import Snapshot
 
 # stdout UTF-8 강제 (Windows 콘솔 CP949 대응)
@@ -33,7 +33,7 @@ log = logging.getLogger("scheduler")
 
 # ── 컴포넌트 싱글턴 ─────────────────────────────────────
 snapshot = Snapshot(Path("pipeline/snapshot.pkl"))
-updater  = FirestoreUpdater()
+updater  = MySQLUpdater()
 crawler  = CrawlerPool(max_workers=20)
 
 
@@ -75,7 +75,7 @@ def run_pipeline():
 
         elapsed = time.time() - start
         log.info(
-            f"완료 | EDA {len(normalized)}건/{eda_qty}박스 → Firestore {len(new_snap)}건/{fs_qty}박스{qty_note} | 변경 {changed}건 | {elapsed:.1f}초 소요"
+            f"완료 | EDA {len(normalized)}건/{eda_qty}박스 → MySQL {len(new_snap)}건/{fs_qty}박스{qty_note} | 변경 {changed}건 | {elapsed:.1f}초 소요"
         )
 
     except Exception as e:

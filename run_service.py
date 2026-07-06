@@ -48,8 +48,18 @@ def _release_lock():
         pass
 
 
+import threading
+import uvicorn
+
+def _run_api():
+    uvicorn.run("api_server:app", host="0.0.0.0", port=8000, log_level="warning")
+
 from pipeline.scheduler import main
 
 if __name__ == "__main__":
     _acquire_lock()
+    # API 서버를 백그라운드 스레드로 실행
+    api_thread = threading.Thread(target=_run_api, daemon=True)
+    api_thread.start()
+    print("[SERVICE] API 서버 시작: http://localhost:8000")
     main()
