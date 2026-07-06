@@ -159,6 +159,13 @@ def _clean(s: str) -> str:
     return re.sub(r"[/\s]", "_", s.strip())
 
 
+def _normalize_holding(s: str) -> str:
+    """DB 홀딩 비고 정규화: 괄호 내용 제거 → 상시용·및·상시 제거 → 공백 제거"""
+    s = re.sub(r"\(.*?\)", "", s)               # (1000원) 등 괄호 내용 제거
+    s = re.sub(r"상시용|상시|및", "", s)        # 지정 단어 제거
+    return s.replace(" ", "").strip()
+
+
 def _df_to_dict(
     df: pd.DataFrame, today: str,
     holding_sum: dict = None,
@@ -247,7 +254,8 @@ def _df_to_dict(
                     for r in all_matched
                 ) if all_matched else False
                 customer_ok = any(
-                    (r.get("홀딩") or "") == sheet_customer for r in all_matched
+                    _normalize_holding(r.get("홀딩") or "") in sheet_customer
+                    for r in all_matched
                 ) if all_matched else False
 
                 if is_holding_use and all_matched and date_ok and customer_ok:
