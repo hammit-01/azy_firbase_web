@@ -549,7 +549,7 @@ async function handleClick(e) {
             );
             if (result) backups.push(result);
         }
-        pushUndo({ type: "bulk-holding", backups: backups.map(b => ({ originalId: b.originalId, originalQty: b.originalQty, holdingId: b.holdingId, holdingRecordId: b.holdingRecordId })) });
+        pushUndo({ type: "bulk-holding", backups: backups.map(b => ({ originalId: b.originalId, originalQty: b.originalQty, wasDeleted: b.wasDeleted, originalData: b.originalData, holdingId: b.holdingId, holdingRecordId: b.holdingRecordId })) });
         state.selectedItems.clear();
         state.crudData = null;
         showToast("✓ 홀딩 완료");

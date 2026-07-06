@@ -29,7 +29,12 @@ function _buildFn(desc) {
 
         case "holding":
             return async () => {
-                await updateItem(desc.originalId, { 재고: desc.originalQty });
+                if (desc.wasDeleted && desc.originalData) {
+                    const { id: _id, updated_at: _ua, holdingTotal: _ht, holdingRecordId: _hri, ...restoreFields } = desc.originalData;
+                    await insertItem({ ...restoreFields, 재고: desc.originalQty });
+                } else {
+                    await updateItem(desc.originalId, { 재고: desc.originalQty });
+                }
                 await _deleteItem(desc.holdingId);
                 if (desc.holdingRecordId) await moveHoldingToHistory(desc.holdingRecordId, "취소");
             };
@@ -46,7 +51,12 @@ function _buildFn(desc) {
         case "bulk-holding":
             return async () => {
                 for (const b of desc.backups) {
-                    await updateItem(b.originalId, { 재고: b.originalQty });
+                    if (b.wasDeleted && b.originalData) {
+                        const { id: _id, updated_at: _ua, holdingTotal: _ht, holdingRecordId: _hri, ...restoreFields } = b.originalData;
+                        await insertItem({ ...restoreFields, 재고: b.originalQty });
+                    } else {
+                        await updateItem(b.originalId, { 재고: b.originalQty });
+                    }
                     await _deleteItem(b.holdingId);
                     if (b.holdingRecordId) await moveHoldingToHistory(b.holdingRecordId, "취소");
                 }

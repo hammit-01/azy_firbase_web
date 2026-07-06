@@ -69,10 +69,16 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "", w
             holdingRecordId: holdRef.id
         });
 
+        // 전량 홀딩은 원본 row가 삭제되므로 undo 시 재삽입할 수 있도록 원본 데이터 보존
+        const wasDeleted = remainQty === 0;
+        const originalData = wasDeleted ? { ...item.raw, 재고: item.qty } : null;
+
         if (!noUndo) pushUndo({
             type:            "holding",
             originalId:      item.id,
             originalQty:     item.qty,
+            wasDeleted,
+            originalData,
             holdingId:       docRef.id,
             holdingRecordId: holdRef.id
         });
@@ -81,6 +87,8 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "", w
         return {
             originalId:      item.id,
             originalQty:     item.qty,
+            wasDeleted,
+            originalData,
             holdingId:       docRef.id,
             holdingRecordId: holdRef.id
         };
