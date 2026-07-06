@@ -50,17 +50,28 @@ export function renderSelectData() {
         return;
     }
 
-    let panelsHtml = "";
+    // panels-area가 없으면 새로 생성, 있으면 기존 카드 보존
+    let panelsArea = sideBox.querySelector(".panels-area");
+    if (!panelsArea) {
+        sideBox.innerHTML = `<div class="panels-area"></div>`;
+        panelsArea = sideBox.querySelector(".panels-area");
+    }
 
-    state.selectedItems.forEach((item, id) => {
-        panelsHtml += `
-            <div class="insert-panel" data-id="${id}"></div>
-            <div class="update-panel" data-id="${id}"></div>
-            <div class="holding-panel" data-id="${id}"></div>
-        `;
+    // 선택 해제된 항목의 패널 제거
+    panelsArea.querySelectorAll(":scope > [data-id]").forEach(el => {
+        if (!state.selectedItems.has(el.dataset.id)) el.remove();
     });
 
-    sideBox.innerHTML = `<div class="panels-area">${panelsHtml}</div>`;
+    // 신규 선택 항목의 빈 패널 추가 (기존 항목은 건드리지 않음)
+    state.selectedItems.forEach((item, id) => {
+        if (panelsArea.querySelector(`.insert-panel[data-id="${id}"]`)) return;
+        ["insert-panel", "update-panel", "holding-panel"].forEach(cls => {
+            const div = document.createElement("div");
+            div.className = cls;
+            div.dataset.id = id;
+            panelsArea.append(div);
+        });
+    });
 }
 
 export function renderInsert() {
@@ -154,15 +165,15 @@ export function createInsertRow() {
 }
 
 export function renderUpdate() {
-    state.selectedItems.forEach((item, id) => clearPanels(id));
-
     dom.container?.classList.add("active");
     const panelsArea = document.querySelector(".panels-area");
     if (panelsArea) panelsArea.classList.add("panels-grid");
 
     state.selectedItems.forEach((item, id) => {
         const target = document.querySelector(`.update-panel[data-id="${id}"]`);
-        if (!target) return;
+        // 이미 카드가 있으면 입력값 보존을 위해 재렌더 안 함
+        if (!target || target.querySelector(".update-card")) return;
+        clearPanels(id);
 
         const dataState = item.dataState || "";
 
@@ -249,15 +260,15 @@ export function renderUpdate() {
 }
 
 export function renderHolding() {
-    state.selectedItems.forEach((item, id) => clearPanels(id));
-
     dom.container?.classList.add("active");
     const panelsArea = document.querySelector(".panels-area");
     if (panelsArea) panelsArea.classList.add("panels-grid");
 
     state.selectedItems.forEach((item, id) => {
         const target = document.querySelector(`.holding-panel[data-id="${id}"]`);
-        if (!target) return;
+        // 이미 카드가 있으면 입력값 보존을 위해 재렌더 안 함
+        if (!target || target.querySelector(".holding-card")) return;
+        clearPanels(id);
 
         target.innerHTML = `
             <div class="holding-card">
