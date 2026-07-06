@@ -339,7 +339,7 @@ def _df_to_dict(
 
     out_total = sum(v.get("재고", 0) or 0 for v in result.values())
     log.info(
-        f"  [변환] 원본 {len(df)}행 {raw_total}박스 → Firestore {len(result)}건 {out_total}박스"
+        f"  [변환] 원본 {len(df)}행 {raw_total}박스 → MySQL {len(result)}건 {out_total}박스"
     )
     if skipped_rows:
         log.warning(f"  [변환] pk없음/홀딩차감 스킵: {skipped_rows}행 {skipped_qty}박스")
