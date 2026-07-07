@@ -237,30 +237,25 @@ def _df_to_dict(
                     None,
                 )
 
-                matched_rows, matched_records = [], []
                 is_holding_use = (
                     sheet_entry is not None
                     and sheet_entry.get("holding_checked", False)
                 )
+
                 if is_holding_use:
+                    # 시트에 있으면 무조건 자동 차감 — 변경사항 탭 미표시
                     matched_rows, matched_records = _match_sheet_holding(
                         bl, estno, grade, holding_rows_by_bl, holding_records_by_key
                     )
-                sheet_customer = sheet_entry.get("customer", "") if sheet_entry else ""
-                all_matched = matched_records + matched_rows
-                # 출고일 없으면 언제든 출고 가능, 있으면 오늘과 일치해야 함
-                date_ok = any(
-                    not (r.get("출고일") or "").strip() or r.get("출고일") == today
-                    for r in all_matched
-                ) if all_matched else False
-                customer_ok = any(
-                    _normalize_holding(r.get("홀딩") or "") in sheet_customer
-                    for r in all_matched
-                ) if all_matched else False
-
-                if is_holding_use and all_matched and date_ok and customer_ok:
-                    # 네 조건 모두 충족 → hold 자동 차감
-                    net_qty = prev_nonhold
+                    all_matched = matched_records + matched_rows
+                    if all_matched:
+                        # 매칭 holding 레코드 있음 → holding에서 차감, non-hold 유지
+                        net_qty = prev_nonhold
+                        log.info(f"  [재고감소-자동] {name[:15]} | -{diff}박스 | hold {len(matched_rows)}행 차감")
+                    else:
+                        # 매칭 holding 레코드 없음 → non-hold에서 직접 차감
+                        net_qty = qty - h_qty
+                        log.info(f"  [재고감소-자동] {name[:15]} | -{diff}박스 | non-hold 직접 차감")
                     auto_list[doc_id] = {
                         "pk":              doc_id,
                         "상품명":          name,
@@ -273,20 +268,10 @@ def _df_to_dict(
                         "matched_records": matched_records,
                         "sheet_entry":     sheet_entry,
                     }
-                    log.info(f"  [재고감소-자동] {name[:15]} | -{diff}박스 | hold {len(matched_rows)}행 자동 차감")
                 else:
-                    # 하나라도 실패 → 수동 처리
+                    # 시트 기록 없음 → 수동 처리
                     net_qty = qty - h_qty
-                    if not sheet_entry:
-                        reason = "시트 기록 없음"
-                    elif not is_holding_use:
-                        reason = "수정사항 불일치"
-                    elif not all_matched:
-                        reason = "holding 레코드 없음"
-                    elif not date_ok:
-                        reason = f"출고일 불일치(holding={[r.get('출고일') for r in all_matched]}, today={today})"
-                    else:
-                        reason = f"매출처 불일치(sheet={sheet_customer}, holding={[r.get('홀딩') for r in all_matched]})"
+                    reason = "시트 기록 없음" if not sheet_entry else "수정사항 불일치"
                     pending_list[doc_id] = {
                         "pk":           doc_id,
                         "상품명":       name,
