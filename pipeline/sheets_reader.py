@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 log = logging.getLogger("sheets_reader")
 
 SHEET_ID  = "1z7nYU9lfQT7d5boRwiU-zttwx90uVlUw2Y77Ydok6LY"
-CRED_PATH = "azy7503-d80d9-firebase-adminsdk-fbsvc-60e8882c5b.json"
+CRED_PATH = "azycompany-2c80615785a2.json"
 
 _COL = {
     "customer": "거래처",
