@@ -5,33 +5,31 @@ from zoneinfo import ZoneInfo
 
 log = logging.getLogger("sheets_reader")
 
-SHEET_ID  = "1OcEoXllrRfrxSqfJTzQWB_WPLzp3xfUKMXgwhYemRyU"
+SHEET_ID  = "1z7nYU9lfQT7d5boRwiU-zttwx90uVlUw2Y77Ydok6LY"
 CRED_PATH = "azy7503-d80d9-firebase-adminsdk-fbsvc-60e8882c5b.json"
-WEEKDAYS  = ["월", "화", "수", "목", "금", "토", "일"]
 
-# 시트 컬럼명 → 내부 키 매핑
 _COL = {
-    "bl":      "BL/매입처",
-    "estno":   "EST",
-    "grade":   "등급",
-    "qty":     "수량",
-    "manager": "담당자",
-    "customer":"매출처",
-    "holding": "홀딩",
-    "note":    "비고",
-    "cancel":  "취소",
+    "customer": "거래처",
+    "product":  "품목",
+    "brand":    "브랜드",
+    "grade":    "등급",
+    "estno":    "EST",
+    "qty":      "수량",
+    "bl":       "BL",
+    "warehouse":"출고창고",
 }
 
 
 def _tab_name(dt=None) -> str:
     if dt is None:
         dt = datetime.now(ZoneInfo("Asia/Seoul"))
-    return f"{dt.month}월{dt.day}일-{WEEKDAYS[dt.weekday()]}"
+    return dt.strftime("%Y-%m-%d")
 
 
 def load_sheet_records() -> dict:
-    """오늘 탭 출고 기록 → {BL: [{estno, grade, qty, manager, customer, note}, ...]}
+    """오늘 탭 출고 기록 → {BL: [{estno, grade, qty, customer, product, brand, warehouse}, ...]}
 
+    시트에 기록된 행은 모두 홀딩 출고로 처리(holding_checked=True).
     실패 시 {} 반환 (파이프라인 중단 없음).
     """
     try:
@@ -56,14 +54,7 @@ def load_sheet_records() -> dict:
         return {}
 
     result: dict = {}
-    skipped = 0
     for row in rows:
-        # 체크박스 TRUE인 행만 스킵 ("FALSE" / 빈값은 정상 처리)
-        cancel_val = str(row.get(_COL["cancel"], "") or "").strip().upper()
-        if cancel_val in ("TRUE", "1", "Y", "예", "취소"):
-            skipped += 1
-            continue
-
         bl      = str(row.get(_COL["bl"],  "") or "").strip()
         qty_raw = str(row.get(_COL["qty"], "") or "").strip()
         if not bl or not qty_raw:
@@ -76,17 +67,17 @@ def load_sheet_records() -> dict:
         if qty <= 0:
             continue
 
-        holding_val = str(row.get(_COL["holding"], "") or "").strip().upper()
         result.setdefault(bl, []).append({
             "estno":           str(row.get(_COL["estno"],    "") or "").strip(),
             "grade":           str(row.get(_COL["grade"],    "") or "").strip(),
             "qty":             qty,
-            "manager":         str(row.get(_COL["manager"],  "") or "").strip(),
             "customer":        str(row.get(_COL["customer"], "") or "").strip(),
-            "holding_checked": holding_val in ("TRUE", "1", "Y", "예"),
-            "note":            str(row.get(_COL["note"],     "") or "").strip(),
+            "product":         str(row.get(_COL["product"],  "") or "").strip(),
+            "brand":           str(row.get(_COL["brand"],    "") or "").strip(),
+            "warehouse":       str(row.get(_COL["warehouse"],"") or "").strip(),
+            "holding_checked": True,  # 시트 기록 = 무조건 홀딩 출고
         })
 
     total_rows = sum(len(v) for v in result.values())
-    log.info(f"  [시트] '{tab}' 탭 {total_rows}건 로드 / BL {len(result)}종 / 취소 {skipped}건 제외")
+    log.info(f"  [시트] '{tab}' 탭 {total_rows}건 로드 / BL {len(result)}종")
     return result
