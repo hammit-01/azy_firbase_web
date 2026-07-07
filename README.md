@@ -12,13 +12,12 @@
 4. [초기 설정](#4-초기-설정)
 5. [서비스 실행](#5-서비스-실행)
 6. [파이프라인 상세](#6-파이프라인-상세)
-7. [Firebase 이중화 구조](#7-firebase-이중화-구조)
-8. [Firestore 스키마](#8-firestore-스키마)
-9. [홀딩 시스템](#9-홀딩-시스템)
+7. [MySQL 스키마](#7-mysql-스키마)
+8. [홀딩 시스템](#8-홀딩-시스템)
+9. [출고 자동 차감 (Google Sheets)](#9-출고-자동-차감-google-sheets)
 10. [웹 UI 구조](#10-웹-ui-구조)
-11. [백엔드 EDA](#11-백엔드-eda)
-12. [배포 (Firebase Hosting)](#12-배포-firebase-hosting)
-13. [트러블슈팅](#13-트러블슈팅)
+11. [API 서버](#11-api-서버)
+12. [트러블슈팅](#12-트러블슈팅)
 
 ---
 
@@ -26,14 +25,13 @@
 
 ```
 [창고 사이트 HTTP]
-       ↓  crawling_list.py / crawling_handmade.py
-[원시 데이터 DataFrame]
-       ↓  back_eda_main.py → eda_*.py → replace_name.py
-[정제된 DataFrame (jns.xlsx)]
-       ↓  pipeline/updater.py  (서비스 모드)
-          post.py              (수동 모드)
-[Firestore all_data 컬렉션]
-       ↓  firebase.js (5분 폴링)
+       ↓  back_end/crawling_list.py
+[원시 DataFrame]
+       ↓  back_end/back_eda_main.py → eda_*.py → replace_name.py
+[정제된 DataFrame]
+       ↓  pipeline/updater.py  (snapshot.pkl 기반 변경 감지)
+[MySQL DB — azy_warehouse]
+       ↓  api_server.py  (FastAPI, port 8000)
 [웹 UI — warehouse_main.html]
 ```
 
@@ -41,11 +39,11 @@
 
 | 원칙 | 구현 |
 |---|---|
-| 중복 없는 doc 식별 | `pk = 코드_BL뒤4자리_식별번호뒤4자리_유통기한` (Firestore 문서 ID와 동일) |
-| 홀딩 수량 보정 | 업로드 전 홀딩 합계 차감 → 원본 재고 = 크롤링 - 홀딩 |
-| 사용자 데이터 보존 | `상태·홀딩·메모` 필드는 크롤링이 덮어쓰지 않음 (`set merge=True`) |
-| Firestore 할당량 관리 | Primary 초과 시 Secondary 자동 폴백, 23시간 후 자동 복귀 |
-| 재고 변화 감지 | snapshot.pkl 로컬 스냅샷 비교 → 변경된 행만 Firestore 업데이트 |
+| 중복 없는 행 식별 | `pk = 코드_BL뒤4자리_식별번호뒤4자리_유통기한YYYYMMDD` |
+| 홀딩 수량 보정 | 크롤 수량 - holding_records 합계 = 실제 표시 재고 |
+| 크롤 vs 홀딩 분리 | 크롤 행: `수집일=날짜`, 홀딩 행: `수집일=''` → 파이프라인이 홀딩 행 건드리지 않음 |
+| 재고 변화 감지 | `snapshot.pkl` 이전 상태 비교 → 변경된 행만 MySQL 업데이트 |
+| 출고 자동 처리 | Google Sheets 출고 기록과 BL+ESTNO+등급 매칭 → 홀딩 자동 차감 |
 
 ---
 
@@ -54,73 +52,73 @@
 ```
 azy_firbase_web/
 │
-├── run_service.py              # 파이프라인 서비스 진입점 (python run_service.py)
-├── main.py                     # 수동 크롤링+EDA 진입점
-├── post.py                     # 수동 Firestore 업로더 (main.py에서 호출)
+├── run_service.py              # 서비스 진입점: 파이프라인 + API 서버 동시 실행
+├── api_server.py               # FastAPI REST API (port 8000)
+├── CLAUDE.md                   # AI 어시스턴트용 프로젝트 가이드
 │
-├── pipeline/                   # 자동화 파이프라인 (서비스 모드)
+├── pipeline/                   # 자동화 파이프라인
 │   ├── scheduler.py            # APScheduler: 평일 08:00~17:00 1분 간격 실행
-│   ├── crawler.py              # 병렬 크롤링 + EDA 정규화 래퍼
-│   ├── updater.py              # Firestore diff 업데이트 + Primary/Secondary 이중화
-│   ├── snapshot.py             # snapshot.pkl 로드/저장 (변경 감지용)
-│   ├── snapshot.pkl            # 마지막 업로드 상태 캐시 (자동 생성, gitignore)
-│   ├── active_db.json          # 현재 활성 DB 상태 (자동 생성, gitignore)
+│   ├── crawler.py              # 병렬 HTTP 크롤링 + EDA 래퍼
+│   ├── updater.py              # DataFrame → MySQL diff 업데이트 + 재고 변화 감지
+│   ├── mysql_updater.py        # MySQLUpdater: INSERT/UPDATE/DELETE + 자동차감 + 이상처리
+│   ├── mysql_db.py             # MySQL 연결 + 공통 쿼리 유틸리티
+│   ├── sheets_reader.py        # Google Sheets 출고 기록 로더 (gspread)
+│   ├── snapshot.py             # snapshot.pkl 로드/저장
+│   ├── snapshot.pkl            # 마지막 파이프라인 상태 캐시 (자동 생성, gitignore)
 │   └── logs/
-│       ├── pipeline.log        # 파이프라인 실행 로그 (UTF-8)
-│       ├── service_out.txt     # 서비스 표준 출력
-│       └── service_err.txt     # 서비스 표준 에러
+│       └── pipeline.log        # 파이프라인 실행 로그 (UTF-8)
 │
 ├── back_end/
-│   ├── crawling_list.py        # HTTP 크롤링 (로그인 → 데이터 수집)
+│   ├── crawling_list.py        # HTTP 크롤링 (로그인 → 창고별 데이터 수집)
 │   ├── crawling_handmade.py    # 비표준 사이트 수동 크롤링
-│   ├── back_eda_main.py        # EDA 오케스트레이터 (list_eda 함수)
+│   ├── back_eda_main.py        # EDA 오케스트레이터 (list_eda)
 │   ├── jns_eda.py              # 제니스(곤지암) 전용 EDA
 │   ├── eda_ch_plz_cs.py        # CH·PLZ·CS 창고 EDA
 │   ├── eda_else_df.py          # 기타 창고 EDA
 │   ├── eda_standard.py         # 공통 EDA 유틸리티
 │   ├── eda_common.py           # 공통 전처리 함수
 │   ├── eda_added.py            # 추가 정제 로직
-│   ├── eda_column.py           # 컬럼 표준화
+│   ├── eda_column.py           # 출력 컬럼 표준화
 │   ├── replace_name.py         # 상품명 정규화 사전
-│   ├── equal_df.py             # 기존 재고장과 신규 데이터 비교 (new/deleted/!)
+│   ├── equal_df.py             # 기존 재고장과 신규 데이터 비교
 │   ├── exception_safe.py       # EDA 함수 안전 래퍼
 │   └── data/
 │       ├── warehouse_list.xlsx # 창고 목록 및 로그인 정보
-│       └── *.xlsx              # EDA 결과물 및 비교 기준 파일
+│       └── warehouse/          # 창고별 EDA 결과 및 비교 기준 파일
 │
 ├── front_end/html/
 │   ├── warehouse_main.html     # SPA 진입점
+│   ├── warehouse_main.js       # 앱 초기화 진입점 (type="module")
+│   ├── main.html               # 홈 화면
 │   ├── css/
-│   │   └── warehouse_main.css
+│   │   ├── warehouse_main.css  # 메인 스타일
+│   │   └── main.css
 │   └── js/
-│       ├── firebase.js         # Firebase 초기화, Primary/Secondary 전환, 5분 폴링
-│       ├── firestoreService.js # Firestore CRUD (insertItem, updateItem, deleteItem)
-│       ├── state.js            # 전역 상태 (allData, selectedItems, flashIds, crudData)
-│       ├── table.js            # 테이블 렌더링 (정렬, 검색, 색상 구분, 모바일 뷰)
-│       ├── panel.js            # 사이드 패널 (추가/수정/홀딩/선택 카드)
-│       ├── events.js           # DOM 이벤트 바인딩 + 호버 카드
-│       ├── crud.js             # 비즈니스 로직 (holdingData, insertData, updateData, deleteItem)
-│       ├── crud_history.js     # Undo 스택 (undoStack, undoLastAction)
-│       ├── data_eda.js         # Firestore 원본 → UI 정규화, addSelectedItem
+│       ├── api.js              # REST API 클라이언트 (fetch 래퍼)
+│       ├── firebase.js         # 데이터 로드 + 5분 폴링 (이름은 레거시)
+│       ├── firestoreService.js # CRUD 함수 (api.js 래퍼, 이름은 레거시)
+│       ├── state.js            # 전역 상태 (allData, selectedItems, pendingChanges)
+│       ├── table.js            # 테이블 렌더링
+│       ├── panel.js            # 사이드 패널 (추가/수정/홀딩 카드)
+│       ├── events.js           # DOM 이벤트 바인딩
+│       ├── crud.js             # 비즈니스 로직 (holdingData, insertData, updateData)
+│       ├── crud_history.js     # Undo 스택
+│       ├── changes.js          # 변경사항 탭 (재고 감소 수동 처리)
+│       ├── data_eda.js         # API 응답 → UI 정규화
 │       ├── dom.js              # DOM 요소 캐시
 │       ├── input_calculater.js # 홀딩 수량·중량 합계 계산
-│       └── actions.js          # 패널 모드 enum 상수
+│       ├── actions.js          # 패널 모드 상수
+│       └── ui.js               # Toast, Confirm 다이얼로그
 │
-├── scripts/                    # 유지보수용 일회성 스크립트
-│   ├── switch_to_secondary.py  # Secondary 수동 전환
-│   ├── switch_to_primary.py    # Primary 수동 복귀
-│   ├── copy_holdings_to_secondary.py  # Primary → Secondary 홀딩 복사
-│   ├── restore_holdings_from_txt.py   # txt 백업에서 홀딩 복원
-│   ├── fix_duplicate_origin.py # 중복 원본행 수량 합산 정리
-│   ├── migrate_doc_ids.py      # doc_id 포맷 마이그레이션
-│   ├── diagnose.py             # Firestore 수량 진단
-│   └── check_holding2.py       # 홀딩 수량 검증 리포트
+├── scripts/                    # 서비스 관리 배치 파일
+│   ├── manage_service.bat      # 서비스 start/stop/restart/status/logs
+│   ├── update_and_restart.bat  # git pull + 서비스 재시작
+│   ├── install_taskscheduler.bat # Windows 작업 스케줄러 등록
+│   └── setup_windows.bat       # 초기 환경 설정
 │
-├── .firebase/                  # Firebase Hosting 캐시 (gitignore 대상 아님)
-├── firebase.json               # Firebase Hosting 설정
-├── .firebaserc                 # 프로젝트 연결 설정
-├── CLAUDE.md                   # AI 어시스턴트용 프로젝트 가이드
-└── README.md                   # 이 파일
+├── azycompany-2c80615785a2.json  # Google Sheets 서비스 계정 키 (gitignore)
+├── requirements_pipeline.txt
+└── README.md
 ```
 
 ---
@@ -130,92 +128,99 @@ azy_firbase_web/
 | 항목 | 버전 / 비고 |
 |---|---|
 | Python | 3.10 이상 (3.14 사용 중) |
-| 주요 패키지 | `firebase-admin`, `google-cloud-firestore`, `pandas`, `requests`, `apscheduler`, `openpyxl` |
-| Firebase CLI | `firebase deploy` 배포 시 필요 |
-| 브라우저 | ES 모듈 지원 브라우저 (Chrome, Edge 최신) |
-| OS | Windows 10/11 (경로 일부 하드코딩 주의) |
+| MySQL | 8.0 이상 |
+| 주요 패키지 | `fastapi`, `uvicorn`, `pymysql`, `pandas`, `requests`, `apscheduler`, `openpyxl`, `gspread` |
+| 브라우저 | ES 모듈 지원 (Chrome, Edge 최신) |
+| OS | Windows 10/11 |
 
 ```bash
-pip install firebase-admin google-cloud-firestore pandas requests apscheduler openpyxl
+pip install fastapi uvicorn pymysql pandas requests apscheduler openpyxl gspread
 ```
 
 ---
 
 ## 4. 초기 설정
 
-### 4-1. Firebase Admin SDK 키 파일
+### 4-1. MySQL DB 생성
 
-두 개의 Firebase 프로젝트에 대한 Admin SDK 서비스 계정 키가 필요합니다.
-
+```sql
+CREATE DATABASE azy_warehouse CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'hyemi'@'localhost' IDENTIFIED BY '0943';
+GRANT ALL PRIVILEGES ON azy_warehouse.* TO 'hyemi'@'localhost';
+FLUSH PRIVILEGES;
 ```
-azy7503-d80d9-firebase-adminsdk-fbsvc-60e8882c5b.json  ← Primary
-awhw-0001-firebase-adminsdk-fbsvc-1af5d17c53.json       ← Secondary
+
+**테이블 생성:** `pipeline/mysql_db.py`의 스키마 참고 또는 아래 실행
+
+```sql
+-- inventory: 크롤 행(수집일=날짜) + 홀딩 행(수집일='')
+CREATE TABLE inventory ( ... );
+
+-- holding_records: 홀딩 이력
+CREATE TABLE holding_records ( ... );
+
+-- pending_changes: 재고 감소 수동 처리 대기
+CREATE TABLE pending_changes (id VARCHAR(255) PRIMARY KEY, data_json TEXT);
+
+-- employees: 담당자 목록 (초기화 대상 아님)
+CREATE TABLE employees (id VARCHAR(255) PRIMARY KEY, 이름 VARCHAR(100), 역할 VARCHAR(100));
 ```
 
-발급 방법:
-> Firebase 콘솔 → 프로젝트 설정 → 서비스 계정 → 새 비공개 키 생성
+### 4-2. Google Sheets 서비스 계정
 
-두 파일 모두 **프로젝트 루트**에 위치해야 합니다. `.gitignore`에 등록되어 있으므로 git에 올라가지 않습니다.
+출고 자동 차감 기능에 사용됩니다.
 
-### 4-2. Firestore 초기화
-
-- Primary (`azy7503-d80d9`): 컬렉션 `all_data`, `employees`, `archive_data`
-- Secondary (`awhw-0001`): 컬렉션 `all_data`, `_meta`
-- Firestore 규칙: `allow read, write: if true` (인증 없음, 사내 전용)
+1. Google Cloud Console → 새 프로젝트 → **Google Sheets API** 사용 설정
+2. 서비스 계정 생성 → **JSON 키 다운로드** → 프로젝트 루트에 저장
+3. `pipeline/sheets_reader.py`의 `CRED_PATH` 업데이트
+4. 출고 기록 Google Sheets에 서비스 계정 이메일을 **편집자**로 공유
 
 ### 4-3. 창고 목록 파일
 
-`back_end/data/warehouse_list.xlsx` — 창고명, IP:Port, 로그인 ID/PW, 고객코드 등을 포함합니다.
-현재 활성 창고: **제니스(곤지암)** (crawler.py 25번째 줄에서 필터링)
-
-```python
-# crawler.py
-active = df[df["창고"] == "제니스(곤지암)"]  # 필요 시 다른 창고 추가
-```
+`back_end/data/warehouse_list.xlsx` — 창고명, IP:Port, 로그인 ID/PW, 고객코드 포함.
 
 ---
 
 ## 5. 서비스 실행
 
-### 5-1. 파이프라인 서비스 (자동 크롤링)
+### 5-1. 파이프라인 + API 서버 동시 실행
 
 ```powershell
-# 백그라운드 서비스로 실행
 $pythonExe = "C:\Users\OWNER\AppData\Local\Python\pythoncore-3.14-64\python.exe"
-Start-Process -FilePath $pythonExe -ArgumentList "run_service.py" `
-    -WorkingDirectory "C:\Users\OWNER\.vscode\azy_firbase_web" `
-    -WindowStyle Hidden
+Start-Process $pythonExe -ArgumentList "run_service.py" `
+    -WorkingDirectory "C:\Users\OWNER\.vscode\azy_firbase_web" -NoNewWindow
 ```
 
-- 스케줄: **평일(월~금) 08:00 ~ 17:00, 1분 간격**
-- 운영 시간 내 시작 시 즉시 1회 실행 후 스케줄 진입
-- 로그: `pipeline/logs/pipeline.log` (UTF-8, 한국어 정상 기록)
+- **파이프라인:** 평일(월~금) 08:00~17:00, 1분 간격 자동 실행
+- **API 서버:** `http://localhost:8000` (FastAPI, 백그라운드 스레드)
+- **로그:** `pipeline/logs/pipeline.log`
 
 ```powershell
-# 프로세스 확인
-Get-WmiObject Win32_Process | Where-Object { $_.Name -like "python*" }
-
-# 프로세스 종료
+# 프로세스 확인 / 종료
 Get-Process python* | Stop-Process -Force
 ```
 
-### 5-2. 웹 서버 (로컬 개발)
+### 5-2. 웹 접속
 
-```bash
-python -m http.server 8000
-# 접속: http://localhost:8000/front_end/html/warehouse_main.html
+API 서버가 정적 파일도 서빙합니다:
+
+```
+http://localhost:8000/front_end/html/warehouse_main.html
 ```
 
-ES 모듈(`import`/`export`) 사용으로 반드시 HTTP 서버 통해야 합니다. 파일 직접 열기(`file://`)는 동작 안 합니다.
-
-### 5-3. 수동 크롤링 + 업로드
-
+외부 접속이 필요한 경우 ngrok 등 터널링 사용:
 ```bash
-# 크롤링 + EDA만 실행 (Firestore 업로드 안 함)
-python main.py
+ngrok http 8000
+```
 
-# Firestore 업로드 포함 (main.py에서 post(jns) 주석 해제 후)
-python main.py
+### 5-3. DB 초기화 (재시작 시)
+
+```python
+# employees 제외 전체 초기화
+DELETE FROM pending_changes;
+DELETE FROM holding_records;
+DELETE FROM inventory;
+# pipeline/snapshot.pkl 삭제 후 서비스 재시작
 ```
 
 ---
@@ -229,503 +234,360 @@ scheduler.py::run_pipeline()
     ↓
 CrawlerPool.crawl_all()          # 병렬 HTTP 크롤링
     ↓
-CrawlerPool.normalize(results)   # back_eda_main.list_eda() 호출
+CrawlerPool.normalize()          # back_eda_main.list_eda() EDA 정제
     ↓
-Snapshot.load()                  # snapshot.pkl → 이전 상태 dict 로드
+Snapshot.load()                  # snapshot.pkl 로드
     ↓
-FirestoreUpdater.update_diff()   # 변경 감지 + Firestore 업데이트
+MySQLUpdater.update_diff()
+    ├── load_sheet_records()     # Google Sheets 오늘 탭 출고 기록 조회
+    ├── _df_to_dict()            # 재고 변화 감지 + 자동/수동 분류
+    ├── INSERT / UPDATE / DELETE # db_snapshot 기준 MySQL 반영
+    ├── _apply_auto_deductions() # 시트 매칭 항목 holding 자동 차감
+    ├── _write_pending_changes() # 시트 미매칭 감소 → pending_changes 기록
+    └── _flag_holding_issues()   # 원본없음/수량초과 홀딩 자동 처리
     ↓
-Snapshot.save(new_snap)          # 새 상태 저장
+Snapshot.save(new_data)          # snapshot.pkl 갱신
 ```
 
-### 6-2. `updater.py` — Firestore diff 업데이트
+### 6-2. `_df_to_dict()` — 재고 변화 감지
 
-`update_diff(new_df, prev_snapshot)` 내부 동작:
+`snapshot.pkl`(이전 파이프라인 상태)과 현재 크롤 수량을 비교합니다.
 
 ```
-1. 활성 DB 결정 (active_db.json 기준: primary or secondary)
-2. Firestore에서 홀딩 행 조회 → holding_sum {pk: 수량합계}
-   (홀딩 행의 pk 필드 = 원본 크롤 행의 pk = 원본 행의 Firestore 문서 ID)
-3. _df_to_dict(new_df, today, holding_sum)
-   - 각 행의 pk(=doc_id) 생성: f"{코드}_{BL뒤4자리}_{식별번호뒤4자리}_{유통기한YYYYMMDD}"
-   - 재고 = 크롤링수량 - holding_sum.get(pk, 0) (순수 잔여 수량)
-   - 순재고 ≤ 0이면 해당 행 스킵 (전량 홀딩)
-   - 동일 doc_id 충돌 시 재고 합산 (창고 코드 다른 같은 상품)
-4. 이전 스냅샷과 비교:
-   - to_insert: 스냅샷에 없는 신규 doc → set() + 사용자 필드 초기화
-   - to_update: 시그니처(주요 필드 해시) 변경된 doc → set(merge=True)
-   - to_delete: 스냅샷에 있으나 신규 데이터에 없는 doc → delete()
-5. Firestore 배치 처리 (250건 단위)
-6. 할당량 초과 시 → _fallback_to_secondary() 자동 호출
+prev_raw     = snapshot["재고"] + snapshot["holdingTotal"]  # 이전 크롤 총량
+prev_nonhold = max(prev_raw - h_qty, 0)                     # 현재 홀딩 보정 후 non-hold
+
+재고 증가: net_qty = prev_nonhold + diff
+재고 감소:
+  ├── 시트에 있음 → auto_list (변경사항 탭 미표시)
+  │     ├── holding 레코드 있음: net_qty = prev_nonhold, holdingTotal -= diff
+  │     └── holding 레코드 없음: net_qty = qty - h_qty (non-hold 직접 차감)
+  └── 시트에 없음 → pending_list (변경사항 탭 수동 처리)
 ```
 
-**비교 대상 필드 (`COMPARE_FIELDS`):**
-```python
-("상품명", "브랜드", "등급", "ESTNO", "재고", "BL", "창고", "유통기한", "평중", "출고일")
-```
-`상태·홀딩·메모`는 사용자 설정 필드이므로 비교 및 덮어쓰기 대상 제외.
+> **핵심:** auto_list 항목은 `holdingTotal`을 차감 후 값으로 pickle에 저장  
+> → 다음 사이클에서 `prev_raw = net_qty + (h_qty - diff) = qty` → 재감지 없음
 
-### 6-3. `snapshot.pkl`
-
-- Python `pickle` 형식으로 `pipeline/snapshot.pkl`에 저장
-- 내용: `{doc_id: {필드: 값, ...}}` 딕셔너리
-- 파이프라인 재시작 시 자동 복구. 없으면 전체 쓰기로 진행
-- **초기화가 필요한 경우:** 파일 삭제 후 서비스 재시작
-
-### 6-4. pk 체계
-
-pk는 데이터 행의 기본키로, **Firestore 문서 ID와 동일**하게 사용됩니다.
-모든 CRUD 및 홀딩 매칭 작업은 pk 기준으로 이루어집니다.
+### 6-3. pk 체계
 
 ```
 pk = "{코드}_{BL뒤4자리}_{식별번호뒤4자리}_{유통기한YYYYMMDD}"
-     (/, 공백 → _로 치환)
+     (특수문자 → _ 치환)
 
 예시: 640O4P23_8600_1057_20260725
 ```
 
-- **크롤 행**: Firestore 문서 ID = pk 필드 = 동일값
-- **홀딩 행 (`all_data`)**: 문서 ID는 UUID(auto-generated), `pk` 필드에 원본 크롤 행의 pk 저장
-- **홀딩 기록 (`holding_data`)**: 문서 ID = 전량홀딩 시 pk, 부분홀딩 시 `{pk}hold01`, `{pk}hold02`, ...
-- `updater.py`에서 홀딩 차감 시 `holding_sum[pk]`로 매칭 (상품명 변경에도 매칭 유지)
+- 크롤 행의 `id` = `pk` = MySQL `inventory.id`
+- 홀딩 행: `inventory.id` = UUID, `inventory.pk` = 원본 크롤 행의 pk
+- 홀딩 레코드: `holding_records.pk` = 원본 크롤 행의 pk
+- holding_sum 매칭은 pk 기준 → 상품명 변경에도 홀딩 유지
+
+### 6-4. `snapshot.pkl`
+
+- 마지막 파이프라인 출력 `{pk: {필드: 값}}` 딕셔너리
+- `snapshot.pkl` 없으면 전체 INSERT로 시작
+- 초기화 필요 시: 파일 삭제 후 서비스 재시작
 
 ---
 
-## 7. Firebase 이중화 구조
+## 7. MySQL 스키마
 
-### 7-1. 구성
+### 7-1. `inventory` 테이블
 
-| 구분 | 프로젝트 ID | 용도 |
+크롤 행과 홀딩 행이 공존합니다.
+
+| 컬럼 | 타입 | 설명 |
 |---|---|---|
-| Primary | `azy7503-d80d9` | 메인 운영 DB |
-| Secondary | `awhw-0001` | 할당량 초과 시 자동 폴백 |
+| `id` | VARCHAR(255) PK | 크롤 행: pk와 동일. 홀딩 행: UUID |
+| `pk` | VARCHAR(255) | 기본키. 홀딩 행은 원본 크롤 행의 pk |
+| `상품명` | VARCHAR | |
+| `브랜드` | VARCHAR | |
+| `등급` | VARCHAR | |
+| `ESTNO` | VARCHAR | EST 인증 번호 |
+| `재고` | INT | 박스 수 (홀딩 차감 후 잔여 또는 홀딩 수량) |
+| `BL` | VARCHAR | BL 번호 전체 |
+| `창고` | VARCHAR | |
+| `유통기한` | VARCHAR | YYYY-MM-DD |
+| `중량` | FLOAT | 개당 중량(kg) |
+| `평중` | FLOAT | 평균 중량(kg) |
+| `출고일` | VARCHAR | 출고 예정일 |
+| `홀딩` | VARCHAR | 홀딩 담당자명 |
+| `상태` | VARCHAR | `없음` / `holding` |
+| `메모` | TEXT | 사용자 메모 |
+| `수집일` | VARCHAR | 크롤 행: YYYY-MM-DD. 홀딩 행: `''` |
+| `holdingTotal` | INT | 해당 pk의 홀딩 수량 합계 (pickle 비교용) |
+| `holdingRecordId` | VARCHAR | 연결된 holding_records.id |
+| `이상` | VARCHAR | 홀딩 이상 감지 메모 |
+| `원본재고` | INT | 이상 감지용 원본 수량 |
 
-### 7-2. 자동 전환 흐름 (Backend)
+**크롤 행 vs 홀딩 행 구분:**
 
-```
-파이프라인 Firestore 쓰기 실패 (429 Quota exceeded)
-    ↓
-_fallback_to_secondary() 호출
-    ↓
-_activate_secondary()
-  - pipeline/active_db.json 저장: {"active": "secondary", "switched_at": "..."}
-  - Secondary Firestore: _meta/active_db 문서 저장 {"active": "secondary"}
-    ↓
-현재 크롤링 데이터 전체를 Secondary에 기록 (set merge=True)
-    ↓
-다음 파이프라인 실행부터 Secondary 사용
-    ↓
-23시간 경과 후 → _try_recover_primary()
-  - Primary에 데이터 쓰기 시도
-  - 성공 시 → _activate_primary() → active_db.json 삭제 + _meta/active_db 마커 삭제
-  - 실패 시 → Secondary 유지 (다음 라운드 재시도)
-```
+| 구분 | `상태` | `수집일` | `id` |
+|---|---|---|---|
+| 크롤 행 | `없음` | YYYY-MM-DD | pk |
+| 홀딩 행 | `holding` | `''` | UUID |
 
-### 7-3. 자동 전환 흐름 (Frontend)
+### 7-2. `holding_records` 테이블
 
-```javascript
-// firebase.js
-onSnapshot(doc(_secondaryDb, "_meta", "active_db"), (snap) => {
-    const newActive = snap.exists() ? snap.data().active : "primary";
-    if (newActive !== _activeDbName) {
-        setTimeout(() => window.location.reload(), 800); // 감지 시 자동 리로드
-    }
-});
-```
+홀딩 이력 관리. `inventory` 홀딩 행의 `holdingRecordId`와 연결.
 
-- 프론트엔드는 Secondary의 `_meta/active_db` 문서를 **실시간 감시**
-- 백엔드가 마커를 쓰면 800ms 후 페이지 자동 리로드 → 새 DB 사용
-- 마커 삭제(Primary 복귀) 시에도 동일하게 감지
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `id` | VARCHAR(255) PK | `{pk}hold{N}` 형식 |
+| `pk` | VARCHAR | 원본 크롤 행의 pk |
+| `BL` | VARCHAR | |
+| `ESTNO` | VARCHAR | |
+| `등급` | VARCHAR | |
+| `수량` | INT | 홀딩 수량 |
+| `홀딩` | VARCHAR | 담당자명 |
+| `출고일` | VARCHAR | 출고 예정일 |
+| `메모` | TEXT | |
 
-### 7-4. 수동 전환 스크립트
+### 7-3. `pending_changes` 테이블
 
-```bash
-# Secondary로 수동 전환 (Primary 할당량 초과 시)
-python scripts/switch_to_secondary.py
+시트 미매칭 재고 감소 항목 (수동 처리 대기).
 
-# Primary로 수동 복귀
-python scripts/switch_to_primary.py
-
-# Primary → Secondary 홀딩 데이터 복사 (Primary 접근 가능한 경우)
-python scripts/copy_holdings_to_secondary.py
-
-# 저장된 txt 파일에서 홀딩 복원 (Primary 접근 불가 시)
-python scripts/restore_holdings_from_txt.py
-```
-
-### 7-5. Firestore 무료 티어 할당량
-
-| 항목 | 무료 한도 |
+| 컬럼 | 타입 |
 |---|---|
-| 문서 읽기 | 50,000건/일 |
-| 문서 쓰기 | 20,000건/일 |
-| 문서 삭제 | 20,000건/일 |
+| `id` | VARCHAR(255) PK |
+| `data_json` | TEXT (JSON) |
 
-**할당량 리셋 시각:** 매일 **오전 00:00 PDT (한국 기준 16:00~17:00)**
+매 파이프라인 사이클마다 전체 교체 (해소된 항목 자동 삭제).
 
-운영 시간(08:00~17:00) 1분 간격 = 하루 최대 540번 파이프라인 실행.
-Firestore는 변경된 행만 업데이트하므로 실제 쓰기는 훨씬 적습니다.
-진단/마이그레이션 스크립트는 전체 컬렉션 읽기(stream)를 사용하므로 할당량 소모가 큼 — 필요할 때만 실행할 것.
+### 7-4. `employees` 테이블
 
----
+담당자 목록. **절대 초기화 대상 아님.**
 
-## 8. Firestore 스키마
-
-### 8-1. `all_data` 컬렉션
-
-모든 재고 행과 홀딩 행이 이 컬렉션에 공존합니다.
-
-| 필드 | 타입 | 설명 |
-|---|---|---|
-| `id` / `pk` | string | **기본키**. 크롤 행: Firestore 문서 ID = pk = `코드_BL뒤4자리_식별번호뒤4자리_유통기한`. 홀딩 행: 문서 ID는 UUID, `pk` 필드는 원본 크롤 행의 pk |
-| `상품명` | string | 수탁품명 |
-| `브랜드` | string | 브랜드명 |
-| `등급` | string | 품질 등급 |
-| `ESTNO` | string | EST 인증 번호 |
-| `재고` | int | 박스 수 (홀딩 차감 후 잔여 수량 또는 홀딩 수량) |
-| `BL` | string | BL 번호 전체 (예: `MAEU269042936`) |
-| `창고` | string | 창고명 |
-| `유통기한` | string | `YYYY-MM-DD` 형식 |
-| `중량` | float | 개당 중량(kg) |
-| `평중` | float | 평균 중량(kg) |
-| `출고일` | string | 출고 예정일 (`YYYY-MM-DD`) |
-| `홀딩` | string | 홀딩 담당자명 (홀딩 행) 또는 비고 (원본 행) |
-| `수집일` | string | 크롤링 날짜 `YYYY-MM-DD` (홀딩 행은 빈 문자열) |
-| `상태` | string | `"없음"` (일반), `"holding"` (홀딩), `"freeze"`, `"stopped"`, `"moving"` |
-| `메모` | string | 사용자 입력 메모 |
-
-**원본 행 vs 홀딩 행 구분:**
-
-| 구분 | `상태` | `수집일` | 문서 ID | `pk` 필드 |
-|---|---|---|---|---|
-| 원본 행 | `"없음"` | `YYYY-MM-DD` | pk (`코드_BL뒤4_식별번호뒤4_유통기한`) | 문서 ID와 동일 |
-| 홀딩 행 | `"holding"` | `""` | UUID (auto-generated) | 원본 크롤 행의 pk |
-
-### 8-2. `holding_data` 컬렉션
-
-홀딩 이력을 별도 관리하는 컬렉션. `all_data` 홀딩 행과 `holdingRecordId` 필드로 연결됩니다.
-
-| 필드 | 타입 | 설명 |
-|---|---|---|
-| 문서 ID | string | 전량홀딩: `{pk}`, 부분홀딩: `{pk}hold01`, `{pk}hold02`, ... |
-| `pk` | string | 원본 크롤 행의 pk |
-| `수량` | int | 홀딩 수량 |
-| `홀딩` | string | 담당자명 |
-| `출고일` | string | 출고 예정일 |
-| `메모` | string | 메모 |
-
-### 8-3. `employees` 컬렉션
-
-사용자 목록. 홀딩·삽입 시 담당자 선택에 사용.
-
-| 필드 | 타입 |
+| 컬럼 | 타입 |
 |---|---|
-| `이름` | string |
-| `역할` | string |
-
-### 8-3. `archive_data` 컬렉션
-
-이전 수집일의 데이터를 보관합니다. `post.py`의 `_archive_old_data()` 함수가 `수집일 != 오늘`인 원본 행을 이동시킵니다. (파이프라인 서비스는 snapshot 비교 방식이라 별도 아카이브 없음)
-
-### 8-4. `_meta` 컬렉션 (Secondary만)
-
-| 문서 ID | 필드 | 설명 |
-|---|---|---|
-| `active_db` | `active: "secondary"` | Primary → Secondary 전환 시 생성 |
-| `active_db` | `switched_at: ISO8601` | 전환 시각 |
-
-Primary 복귀 시 이 문서가 삭제됩니다.
+| `id` | VARCHAR(255) PK |
+| `이름` | VARCHAR |
+| `역할` | VARCHAR |
 
 ---
 
-## 9. 홀딩 시스템
+## 8. 홀딩 시스템
 
-### 9-1. 개념
+### 8-1. 개념
 
-홀딩(Holding)은 재고를 출고 예약 상태로 분리하는 기능입니다.
+출고 예약 상태로 재고를 분리하는 기능.
 
 ```
-[원본 재고 100박스]
-       ↓ 홀딩 60박스 (holdingData)
-[원본 행: 재고 40박스] + [홀딩 행: 재고 60박스, 상태=holding]
+[크롤 재고 100박스]
+       ↓ holdingData(60박스)
+[inventory 크롤 행: 재고=40] + [inventory 홀딩 행: 재고=60, 상태=holding]
+                                [holding_records: 수량=60]
 ```
 
-- `holdingData(item, holdQty, ...)` — 원본 행 재고를 `holdQty`만큼 줄이고, 홀딩 행(UUID ID)을 새로 생성
-- 홀딩 행은 `상태: "holding"`, `수집일: ""` — 파이프라인이 건드리지 않음
-- 원본 행은 `재고 -= holdQty`로 감소
+### 8-2. 홀딩 처리 흐름
 
-### 9-2. 크롤링과 홀딩의 관계
+```
+holdingData(item, holdQty)
+  ├── remainQty = item.qty - holdQty
+  ├── remainQty > 0: updateItem(id, {재고: remainQty})  → 크롤 행 재고 감소
+  └── remainQty = 0: deleteItem(id)                     → 크롤 행 삭제 (0박스 행 방지)
+  └── insertItem({상태:"holding", 수집일:"", 재고: holdQty, ...})  → 홀딩 행 생성
+  └── insertHoldingRecord({pk, BL, ESTNO, 등급, 수량, ...})       → holding_records 기록
+  └── pushUndo({type:"holding", wasDeleted, originalData, ...})
+```
 
-파이프라인(updater.py)은 크롤링 업로드 전 홀딩 수량을 차감합니다:
+### 8-3. 파이프라인과 홀딩의 관계
 
 ```python
-holding_sum = {pk: 홀딩수량합계}  # all_data 홀딩 행의 pk 필드 기준 집계
-net_qty = crawled_qty - holding_sum.get(doc_id, 0)
-# net_qty <= 0 이면 원본 doc 업로드 스킵 (전량 홀딩 중)
+h_qty = holding_records에서 pk 기준 수량 합계
+net_qty = 크롤_수량 - h_qty      # 실제 표시 재고
+# net_qty ≤ 0이면 크롤 행 스킵 (전량 홀딩)
 ```
 
-매칭 키가 pk이므로 상품명이 변경되거나 정규화되어도 홀딩 차감이 정확히 작동합니다.
-이렇게 하면 매 크롤링마다 홀딩이 초기화되지 않고, 원본 행의 재고가 항상 실제 잔여분을 반영합니다.
+파이프라인은 `수집일=''` 행을 건드리지 않으므로 홀딩 행은 크롤링에 의해 초기화되지 않습니다.
 
-### 9-3. 완료 처리
+### 8-4. 홀딩 이상 자동처리 (`_flag_holding_issues`)
 
-웹 UI의 `사용` 열 ✓ 버튼 클릭 → 홀딩 행 삭제 → 원본 행 없음 (전량 홀딩이었으면 다음 크롤링에서 원본 행 재생성)
+매 파이프라인 사이클에 자동 실행:
 
-### 9-4. 홀딩 수량 검증
+| 상황 | 처리 |
+|---|---|
+| 크롤에서 해당 pk 완전히 사라짐 (원본없음) | inventory 홀딩 행 + holding_records DELETE |
+| holding 합계 > 크롤 수량 (수량초과) | 초과분을 작은 홀딩 행부터 차감, 0이면 DELETE |
 
-```bash
-python scripts/check_holding2.py
-# 결과: scripts/holding_check_result.txt
+### 8-5. Undo
+
+```javascript
+// undo 스택에 저장
+pushUndo({
+    type: "holding",
+    wasDeleted: remainQty === 0,     // 전량홀딩이면 크롤 행이 삭제됨
+    originalData: { ...item.raw },   // 전량홀딩 시 복구용 원본 데이터
+    originalId, originalQty,
+    holdingId, holdingRecordId
+})
+
+// undo 실행
+wasDeleted ? insertItem(originalData) : updateItem(originalId, {재고: originalQty})
+deleteItem(holdingId)
+moveHoldingToHistory(holdingRecordId, "취소")
 ```
 
-출력 형식:
+---
+
+## 9. 출고 자동 차감 (Google Sheets)
+
+### 9-1. 시트 형식
+
+| 시트 | 설명 |
+|---|---|
+| 탭 이름 | `YYYY-MM-DD` (당일 날짜) |
+| 컬럼 | `거래처`, `품목`, `브랜드`, `등급`, `EST`, `수량`, `BL`, `출고창고` |
+
+시트에 기록된 행 = **무조건 홀딩 출고로 처리** (별도 홀딩 체크박스 없음).
+
+### 9-2. 매칭 및 처리
+
 ```
-BL              상품명   유통기한   원본  홀딩합  합계  홀딩 상세
-MAEU269042936   삼겹  2028-04-13  430   300   730  미상:200박스(출고 2026-07-03)  미상:100박스(출고 미정)
+시트 BL + ESTNO + 등급 → inventory 홀딩 행 + holding_records 탐색
+
+매칭됨:
+  inventory 홀딩 행 재고 -= diff
+  holding_records 수량    -= diff
+  net_qty(크롤 행) = prev_nonhold 유지  ← 감소분은 홀딩에서 처리
+
+매칭 안 됨 (홀딩 없이 단순 출고):
+  net_qty = 크롤수량 - h_qty  ← non-hold에서 직접 차감
+
+→ 두 경우 모두 변경사항 탭에 미표시 (pending_list 기록 안 함)
+```
+
+### 9-3. 설정
+
+```python
+# pipeline/sheets_reader.py
+SHEET_ID  = "1z7nYU9lfQT7d5boRwiU-zttwx90uVlUw2Y77Ydok6LY"
+CRED_PATH = "azycompany-2c80615785a2.json"
 ```
 
 ---
 
 ## 10. 웹 UI 구조
 
-### 10-1. JS 모듈 의존관계
-
-```
-warehouse_main.html
-  └── warehouse_main.js (type="module")
-        ├── firebase.js    → state.js, table.js, panel.js
-        ├── events.js      → dom.js, state.js, crud.js, data_eda.js, actions.js
-        ├── table.js       → state.js, dom.js
-        ├── panel.js       → state.js, dom.js, actions.js
-        ├── crud.js        → firestoreService.js, state.js, crud_history.js
-        └── data_eda.js    → state.js, panel.js, table.js
-```
-
-### 10-2. 렌더링 흐름
+### 10-1. 렌더링 흐름
 
 ```
 [페이지 로드]
-  bindEvents()         ← events.js: 모든 DOM 이벤트 등록
-  initFirebase()       ← firebase.js: Primary/Secondary 결정 + 5분 폴링 시작
+  bindEvents()          ← 모든 DOM 이벤트 등록
+  initFirebase()        ← 더미 (MySQL 버전에서는 불필요)
   subscribeData()
-    → fetchAllData()
-        → getDocs(all_data)
-        → state.allData = [...]
-        → renderTable()      ← table.js: tbody 전체 재렌더
-        → renderSelectData() ← panel.js: 선택 항목 패널 업데이트
+    → fetchAllData()    ← GET /api/inventory
+    → state.allData = [...]
+    → renderTable()
+    → renderSelectData()
 
 [행 더블클릭]
-  addSelectedItem()    ← data_eda.js: 행 정규화 후 state.selectedItems에 추가
-  renderAll()          ← table.js + panel.js
+  addSelectedItem()     ← 행 정규화 후 state.selectedItems 추가
+  renderAll()
 
 [홀딩 버튼]
-  holdingData()        ← crud.js: 원본 재고 감소 + 홀딩 행 생성
-    → updateItem()     ← firestoreService.js
-    → insertItem()     ← firestoreService.js
-  undoStack에 push     ← crud_history.js
-  5분 후 다음 폴링에서 갱신 반영
+  holdingData()         ← CRUD 처리
+  5분 폴링에서 자동 갱신
 ```
 
-### 10-3. 테이블 컬럼 구성
+### 10-2. 변경사항 탭
 
-| 순서 | 컬럼 | 너비 | 비고 |
-|---|---|---|---|
-| 1 | 선택 (체크박스) | 3% | |
-| 2 | 상품명 | 12% | |
-| 3 | 브랜드 | 12% | |
-| 4 | 등급 | 7% | |
-| 5 | ESTNO | 8% | |
-| 6 | 재고 | 7% | |
-| 7 | BL | 16% | |
-| 8 | 창고 | 10% | |
-| 9 | 유통기한 | 8% | |
-| 10 | 평균중량 | 5% | |
-| 11 | 메모 | 10% | |
-| 12 | 사용 (완료 버튼) | 3% | 홀딩 행만 표시 |
+시트 기록 없이 크롤 재고가 감소한 항목을 수동 처리합니다.
 
-출고일·홀딩 정보는 테이블에서 제거하고, 행에 마우스 올리면 호버 카드로 표시됩니다.
+- **non-hold에서 차감:** 시스템이 이미 반영 → pending_changes 레코드 삭제만
+- **hold에서 차감:** non-hold 수량 복구 + holding 행 감소 + pending 삭제
 
-### 10-4. 행 색상 구분
+자동 차감된 항목(시트 매칭)은 이 탭에 표시되지 않습니다.
+
+### 10-3. 테이블 컬럼
+
+| 컬럼 | 설명 |
+|---|---|
+| 선택 (체크박스) | 행 선택 |
+| 상품명 | |
+| 브랜드 | |
+| 등급 | |
+| ESTNO | |
+| 재고 | 홀딩 차감 후 잔여 박스 수 |
+| BL | |
+| 창고 | |
+| 유통기한 | |
+| 평균중량 | |
+| 메모 | |
+| 사용 (✓) | 홀딩 행 완료 처리 버튼 |
+
+출고일·홀딩 담당자는 행 호버 카드에 표시됩니다.
+
+### 10-4. 행 색상
 
 | 상태 | 색상 |
 |---|---|
-| 일반 (`없음`) | 기본 (검정) |
-| 홀딩 (`holding`) | 파랑 `#007de4` |
-| 선택됨 | 초록 `#2e9100` |
-| 동결 (`freeze`) | 보라 `#6d28d9` |
-| 중단 (`stopped`) | 갈색 `#92400e` |
-| 이동 (`moving`) | 주황 `#ff8838` |
-
-### 10-5. Firebase 초기화 (Primary/Secondary 결정)
-
-```javascript
-// firebase.js 초기화 순서
-initFirebase()
-  1. Primary, Secondary 앱 초기화
-  2. Secondary의 _meta/active_db 문서 조회 (일회성)
-     - 존재하고 active==="secondary" → _activeDbName = "secondary"
-  3. _meta/active_db 실시간 감시 (onSnapshot)
-     - 변경 감지 시 800ms 후 window.location.reload()
-  4. db = _activeDbName==="secondary" ? _secondaryDb : _primaryDb
-```
+| 일반 (`없음`) | 기본 |
+| 홀딩 (`holding`) | 파랑 |
+| 선택됨 | 초록 |
+| 동결 (`freeze`) | 보라 |
+| 중단 (`stopped`) | 갈색 |
+| 이동 (`moving`) | 주황 |
 
 ---
 
-## 11. 백엔드 EDA
+## 11. API 서버
 
-### 11-1. 파이프라인 흐름
+`api_server.py` — FastAPI, port 8000.
 
-```
-crawling_list.py::get_data()       # 사이트별 원시 데이터 수집
-       ↓
-back_eda_main.py::list_eda()       # 오케스트레이터
-       ↓
-jns_eda.py / eda_ch_plz_cs.py / eda_else_df.py  # 창고별 전처리
-       ↓
-eda_standard.py / eda_common.py / eda_added.py  # 공통 정제
-       ↓
-replace_name.py                    # 상품명 표준화 사전 적용
-       ↓
-eda_column.py                      # 출력 컬럼 표준화
-       ↓
-정제된 DataFrame (컬럼: BL번호, 수탁품, 유통기한, 재고수량, 브랜드, 등급, ESTNO, 창고, 중량, 평균중량, 출고예정일, 코드, ...)
-```
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| GET | `/api/inventory` | 전체 재고 조회 (크롤 행 + 홀딩 행) |
+| GET | `/api/employees` | 담당자 목록 |
+| GET | `/api/pending-changes` | 수동 처리 대기 항목 |
+| POST | `/api/inventory` | 재고 행 추가 |
+| PUT | `/api/inventory/{id}` | 재고 행 수정 |
+| DELETE | `/api/inventory/{id}` | 재고 행 삭제 |
+| POST | `/api/holding-records` | 홀딩 레코드 추가 |
+| PUT | `/api/holding-records/{id}` | 홀딩 레코드 수정 |
+| DELETE | `/api/holding-records/{id}` | 홀딩 레코드 삭제 |
+| GET | `/api/holding-count/{pk}` | pk 기준 홀딩 건수 조회 |
+| POST | `/api/holding-records/{id}/history` | 홀딩 → 이력으로 이동 |
+| DELETE | `/api/pending-changes/{id}` | pending 항목 삭제 |
 
-### 11-2. pk 기반 중복 합산
-
-EDA 내부에서 동일 pk(창고코드+BL+유통기한) 기준으로 1차 합산이 이루어집니다.
-파이프라인의 `_df_to_dict()`에서 동일 doc_id(BL+유통기한+상품명) 기준으로 2차 합산합니다.
-이중 합산으로 창고 코드가 달라도 같은 상품이면 단일 Firestore 문서로 병합됩니다.
-
-### 11-3. `equal_df.py` — 재고 변화 비교
-
-기존 재고장(`[창고]재고장(전미림).xlsx`)과 새 크롤링 데이터를 비교해 행에 상태를 붙입니다:
-- `new`: 새로 들어온 재고
-- `deleted`: 사라진 재고
-- `!`: 수량 변경됨
-
-이 파일은 웹 UI에 직접 연동되지 않고, 재고 변화 확인용 보고서 생성에 사용됩니다.
+웹 UI와 API 서버가 같은 origin에서 동작하므로 CORS 이슈 없음.
 
 ---
 
-## 12. 배포 (Firebase Hosting)
+## 12. 트러블슈팅
 
-### 12-1. 경로 변경
+### 파이프라인이 시작되지 않음
 
-로컬 서버(`./css/...`)와 Firebase Hosting(`/css/...`) 경로가 다릅니다.
-배포 전 Bash `sed`로 변환합니다 (PowerShell은 한국어 인코딩 깨짐).
-
-```bash
-# 로컬 → 배포 (배포 전)
-sed -i 's|\./css/|/css/|g; s|\./js/|/js/|g' front_end/html/warehouse_main.html
-
-# 배포
-firebase deploy --only hosting
-
-# 배포 후 로컬로 복구
-sed -i 's|"/css/|"./css/|g; s|"/js/|"./js/|g' front_end/html/warehouse_main.html
-```
-
-> **주의:** `Get-Content | Set-Content` (PowerShell)는 한국어 문자를 UTF-16으로 재인코딩해 깨집니다.
-
-### 12-2. 배포 URL
-
-```
-https://azy7503-d80d9.web.app
-https://azy7503-d80d9.firebaseapp.com
-```
-
----
-
-## 13. 트러블슈팅
-
-### Firestore 할당량 초과 (`429 Quota exceeded`)
-
-**증상:** 웹 UI에 데이터 안 보임, 파이프라인 로그에 할당량 초과
-
-**자동 처리:** 파이프라인이 Secondary로 자동 전환 + 프론트엔드 자동 리로드
-
-**수동 처리:**
-```bash
-python scripts/switch_to_secondary.py   # Secondary 전환
-# 서비스 재시작 (PID 확인 후 Kill → 재시작)
-```
-
-**할당량 리셋:** 매일 한국 기준 오후 4~5시 (PDT 00:00)
-
----
-
-### 데이터 수량 불일치
-
-**원인 1:** snapshot.pkl에 구버전 doc_id가 남아있어 중복 doc 생성
-
-```bash
-# snapshot.pkl 삭제 후 서비스 재시작 → 전체 재쓰기
-del pipeline\snapshot.pkl
-```
-
-**원인 2:** 홀딩 데이터와 원본 데이터 이중계산
-
-```bash
-python scripts/check_holding2.py        # 홀딩 수량 검증
-python scripts/diagnose.py              # 중복 원본행 탐지
-python scripts/fix_duplicate_origin.py  # 중복 원본행 합산 정리
-```
-
----
-
-### 파이프라인 서비스가 시작 안 됨 (cp949 인코딩 오류)
-
-**증상:** `UnicodeEncodeError: 'cp949' codec can't encode character`
-
-**원인:** `py run_service.py 2>&1` 처럼 stderr를 PowerShell에 리다이렉트하면 한국어·유니코드가 cp949로 강제 인코딩됨
-
-**해결:**
 ```powershell
-# 올바른 실행 방법 (WindowStyle Hidden → 터미널 없이 실행)
-Start-Process -FilePath "python" -ArgumentList "run_service.py" `
-    -WorkingDirectory "프로젝트경로" -WindowStyle Hidden
+# 기존 프로세스 확인 후 강제 종료
+Get-Process python* | Stop-Process -Force
+# snapshot.pkl이 손상된 경우 삭제
+Remove-Item pipeline\snapshot.pkl
 ```
 
----
+### 재고 수량 불일치
 
-### PowerShell에서 한국어 파일 인코딩 깨짐
+**원인 1:** snapshot.pkl과 MySQL 상태 불일치
 
-**원인:** `Get-Content | Set-Content` 기본 인코딩이 UTF-16
-
-**해결:** 파일 내용 치환은 반드시 Bash `sed` 사용
-```bash
-sed -i 's/찾을텍스트/바꿀텍스트/g' 파일명
+```powershell
+# snapshot.pkl 삭제 후 재시작 → 전체 재비교
+Remove-Item pipeline\snapshot.pkl
 ```
 
----
+**원인 2:** 홀딩 이상 (원본 없음 / 수량 초과)
+
+자동으로 다음 파이프라인 사이클에 처리됩니다 (`_flag_holding_issues`).
+
+### 자동 차감이 작동하지 않음
+
+1. 파이프라인 로그에서 `[시트]` 라인 확인 — 시트 접속 성공 여부
+2. `[재고감소-자동]` 로그 없으면 시트의 BL/ESTNO/등급이 크롤 데이터와 불일치
+3. `[재고감소-pending]` 로그 있으면 시트에 해당 항목이 없는 것
+
+### PowerShell에서 한국어 인코딩 깨짐
+
+파일 내용 치환은 반드시 Bash `sed` 사용. `Get-Content | Set-Content`는 UTF-16으로 인코딩해 한국어가 깨집니다.
 
 ### `back_eda_main.py` 경로 오류
 
-`sys.path.append('C:\\Users\\ASUS\\...')` 하드코딩이 있습니다.
-다른 PC에서 실행 시 이 경로를 수정하거나 주석 처리하세요.
-
----
-
-### 홀딩 데이터 Secondary 복원
-
-Primary 접근 가능한 경우:
-```bash
-python scripts/copy_holdings_to_secondary.py
-```
-
-Primary 할당량 초과로 접근 불가한 경우:
-```bash
-# scripts/holding_check_result.txt (마지막 check_holding2.py 결과)에서 복원
-python scripts/restore_holdings_from_txt.py
-```
-
----
-
-## 개발 메모
-
-- **Firebase SDK 버전:** CDN `12.12.0` (npm 설치 없음)
-- **Firestore Python SDK:** `FieldFilter` 클래스 필수 (`where(filter=FieldFilter(...))`)  
-  구버전 `.where("field", "==", value)` 문법은 한국어 필드명에서 오류 발생
-- **홀딩 행 보존:** `_archive_old_data()` 및 `update_diff()`는 `수집일`이 없는(빈 문자열) 홀딩 행을 건드리지 않음
-- **모바일 뷰:** `table.js::renderMobileView()` — 768px 이하에서 카드형 레이아웃, `limitDate` 변수는 함수 내부에서 별도 선언 필요
+파일 내 `sys.path.append('C:\\Users\\ASUS\\...')` 하드코딩이 있습니다. 다른 PC에서 실행 시 수정 필요.
