@@ -1,5 +1,5 @@
 """FastAPI 서버 - 프론트엔드 ↔ MySQL CRUD."""
-import uuid
+import uuid, json as _json
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -48,8 +48,12 @@ def get_pending_changes():
     result = []
     for row in rows:
         item = {"id": row["id"]}
-        if isinstance(row["data_json"], dict):
-            item.update(row["data_json"])
+        data = row["data_json"]
+        if isinstance(data, str):
+            try: data = _json.loads(data)
+            except Exception: data = {}
+        if isinstance(data, dict):
+            item.update(data)
         result.append(item)
     return {"data": result}
 

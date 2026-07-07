@@ -90,6 +90,8 @@ class MySQLUpdater:
         if pending_list:
             self._write_pending_changes(pending_list)
 
+        self._flag_holding_issues(holding_sum, crawled_key_totals)
+
         return total, new_data
 
     def _apply_auto_deductions(self, auto_list: dict):
@@ -122,17 +124,59 @@ class MySQLUpdater:
         except Exception as e:
             log.warning(f"  자동차감 실패: {e}")
 
+    def _flag_holding_issues(self, holding_sum: dict, crawled_key_totals: dict):
+        """홀딩 행의 이상/원본재고 필드를 갱신 — 수량초과·원본없음 감지."""
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT id, pk, `이상` FROM inventory "
+                        "WHERE `수집일`='' AND `상태`='holding'"
+                    )
+                    holding_rows = cur.fetchall()
+
+            updates = []
+            for row in holding_rows:
+                pk         = row["pk"] or ""
+                cur_issue  = row["이상"] or ""
+                h_total    = holding_sum.get(pk, 0)
+                crawled    = crawled_key_totals.get(pk, 0)
+
+                if crawled == 0:
+                    issue, orig_qty = "원본없음", 0
+                elif h_total > crawled:
+                    issue, orig_qty = "수량초과", crawled
+                else:
+                    issue, orig_qty = "", 0
+
+                if cur_issue != issue:
+                    updates.append((issue, orig_qty, row["id"]))
+
+            if updates:
+                with get_conn() as conn:
+                    with conn.cursor() as cur:
+                        cur.executemany(
+                            "UPDATE inventory SET `이상`=%s, `원본재고`=%s WHERE id=%s",
+                            updates
+                        )
+                flagged = sum(1 for u in updates if u[0])
+                cleared = len(updates) - flagged
+                if flagged: log.warning(f"  [홀딩이상] 신규/변경 {flagged}건 플래그")
+                if cleared: log.info(f"  [홀딩이상] 해소 클리어 {cleared}건")
+        except Exception as e:
+            log.warning(f"  홀딩 이상 플래그 실패: {e}")
+
     def _write_pending_changes(self, pending_list: dict):
         import json
         try:
             with get_conn() as conn:
-                for pk, info in pending_list.items():
-                    with conn.cursor() as cur:
+                with conn.cursor() as cur:
+                    # 매 사이클마다 전체 교체 — 해소된 항목 자동 삭제
+                    cur.execute("DELETE FROM pending_changes")
+                    for pk, info in pending_list.items():
                         cur.execute(
-                            "INSERT INTO pending_changes (id, data_json) VALUES (%s, %s) "
-                            "ON DUPLICATE KEY UPDATE data_json=%s",
-                            (pk, json.dumps(info, ensure_ascii=False),
-                                 json.dumps(info, ensure_ascii=False))
+                            "INSERT INTO pending_changes (id, data_json) VALUES (%s, %s)",
+                            (pk, json.dumps(info, ensure_ascii=False))
                         )
             log.info(f"  [pending] {len(pending_list)}건 기록")
         except Exception as e:
