@@ -9,6 +9,9 @@ jns.xlsx
 # 파이프라인 런타임
 pipeline/snapshot.pkl
 pipeline/logs/
+pipeline/.service.lock
+service_err.txt
+service_out.txt
 
 # Excel 임시 잠금 파일
 ~$*.xlsx
