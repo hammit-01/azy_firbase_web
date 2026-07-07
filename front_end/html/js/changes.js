@@ -12,50 +12,12 @@ export function renderChanges() {
     const container = listEl.closest(".changes-container");
     if (!container || container.style.display === "none") return;
 
-    const issueItems   = _getIssueItems();
     const pendingItems = state.pendingChanges || [];
 
-    if (issueItems.length === 0 && pendingItems.length === 0) {
+    if (pendingItems.length === 0) {
         listEl.innerHTML = `<div class="changes-empty">확인할 변경사항 없음</div>`;
         return;
     }
-
-    const issueHtml = issueItems.map(item => {
-        const isOverQty = item.이상 === "수량초과";
-        const orig  = item.원본재고 ?? 0;
-        const holdId = item.holdingRecordId || "";
-        return `
-<div class="change-card ${isOverQty ? "over-qty" : "no-origin"}"
-     data-id="${item.id}" data-hold-id="${holdId}" data-type="issue">
-    <div class="change-info">
-        <span class="change-name">${item.상품명 || ""}</span>
-        <span class="change-tag">${item.창고 || ""}</span>
-        <span class="change-tag">${(item.BL || "").slice(-10)}</span>
-        <span class="change-tag">${item.유통기한 || ""}</span>
-        <span class="change-issue-badge ${isOverQty ? "badge-over" : "badge-none"}">
-            ${isOverQty ? "수량초과" : "원본없음"}
-        </span>
-    </div>
-    <div class="change-qty-row">
-        <span>홀딩 <strong>${item.재고}</strong>박스</span>
-        ${isOverQty
-            ? `<span class="arrow-sep">→</span>
-               <span>원본재고 <strong>${orig}</strong>박스</span>`
-            : `<span class="no-origin-text">창고에서 사라진 항목</span>`
-        }
-    </div>
-    <div class="change-action">
-        ${isOverQty ? `
-            <label class="change-qty-label">수정 수량</label>
-            <input type="number" class="change-qty-input"
-                   min="1" max="${orig}" value="${orig}" data-orig="${orig}">
-            <button class="change-done-btn" disabled>완료</button>
-        ` : `
-            <button class="change-cancel-btn">홀딩 취소</button>
-        `}
-    </div>
-</div>`;
-    }).join("");
 
     const pendingHtml = pendingItems.map(p => {
         const diff    = Math.abs(p.diff || 0);
@@ -88,7 +50,7 @@ export function renderChanges() {
 </div>`;
     }).join("");
 
-    listEl.innerHTML = pendingHtml + issueHtml;
+    listEl.innerHTML = pendingHtml;
 
     listEl.querySelectorAll(".change-qty-input").forEach(input => {
         const sync = () => {
@@ -157,55 +119,11 @@ export function bindChangesEvents() {
             return;
         }
 
-        // 완료: 홀딩 수량을 원본재고 이하로 수정
-        if (e.target.classList.contains("change-done-btn")) {
-            const card   = e.target.closest(".change-card");
-            const id     = card.dataset.id;
-            const holdId = card.dataset.holdId;
-            const newQty = Number(card.querySelector(".change-qty-input").value);
-
-            try {
-                await updateItem(id, { 재고: newQty, 이상: "", 원본재고: "" });
-                if (holdId) await updateHoldingRecord(holdId, { 수량: newQty });
-                showToast("✓ 수량 수정 완료 — 다음 파이프라인 실행 시 원본 자동 반영");
-                await fetchAllData();
-            } catch (err) {
-                console.error("변경 처리 실패:", err);
-                showError("처리 중 오류가 발생했습니다.");
-            }
-            return;
-        }
-
-        // 홀딩 취소: 원본없음 항목 보관 이력으로 이동
-        if (e.target.classList.contains("change-cancel-btn")) {
-            if (!await showConfirm("홀딩을 취소합니다.\n계속하시겠습니까?")) return;
-
-            const card   = e.target.closest(".change-card");
-            const id     = card.dataset.id;
-            const holdId = card.dataset.holdId;
-
-            try {
-                if (holdId) await moveHoldingToHistory(holdId, "취소");
-                await deleteItem(id);
-                showToast("✓ 홀딩 취소 완료");
-                await fetchAllData();
-            } catch (err) {
-                console.error("홀딩 취소 실패:", err);
-                showError("처리 중 오류가 발생했습니다.");
-            }
-            return;
-        }
     });
 }
 
-function _getIssueItems() {
-    return state.allData.filter(d =>
-        d.상태 === "holding" && d.이상 && d.이상 !== ""
-    );
-}
-
 function _updateBadge() {
-    const count  = _getIssueItems().length + (state.pendingChanges?.length || 0);
+    const count  = state.pendingChanges?.length || 0;
     const badge  = document.querySelector(".changes-badge");
     const tabBtn = document.querySelector(".changes-tab-btn");
     if (!badge) return;

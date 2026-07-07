@@ -125,46 +125,69 @@ class MySQLUpdater:
             log.warning(f"  자동차감 실패: {e}")
 
     def _flag_holding_issues(self, holding_sum: dict, crawled_key_totals: dict):
-        """홀딩 행의 이상/원본재고 필드를 갱신 — 수량초과·원본없음 감지."""
+        """수량초과·원본없음 홀딩 행 자동 처리 — UI 수동 개입 불필요."""
         try:
             with get_conn() as conn:
                 with conn.cursor() as cur:
                     cur.execute(
-                        "SELECT id, pk, `이상` FROM inventory "
+                        "SELECT id, pk, `재고`, holdingRecordId FROM inventory "
                         "WHERE `수집일`='' AND `상태`='holding'"
                     )
                     holding_rows = cur.fetchall()
 
-            updates = []
+            # pk → [rows] 그룹핑
+            rows_by_pk: dict = {}
             for row in holding_rows:
-                pk         = row["pk"] or ""
-                cur_issue  = row["이상"] or ""
-                h_total    = holding_sum.get(pk, 0)
-                crawled    = crawled_key_totals.get(pk, 0)
+                rows_by_pk.setdefault(row["pk"] or "", []).append(row)
 
-                if crawled == 0:
-                    issue, orig_qty = "원본없음", 0
-                elif h_total > crawled:
-                    issue, orig_qty = "수량초과", crawled
-                else:
-                    issue, orig_qty = "", 0
+            with get_conn() as conn:
+                for pk, rows in rows_by_pk.items():
+                    if not pk:
+                        continue
+                    h_total = holding_sum.get(pk, 0)
+                    crawled = crawled_key_totals.get(pk, 0)
 
-                if cur_issue != issue:
-                    updates.append((issue, orig_qty, row["id"]))
+                    if crawled == 0:
+                        # 원본없음: 크롤에서 완전히 사라진 항목 → 홀딩 row + records 삭제
+                        for row in rows:
+                            with conn.cursor() as cur:
+                                cur.execute("DELETE FROM inventory WHERE id=%s", (row["id"],))
+                                if row["holdingRecordId"]:
+                                    cur.execute("DELETE FROM holding_records WHERE id=%s",
+                                                (row["holdingRecordId"],))
+                        log.info(f"  [홀딩이상-자동] 원본없음 pk={pk[:25]} → {len(rows)}건 삭제")
 
-            if updates:
-                with get_conn() as conn:
-                    with conn.cursor() as cur:
-                        cur.executemany(
-                            "UPDATE inventory SET `이상`=%s, `원본재고`=%s WHERE id=%s",
-                            updates
-                        )
-                flagged = sum(1 for u in updates if u[0])
-                cleared = len(updates) - flagged
-                if flagged: log.warning(f"  [홀딩이상] 신규/변경 {flagged}건 플래그")
-                if cleared: log.info(f"  [홀딩이상] 해소 클리어 {cleared}건")
+                    elif h_total > crawled:
+                        # 수량초과: 초과분(h_total - crawled)을 작은 row부터 차감
+                        excess = h_total - crawled
+                        remaining = excess
+                        for row in sorted(rows, key=lambda r: r["재고"] or 0):
+                            if remaining <= 0:
+                                break
+                            cur_qty = row["재고"] or 0
+                            reduce  = min(cur_qty, remaining)
+                            new_qty = cur_qty - reduce
+                            with conn.cursor() as cur:
+                                if new_qty <= 0:
+                                    cur.execute("DELETE FROM inventory WHERE id=%s", (row["id"],))
+                                    if row["holdingRecordId"]:
+                                        cur.execute("DELETE FROM holding_records WHERE id=%s",
+                                                    (row["holdingRecordId"],))
+                                else:
+                                    cur.execute(
+                                        "UPDATE inventory SET `재고`=%s WHERE id=%s",
+                                        (new_qty, row["id"])
+                                    )
+                                    if row["holdingRecordId"]:
+                                        cur.execute(
+                                            "UPDATE holding_records SET `수량`=%s WHERE id=%s",
+                                            (new_qty, row["holdingRecordId"])
+                                        )
+                            remaining -= reduce
+                        log.info(f"  [홀딩이상-자동] 수량초과 pk={pk[:25]} → -{excess}박스 차감")
+
         except Exception as e:
-            log.warning(f"  홀딩 이상 플래그 실패: {e}")
+            log.warning(f"  홀딩 이상 자동처리 실패: {e}")
 
     def _write_pending_changes(self, pending_list: dict):
         import json
