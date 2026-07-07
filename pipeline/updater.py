@@ -216,7 +216,8 @@ def _df_to_dict(
         crawled_key_totals[doc_id] = crawled_key_totals.get(doc_id, 0) + qty
 
         # 홀딩 차감 + 재고 증감 감지
-        h_qty = holding_sum.get(doc_id, 0)
+        h_qty         = holding_sum.get(doc_id, 0)
+        effective_h_qty = h_qty  # pickle에 저장될 holdingTotal (auto 차감 시 갱신)
         prev  = prev_snapshot.get(doc_id)
         if prev is not None and "holdingTotal" in prev:
             prev_raw     = (prev.get("재고") or 0) + (prev.get("holdingTotal") or 0)
@@ -250,11 +251,13 @@ def _df_to_dict(
                     )
                     all_matched = matched_records + matched_rows
                     if all_matched:
-                        # 매칭 holding 레코드 있음 → holding에서 차감, non-hold 유지
+                        # holding 레코드 있음 → holding에서 차감, non-hold 유지
                         net_qty = prev_nonhold
+                        # pickle holdingTotal을 차감 후 값으로 갱신 → 다음 사이클 재감지 방지
+                        effective_h_qty = max(h_qty - diff, 0)
                         log.info(f"  [재고감소-자동] {name[:15]} | -{diff}박스 | hold {len(matched_rows)}행 차감")
                     else:
-                        # 매칭 holding 레코드 없음 → non-hold에서 직접 차감
+                        # holding 레코드 없음 → non-hold에서 직접 차감
                         net_qty = qty - h_qty
                         log.info(f"  [재고감소-자동] {name[:15]} | -{diff}박스 | non-hold 직접 차감")
                     auto_list[doc_id] = {
@@ -313,7 +316,7 @@ def _df_to_dict(
             "평중":   to_float(row.get("평균중량", "")),
             "출고일": to_date(row.get("출고일")),
             "수집일": today,
-            "holdingTotal": h_qty,
+            "holdingTotal": effective_h_qty,  # auto 차감 시 차감 후 값 반영
         }
         if doc_id in result:
             # 동일 pk: 창고 코드 달라도 같은 상품 → 재고 합산
