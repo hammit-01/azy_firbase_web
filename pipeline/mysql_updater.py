@@ -87,8 +87,7 @@ class MySQLUpdater:
 
         if auto_list:
             self._apply_auto_deductions(auto_list)
-        if pending_list:
-            self._write_pending_changes(pending_list)
+        self._write_pending_changes(pending_list)  # 항상 호출 — 빈 list면 DELETE만
 
         self._flag_holding_issues(holding_sum, crawled_key_totals)
 

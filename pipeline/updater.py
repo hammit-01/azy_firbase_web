@@ -220,7 +220,8 @@ def _df_to_dict(
         prev  = prev_snapshot.get(doc_id)
         if prev is not None and "holdingTotal" in prev:
             prev_raw     = (prev.get("재고") or 0) + (prev.get("holdingTotal") or 0)
-            prev_nonhold = prev.get("재고") or 0
+            # 현재 h_qty로 보정 — 홀딩 잡힌 이후 pickle 갱신 전 상태 보정
+            prev_nonhold = max(prev_raw - h_qty, 0)
             if qty > prev_raw:
                 diff    = qty - prev_raw
                 net_qty = prev_nonhold + diff
