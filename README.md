@@ -53,7 +53,7 @@
 azy_firbase_web/
 │
 ├── run_service.py              # 서비스 진입점: 파이프라인 + API 서버 동시 실행
-├── api_server.py               # FastAPI REST API (port 8000)
+├── api_server.py               # FastAPI REST API
 ├── CLAUDE.md                   # AI 어시스턴트용 프로젝트 가이드
 │
 ├── pipeline/                   # 자동화 파이프라인
@@ -145,8 +145,8 @@ pip install fastapi uvicorn pymysql pandas requests apscheduler openpyxl gspread
 
 ```sql
 CREATE DATABASE azy_warehouse CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'hyemi'@'localhost' IDENTIFIED BY '0943';
-GRANT ALL PRIVILEGES ON azy_warehouse.* TO 'hyemi'@'localhost';
+CREATE USER 'XXXX'@'localhost' IDENTIFIED BY 'XXXXXX';
+GRANT ALL PRIVILEGES ON azy_warehouse.* TO 'XXXXX'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
@@ -461,8 +461,8 @@ moveHoldingToHistory(holdingRecordId, "취소")
 
 ```python
 # pipeline/sheets_reader.py
-SHEET_ID  = "1z7nYU9lfQT7d5boRwiU-zttwx90uVlUw2Y77Ydok6LY"
-CRED_PATH = "azycompany-2c80615785a2.json"
+SHEET_ID  = "XXXXXXXXXXXXXXXX"
+CRED_PATH = "XXXXXXXXXXXXXXXX"
 ```
 
 ---
