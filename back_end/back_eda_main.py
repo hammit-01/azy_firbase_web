@@ -125,6 +125,10 @@ def jns_only_eda(jns_raw):
     """JNS(제니스) 크롤링 원본 → inventory용 최종 데이터.
     list_eda()의 JNS 처리 블록을 분리 — 독립 스케줄(run_jns_pipeline)에서도 동일 로직 재사용."""
     jns = safe_eda(jns_eda, jns_raw, "JNS")
+    if jns is None or jns.empty:
+        # 메인(나머지 창고) 잡은 JNS를 crawl_all(exclude=...)로 아예 안 크롤링하므로
+        # 여기 항상 빈 데이터로 들어옴 — 정상 상황, 조용히 빈 결과 반환
+        return pd.DataFrame()
 
     total_data = pd.concat([jns], ignore_index=True)
     total_data = total_data.drop(columns=["중량"], errors="ignore")
