@@ -7,6 +7,7 @@ from back_end.jns_eda import jns_eda
 from back_end.eda_ch_plz_cs import ch_eda
 from back_end.eda_ch_plz_cs import plz_eda
 from back_end.eda_ch_plz_cs import cs_eda
+from back_end.eda_ch_plz_cs import irn_eda
 from back_end.replace_name import replace_name
 from back_end.eda_standard import eda_standard
 from back_end.eda_common import eda_common
@@ -36,7 +37,8 @@ warehouses = [
     "대재",
     "한라곤지암",
     "한라동탄",
-    "CS"
+    "CS",
+    "아이린냉장"
 ]
 
 def list_eda(final_df, jns):
@@ -71,6 +73,7 @@ def list_eda(final_df, jns):
     hlk = warehouse_dfs["한라곤지암"].copy()
     hld = warehouse_dfs["한라동탄"].copy()
     cs = warehouse_dfs["CS"].copy()
+    irn = warehouse_dfs["아이린냉장"].copy()
 
     beige = safe_df(beige, "베이지박스투")
     samil = safe_df(samil, "삼일물류")
@@ -95,22 +98,42 @@ def list_eda(final_df, jns):
         print(f"else_df_eda 오류 (빈 데이터로 대체): {e}")
         six_df = pd.DataFrame()
 
-    jns = safe_eda(jns_eda, jns, "JNS")
     ch = safe_eda(ch_eda, ch, "CH")
     plz = safe_eda(plz_eda, plz, "PLZ")
     cs = safe_eda(cs_eda, cs, "CS")
-    # hand_df = crawling_handmade()
-    total_data = pd.concat([added_df, six_df, ch, plz, jns, cs], ignore_index=True)
+    irn = safe_df(irn, "아이린냉장")
+    irn = safe_eda(irn_eda, irn, "IRN")
+    hand_df = crawling_handmade()
 
+    # ── azy_inventory용: JNS 제외 전 창고 ──────────────────
+    azy_data = pd.concat([added_df, six_df, ch, plz, cs, irn, hand_df], ignore_index=True)
+    azy_data = replace_name(azy_data)
+    azy_data = eda_standard(azy_data)
+    azy_data = replace_name(azy_data)
+    # 중량은 dedup 이후에 제거 — 같은 BL·수량·유통기한이라도 중량이 다르면
+    # 별도 로트이므로 drop_duplicates()가 먼저 이걸로 구분할 수 있어야 함
+    azy_data = azy_data.drop_duplicates().reset_index(drop=True)
+    azy_data = azy_data.drop(columns=["중량"], errors="ignore")
+
+    # ── inventory용: JNS만 (독립 스케줄에서도 재사용 가능하도록 분리) ──
+    total_data = jns_only_eda(jns)
+
+    return final_df, total_data, azy_data
+
+
+def jns_only_eda(jns_raw):
+    """JNS(제니스) 크롤링 원본 → inventory용 최종 데이터.
+    list_eda()의 JNS 처리 블록을 분리 — 독립 스케줄(run_jns_pipeline)에서도 동일 로직 재사용."""
+    jns = safe_eda(jns_eda, jns_raw, "JNS")
+
+    total_data = pd.concat([jns], ignore_index=True)
     total_data = total_data.drop(columns=["중량"], errors="ignore")
     total_data = replace_name(total_data)
     total_data = eda_standard(total_data)
-    # eda_standard가 "X(냉장)" → "냉장X" 변환 후 생성된 패턴을 잡기 위해 2차 replace
     total_data = replace_name(total_data)
     total_data = total_data.reset_index(drop=True)
 
-    # pk 기준 집계: 같은 pk는 재고수량 합산 (JNS 전용)
-    # pk=NaN 행(비JNS 창고)은 개별 행 그대로 유지
+    # pk 기준 집계 (JNS 전용)
     if "pk" in total_data.columns and "재고수량" in total_data.columns:
         total_data["재고수량"] = pd.to_numeric(
             total_data["재고수량"].astype(str).str.replace(",", "", regex=False),
@@ -118,8 +141,8 @@ def list_eda(final_df, jns):
         ).fillna(0).astype(int)
 
         nan_pk_mask = total_data["pk"].isna()
-        no_pk_data = total_data[nan_pk_mask].copy()   # 비JNS: 그대로 유지
-        pk_data    = total_data[~nan_pk_mask].copy()  # JNS: pk 기준 합산
+        no_pk_data = total_data[nan_pk_mask].drop_duplicates().reset_index(drop=True)
+        pk_data    = total_data[~nan_pk_mask].copy()
 
         if not pk_data.empty:
             before_rows = len(pk_data)
@@ -135,4 +158,4 @@ def list_eda(final_df, jns):
     else:
         total_data = total_data.drop_duplicates().reset_index(drop=True)
 
-    return final_df, total_data
+    return total_data

@@ -1,7 +1,5 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
-<!-- firebase web service upload = /css/...
- pytjon service upload = /css/... -->
 
 <head>
     <meta charset="UTF-8">
@@ -9,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="stylesheet" href="./css/warehouse_main.css">
-    <title>에이젯유통 재고 시스템</title>
+    <title>타창고 에이젯유통 재고 시스템</title>
 </head>
 
 <body>
@@ -23,7 +21,7 @@
                     <img src="./css/logo.png" class="logo">
                 </a>
                 <div class="toolbar-title">
-                    <h1>통관분 재고 리스트</h1>
+                    <h1>타창고 에이젯유통 재고 리스트</h1>
                     <div class="table_size"></div>
                 </div>
             </div>
@@ -32,40 +30,49 @@
                 <!-- 필터 -->
                 <select class="show-warehouse filter-sel">
                     <option value="">창고</option>
-                    <option value="곤지암">곤지암</option>
-                    <option value="곤CS">곤CS</option>
-                    <option value="곤SWC">곤SWC</option>
-                    <option value="곤대재">곤대재</option>
-                    <option value="곤대청">곤대청</option>
-                    <option value="곤삼진2">곤삼진2</option>
-                    <option value="곤에이스처인">곤에이스처인</option>
+                    <option value="강동1">강동1</option>
+                    <option value="강동2">강동2</option>
+                    <option value="경인">경인</option>
+                    <option value="대재">대재</option>
+                    <option value="대청">대청</option>
+                    <option value="도지냉장">도지냉장</option>
+                    <option value="삼일물류">삼일물류</option>
+                    <option value="삼진1">삼진1</option>
+                    <option value="삼진2">삼진2</option>
+                    <option value="신우냉장">신우냉장</option>
+                    <option value="오로라CS">오로라CS</option>
+                    <option value="아이린냉장">아이린냉장</option>
+                    <option value="미빙냉장">미빙냉장</option>
+                    <option value="이스트밸리">이스트밸리</option>
+                    <option value="한라곤지암">한라곤지암</option>
+                    <option value="희창냉장">희창냉장</option>
+                    <option value="CH">CH</option>
+                    <option value="CS">CS</option>
+                    <option value="SWC">SWC</option>
+                    <option value="프라자">프라자</option>
                 </select>
 
                 <select class="show-brand filter-sel">
                     <option value="">브랜드</option>
-                    <option value="5 STAR">5 STAR</option>
-                    <option value="AFG">AFG</option>
                     <option value="AGROSUPER">AGROSUPER</option>
                     <option value="AMH">AMH</option>
+                    <option value="CLASSIC">CLASSIC</option>
                     <option value="EXCEL">EXCEL</option>
-                    <option value="GCM">GCM</option>
-                    <option value="GREENHAM">GREENHAM</option>
+                    <option value="GREENLEA">GREENLEA</option>
                     <option value="IBP">IBP</option>
                     <option value="KILCOY">KILCOY</option>
-                    <option value="LITERA">LITERA</option>
                     <option value="LOCKS">LOCKS</option>
-                    <option value="NB">NB</option>
                     <option value="OLYMEL">OLYMEL</option>
-                    <option value="PATEL">PATEL</option>
                     <option value="PERDIGAO">PERDIGAO</option>
                     <option value="PPCS">PPCS</option>
                     <option value="SADIA">SADIA</option>
                     <option value="SEARA">SEARA</option>
-                    <option value="SHOWCASE">SHOWCASE</option>
                     <option value="SMITHFIELD">SMITHFIELD</option>
                     <option value="SWIFT">SWIFT</option>
+                    <option value="TCH">TCH</option>
                     <option value="TEYS">TEYS</option>
                     <option value="TONNIES">TONNIES</option>
+                    <option value="VIBRA">VIBRA</option>
                 </select>
 
                 <select class="show-state filter-sel">
@@ -152,7 +159,8 @@
 
     </div>
 
-    <script type="module" src="./warehouse_main.js"></script>
+    <script>window.__AZY_API_MODE = true;</script>
+    <script type="module" src="./azy_warehouse.js"></script>
 </body>
 
 </html>

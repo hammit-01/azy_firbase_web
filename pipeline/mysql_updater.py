@@ -12,6 +12,9 @@ from pipeline.updater import _df_to_dict, _row_sig
 
 log = logging.getLogger("mysql_updater")
 
+# 사용자가 UI에서 직접 고칠 수 있는 마스터 필드 — 기존 행이면 크롤값으로 덮어쓰지 않고 보존
+_PRESERVE_ON_UPDATE = ("상품명", "브랜드", "등급", "ESTNO", "BL", "창고", "유통기한", "평중", "출고일")
+
 
 class MySQLUpdater:
     def update_diff(self, new_df, prev_snapshot: dict) -> tuple:
@@ -63,7 +66,14 @@ class MySQLUpdater:
             if db_prev is None:
                 to_insert[pk] = {**data, "홀딩": "", "상태": "없음", "메모": ""}
             elif _row_sig(db_prev) != _row_sig(data):
-                to_update[pk] = data
+                merged = {**data}
+                for f in _PRESERVE_ON_UPDATE:
+                    if f in db_prev:
+                        merged[f] = db_prev[f]
+                merged["홀딩"] = db_prev.get("홀딩", "")
+                merged["상태"] = db_prev.get("상태", "없음")
+                merged["메모"] = db_prev.get("메모", "")
+                to_update[pk] = merged
 
         for pk in db_snapshot:
             if pk not in new_data:
@@ -87,7 +97,7 @@ class MySQLUpdater:
 
         if auto_list:
             self._apply_auto_deductions(auto_list)
-        self._write_pending_changes(pending_list)  # 항상 호출 — 빈 list면 DELETE만
+        self._write_pending_changes({})  # 변경사항 탭 미사용 — 항상 비움
 
         self._flag_holding_issues(holding_sum, crawled_key_totals)
 

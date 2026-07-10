@@ -124,9 +124,10 @@ def eda_standard(df):
     df.loc[df["수탁품"].astype(str).str.contains("SADIA", case=False, na=False), "브랜드"] = "SADIA"
     df.loc[df["수탁품"].astype(str).str.contains("SEARA", case=False, na=False), "브랜드"] = "SEARA"
 
-    # ── 평균중량: 크롤링 값 무시, 규격 상품만 설정 ──────────────────────
-    # 브랜드·수탁품 정규화 완료 후 적용
-    df["평균중량"] = None
+    # ── 평균중량: EDA 추출값 유지, 알려진 규격 상품만 고정값으로 덮어씌움 ──
+    if "평균중량" not in df.columns:
+        df["평균중량"] = None
+    df["평균중량"] = pd.to_numeric(df["평균중량"], errors="coerce")
 
     # 우육
     df.loc[(df["브랜드"] == "TEYS")  & (df["수탁품"] == "곱창"),     "평균중량"] = 15.0

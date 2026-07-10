@@ -493,6 +493,7 @@ async function handleClick(e) {
         pushUndo({ type: "bulk-insert", ids: insertedIds });
         closePanel();
         showToast("✓ 추가 완료");
+        await fetchAllData();
         return;
     }
 
@@ -527,6 +528,7 @@ async function handleClick(e) {
         state.crudData = null;
         showToast("✓ 수정 완료");
         await fetchAllData();
+        closePanel();
         return;
     }
 
@@ -554,6 +556,7 @@ async function handleClick(e) {
         state.crudData = null;
         showToast("✓ 홀딩 완료");
         await fetchAllData();
+        closePanel();
         return;
     }
 

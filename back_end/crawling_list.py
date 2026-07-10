@@ -3,7 +3,13 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from back_end.eda_common import eda_common
 from requests.exceptions import RequestException, Timeout, ConnectionError
-from back_end.eda_column import jns,beige,samil,sinu,huichang,aurora,hyosung,eastbelly,swc,ch,daechung,hanladt,hanla,gangdong1,gangdong2,gyungin,plaza,samjin1,samjin2,cs,daejae
+from back_end.eda_column import jns,beige,samil,sinu,huichang,aurora,hyosung,eastbelly,swc,ch,daechung,hanladt,hanla,gangdong1,gangdong2,gyungin,plaza,samjin1,samjin2,cs,daejae,irn
+
+# 실제 브라우저와 유사한 UA — 세션 하나 동안은 절대 바꾸지 않음(중간에 바뀌면 오히려 봇 신호)
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+)
 
 def get_users(row):
     users = []
@@ -71,7 +77,29 @@ SPECIAL_SITES = {
     "대재": {
         "login": "http://nwill.net:8080/djedst/login.do",
         "data": "http://nwill.net:8080/djedst/rtv_stock.do"
+    },
+    "아이린냉장": {
+        "login": "http://211.239.173.91:8080/irndst/login.do",
+        "data": "http://211.239.173.91:8080/irndst/rtv_stock.do"
+    },
+    # 도지냉장: PentascanWMS(완전히 다른 플랫폼) — 로그인 검증만 우선 연결, 데이터 파싱/EDA는 보류
+    "도지냉장": {
+        "login": "https://wms.pentascan.com/login/login",
+        "data": "https://wms.pentascan.com/list/stock"
     }
+}
+
+# 창고별 nav_num 오버라이드 (기본값 "0103")
+NAV_NUM_OVERRIDE = {
+    "아이린냉장": "0105",
+    "오로라CS": "0110",
+    "신우냉장": "0107",
+    "희창냉장": "0107",
+}
+
+# 창고별 로그인 폼 필드명 오버라이드 (기본값 id/pw)
+LOGIN_FIELD_OVERRIDE = {
+    "도지냉장": {"id": "login", "pw": "password"},
 }
 
 def get_loginUrls(ip_port, path, warehouse):
@@ -97,16 +125,17 @@ def login(session, ip_port, path, id, pw, warehouse):
 
         # 2️⃣ 헤더
         headers = {
-            "User-Agent": "Mozilla/5.0",
+            "User-Agent": USER_AGENT,
             "Referer": login_url
         }
 
         # 3️⃣ 로그인 요청
+        fields = LOGIN_FIELD_OVERRIDE.get(warehouse, {"id": "id", "pw": "pw"})
         res = session.post(
             login_url,
             data={
-                "id": id,
-                "pw": pw
+                fields["id"]: id,
+                fields["pw"]: pw
             },
             headers=headers,
             timeout=10
@@ -155,7 +184,7 @@ def get_data(session, ip_port, path, scustcd, scmdept, warehouse, date=None):
             scmdept = "00"
 
         payload = {
-            "nav_num": "0103",
+            "nav_num": NAV_NUM_OVERRIDE.get(warehouse, "0103"),
             "scmdept": scmdept,
             "swms_cd": "",
             "scustcd": scustcd,
@@ -173,6 +202,11 @@ def get_data(session, ip_port, path, scustcd, scmdept, warehouse, date=None):
 
         # thead 헤더 캡처
         header_row = soup.select_one("thead tr")
+
+        # 세션 만료 감지: 조회 응답에 데이터 테이블 없이 로그인 폼이 돌아오면 재로그인 필요
+        if header_row is None and "아이디" in res.text and "비밀번호" in res.text:
+            return None
+
         headers = []
         if header_row:
             headers = [
@@ -180,6 +214,7 @@ def get_data(session, ip_port, path, scustcd, scmdept, warehouse, date=None):
                 for th in header_row.find_all(["th", "td"])
             ]
 
+        _NO_DATA_PHRASES = ("조회된 결과가 없습니다", "데이터가 없습니다", "결과가 없습니다")
         rows = soup.select("tbody tr")
         data = []
         for row in rows:
@@ -187,8 +222,12 @@ def get_data(session, ip_port, path, scustcd, scmdept, warehouse, date=None):
                 td.get_text(strip=True).replace("\n", " ")
                 for td in row.find_all("td")
             ]
-            if cols:
-                data.append(cols)
+            if not cols:
+                continue
+            row_text = " ".join(cols)
+            if any(phrase in row_text for phrase in _NO_DATA_PHRASES):
+                continue
+            data.append(cols)
 
         if not data:
             return pd.DataFrame()
@@ -228,6 +267,7 @@ PROCESS_MAP = {
     "삼진1": samjin1,
     "삼진2": samjin2,
     "CS": cs,
+    "아이린냉장": irn,
     "제니스(곤지암)": jns
 }
 

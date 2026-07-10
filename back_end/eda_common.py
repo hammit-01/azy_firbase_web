@@ -61,6 +61,6 @@ def eda_data(df):
     df["규격단위중량"] = df["규격단위중량"].str.replace("@@", "", regex=False)
     df["ESTNO"] = df["ESTNO"].str.replace("#", "")
     df["BL번호"] = df["BL번호"].replace("*", "")
-    df["BL번호"] = df["BL번호"].replace("/", "")
+    df["BL번호"] = df["BL번호"].str.replace("/", "", regex=False)
 
     return df

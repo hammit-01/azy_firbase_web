@@ -21,6 +21,7 @@ def replace_name(df):
         "삶은곱창(믹스)": "작업삶은곱창",
         "살치(냉장)": "살치살(냉장)",
         "안창": "안창살",
+        "우백립": "탕갈비(MEATY)",
         "갈비토시살": "토시살",
         "알전각": "앞다리",
         "차돌양지": "양지",
@@ -44,6 +45,7 @@ def replace_name(df):
         "토시": "살치살",
         "우목심GFYG": "목심",
         "냉장돈목잡": "냉장목살",
+        "설도진공": "설도",
         "건": "우건",
         # "등갈비": "탕갈비(MEATY)",
         "토시": "토시살",
@@ -52,8 +54,10 @@ def replace_name(df):
         "돈목전지" : "목전지",
         "목심(T)" : "동결목심",
         "앞다리" : "일반전각",
+        "냉동꽃갈비" : "소갈비",
 
         "작업 목전지" : "작업목전지",
+        "장각" : "닭장각",
         "장각정육" : "닭장각정육",
         "작업 스페어립(청담)" : "작업스페어립",
         "작업 스페어립" : "작업스페어립",
@@ -63,6 +67,10 @@ def replace_name(df):
         "작업 우목뼈" : "작업우목뼈",
         "작업 양지" : "작업양지",
         "소갈비(T)" : "동결소갈비",
+        "삼겹살" : "삼겹",
+        "상둔" : "우둔",
+        "우갈비A" : "소갈비",
+        "앞사태살" : "사태(앞)",
         "앞우건" : "우건",
         "작업 돈껍데기" : "작업돈껍데기",
         "조각삼겹양지" : "삼겹양지(PCS)",
@@ -75,7 +83,22 @@ def replace_name(df):
         "일반전각" : "앞다리",
         "뒷왕사골" : "사골(뒤왕)",
         "작업 삼겹양지" : "작업삼겹양지",
+        "업진살" : "삼겹양지",
+        "우깐양" : "깐양",
         "알목심(T)" : "동결알목심",
+        "본갈비" : "척갈비",
+        "삼겹양지(PCS)" : "조각삼겹양지",
+        "우등갈비" : "탕갈비",
+        "우삼겹양지" : "삼겹양지",
+        "우늑간" : "늑간살",
+        "우부채살" : "부채살",
+        "우아롱사태" : "아롱사태",
+        "우일반갈비" : "소갈비",
+        "일반갈비" : "소갈비",
+        "우스지/내국" : "우건",
+        "우차돌양지S,IW/VAC" : "양지",
+        "우척BBQ빽립A" : "BBQ탕갈비",
+        "우척갈비CH CAB" : "척갈비",
     }
     for _col in ("수탁품", "상품명"):
         if _col in df.columns:
@@ -85,6 +108,7 @@ def replace_name(df):
         .astype(str)
         .str.replace(' ', ' ', regex=False)  # non-breaking space → 일반 공백
         .str.replace(r'\s+', ' ', regex=True)     # 연속 공백 정리
+        .str.replace('_', '', regex=False)   # 언더스코어 제거
         .str.strip()
         .replace({"nan": "", "None": ""})
     )
@@ -98,6 +122,7 @@ def replace_name(df):
         "SADIASIF": "SADIA",
         "SEARASIF": "SEARA",
         "PROTEINAANIMAI": "PROAN",
+        "카지노": "CASINO",
         "SWIFT_S/C": "5STAR",
         "EX": "EXCEL",
         "놀란": "NOLAN",
@@ -110,6 +135,13 @@ def replace_name(df):
         "5 STAR 562": "5 STAR",
         "5 STAR 562M": "5 STAR",
         "루돌프" : "RUDOLF",
+        "로즈데라": "ROSDERRA",
+        "S/W": "SWIFT",
+        "K/C": "KILCOY",
+        "엑셀": "EXCEL",
+        "인터칸": "INTERGAN",
+        "알레한드로": "ALEJANDRO",
+        "ALE/DU": "ALEJANDRO",
     })
     df["등급"] = df["등급"].replace({
         "CHAN": "UN",
@@ -118,7 +150,12 @@ def replace_name(df):
         "ANGUS_CH": "RRA",
         "SIF": "",
         "M": "",
-        "gf": "GF"
+        "gf": "GF",
+        "HELLABY": "",
+        "GFFORE": "GF",
+        "CH6-8R": "CH",
+        "GFCAPOFF": "GF",
+        "DUROC": "",
 
     })
     df["ESTNO"] = df["ESTNO"].replace({
@@ -134,6 +171,9 @@ def replace_name(df):
         "UN969": "969",
         "CH86R": "86R",
         "16208724": "1620",
+        "DUROC": "",
+        "HELLABY": "",
+        "969[대]": "969"
 
     })
     return df

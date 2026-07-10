@@ -372,14 +372,14 @@ def swc(data):
     # 브랜드
     # =========================
     df["브랜드"] = s.str.extract(
-        r"(EXCEL|SWIFT|SADIA|IBP|TEYS|AMH|KILCOY|SHOWCASE|ACC)"
+        r"(EXCEL|SWIFT|SADIA|IBP|TEYS|AMH|KILCOY|SHOWCASE|ACC|TONNIES)"
     )[0]
 
     # =========================
     # 등급
     # =========================
     df["등급"] = s.str.extract(
-        r"(ANGUS_CH|SEL|PRI|CH|GF|SE|UN)"
+        r"(ANGUS_CH|SEL|PRI|PRE|CH|GF|SE|UN)"
     )[0]
 
     # =========================
@@ -403,12 +403,12 @@ def swc(data):
         .str.extract(r"(SIF\d+)")[0]
     )
 
-    # 3순위 : 969G / 270A 형태
+    # 3순위 : 969G / 270A / 20202EG 형태 (끝 문자가 여러 글자일 수 있음)
     mask = df["ESTNO"].isna()
 
     df.loc[mask, "ESTNO"] = (
         s[mask]
-        .str.extract(r"(\d{2,}[A-Z])")[0]
+        .str.extract(r"(\d{2,}[A-Z]+)")[0]
     )
 
     # 4순위 : 숫자만

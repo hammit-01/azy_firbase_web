@@ -152,8 +152,21 @@ export function renderTableSize(count, size, mean) {
 
     if (!target) return;
 
+    const timestamps = state.allData
+        .map(item => item.updated_at)
+        .filter(Boolean)
+        .map(t => new Date(t))
+        .filter(d => !isNaN(d.getTime()));
+
+    let lastUpdatedText = "";
+    if (timestamps.length) {
+        const latest = new Date(Math.max(...timestamps));
+        const pad = n => String(n).padStart(2, "0");
+        lastUpdatedText = ` · 마지막 업데이트 ${latest.getFullYear()}-${pad(latest.getMonth() + 1)}-${pad(latest.getDate())} ${pad(latest.getHours())}:${pad(latest.getMinutes())}`;
+    }
+
     target.textContent =
-        `총 ${count} 행 / 총 ${size} 박스 / 총 ${mean.toFixed(2)} KG`;
+        `총 ${count} 행 / 총 ${size} 박스 / 총 ${mean.toFixed(2)} KG${lastUpdatedText}`;
 }
 
 // =========================

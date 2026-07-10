@@ -15,20 +15,17 @@ def extract_spec_ch(data):
     # 앞 숫자 제거
     text = re.sub(r"^\d+", "", text)
 
-    # 기본 패턴
-    m = re.search(
-        r"([A-Z]+)/([A-Z0-9]+)(?:\(\d+\))?([A-Z]+)?",
-        text
-    )
+    # 슬래시 구분된 파트들: 첫 파트=등급, 마지막 파트=ESTNO
+    # XT/278, UN/245E, XT/UN/245E 모두 처리
+    m = re.search(r"([A-Z][A-Z0-9]*(?:/[A-Z0-9]+)+)", text)
 
     if not m:
         return pd.Series([None, None, None])
 
-    grade = m.group(1)
-
-    raw_est = m.group(2)
-
-    brand = m.group(3)
+    parts = m.group(0).split("/")
+    grade = parts[0]
+    raw_est = parts[-1]
+    brand = None
 
     # 1311SWIFT 같은 케이스 처리
     split_m = re.match(
@@ -219,25 +216,18 @@ def ch_eda(data):
 
     ch["창고"] = "CH"
 
-    # 1. 전산이체 제거
-    ch["평균중량"] = (
-        ch["규격단위중량"]
-        .astype(str)
-        .str.replace("전산이체", "", regex=False)
-        .str.strip()
+    # 평균중량: 한글 포함 행(메모 텍스트)은 None, 나머지는 숫자 추출
+    _spec = ch["규격단위중량"].astype(str)
+    ch["평균중량"] = pd.to_numeric(
+        _spec.str.extract(r"([\d.]+)")[0],
+        errors="coerce"
     )
+    ch.loc[_spec.str.contains("[가-힣]", regex=True, na=False), "평균중량"] = None
 
-    # 2. 숫자만 추출 (KG 제거 + float 변환)
-    ch["평균중량"] = (
-        ch["평균중량"]
-        .str.extract(r"([\d.]+)")
-        .astype(float)
-    )
-    
     ch["브랜드"] = (
         ch["기타정보"]
         .astype(str)
-        .str.extract(r"-([A-Z]+)\[")[0]
+        .str.extract(r"-([A-Z]+)(?:\[|$)")[0]
     )
 
     # 이름 EDA
@@ -266,20 +256,14 @@ def plz_eda(data):
 
     plz["창고"] = "프라자"
 
-    # 브랜드 추출
-    tmp = (
-        plz["규격단위중량"]
-        .astype(str)
-        .str.extract(
-            r"([A-Z가-힣]+)(\d+(?:\.\d+)?)"
-        )
-    )
+    _spec = plz["규격단위중량"].astype(str)
 
-    plz["브랜드"] = tmp[0]
+    # 브랜드: 알파벳 시작 부분 추출 (SWIFT, EXCEL 등)
+    plz["브랜드"] = _spec.str.extract(r"^([A-Za-z]+)")[0]
 
-    # 평균중량
+    # 평균중량: KG 포함 경우만 (단순 숫자=규격코드는 제외)
     plz["평균중량"] = pd.to_numeric(
-        tmp[1],
+        _spec.str.extract(r"(\d+(?:\.\d+)?)\s*[Kk][Gg]")[0],
         errors="coerce"
     )
 
@@ -326,6 +310,27 @@ def cs_eda(data):
     )
 
     return cs
+
+# =========================
+# 아이린냉장 EDA
+# =========================
+def irn_eda(data):
+    if data is None or data.empty:
+        return data
+
+    irn = data.drop_duplicates().copy()
+
+    irn["창고"] = "아이린냉장"
+    # 브랜드/등급이 상품명에 뭉쳐 있고 분리 규칙이 아직 불확실 — 우선 비워둠
+    irn["브랜드"] = ""
+    irn["등급"] = ""
+    irn["평균중량"] = None
+
+    # 브랜드/등급 미추출 — eda_common이 만든 기타정보(비한글 텍스트)는 사용하지 않고 버림
+    irn = irn.drop(columns=["규격단위중량", "기타정보"], errors="ignore")
+
+    return irn
+
 
 def split_data(text):
     # 등급 추출 ("..." 형태)

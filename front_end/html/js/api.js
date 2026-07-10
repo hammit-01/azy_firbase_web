@@ -1,8 +1,15 @@
 // api.js — MySQL 백엔드 API 클라이언트
 const API_BASE = window.location.origin;
 
+function _resolvePath(p) {
+    if (!window.__AZY_API_MODE) return p;
+    return p
+        .replace(/^\/api\/inventory/, "/api/azy_inventory")
+        .replace(/^\/api\/holding_records/, "/api/azy_holding_records");
+}
+
 export async function apiFetch(path, options = {}) {
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(`${API_BASE}${_resolvePath(path)}`, {
         headers: { "Content-Type": "application/json" },
         ...options,
     });

@@ -146,3 +146,57 @@ def get_snapshot(conn) -> dict:
     with conn.cursor() as cur:
         cur.execute("SELECT * FROM inventory WHERE 수집일 != ''")
         return {row["id"]: dict(row) for row in cur.fetchall()}
+
+
+# ── 타창고(azy) 전용 함수 ─────────────────────────────────────
+
+def upsert_azy_inventory(conn, rows: list[dict]):
+    if not rows:
+        return
+    cols = ["id","pk","상품명","브랜드","등급","ESTNO","재고","BL","창고",
+            "유통기한","중량","평중","출고일","홀딩","상태","메모","수집일",
+            "holdingTotal","holdingRecordId","이상","원본재고"]
+    placeholders = ", ".join(["%s"] * len(cols))
+    col_names    = ", ".join([f"`{c}`" for c in cols])
+    update_part  = ", ".join([f"`{c}`=VALUES(`{c}`)" for c in cols if c != "id"])
+    sql = (f"INSERT INTO azy_inventory ({col_names}) VALUES ({placeholders}) "
+           f"ON DUPLICATE KEY UPDATE {update_part}")
+    with conn.cursor() as cur:
+        data = [[_val(c, row) for c in cols] for row in rows]
+        cur.executemany(sql, data)
+
+
+def delete_azy_inventory(conn, ids: list[str]):
+    if not ids:
+        return
+    placeholders = ", ".join(["%s"] * len(ids))
+    with conn.cursor() as cur:
+        cur.execute(f"DELETE FROM azy_inventory WHERE id IN ({placeholders})", ids)
+
+
+def upsert_azy_holding_record(conn, rec: dict):
+    cols = ["id","pk","BL","ESTNO","등급","수량","홀딩","출고일","메모"]
+    placeholders = ", ".join(["%s"] * len(cols))
+    col_names    = ", ".join([f"`{c}`" for c in cols])
+    update_part  = ", ".join([f"`{c}`=VALUES(`{c}`)" for c in cols if c != "id"])
+    sql = (f"INSERT INTO azy_holding_records ({col_names}) VALUES ({placeholders}) "
+           f"ON DUPLICATE KEY UPDATE {update_part}")
+    with conn.cursor() as cur:
+        cur.execute(sql, [_hr_val(c, rec) for c in cols])
+
+
+def delete_azy_holding_record(conn, rec_id: str):
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM azy_holding_records WHERE id=%s", (rec_id,))
+
+
+def get_azy_holding_sum(conn) -> dict:
+    with conn.cursor() as cur:
+        cur.execute("SELECT pk, SUM(수량) as total FROM azy_holding_records WHERE pk != '' GROUP BY pk")
+        return {row["pk"]: int(row["total"] or 0) for row in cur.fetchall()}
+
+
+def get_azy_snapshot(conn) -> dict:
+    with conn.cursor() as cur:
+        cur.execute("SELECT * FROM azy_inventory WHERE 수집일 != ''")
+        return {row["id"]: dict(row) for row in cur.fetchall()}

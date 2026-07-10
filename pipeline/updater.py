@@ -36,10 +36,10 @@ ACTIVE_DB_FILE = Path("pipeline/active_db.json")
 RECOVERY_HOURS = 23  # Secondary 전환 후 N시간 뒤 Primary 복귀 시도
 
 COMPARE_FIELDS = (
-    "상품명", "브랜드", "등급", "ESTNO", "재고",
-    "BL", "창고", "유통기한", "평중", "출고일",
-    "holdingTotal",
-    # 홀딩·상태·메모는 사용자 설정 필드 → 파이프라인 비교/덮어쓰기 대상 제외
+    "재고", "holdingTotal",
+    # 상품명·브랜드·등급·ESTNO·BL·창고·유통기한·평중·출고일은 기존 행이면 사용자 편집을
+    # 보존하는 마스터 필드(mysql_updater._PRESERVE_ON_UPDATE) → 비교 대상에서 제외
+    # 홀딩·상태·메모도 사용자 설정 필드 → 파이프라인 비교/덮어쓰기 대상 제외
 )
 
 
@@ -176,7 +176,23 @@ def _df_to_dict(
     employees_names: set = None,
 ) -> tuple:
     """Returns (result_dict, crawled_key_totals, pending_list, auto_list)."""
-    from post import to_str, to_int, to_float, to_date
+    def to_str(v):
+        if v is None or (isinstance(v, float) and pd.isna(v)):
+            return ""
+        return str(v).strip()
+    def to_int(v):
+        try: return int(str(v).replace(",", ""))
+        except: return 0
+    def to_float(v):
+        try:
+            f = float(v)
+            return None if pd.isna(f) else f
+        except: return None
+    def to_date(v):
+        if v is None or (isinstance(v, float) and pd.isna(v)):
+            return ""
+        try: return pd.Timestamp(v).strftime("%Y.%m.%d")
+        except: return str(v)
     if holding_sum            is None: holding_sum            = {}
     if prev_snapshot          is None: prev_snapshot          = {}
     if holding_rows_by_bl     is None: holding_rows_by_bl     = {}
