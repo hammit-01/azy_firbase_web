@@ -10,6 +10,7 @@ jns.xlsx
 pipeline/snapshot.pkl
 pipeline/logs/
 pipeline/.service.lock
+pipeline/.api.lock
 service_err.txt
 service_out.txt
 
