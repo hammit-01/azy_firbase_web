@@ -130,6 +130,8 @@ def _upload_azy(azy_df, warehouse_scope=None):
             "수집일": today,
             "holdingTotal": h_qty, "holdingRecordId": "", "이상": "",
             "원본재고": raw_qty,
+            "_auto_상태": _s(r.get("_auto_상태")),
+            "_auto_메모": _s(r.get("_auto_메모")),
         }
 
     # stale 삭제 범위 — 명시 안 하면 이번에 실제로 크롤링된 창고들로 자동 한정
@@ -157,9 +159,16 @@ def _upload_azy(azy_df, warehouse_scope=None):
         # 사용자가 UI에서 직접 고칠 수 있는 마스터 필드 — 기존 행이면 크롤값으로 덮어쓰지 않고 보존
         for uid, data in rows.items():
             prev = existing.get(uid)
+            auto_state = data.pop("_auto_상태", "")
+            auto_memo  = data.pop("_auto_메모", "")
             data["홀딩"] = prev.get("홀딩", "") if prev else ""
-            data["상태"] = prev.get("상태", "없음") if prev else "없음"
-            data["메모"] = prev.get("메모", "") if prev else ""
+            if prev:
+                data["상태"] = prev.get("상태", "없음")
+                data["메모"] = prev.get("메모", "")
+            else:
+                # 신규 행: 파손/상이품/반품·필수값 결측 자동 감지 결과를 초기 상태로 사용
+                data["상태"] = auto_state or "없음"
+                data["메모"] = auto_memo
             if prev:
                 for f in ("상품명", "브랜드", "등급", "ESTNO", "평중", "유통기한", "출고일"):
                     if prev.get(f) not in (None, ""):

@@ -177,4 +177,30 @@ def eda_standard(df):
         manufactured_year = (expire - pd.Timedelta(days=730)).dt.year
         df.loc[tonnies_mask & (manufactured_year == date.today().year), "평균중량"] = 10.0
 
+    # ── 특이품 자동 감지 (신규 행 생성 시 상태/메모 기본값으로 사용 — _upload_azy 참고) ──
+    df["_auto_상태"] = ""
+    df["_auto_메모"] = ""
+
+    # 1) 상품명에 파손/상이품/반품 포함 → 상품명에서 제거하고 상태=특이품, 메모=사유
+    qualifier_pattern = r"(파손|상이품|반품)"
+    extracted = df["수탁품"].astype(str).str.extract(qualifier_pattern)[0]
+    has_qualifier = extracted.notna()
+    df.loc[has_qualifier, "수탁품"] = (
+        df.loc[has_qualifier, "수탁품"]
+        .astype(str)
+        .str.replace(qualifier_pattern, "", regex=True)
+        .str.strip()
+    )
+    df.loc[has_qualifier, "_auto_상태"] = "특이품"
+    df.loc[has_qualifier, "_auto_메모"] = extracted[has_qualifier]
+
+    # 2) 상품명/브랜드/등급/ESTNO 중 하나라도 비어있음 → 상태=null (메모는 안 건드림)
+    core_cols = ["수탁품", "브랜드", "등급", "ESTNO"]
+    missing_mask = pd.Series(False, index=df.index)
+    for c in core_cols:
+        if c in df.columns:
+            missing_mask = missing_mask | df[c].isna() | (df[c].astype(str).str.strip() == "")
+    null_only = missing_mask & ~has_qualifier
+    df.loc[null_only, "_auto_상태"] = "null"
+
     return df
