@@ -162,17 +162,33 @@ def _upload_azy(azy_df, warehouse_scope=None):
             auto_state = data.pop("_auto_상태", "")
             auto_memo  = data.pop("_auto_메모", "")
             data["홀딩"] = prev.get("홀딩", "") if prev else ""
-            if prev:
-                data["상태"] = prev.get("상태", "없음")
-                data["메모"] = prev.get("메모", "")
-            else:
-                # 신규 행: 파손/상이품/반품·필수값 결측 자동 감지 결과를 초기 상태로 사용
-                data["상태"] = auto_state or "없음"
-                data["메모"] = auto_memo
+
             if prev:
                 for f in ("상품명", "브랜드", "등급", "ESTNO", "평중", "유통기한", "출고일"):
                     if prev.get(f) not in (None, ""):
                         data[f] = prev[f]
+
+            prev_state = prev.get("상태", "없음") if prev else "없음"
+            if prev_state == "holding":
+                # 실제 홀딩 처리 중인 행은 자동 로직이 건드리지 않음
+                data["상태"] = prev_state
+                data["메모"] = prev.get("메모", "") if prev else ""
+            else:
+                # holding이 아니면 매 사이클 최신 데이터(위 보존 반영 후 최종값) 기준으로 재계산
+                # — 결측이 나중에 채워지거나 새로 결측이 생겨도 상태가 계속 따라감
+                is_missing = any(
+                    not str(data.get(f, "")).strip()
+                    for f in ("상품명", "브랜드", "등급", "ESTNO")
+                )
+                if auto_state == "특이품":
+                    data["상태"] = "특이품"
+                    data["메모"] = auto_memo
+                elif is_missing:
+                    data["상태"] = "null"
+                    data["메모"] = prev.get("메모", "") if prev else ""
+                else:
+                    data["상태"] = "없음"
+                    data["메모"] = prev.get("메모", "") if prev else ""
 
         stale_ids = [uid for uid in existing if uid not in rows]
 

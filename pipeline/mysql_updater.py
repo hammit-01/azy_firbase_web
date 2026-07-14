@@ -84,6 +84,11 @@ class MySQLUpdater:
 
         total = len(to_insert) + len(to_update) + len(to_delete)
 
+        # 정보누락(null) 상태는 재고 증감과 무관하게 매 사이클 전체 행 기준으로 재계산
+        # (홀딩/특이품으로 이미 표시된 행은 건드리지 않음)
+        with get_conn() as conn:
+            self._sync_missing_status(conn)
+
         if total == 0:
             log.info("  변경 없음")
             return 0, new_data
@@ -105,6 +110,24 @@ class MySQLUpdater:
         self._flag_holding_issues(holding_sum, crawled_key_totals)
 
         return total, new_data
+
+    def _sync_missing_status(self, conn):
+        """상품명/브랜드/등급/ESTNO 중 하나라도 비어있으면 상태=null, 다 채워지면 상태=없음으로
+        되돌림. 홀딩/특이품 행은 건드리지 않음 — 재고 증감 diff와 무관하게 매 사이클 실행."""
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE inventory SET `상태`='null' "
+                    "WHERE `상태` NOT IN ('holding', '특이품', 'null') "
+                    "AND (`상품명`='' OR `브랜드`='' OR `등급`='' OR `ESTNO`='')"
+                )
+                cur.execute(
+                    "UPDATE inventory SET `상태`='없음' "
+                    "WHERE `상태`='null' "
+                    "AND `상품명`!='' AND `브랜드`!='' AND `등급`!='' AND `ESTNO`!=''"
+                )
+        except Exception as e:
+            log.warning(f"  정보누락 상태 동기화 실패: {e}")
 
     def _apply_auto_deductions(self, auto_list: dict):
         try:
