@@ -5,8 +5,11 @@ html {
 body {
     margin: 0;
     padding: 30px;
-    font-family: Arial;
-    background: #f4f6f8;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo",
+                 "Malgun Gothic", "맑은 고딕", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: #eef1f5;
     height: 100%;
     box-sizing: border-box;
     overflow: hidden;
@@ -24,6 +27,7 @@ h1 {
     margin: 0;
     font-weight: 800;
     color: #1e293b;
+    letter-spacing: -0.3px;
 }
 
 .container {
@@ -79,8 +83,8 @@ h1 {
 .right-panel {
     padding: 25px;
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    border-radius: 14px;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.07);
     box-sizing: border-box;
     width: 100%;
     overflow-x: hidden;
@@ -90,7 +94,7 @@ h1 {
     width: 100%;
     overflow-x: clip;
     background: #fff;
-    border-radius: 10px;
+    border-radius: 12px;
 }
 
 table {
@@ -100,20 +104,22 @@ table {
 }
 
 th {
-    padding: 10px 6px;
+    padding: 12px 8px;
     text-align: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: 20px;
+    font-size: 19px;
+    letter-spacing: -0.2px;
 }
 
 td {
-    padding: 8px 6px;
+    padding: 10px 8px;
     text-align: center;
     word-break: break-word;
     overflow-wrap: break-word;
-    font-size: 20px;
+    font-size: 19px;
+    border-bottom: 1px solid #f0f2f5;
 }
 
 /* BL번호 열 한 줄 표시 */
@@ -124,22 +130,24 @@ td:nth-child(7) {
 }
 
 tbody tr:nth-child(even) td {
-    background: #efffd3;
+    background: #f6fbea;
 }
 
 tbody tr:hover td {
-    background: #c7ff67 !important;
+    background: #e4f7c1 !important;
+    transition: background 0.12s ease;
 }
 
 
 thead {
-    background: #94d900;
-    color: white;
-    font-size: 20px;
+    background: linear-gradient(180deg, #a0e600 0%, #8fce00 100%);
+    color: #ffffff;
+    font-size: 19px;
     font-weight: 700;
     position: sticky;
     top: 0;
     z-index: 50;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }
 
 th.sortable {
@@ -162,10 +170,10 @@ th.sort-active {
     display: flex;
     align-items: center;
     gap: 16px;
-    padding: 12px 20px;
+    padding: 14px 22px;
     background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    border-radius: 14px;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.07);
     flex-wrap: wrap;
     box-sizing: border-box;
     width: 100%;
@@ -196,18 +204,18 @@ th.sort-active {
     height: 42px;
     padding: 0 10px;
     border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    border-radius: 9px;
     font-size: 16px;
     background: #f9fafb;
     cursor: pointer;
     outline: none;
-    transition: 0.2s;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
     width: 90px;
     flex-shrink: 0;
 }
 
 .filter-sel:hover  { border-color: #94a3b8; }
-.filter-sel:focus  { border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+.filter-sel:focus  { border-color: #8fce00; background: #fff; box-shadow: 0 0 0 3px rgba(143,206,0,0.15); }
 
 .search-input {
     flex: 1;
@@ -215,17 +223,17 @@ th.sort-active {
     height: 42px;
     padding: 0 14px;
     border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    border-radius: 9px;
     font-size: 16px;
     background: #f9fafb;
     outline: none;
-    transition: 0.2s;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
     box-sizing: border-box;
     margin-top: 0;
 }
 
 .search-input:hover { border-color: #94a3b8; }
-.search-input:focus { border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+.search-input:focus { border-color: #8fce00; background: #fff; box-shadow: 0 0 0 3px rgba(143,206,0,0.15); }
 
 .tb-sep {
     width: 2px;
@@ -378,14 +386,19 @@ th.sort-active {
     height: 42px;
     padding: 0 18px;
     border: none;
-    border-radius: 8px;
+    border-radius: 9px;
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
     white-space: nowrap;
     width: auto;
     flex-shrink: 0;
+}
+
+.insert-btn:active, .update-btn:active, .holding-btn:active,
+.rollback-btn:active, .all-delete-btn:active {
+    transform: translateY(1px);
 }
 
 /* ── 변경사항 탭 버튼 ── */
@@ -622,6 +635,7 @@ th.sort-active {
 
 .insert-btn, .all-insert-btn, .select-insert-btn {
     background: #22c55e; color: #fff;
+    box-shadow: 0 2px 8px rgba(34,197,94,0.28);
 }
 .insert-btn:hover, .all-insert-btn:hover, .select-insert-btn:hover {
     background: #16a34a;
@@ -629,6 +643,7 @@ th.sort-active {
 
 .update-btn, .all-update-btn, .select-update-btn {
     background: #3b82f6; color: #fff;
+    box-shadow: 0 2px 8px rgba(59,130,246,0.28);
 }
 .update-btn:hover, .all-update-btn:hover, .select-update-btn:hover {
     background: #2563eb;
@@ -636,6 +651,7 @@ th.sort-active {
 
 .holding-btn, .all-holding-btn, .select-holding-btn {
     background: #0ea5e9; color: #fff;
+    box-shadow: 0 2px 8px rgba(14,165,233,0.28);
 }
 .holding-btn:hover, .all-holding-btn:hover, .select-holding-btn:hover {
     background: #0284c7;
@@ -712,14 +728,14 @@ tbody tr {
 
 /* 체크한 행 = 연초록 */
 .selected-row td{
-    background:#baff25 !important;
-    color: #2e9100 !important;
+    background:#d4f7a0 !important;
+    color: #3f7d00 !important;
     font-weight:700;
 }
 
 /* 홀딩된 행 일시 표시 */
 .flash-row td {
-    background: #bbffa3 !important;
+    background: #d3f5c4 !important;
     transition: 0.3s;
 }
 
@@ -883,14 +899,15 @@ tbody tr {
     width: auto !important;
     padding: 0 24px !important;
     height: 40px;
-    background: #94d900 !important;
+    background: #8fce00 !important;
     color: #fff !important;
     border: none !important;
-    border-radius: 8px !important;
+    border-radius: 9px !important;
     font-weight: 700;
     font-size: 16px;
     cursor: pointer;
     transition: 0.15s;
+    box-shadow: 0 2px 8px rgba(143,206,0,0.3);
 }
 
 .insert-submit-btn:hover {
