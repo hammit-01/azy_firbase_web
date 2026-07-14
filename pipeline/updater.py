@@ -333,6 +333,8 @@ def _df_to_dict(
             "출고일": to_date(row.get("출고일")),
             "수집일": today,
             "holdingTotal": effective_h_qty,  # auto 차감 시 차감 후 값 반영
+            "_auto_상태": to_str(row.get("_auto_상태", "")).strip(),
+            "_auto_메모": to_str(row.get("_auto_메모", "")).strip(),
         }
         if doc_id in result:
             # 동일 pk: 창고 코드 달라도 같은 상품 → 재고 합산

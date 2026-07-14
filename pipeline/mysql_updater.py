@@ -64,7 +64,10 @@ class MySQLUpdater:
         for pk, data in new_data.items():
             db_prev = db_snapshot.get(pk)
             if db_prev is None:
-                to_insert[pk] = {**data, "홀딩": "", "상태": "없음", "메모": ""}
+                # 신규 행: 파손/상이품/반품·필수값 결측 자동 감지 결과를 초기 상태로 사용
+                auto_state = data.get("_auto_상태", "")
+                auto_memo  = data.get("_auto_메모", "")
+                to_insert[pk] = {**data, "홀딩": "", "상태": auto_state or "없음", "메모": auto_memo}
             elif _row_sig(db_prev) != _row_sig(data):
                 merged = {**data}
                 for f in _PRESERVE_ON_UPDATE:
