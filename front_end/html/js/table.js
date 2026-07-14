@@ -186,40 +186,34 @@ export function renderTable() {
             dom.searchInput.value
         ).toLowerCase();
 
-    const field = "전체";
+    const keyword2 =
+        cleanText(
+            dom.searchInput2?.value || ""
+        ).toLowerCase();
 
     // =========================
-    // 검색 필터
+    // 검색 필터 (검색1 · 검색2 둘 다 만족해야 함 — AND)
     // =========================
-    if (keyword) {
+    const matchesKeyword = (item, kw) =>
+        Object.values(item).some(value => {
 
-        data = data.filter(item => {
+            if (value == null)
+                return false;
 
-            // 전체 검색
-            if (field === "전체") {
+            if (typeof value === "object")
+                return false;
 
-                return Object.values(item)
-                    .some(value => {
-
-                        if (value == null)
-                            return false;
-
-                        if (
-                            typeof value === "object"
-                        )
-                            return false;
-
-                        return cleanText(value)
-                            .toLowerCase()
-                            .includes(keyword);
-                    });
-            }
-
-            // 컬럼 검색
-            return cleanText(item[field])
+            return cleanText(value)
                 .toLowerCase()
-                .includes(keyword);
+                .includes(kw);
         });
+
+    if (keyword) {
+        data = data.filter(item => matchesKeyword(item, keyword));
+    }
+
+    if (keyword2) {
+        data = data.filter(item => matchesKeyword(item, keyword2));
     }
 
     const warehouse =

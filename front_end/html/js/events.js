@@ -98,6 +98,12 @@ export function bindEvents() {
         searchTimer = setTimeout(() => renderTable(), 200);
     });
 
+    let searchTimer2 = null;
+    dom.searchInput2?.addEventListener("input", () => {
+        clearTimeout(searchTimer2);
+        searchTimer2 = setTimeout(() => renderTable(), 200);
+    });
+
     let filterTimer = null;
     ["show-warehouse", "show-brand", "show-state"].forEach(cls => {
         document.querySelector(`.${cls}`)?.addEventListener("change", () => {
