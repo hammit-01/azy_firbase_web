@@ -336,6 +336,12 @@ def hl_eda(data1):
                 "",
                 regex=True
             )
+            # 브랜드 뒤에 "_순번" 형태 접미사가 붙는 경우 제거 (예: PERDIGAO_1046867 -> PERDIGAO)
+            .str.replace(
+                r"_\d+$",
+                "",
+                regex=True
+            )
             .str.strip()
         )
 
