@@ -87,8 +87,11 @@ def _upload_azy(azy_df, warehouse_scope=None):
     for _, r in azy_df.iterrows():
         bl    = _s(r.get("BL번호"))
         estno = _s(r.get("ESTNO") or r.get("식별번호", ""))
+        grade = _s(r.get("등급"))
         wh    = _s(r.get("창고"))
-        uid   = f"{bl}_{estno}_{wh}" if bl else uuid.uuid4().hex
+        # 등급도 식별자에 포함 — 같은 BL+ESTNO라도 등급(CH/UN 등)이 다르면
+        # 별도 재고이므로 로트/저장위치 중복 합산 대상이 아님
+        uid   = f"{bl}_{estno}_{grade}_{wh}" if bl else uuid.uuid4().hex
         try:
             raw_qty = int(str(r.get("재고수량", 0)).replace(",", ""))
         except Exception:
