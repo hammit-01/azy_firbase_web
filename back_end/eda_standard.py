@@ -120,6 +120,10 @@ def eda_standard(df):
     mask = df["수탁품"] == "우척BBQ빽립A"
     df.loc[mask, "등급"] = "A"
 
+    # 소갈비/SWIFT/ESTNO=3D는 원본 WMS에 등급 정보가 아예 없어 사용자 확인으로 고정값 지정
+    mask = (df["브랜드"] == "SWIFT") & (df["수탁품"] == "소갈비") & (df["ESTNO"] == "3D")
+    df.loc[mask, "등급"] = "UN"
+
     df.loc[df["수탁품"].astype(str).str.contains("PERDI", case=False, na=False), "브랜드"] = "PERDIGAO"
     df.loc[df["수탁품"].astype(str).str.contains("SADIA", case=False, na=False), "브랜드"] = "SADIA"
     df.loc[df["수탁품"].astype(str).str.contains("SEARA", case=False, na=False), "브랜드"] = "SEARA"
