@@ -69,6 +69,14 @@ def extract_spec_plz(data):
             m.group(2)   # ESTNO
         ])
 
+    # 등급 없이 숫자만 있는 경우 (예: "()104") — ESTNO만이라도 추출
+    m = re.search(r"(\d+)", text)
+    if m:
+        return pd.Series([
+            None,
+            m.group(1)   # ESTNO
+        ])
+
     return pd.Series([
         None,
         None
