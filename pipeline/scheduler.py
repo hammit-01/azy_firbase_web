@@ -347,12 +347,17 @@ def main():
         id="jns_pipeline",
     )
 
-    # 에이스냉장 전용 — 평일 08~17시 정각(1시간 간격)에만, 메인 잡과 완전히 독립적으로 실행.
+    # 에이스냉장 전용 — 평일 08~16시 정각 + 16:59(마지막 실행)에, 메인 잡과 완전히 독립적으로 실행.
     # 동시접속 1명 제한 사이트라 메인 파이프라인 소요시간(최대 ~150초)과 무관하게
-    # 매 정각에 정확히 트리거되도록 별도 잡으로 분리.
+    # 매 정각에 정확히 트리거되도록 별도 잡으로 분리. 마지막 실행만 17:00 대신 16:59로 앞당김.
+    ace_trigger = OrTrigger([
+        CronTrigger(hour="8-16", minute="0", day_of_week="mon-fri", timezone="Asia/Seoul"),
+        CronTrigger(hour="16",   minute="59", day_of_week="mon-fri", timezone="Asia/Seoul"),
+    ])
+
     scheduler.add_job(
         run_ace_pipeline,
-        CronTrigger(hour="8-17", minute="0", day_of_week="mon-fri", timezone="Asia/Seoul"),
+        ace_trigger,
         max_instances=1,
         coalesce=True,
         misfire_grace_time=60,
