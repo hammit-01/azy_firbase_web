@@ -1,13 +1,21 @@
 """MySQL 연결 및 공통 쿼리 유틸리티."""
+import os
 import pymysql
 import pymysql.cursors
 from contextlib import contextmanager
 
+_PASSWORD = os.environ.get("MYSQL_PASSWORD")
+if not _PASSWORD:
+    raise RuntimeError(
+        "MYSQL_PASSWORD 환경변수가 설정되지 않았습니다. "
+        "(로컬 실행: setx MYSQL_PASSWORD ... 후 새 터미널 / 서비스: NSSM AppEnvironmentExtra에 등록)"
+    )
+
 _CONFIG = {
-    "host":    "localhost",
-    "user":    "hyemi",
-    "password": "0943",
-    "database": "azy_warehouse",
+    "host":    os.environ.get("MYSQL_HOST", "localhost"),
+    "user":    os.environ.get("MYSQL_USER", "hyemi"),
+    "password": _PASSWORD,
+    "database": os.environ.get("MYSQL_DATABASE", "azy_warehouse"),
     "charset":  "utf8mb4",
     "cursorclass": pymysql.cursors.DictCursor,
     "autocommit": False,
