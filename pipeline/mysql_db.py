@@ -194,9 +194,3 @@ def get_azy_holding_sum(conn) -> dict:
     with conn.cursor() as cur:
         cur.execute("SELECT pk, SUM(수량) as total FROM azy_holding_records WHERE pk != '' GROUP BY pk")
         return {row["pk"]: int(row["total"] or 0) for row in cur.fetchall()}
-
-
-def get_azy_snapshot(conn) -> dict:
-    with conn.cursor() as cur:
-        cur.execute("SELECT * FROM azy_inventory WHERE 수집일 != ''")
-        return {row["id"]: dict(row) for row in cur.fetchall()}
