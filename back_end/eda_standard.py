@@ -37,6 +37,15 @@ def eda_standard(df):
         "등급"
     ] = "S"
 
+    # SMITHFIELD 목전지: 원본 수탁품 텍스트에 "18079"가 들어있으면 ESTNO를 18079로 고정
+    # (replace_name.py에서 "돈목전지"→"목전지"로 정규화되면서 원본 텍스트의 18079 정보가
+    #  사라지므로, 그 전 단계인 여기서 잡아야 함)
+    smithfield_18079_mask = (
+        (df["브랜드"] == "SMITHFIELD") &
+        (df["수탁품"].astype(str).str.contains("18079", na=False))
+    )
+    df.loc[smithfield_18079_mask, "ESTNO"] = "18079"
+
     df["등급"] = df["등급"].astype(str).str.replace("#", "", regex=False)
 
     # 수산물 브랜드: 수탁품의 "31-40/9KG" 형식에서 "31/40"을 브랜드로 추출
@@ -183,7 +192,7 @@ def eda_standard(df):
 
     # 1) 상품명에 파손/상이품/반품 포함 → 상품명에서 제거하고 상태=특이품, 메모=사유
     # "반품입고"처럼 뒤에 "입고"가 붙어 나오는 경우가 많아 같이 제거 (메모는 사유만 저장)
-    qualifier_pattern = r"(파손|상이품|반품)"
+    qualifier_pattern = r"(진공파손|파손|상이품|반품)"
     extracted = df["수탁품"].astype(str).str.extract(qualifier_pattern)[0]
     has_qualifier = extracted.notna()
     df.loc[has_qualifier, "수탁품"] = (

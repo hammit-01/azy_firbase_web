@@ -130,7 +130,10 @@ def daejae(data):
     if data is None or data.empty:
         return pd.DataFrame()
 
-    df = data.drop_duplicates().copy()
+    # drop_duplicates() 금지: 같은 상품이 수량만 다른 두 로트로 잡혀도 여기서
+    # 한쪽이 지워지면 박스 수가 손실된다. 중복 로트 합산은 list_eda()의
+    # azy_data 단계(groupby+재고수량 합산)에서 처리한다.
+    df = data.copy()
 
     df["평균중량"] = pd.to_numeric(
         df["규격단위중량"]
@@ -157,7 +160,7 @@ def daejae(data):
     # 브랜드
     # =========================
     df["브랜드"] = s.str.extract(
-        r"(SHOWCASE\(5STAR\)|EXCEL|SADIA|INCARLOPSA|PERDIGAO|PPCS|SWIFT)"
+        r"(SHOWCASE\(5STAR\)|EXCEL|SADIA|INCARLOPSA|PERDIGAO|PPCS|SWIFT|SEARA|NATIONAL)"
     )[0]
 
     # =========================

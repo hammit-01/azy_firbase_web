@@ -2,6 +2,20 @@ import { updateItem, insertItem, insertHoldingRecordWithId, getHoldingCountByPk,
 import { fetchAllData } from "./firebase.js";
 import { pushUndo } from "./crud_history.js";
 import { showError } from "./ui.js";
+import { getStoredUser } from "./login.js";
+import { apiLogChange } from "./api.js";
+
+function _logChange(azy, targetId, action) {
+    apiLogChange(getStoredUser()?.id, azy ? "azy_inventory" : "inventory", targetId, action);
+}
+
+// item은 정규화된 형태(.raw._source/._rawId) 또는 raw 형태(._source/._rawId) 둘 다 올 수 있다.
+function _isAzy(item) {
+    return (item?._source ?? item?.raw?._source) === "azy";
+}
+function _rawId(item) {
+    return item?._rawId ?? item?.raw?._rawId ?? item?.id;
+}
 
 export async function holdingData(item, holdQty, releaseDate, note, memo = "", weight = null, noUndo = false) {
 
@@ -17,24 +31,27 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "", w
         return null;
     }
 
+    const azy = _isAzy(item);
+    const rawId = _rawId(item);
+
     try {
 
         // 전량 홀딩이면 0박스 행이 남지 않도록 삭제, 부분 홀딩이면 차감
         if (remainQty === 0) {
-            await _deleteItem(item.id);
+            await _deleteItem(rawId, azy);
         } else {
-            await updateItem(item.id, { 재고: remainQty });
+            await updateItem(rawId, { 재고: remainQty }, azy);
         }
 
         // 1. holding_data 생성
         //    전량 홀딩(remainQty=0): holdId = pk 그대로
         //    부분 홀딩(remainQty>0): holdId = {pk}hold01, hold02, ...
-        const pk = item.raw?.pk || item.id;
+        const pk = item.raw?.pk || rawId;
         let holdId;
         if (remainQty === 0) {
             holdId = pk;
         } else {
-            const count = await getHoldingCountByPk(pk);
+            const count = await getHoldingCountByPk(pk, azy);
             holdId = `${pk}hold${String(count + 1).padStart(2, "0")}`;
         }
         const holdRef = await insertHoldingRecordWithId(holdId, {
@@ -45,8 +62,9 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "", w
             수량:   holdQty,
             홀딩:   note?.trim() || "",
             출고일: releaseDate || "",
-            메모:   memo || item.memo || ""
-        });
+            메모:   memo || item.memo || "",
+            uid:    getStoredUser()?.id || ""
+        }, azy);
 
         // 2. all_data에 홀딩 row 추가 (테이블 표시용 필드 포함)
         // 수집일: "" → updater.py의 where(수집일 == "") 쿼리로 홀딩 row 식별 가능
@@ -67,30 +85,35 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "", w
             상태:            "holding",
             수집일:          "",
             holdingRecordId: holdRef.id
-        });
+        }, azy);
 
         // 전량 홀딩은 원본 row가 삭제되므로 undo 시 재삽입할 수 있도록 원본 데이터 보존
         const wasDeleted = remainQty === 0;
-        const originalData = wasDeleted ? { ...item.raw, 재고: item.qty } : null;
+        const { _source: _s, _rawId: _r, ...originalDataClean } = item.raw || {};
+        const originalData = wasDeleted ? { ...originalDataClean, 재고: item.qty } : null;
 
         if (!noUndo) pushUndo({
             type:            "holding",
-            originalId:      item.id,
+            originalId:      rawId,
             originalQty:     item.qty,
             wasDeleted,
             originalData,
             holdingId:       docRef.id,
-            holdingRecordId: holdRef.id
+            holdingRecordId: holdRef.id,
+            azy
         });
+
+        _logChange(azy, rawId, "홀딩");
 
         await fetchAllData();
         return {
-            originalId:      item.id,
+            originalId:      rawId,
             originalQty:     item.qty,
             wasDeleted,
             originalData,
             holdingId:       docRef.id,
-            holdingRecordId: holdRef.id
+            holdingRecordId: holdRef.id,
+            azy
         };
 
     } catch (error) {
@@ -130,6 +153,8 @@ export async function insertData(
 
         if (!noUndo) pushUndo({ type: "insert", newId: docRef.id });
 
+        _logChange(window.__AZY_API_MODE, docRef.id, "삽입");
+
         await fetchAllData();
         return docRef.id;
 
@@ -142,7 +167,9 @@ export async function insertData(
 export async function updateData(item, id, name, brand, grade, estNo, qty, bl, warehouse, dueDate, weight,
     releaseDate, holding, dataState, memo, noUndo = false) {
 
-    const dataId = item ? item.id : id;
+    const azy = _isAzy(item);
+    const rawId = item ? _rawId(item) : id;
+    const uiId = item ? item.id : id;
 
     const numQty = Number(qty);
 
@@ -195,26 +222,30 @@ export async function updateData(item, id, name, brand, grade, estNo, qty, bl, w
 
     try {
 
-        await updateItem(dataId, data);
+        await updateItem(rawId, data, azy);
 
         const holdingRecordId = item?.raw?.holdingRecordId;
         const wasHolding = item?.dataState === "holding";
 
         if (wasHolding && resolvedState !== "holding") {
-            await moveHoldingToHistory(holdingRecordId, "취소");
+            await moveHoldingToHistory(holdingRecordId, "취소", azy);
         } else if (resolvedState === "holding" && holdingRecordId) {
             await updateHoldingRecord(holdingRecordId, {
                 홀딩:   holding?.trim() || "",
                 출고일: releaseDate || "",
                 메모:   memo || ""
-            });
+            }, azy);
         }
 
-        if (!noUndo) pushUndo({ type: "update", id: dataId, prevData });
+        if (!noUndo) pushUndo({ type: "update", id: rawId, prevData, azy });
+
+        _logChange(azy, rawId, "수정");
 
         await fetchAllData();
         return {
-            id: dataId,
+            id: uiId,
+            rawId,
+            azy,
             prevData
         };
 
@@ -225,12 +256,15 @@ export async function updateData(item, id, name, brand, grade, estNo, qty, bl, w
 }
 
 export async function deleteItem(item, noUndo = false, noFetch = false) {
+    const azy = _isAzy(item);
+    const rawId = _rawId(item);
     try {
         if (!noUndo) {
-            const { id: _id, ...restoreData } = { ...item };
-            pushUndo({ type: "delete", restoreData });
+            const { id: _id, _source: _s, _rawId: _r, ...restoreData } = { ...item };
+            pushUndo({ type: "delete", restoreData, azy });
         }
-        await _deleteItem(item.id);
+        await _deleteItem(rawId, azy);
+        _logChange(azy, rawId, "삭제");
         if (!noFetch) await fetchAllData();
     } catch (error) {
         console.error("삭제 실패:", error);

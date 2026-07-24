@@ -9,5 +9,4 @@ export const state = {
     crudData: null,
     useDefaultOrder: true,
     sortColumns: [],    // [{key, dir}] dir: 1=오름차, 2=내림차
-    pendingChanges: [], // 재고 감소 미확인 항목
 };

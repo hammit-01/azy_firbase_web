@@ -89,9 +89,11 @@ def _upload_azy(azy_df, warehouse_scope=None):
         estno = _s(r.get("ESTNO") or r.get("식별번호", ""))
         grade = _s(r.get("등급"))
         wh    = _s(r.get("창고"))
-        # 등급도 식별자에 포함 — 같은 BL+ESTNO라도 등급(CH/UN 등)이 다르면
-        # 별도 재고이므로 로트/저장위치 중복 합산 대상이 아님
-        uid   = f"{bl}_{estno}_{grade}_{wh}" if bl else uuid.uuid4().hex
+        name  = _s(r.get("수탁품"))
+        # 등급·상품명도 식별자에 포함 — 같은 BL+ESTNO라도 등급(CH/UN 등)이 다르면 별도 재고이고,
+        # 같은 BL+ESTNO+등급이라도 상품명이 다르면(한 BL에 서로 다른 상품이 같이 실려온 경우) 별도 상품이므로
+        # 로트/저장위치 중복 합산 대상이 아님
+        uid   = f"{bl}_{estno}_{grade}_{name}_{wh}" if bl else uuid.uuid4().hex
         try:
             raw_qty = int(str(r.get("재고수량", 0)).replace(",", ""))
         except Exception:
@@ -180,15 +182,20 @@ def _upload_azy(azy_df, warehouse_scope=None):
                     not str(data.get(f, "")).strip()
                     for f in ("상품명", "브랜드", "등급", "ESTNO")
                 )
+                prev_memo = prev.get("메모", "") if prev else ""
                 if auto_state == "특이품":
                     data["상태"] = "특이품"
                     data["메모"] = auto_memo
+                elif "검품" in str(prev_memo):
+                    # 메모에 "검품"이 남아있으면(사람이 직접 남긴 태그) 상태를 특이품으로 강제
+                    data["상태"] = "특이품"
+                    data["메모"] = prev_memo
                 elif is_missing:
                     data["상태"] = "null"
-                    data["메모"] = prev.get("메모", "") if prev else ""
+                    data["메모"] = prev_memo
                 else:
                     data["상태"] = "없음"
-                    data["메모"] = prev.get("메모", "") if prev else ""
+                    data["메모"] = prev_memo
 
         stale_ids = [uid for uid in existing if uid not in rows]
 
@@ -305,6 +312,19 @@ def run_ace_pipeline():
         ace_log.error(f"에이스 파이프라인 오류: {e}", exc_info=True)
 
 
+def reset_changes_log():
+    """changes_log 월간 초기화 — 매달 1일 자정에 통째로 비움."""
+    log.info("changes_log 월간 초기화")
+    try:
+        from pipeline.mysql_db import get_conn
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("TRUNCATE TABLE changes_log")
+        log.info("changes_log 초기화 완료")
+    except Exception as e:
+        log.error(f"changes_log 초기화 실패: {e}")
+
+
 def _in_operating_hours(dt: datetime) -> bool:
     if dt.weekday() >= 5:  # 토(5), 일(6) 제외
         return False
@@ -362,6 +382,13 @@ def main():
         coalesce=True,
         misfire_grace_time=60,
         id="ace_pipeline",
+    )
+
+    # 매달 1일 00:00에 changes_log 통째로 초기화
+    scheduler.add_job(
+        reset_changes_log,
+        CronTrigger(day=1, hour=0, minute=0, timezone="Asia/Seoul"),
+        id="changes_log_reset",
     )
 
     def _shutdown(signum, frame):

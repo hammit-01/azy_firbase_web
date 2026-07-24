@@ -105,7 +105,6 @@ class MySQLUpdater:
 
         if auto_list:
             self._apply_auto_deductions(auto_list)
-        self._write_pending_changes({})  # 변경사항 탭 미사용 — 항상 비움
 
         self._flag_holding_issues(holding_sum, crawled_key_totals)
 
@@ -113,7 +112,8 @@ class MySQLUpdater:
 
     def _sync_missing_status(self, conn):
         """상품명/브랜드/등급/ESTNO 중 하나라도 비어있으면 상태=null, 다 채워지면 상태=없음으로
-        되돌림. 홀딩/특이품 행은 건드리지 않음 — 재고 증감 diff와 무관하게 매 사이클 실행."""
+        되돌림. 메모에 "검품"이 남아있으면 상태=특이품으로 강제. 홀딩 행은 건드리지 않음 —
+        재고 증감 diff와 무관하게 매 사이클 실행."""
         try:
             with conn.cursor() as cur:
                 cur.execute(
@@ -125,6 +125,11 @@ class MySQLUpdater:
                     "UPDATE inventory SET `상태`='없음' "
                     "WHERE `상태`='null' "
                     "AND `상품명`!='' AND `브랜드`!='' AND `등급`!='' AND `ESTNO`!=''"
+                )
+                cur.execute(
+                    "UPDATE inventory SET `상태`='특이품' "
+                    "WHERE `상태` != 'holding' AND `상태` != '특이품' "
+                    "AND `메모` LIKE '%검품%'"
                 )
         except Exception as e:
             log.warning(f"  정보누락 상태 동기화 실패: {e}")
@@ -224,18 +229,3 @@ class MySQLUpdater:
         except Exception as e:
             log.warning(f"  홀딩 이상 자동처리 실패: {e}")
 
-    def _write_pending_changes(self, pending_list: dict):
-        import json
-        try:
-            with get_conn() as conn:
-                with conn.cursor() as cur:
-                    # 매 사이클마다 전체 교체 — 해소된 항목 자동 삭제
-                    cur.execute("DELETE FROM pending_changes")
-                    for pk, info in pending_list.items():
-                        cur.execute(
-                            "INSERT INTO pending_changes (id, data_json) VALUES (%s, %s)",
-                            (pk, json.dumps(info, ensure_ascii=False))
-                        )
-            log.info(f"  [pending] {len(pending_list)}건 기록")
-        except Exception as e:
-            log.warning(f"  pending 기록 실패: {e}")

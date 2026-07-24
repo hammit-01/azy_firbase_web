@@ -8,6 +8,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@latest/dist/web/variable/pretendardvariable.css" />
     <link rel="stylesheet" href="./css/warehouse_main.css">
     <title>에이젯유통 재고 시스템</title>
 </head>
@@ -29,81 +31,99 @@
             </div>
 
             <div class="toolbar-right">
-                <!-- 필터 -->
-                <select class="show-warehouse filter-sel">
-                    <option value="">창고</option>
-                    <option value="곤지암">곤지암</option>
-                    <option value="곤CS">곤CS</option>
-                    <option value="곤SWC">곤SWC</option>
-                    <option value="곤대재">곤대재</option>
-                    <option value="곤대청">곤대청</option>
-                    <option value="곤삼진2">곤삼진2</option>
-                    <option value="곤에이스처인">곤에이스처인</option>
-                </select>
+                <div class="toolbar-row">
+                    <select class="show-warehouse filter-sel">
+                        <option value="">창고</option>
+                        <!-- 실제 옵션은 현재 크롤링된 데이터 기준으로 js/table.js의 renderWarehouseOptions()가 가나다순으로 채움 -->
+                    </select>
+                    <input id="searchInput" class="search-input" placeholder="검색1">
+                </div>
 
-                <select class="show-brand filter-sel">
-                    <option value="">브랜드</option>
-                    <option value="5 STAR">5 STAR</option>
-                    <option value="AFG">AFG</option>
-                    <option value="AGROSUPER">AGROSUPER</option>
-                    <option value="AMH">AMH</option>
-                    <option value="EXCEL">EXCEL</option>
-                    <option value="GCM">GCM</option>
-                    <option value="GREENHAM">GREENHAM</option>
-                    <option value="IBP">IBP</option>
-                    <option value="KILCOY">KILCOY</option>
-                    <option value="LITERA">LITERA</option>
-                    <option value="LOCKS">LOCKS</option>
-                    <option value="NB">NB</option>
-                    <option value="OLYMEL">OLYMEL</option>
-                    <option value="PATEL">PATEL</option>
-                    <option value="PERDIGAO">PERDIGAO</option>
-                    <option value="PPCS">PPCS</option>
-                    <option value="SADIA">SADIA</option>
-                    <option value="SEARA">SEARA</option>
-                    <option value="SHOWCASE">SHOWCASE</option>
-                    <option value="SMITHFIELD">SMITHFIELD</option>
-                    <option value="SWIFT">SWIFT</option>
-                    <option value="TEYS">TEYS</option>
-                    <option value="TONNIES">TONNIES</option>
-                </select>
+                <div class="toolbar-row">
+                    <select class="show-brand filter-sel">
+                        <option value="">브랜드</option>
+                        <option value="5 STAR">5 STAR</option>
+                        <option value="AFG">AFG</option>
+                        <option value="AGROSUPER">AGROSUPER</option>
+                        <option value="AMH">AMH</option>
+                        <option value="EXCEL">EXCEL</option>
+                        <option value="GCM">GCM</option>
+                        <option value="GREENHAM">GREENHAM</option>
+                        <option value="IBP">IBP</option>
+                        <option value="KILCOY">KILCOY</option>
+                        <option value="LITERA">LITERA</option>
+                        <option value="LOCKS">LOCKS</option>
+                        <option value="NB">NB</option>
+                        <option value="OLYMEL">OLYMEL</option>
+                        <option value="PATEL">PATEL</option>
+                        <option value="PERDIGAO">PERDIGAO</option>
+                        <option value="PPCS">PPCS</option>
+                        <option value="SADIA">SADIA</option>
+                        <option value="SEARA">SEARA</option>
+                        <option value="SHOWCASE">SHOWCASE</option>
+                        <option value="SMITHFIELD">SMITHFIELD</option>
+                        <option value="SWIFT">SWIFT</option>
+                        <option value="TEYS">TEYS</option>
+                        <option value="TONNIES">TONNIES</option>
+                        <!-- 타창고(azy_inventory) 전용 브랜드 -->
+                        <option value="CLASSIC">CLASSIC</option>
+                        <option value="GREENLEA">GREENLEA</option>
+                        <option value="TCH">TCH</option>
+                        <option value="VIBRA">VIBRA</option>
+                    </select>
+                    <input id="searchInput2" class="search-input" placeholder="검색2">
+                </div>
 
-                <select class="show-state filter-sel">
-                    <option value="">상태</option>
-                    <option value="holding">홀딩</option>
-                    <option value="freeze">동결</option>
-                    <option value="stopped">사용불가</option>
-                    <option value="moving">이고</option>
-                    <option value="특이품">특이품</option>
-                    <option value="null">null(정보누락)</option>
-                </select>
+                <div class="toolbar-row">
+                    <select class="show-state filter-sel">
+                        <option value="">상태</option>
+                        <option value="holding">홀딩</option>
+                        <option value="freeze">동결</option>
+                        <option value="stopped">사용불가</option>
+                        <option value="moving">이고</option>
+                        <option value="특이품">특이품</option>
+                        <option value="null">null(정보누락)</option>
+                    </select>
 
-                <input id="searchInput" class="search-input" placeholder="검색1">
-                <input id="searchInput2" class="search-input" placeholder="검색2">
+                    <!-- CRUD 버튼 -->
+                    <button class="insert-btn">추가</button>
+                    <button class="update-btn">수정</button>
+                    <button class="holding-btn">홀딩</button>
 
-                <div class="tb-sep"></div>
+                    <div class="tb-sep"></div>
 
-                <!-- CRUD 버튼 -->
-                <button class="insert-btn">추가</button>
-                <button class="update-btn">수정</button>
-                <button class="holding-btn">홀딩</button>
-
-                <div class="tb-sep"></div>
-
-                <!-- 유틸 버튼 -->
-                <button class="rollback-btn">되돌리기</button>
-                <button class="clear-btn" data-action="clear-selection">전체 취소</button>
-                <button class="all-delete-btn">전체 삭제</button>
-
-                <div class="tb-sep"></div>
-                <button class="changes-tab-btn">변경사항<span class="changes-badge" style="display:none"></span></button>
+                    <!-- 유틸 버튼 -->
+                    <button class="rollback-btn">되돌리기</button>
+                    <button class="clear-btn" data-action="clear-selection">전체 취소</button>
+                    <button class="all-delete-btn">전체 삭제</button>
+                </div>
             </div>
-        </div>
 
-        <!-- ── 선택 패널 ── -->
-        <div class="top_bar">
-            <div class="right-panel">
-                <div id="sideBox"></div>
+            <div class="toolbar-login">
+                <button class="login-btn">
+                    <span class="login-icon">👤</span>
+                    <span class="login-btn-text">로그인</span>
+                </button>
+
+                <div class="login-popover">
+                    <div class="login-form">
+                        <label class="login-field">
+                            <span class="login-label">아이디</span>
+                            <input type="text" id="loginIdInput" class="login-input" placeholder="아이디(사번)" autocomplete="username">
+                        </label>
+                        <label class="login-field">
+                            <span class="login-label">비밀번호</span>
+                            <input type="password" id="loginPwInput" class="login-input" placeholder="비밀번호" autocomplete="current-password" maxlength="4">
+                        </label>
+                        <div class="login-error"></div>
+                        <button class="login-submit-btn">로그인</button>
+                    </div>
+                    <div class="login-profile" style="display:none">
+                        <div class="login-profile-name"></div>
+                        <div class="login-profile-role"></div>
+                        <button class="logout-btn">로그아웃</button>
+                    </div>
+                </div>
             </div>
         </div>
         </div><!-- /.sticky-header -->
@@ -115,17 +135,17 @@
             <div class="table-wrap">
                 <table>
                     <colgroup>
-                        <col style="width:3%">  <!--선택-->
+                        <col style="width:5%">  <!--선택-->
                         <col style="width:12%"> <!--상품명-->
-                        <col style="width:12%"> <!--브랜드-->
-                        <col style="width:7%">  <!--등급-->
+                        <col style="width:11%"> <!--브랜드-->
+                        <col style="width:5%">  <!--등급-->
                         <col style="width:8%">  <!--ESTNO-->
                         <col style="width:7%">  <!--재고-->
-                        <col style="width:16%"> <!--BL번호-->
-                        <col style="width:10%"> <!--창고-->
-                        <col style="width:8%">  <!--유통기한-->
+                        <col style="width:14%"> <!--BL번호-->
+                        <col style="width:9%">  <!--창고-->
+                        <col style="width:10%"> <!--유통기한-->
                         <col style="width:5%">  <!--평균-->
-                        <col style="width:10%"> <!--비고-->
+                        <col style="width:14%"> <!--비고-->
                     </colgroup>
                     <thead>
                         <tr>
@@ -142,6 +162,7 @@
                             <th data-key="메모" class="sortable">비고</th>
                         </tr>
                     </thead>
+                    <tbody id="insert-rows"></tbody>
                     <tbody id="list"></tbody>
                 </table>
             </div>
@@ -154,6 +175,8 @@
         </div>
 
     </div>
+
+    <div id="bulk-action-bar" class="bulk-action-bar"></div>
 
     <script type="module" src="./warehouse_main.js"></script>
 </body>

@@ -1,38 +1,15 @@
 import { state } from "./state.js";
-import { renderTable, updateSortHeaders } from "./table.js";
-import { renderSelectData, renderInsert, renderUpdate, renderHolding, renderFooter, createInsertRow } from "./panel.js";
+import { renderTable, updateSortHeaders, renderBulkActionBar } from "./table.js";
+import { renderSelectData, renderInsert, createInsertRow } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
-import { fetchAllData, addRenderHook } from "./firebase.js";
+import { fetchAllData } from "./firebase.js";
 import { showToast, showError, showConfirm } from "./ui.js";
-import { renderChanges, bindChangesEvents } from "./changes.js";
 
 export function bindEvents() {
-    // 변경사항 탭 렌더 훅 등록
-    addRenderHook(renderChanges);
-    bindChangesEvents();
-
-    // 변경사항 탭 스위칭
-    document.querySelector(".changes-tab-btn")?.addEventListener("click", () => {
-        const changesEl = document.querySelector(".changes-container");
-        const tableEl   = document.querySelector(".table-container");
-        const tabBtn    = document.querySelector(".changes-tab-btn");
-        const isOpen    = changesEl?.style.display !== "none";
-
-        if (isOpen) {
-            changesEl.style.display = "none";
-            tableEl.style.display   = "";
-            tabBtn.classList.remove("tab-active");
-        } else {
-            changesEl.style.display = "";
-            tableEl.style.display   = "none";
-            tabBtn.classList.add("tab-active");
-            renderChanges();
-        }
-    });
 
     // 출고일·홀딩 hover 카드
     const hoverCard = document.createElement("div");
@@ -63,6 +40,9 @@ export function bindEvents() {
             _hoveredTr = null;
             hoverCard.style.display = "none";
         });
+
+        // 추가/수정/홀딩 입력행이 뜨거나 사라질 때마다 우하단 전체 처리 바 갱신
+        new MutationObserver(renderBulkActionBar).observe(tableEl, { childList: true, subtree: true });
     }
 
     // 드래그 감지 (드래그 중 행 체크 방지)
@@ -164,14 +144,8 @@ export function bindEvents() {
 
         switch (state.crudData) {
             case "update":
-                renderSelectData();
-                renderUpdate();
-                renderFooter("update");
-                break;
             case "holding":
-                renderSelectData();
-                renderHolding();
-                renderFooter("holding");
+                renderTable();
                 break;
             default:
                 renderSelectData();
@@ -186,10 +160,9 @@ function renderAll() {
     renderSelectData();
 }
 
-function closePanel() {
-    state.crudData = null;
-    dom.container?.classList.remove("active");
-    if (dom.sideBox) dom.sideBox.innerHTML = "";
+// 저장된 유통기한은 "2028.01.04" 형식(점 구분) — <input type="date">가 내놓는 "YYYY-MM-DD"를 다시 점 형식으로
+function toDotDate(v) {
+    return v ? v.replace(/-/g, ".") : "";
 }
 
 function handleChange(e) {
@@ -218,14 +191,8 @@ function handleChange(e) {
     // ② 패널 업데이트 (중복 renderSelectData 제거)
     switch (state.crudData) {
         case "update":
-            renderSelectData();
-            renderUpdate();
-            renderFooter("update");
-            break;
         case "holding":
-            renderSelectData();
-            renderHolding();
-            renderFooter("holding");
+            renderTable();
             break;
         default:
             renderSelectData();
@@ -256,63 +223,42 @@ async function handleClick(e) {
         return;
     }
 
-    // 추가 버튼
+    // 추가 버튼 — 테이블 맨 위에 입력행을 띄우거나(없으면) 닫는다(있으면). 선택/수정/홀딩 패널과는 무관하게 독립 동작.
     if (e.target.classList.contains("insert-btn")) {
-        if (state.crudData === "insert" && dom.container?.classList.contains("active")) {
-            closePanel();
+        if (dom.insertRowsBody && dom.insertRowsBody.children.length > 0) {
+            dom.insertRowsBody.innerHTML = "";
             return;
         }
-        state.selectedItems.clear();
-        state.crudData = "insert";
-        renderAll();
         renderInsert();
-        renderFooter("insert");
         return;
     }
 
-    // 행 추가
-    if (e.target.classList.contains("insertRow-btn")) {
-        document.querySelector(".insert-list")?.insertAdjacentHTML("beforeend", createInsertRow());
-        return;
-    }
-
-    // 추가 카드 제거
+    // 추가 입력행 취소
     const removeBtn = e.target.closest(".remove-insert-btn, .card-close-btn");
     if (removeBtn && removeBtn.closest(".insert-card")) {
         removeBtn.closest(".insert-card").remove();
-        // 카드가 모두 없어지면 패널 닫기
-        const remaining = document.querySelectorAll(".insert-card");
-        if (remaining.length === 0) {
-            closePanel();
-        }
         return;
     }
 
-    // 수정 버튼
+    // 추가 입력행 하나 더 늘리기 (여러 상품 연속 입력)
+    if (e.target.classList.contains("add-insert-row-btn")) {
+        e.target.closest(".insert-card")?.insertAdjacentHTML("afterend", createInsertRow());
+        return;
+    }
+
+    // 수정 버튼 — 선택한 행을 테이블 안에서 바로 편집 가능하게 전환(다시 누르면 해제)
     if (e.target.classList.contains("update-btn")) {
         if (state.selectedItems.size === 0) { showError("수정할 상품을 선택하세요."); return; }
-        if (state.crudData === "update" && dom.container?.classList.contains("active")) {
-            closePanel();
-            return;
-        }
-        state.crudData = "update";
-        renderSelectData();
-        renderUpdate();
-        renderFooter("update");
+        state.crudData = state.crudData === "update" ? null : "update";
+        renderTable();
         return;
     }
 
-    // 홀딩 버튼
+    // 홀딩 버튼 — 선택한 행 밑에 홀딩 입력행을 추가(다시 누르면 해제)
     if (e.target.classList.contains("holding-btn")) {
         if (state.selectedItems.size === 0) { showError("홀딩할 상품을 선택하세요."); return; }
-        if (state.crudData === "holding" && dom.container?.classList.contains("active")) {
-            closePanel();
-            return;
-        }
-        state.crudData = "holding";
-        renderSelectData();
-        renderHolding();
-        renderFooter("holding");
+        state.crudData = state.crudData === "holding" ? null : "holding";
+        renderTable();
         return;
     }
 
@@ -323,10 +269,11 @@ async function handleClick(e) {
         dom.container?.classList.remove("active");
         if (dom.sideBox) dom.sideBox.innerHTML = "";
         renderTable();
+        renderSelectData();
         return;
     }
 
-    // 개별 취소
+    // 개별 취소 (인라인 수정행 / 홀딩 입력행 닫기)
     if (e.target.classList.contains("cancel-btn")) {
         const id = e.target.dataset.id;
         state.selectedItems.delete(id);
@@ -335,24 +282,15 @@ async function handleClick(e) {
             state.crudData = null;
             dom.container?.classList.remove("active");
             if (dom.sideBox) dom.sideBox.innerHTML = "";
-            renderTable();
-            return;
         }
 
-        // 해당 아이템 패널만 제거 — 다른 항목의 입력값 보존
-        ["insert-panel", "update-panel", "holding-panel"].forEach(cls => {
-            document.querySelector(`.${cls}[data-id="${id}"]`)?.remove();
-        });
-        const cb = document.querySelector(`.row-check[data-id="${id}"]`);
-        if (cb) cb.checked = false;
-        cb?.closest("tr")?.classList.remove("selected-row");
-        renderFooter(state.crudData);
+        renderTable();
+        renderSelectData();
         return;
     }
 
-    // 개별 추가
+    // 개별 추가 (테이블 입력행 저장)
     if (e.target.classList.contains("select-insert-btn")) {
-        const id = e.target.dataset.id;
         const card     = e.target.closest(".insert-card");
         const name     = card?.querySelector(".insert-name")?.value || "";
         const brand    = card?.querySelector(".insert-brand")?.value || "";
@@ -371,14 +309,8 @@ async function handleClick(e) {
         const newId = await insertData(name, brand, grade, estNo, qty, bl, warehouse, dueDate, weight, releaseDate, holding, dataState, memo);
         if (!newId) return;
 
-        // 해당 카드만 제거, 나머지 카드 유지
         card?.remove();
         renderTable();
-
-        const remainCards = document.querySelectorAll(".insert-card");
-        if (remainCards.length === 0) {
-            closePanel();
-        }
 
         showToast("✓ 추가 완료");
         state.flashIds.add(newId);
@@ -397,12 +329,12 @@ async function handleClick(e) {
         const qty      = document.querySelector(`.update-qty[data-id="${id}"]`)?.value;
         const bl       = document.querySelector(`.update-bl[data-id="${id}"]`)?.value;
         const warehouse = document.querySelector(`.update-warehouse[data-id="${id}"]`)?.value;
-        const dueDate  = document.querySelector(`.update-dueDate[data-id="${id}"]`)?.value;
+        const dueDate  = toDotDate(document.querySelector(`.update-dueDate[data-id="${id}"]`)?.value);
         const weight   = document.querySelector(`.update-weight[data-id="${id}"]`)?.value;
         const releaseDate = document.querySelector(`.update-releaseDate[data-id="${id}"]`)?.value;
         const holding  = document.querySelector(`.update-holding[data-id="${id}"]`)?.value;
         const dataState = document.querySelector(`.update-state[data-id="${id}"]`)?.value;
-        const memo     = document.querySelector(`.input-note[data-id="${id}"]`)?.value || "";
+        const memo     = document.querySelector(`.update-memo[data-id="${id}"]`)?.value || "";
 
         // fetchAllData가 updateData 내부에서 실행되기 전에 선택 해제 → 체크박스 즉시 해제
         state.selectedItems.delete(id);
@@ -411,15 +343,9 @@ async function handleClick(e) {
         if (!result) { state.selectedItems.set(id, item); return; }
 
         state.flashIds.add(result.id);
-
-        if (state.selectedItems.size === 0) {
-            state.crudData = null;
-            renderAll();
-        } else {
-            renderAll();
-            renderUpdate();
-            renderFooter("update");
-        }
+        if (state.selectedItems.size === 0) state.crudData = null;
+        renderTable();
+        renderSelectData();
 
         showToast("✓ 수정 완료");
         setTimeout(() => { state.flashIds.delete(result.id); renderTable(); }, 1500);
@@ -434,7 +360,7 @@ async function handleClick(e) {
         const weight = document.querySelector(`.hold-weight[data-id="${id}"]`)?.value;
         const date   = document.querySelector(`.hold-releaseDate[data-id="${id}"]`)?.value;
         const note   = document.querySelector(`.hold-note[data-id="${id}"]`)?.value;
-        const memo   = document.querySelector(`.input-note[data-id="${id}"]`)?.value || "";
+        const memo   = document.querySelector(`.hold-memo[data-id="${id}"]`)?.value || "";
 
         // fetchAllData가 holdingData 내부에서 실행되기 전에 선택 해제 → 체크박스 즉시 해제
         state.selectedItems.delete(id);
@@ -442,19 +368,14 @@ async function handleClick(e) {
         const result = await holdingData(item, Number(qty), date, note, memo, weight !== "" ? weight : null);
         if (!result) { state.selectedItems.set(id, item); return; }
 
-        state.flashIds.add(result.holdingId);
-
-        if (state.selectedItems.size === 0) {
-            state.crudData = null;
-            renderAll();
-        } else {
-            renderAll();
-            renderHolding();
-            renderFooter("holding");
-        }
+        const flashId = result.azy ? `azy:${result.holdingId}` : result.holdingId;
+        state.flashIds.add(flashId);
+        if (state.selectedItems.size === 0) state.crudData = null;
+        renderTable();
+        renderSelectData();
 
         showToast("✓ 홀딩 완료");
-        setTimeout(() => { state.flashIds.delete(result.holdingId); renderTable(); }, 1500);
+        setTimeout(() => { state.flashIds.delete(flashId); renderTable(); }, 1500);
         return;
     }
 
@@ -473,39 +394,43 @@ async function handleClick(e) {
         return;
     }
 
-    // 전체 추가
+    // 전체 추가 (입력 중인 상품 행 모두 저장)
     if (e.target.classList.contains("all-insert-btn")) {
-        const rows = document.querySelectorAll(".insert-card");
-        const insertedIds = [];
-        for (const row of rows) {
+        const cards = document.querySelectorAll("tr.insert-card");
+        const ids = [];
+        for (const card of cards) {
             const newId = await insertData(
-                row.querySelector(".insert-name")?.value || "",
-                row.querySelector(".insert-brand")?.value || "",
-                row.querySelector(".insert-grade")?.value || "",
-                row.querySelector(".insert-estNo")?.value || "",
-                row.querySelector(".insert-qty")?.value || "",
-                row.querySelector(".insert-bl")?.value || "",
-                row.querySelector(".insert-warehouse")?.value || "",
-                row.querySelector(".insert-dueDate")?.value || "",
-                row.querySelector(".insert-weight")?.value || "",
-                row.querySelector(".insert-releaseDate")?.value || "",
-                row.querySelector(".insert-holding")?.value || "",
-                row.querySelector(".insert-state")?.value || "",
-                row.querySelector(".input-note")?.value || "",
+                card.querySelector(".insert-name")?.value || "",
+                card.querySelector(".insert-brand")?.value || "",
+                card.querySelector(".insert-grade")?.value || "",
+                card.querySelector(".insert-estNo")?.value || "",
+                card.querySelector(".insert-qty")?.value || "",
+                card.querySelector(".insert-bl")?.value || "",
+                card.querySelector(".insert-warehouse")?.value || "",
+                card.querySelector(".insert-dueDate")?.value || "",
+                card.querySelector(".insert-weight")?.value || "",
+                card.querySelector(".insert-releaseDate")?.value || "",
+                card.querySelector(".insert-holding")?.value || "",
+                card.querySelector(".insert-state")?.value || "",
+                card.querySelector(".insert-memo")?.value || "",
                 true  // noUndo — 전체 undo는 아래 pushUndo(bulk-insert)로 처리
             );
-            if (newId) insertedIds.push(newId);
+            if (newId) ids.push(newId);
         }
-        pushUndo({ type: "bulk-insert", ids: insertedIds });
-        closePanel();
-        showToast("✓ 추가 완료");
+        if (ids.length === 0) return;
+        pushUndo({ type: "bulk-insert", ids });
+        if (dom.insertRowsBody) dom.insertRowsBody.innerHTML = "";
+        showToast(`✓ ${ids.length}건 추가 완료`);
         await fetchAllData();
+        ids.forEach(id => state.flashIds.add(id));
+        renderTable();
+        setTimeout(() => { ids.forEach(id => state.flashIds.delete(id)); renderTable(); }, 1500);
         return;
     }
 
     // 전체 수정
     if (e.target.classList.contains("all-update-btn")) {
-        const rows = document.querySelectorAll(".update-pan[data-id]");
+        const rows = document.querySelectorAll("tr.update-row-edit[data-id]");
         const backups = [];
         for (const row of rows) {
             const id = row.dataset.id;
@@ -519,28 +444,29 @@ async function handleClick(e) {
                 row.querySelector(".update-qty")?.value,
                 row.querySelector(".update-bl")?.value,
                 row.querySelector(".update-warehouse")?.value,
-                row.querySelector(".update-dueDate")?.value,
+                toDotDate(row.querySelector(".update-dueDate")?.value),
                 row.querySelector(".update-weight")?.value,
                 row.querySelector(".update-releaseDate")?.value,
                 row.querySelector(".update-holding")?.value,
                 row.querySelector(".update-state")?.value,
-                document.querySelector(`.input-note[data-id="${id}"]`)?.value || "",
+                row.querySelector(".update-memo")?.value || "",
                 true  // noUndo — 전체 undo는 아래 pushUndo(bulk-update)로 처리
             );
             if (result) backups.push(result);
         }
-        pushUndo({ type: "bulk-update", backups: backups.map(b => ({ id: b.id, prevData: b.prevData })) });
+        if (backups.length > 0) {
+            pushUndo({ type: "bulk-update", backups: backups.map(b => ({ id: b.rawId, prevData: b.prevData, azy: b.azy })) });
+        }
         state.selectedItems.clear();
         state.crudData = null;
         showToast("✓ 수정 완료");
         await fetchAllData();
-        closePanel();
         return;
     }
 
     // 전체 홀딩
     if (e.target.classList.contains("all-holding-btn")) {
-        const rows = document.querySelectorAll(".holding-pan[data-id]");
+        const rows = document.querySelectorAll("tr.holding-insert-row[data-id]");
         const backups = [];
         for (const row of rows) {
             const id = row.dataset.id;
@@ -551,18 +477,19 @@ async function handleClick(e) {
                 Number(row.querySelector(".hold-qty")?.value),
                 row.querySelector(".hold-releaseDate")?.value,
                 row.querySelector(".hold-note")?.value,
-                document.querySelector(`.input-note[data-id="${id}"]`)?.value || "",
+                row.querySelector(".hold-memo")?.value || "",
                 holdWeight !== "" ? holdWeight : null,
                 true  // noUndo — 전체 undo는 아래 pushUndo(bulk-holding)로 처리
             );
             if (result) backups.push(result);
         }
-        pushUndo({ type: "bulk-holding", backups: backups.map(b => ({ originalId: b.originalId, originalQty: b.originalQty, wasDeleted: b.wasDeleted, originalData: b.originalData, holdingId: b.holdingId, holdingRecordId: b.holdingRecordId })) });
+        if (backups.length > 0) {
+            pushUndo({ type: "bulk-holding", backups: backups.map(b => ({ originalId: b.originalId, originalQty: b.originalQty, wasDeleted: b.wasDeleted, originalData: b.originalData, holdingId: b.holdingId, holdingRecordId: b.holdingRecordId, azy: b.azy })) });
+        }
         state.selectedItems.clear();
         state.crudData = null;
         showToast("✓ 홀딩 완료");
         await fetchAllData();
-        closePanel();
         return;
     }
 
@@ -577,19 +504,22 @@ async function handleClick(e) {
                 await deleteItem(item, true, true);  // noUndo=true, noFetch=true (마지막에 한 번만)
             }
             pushUndo({ type: "bulk-delete", items: backups.map(b => ({
-                상품명: b.name || "",
-                브랜드: b.brand || "",
-                등급: b.grade || "",
-                ESTNO: b.estNo || "",
-                재고: b.qty || 0,
-                BL: b.bl || "",
-                창고: b.warehouse || "",
-                유통기한: b.dueDate || "",
-                평중: b.weight || 0,
-                출고일: b.releaseDate || "",
-                홀딩: b.holding || "",
-                상태: b.dataState || "",
-                메모: b.memo || "",
+                azy: b.raw?._source === "azy",
+                data: {
+                    상품명: b.name || "",
+                    브랜드: b.brand || "",
+                    등급: b.grade || "",
+                    ESTNO: b.estNo || "",
+                    재고: b.qty || 0,
+                    BL: b.bl || "",
+                    창고: b.warehouse || "",
+                    유통기한: b.dueDate || "",
+                    평중: b.weight || 0,
+                    출고일: b.releaseDate || "",
+                    홀딩: b.holding || "",
+                    상태: b.dataState || "",
+                    메모: b.memo || "",
+                },
             })) });
             state.selectedItems.clear();
             await fetchAllData();

@@ -110,9 +110,28 @@ def list_eda(final_df, jns):
     azy_data = replace_name(azy_data)
     azy_data = eda_standard(azy_data)
     azy_data = replace_name(azy_data)
-    # 중량은 dedup 이후에 제거 — 같은 BL·수량·유통기한이라도 중량이 다르면
-    # 별도 로트이므로 drop_duplicates()가 먼저 이걸로 구분할 수 있어야 함
-    azy_data = azy_data.drop_duplicates().reset_index(drop=True)
+    # 중량은 합산 이후에 제거 — 같은 BL·수량·유통기한이라도 중량이 다르면
+    # 별도 로트이므로 groupby가 먼저 이걸로 구분할 수 있어야 함
+    # drop_duplicates()는 사용하지 않음: 두 로트가 모든 컬럼값까지 완전히 같은 경우
+    # (같은 상품/BL/유통기한/중량인데 수량만 각각 10박스씩인 경우 등) 한쪽이 통째로
+    # 삭제되어 박스 수가 조용히 손실된다 (#012와 동일 유형) — 대신 수량을 합산한다.
+    if "재고수량" in azy_data.columns:
+        azy_data["재고수량"] = pd.to_numeric(
+            azy_data["재고수량"].astype(str).str.replace(",", "", regex=False),
+            errors="coerce"
+        ).fillna(0).astype(int)
+        group_cols = [c for c in azy_data.columns if c != "재고수량"]
+        before_rows, before_qty = len(azy_data), int(azy_data["재고수량"].sum())
+        azy_data = (
+            azy_data.groupby(group_cols, dropna=False, sort=False)["재고수량"]
+            .sum()
+            .reset_index()
+        )
+        after_qty = int(azy_data["재고수량"].sum())
+        if before_rows != len(azy_data) or before_qty != after_qty:
+            log.info(f"[EDA] azy_data 중복 합산: {before_rows}행→{len(azy_data)}행 | {before_qty}→{after_qty}박스")
+    else:
+        azy_data = azy_data.drop_duplicates().reset_index(drop=True)
     azy_data = azy_data.drop(columns=["중량"], errors="ignore")
 
     # ── inventory용: JNS만 (독립 스케줄에서도 재사용 가능하도록 분리) ──

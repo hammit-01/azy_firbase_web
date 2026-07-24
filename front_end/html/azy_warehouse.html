@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@latest/dist/web/variable/pretendardvariable.css" />
     <link rel="stylesheet" href="./css/warehouse_main.css">
     <title>타창고 에이젯유통 재고 시스템</title>
 </head>
@@ -27,90 +29,63 @@
             </div>
 
             <div class="toolbar-right">
-                <!-- 필터 -->
-                <select class="show-warehouse filter-sel">
-                    <option value="">창고</option>
-                    <option value="강동1">강동1</option>
-                    <option value="강동2">강동2</option>
-                    <option value="경인">경인</option>
-                    <option value="대재">대재</option>
-                    <option value="대청">대청</option>
-                    <option value="도지냉장">도지냉장</option>
-                    <option value="삼일물류">삼일물류</option>
-                    <option value="삼진1">삼진1</option>
-                    <option value="삼진2">삼진2</option>
-                    <option value="신우냉장">신우냉장</option>
-                    <option value="오로라CS">오로라CS</option>
-                    <option value="아이린냉장">아이린냉장</option>
-                    <option value="미빙냉장">미빙냉장</option>
-                    <option value="이스트밸리">이스트밸리</option>
-                    <option value="한라곤지암">한라곤지암</option>
-                    <option value="희창냉장">희창냉장</option>
-                    <option value="CH">CH</option>
-                    <option value="CS">CS</option>
-                    <option value="SWC">SWC</option>
-                    <option value="프라자">프라자</option>
-                </select>
+                <div class="toolbar-row">
+                    <select class="show-warehouse filter-sel">
+                        <option value="">창고</option>
+                        <!-- 실제 옵션은 현재 크롤링된 데이터 기준으로 js/table.js의 renderWarehouseOptions()가 가나다순으로 채움 -->
+                    </select>
+                    <input id="searchInput" class="search-input" placeholder="검색1">
+                </div>
 
-                <select class="show-brand filter-sel">
-                    <option value="">브랜드</option>
-                    <option value="AGROSUPER">AGROSUPER</option>
-                    <option value="AMH">AMH</option>
-                    <option value="CLASSIC">CLASSIC</option>
-                    <option value="EXCEL">EXCEL</option>
-                    <option value="GREENLEA">GREENLEA</option>
-                    <option value="IBP">IBP</option>
-                    <option value="KILCOY">KILCOY</option>
-                    <option value="LOCKS">LOCKS</option>
-                    <option value="OLYMEL">OLYMEL</option>
-                    <option value="PERDIGAO">PERDIGAO</option>
-                    <option value="PPCS">PPCS</option>
-                    <option value="SADIA">SADIA</option>
-                    <option value="SEARA">SEARA</option>
-                    <option value="SMITHFIELD">SMITHFIELD</option>
-                    <option value="SWIFT">SWIFT</option>
-                    <option value="TCH">TCH</option>
-                    <option value="TEYS">TEYS</option>
-                    <option value="TONNIES">TONNIES</option>
-                    <option value="VIBRA">VIBRA</option>
-                </select>
+                <div class="toolbar-row">
+                    <select class="show-brand filter-sel">
+                        <option value="">브랜드</option>
+                        <option value="AGROSUPER">AGROSUPER</option>
+                        <option value="AMH">AMH</option>
+                        <option value="CLASSIC">CLASSIC</option>
+                        <option value="EXCEL">EXCEL</option>
+                        <option value="GREENLEA">GREENLEA</option>
+                        <option value="IBP">IBP</option>
+                        <option value="KILCOY">KILCOY</option>
+                        <option value="LOCKS">LOCKS</option>
+                        <option value="OLYMEL">OLYMEL</option>
+                        <option value="PERDIGAO">PERDIGAO</option>
+                        <option value="PPCS">PPCS</option>
+                        <option value="SADIA">SADIA</option>
+                        <option value="SEARA">SEARA</option>
+                        <option value="SMITHFIELD">SMITHFIELD</option>
+                        <option value="SWIFT">SWIFT</option>
+                        <option value="TCH">TCH</option>
+                        <option value="TEYS">TEYS</option>
+                        <option value="TONNIES">TONNIES</option>
+                        <option value="VIBRA">VIBRA</option>
+                    </select>
+                    <input id="searchInput2" class="search-input" placeholder="검색2">
+                </div>
 
-                <select class="show-state filter-sel">
-                    <option value="">상태</option>
-                    <option value="holding">홀딩</option>
-                    <option value="freeze">동결</option>
-                    <option value="stopped">사용불가</option>
-                    <option value="moving">이고</option>
-                    <option value="특이품">특이품</option>
-                    <option value="null">null(정보누락)</option>
-                </select>
+                <div class="toolbar-row">
+                    <select class="show-state filter-sel">
+                        <option value="">상태</option>
+                        <option value="holding">홀딩</option>
+                        <option value="freeze">동결</option>
+                        <option value="stopped">사용불가</option>
+                        <option value="moving">이고</option>
+                        <option value="특이품">특이품</option>
+                        <option value="null">null(정보누락)</option>
+                    </select>
 
-                <input id="searchInput" class="search-input" placeholder="검색1">
-                <input id="searchInput2" class="search-input" placeholder="검색2">
+                    <!-- CRUD 버튼 -->
+                    <button class="insert-btn">추가</button>
+                    <button class="update-btn">수정</button>
+                    <button class="holding-btn">홀딩</button>
 
-                <div class="tb-sep"></div>
+                    <div class="tb-sep"></div>
 
-                <!-- CRUD 버튼 -->
-                <button class="insert-btn">추가</button>
-                <button class="update-btn">수정</button>
-                <button class="holding-btn">홀딩</button>
-
-                <div class="tb-sep"></div>
-
-                <!-- 유틸 버튼 -->
-                <button class="rollback-btn">되돌리기</button>
-                <button class="clear-btn" data-action="clear-selection">전체 취소</button>
-                <button class="all-delete-btn">전체 삭제</button>
-
-                <div class="tb-sep"></div>
-                <button class="changes-tab-btn">변경사항<span class="changes-badge" style="display:none"></span></button>
-            </div>
-        </div>
-
-        <!-- ── 선택 패널 ── -->
-        <div class="top_bar">
-            <div class="right-panel">
-                <div id="sideBox"></div>
+                    <!-- 유틸 버튼 -->
+                    <button class="rollback-btn">되돌리기</button>
+                    <button class="clear-btn" data-action="clear-selection">전체 취소</button>
+                    <button class="all-delete-btn">전체 삭제</button>
+                </div>
             </div>
         </div>
         </div><!-- /.sticky-header -->
@@ -122,17 +97,17 @@
             <div class="table-wrap">
                 <table>
                     <colgroup>
-                        <col style="width:3%">  <!--선택-->
+                        <col style="width:5%">  <!--선택-->
                         <col style="width:12%"> <!--상품명-->
-                        <col style="width:12%"> <!--브랜드-->
-                        <col style="width:7%">  <!--등급-->
+                        <col style="width:11%"> <!--브랜드-->
+                        <col style="width:5%">  <!--등급-->
                         <col style="width:8%">  <!--ESTNO-->
                         <col style="width:7%">  <!--재고-->
-                        <col style="width:16%"> <!--BL번호-->
-                        <col style="width:10%"> <!--창고-->
-                        <col style="width:8%">  <!--유통기한-->
+                        <col style="width:14%"> <!--BL번호-->
+                        <col style="width:9%">  <!--창고-->
+                        <col style="width:10%"> <!--유통기한-->
                         <col style="width:5%">  <!--평균-->
-                        <col style="width:10%"> <!--비고-->
+                        <col style="width:14%"> <!--비고-->
                     </colgroup>
                     <thead>
                         <tr>
@@ -149,18 +124,16 @@
                             <th data-key="메모" class="sortable">비고</th>
                         </tr>
                     </thead>
+                    <tbody id="insert-rows"></tbody>
                     <tbody id="list"></tbody>
                 </table>
             </div>
         </div>
         </div><!-- /.table-container -->
 
-        <!-- ── 변경사항 탭 ── -->
-        <div class="changes-container" style="display:none">
-            <div id="changes-list"></div>
-        </div>
-
     </div>
+
+    <div id="bulk-action-bar" class="bulk-action-bar"></div>
 
     <script>window.__AZY_API_MODE = true;</script>
     <script type="module" src="./azy_warehouse.js"></script>

@@ -37,7 +37,14 @@ def _crawl_single_row(row: pd.Series, session_cache: dict, cache_lock: threading
     path      = str(row["약식주소"])
     frames    = []
 
-    for user_type, uid, pw, scustcd, scmdept in get_users(row):
+    users = get_users(row)
+    if warehouse == "대재":
+        # 일반/웹출고/웹출고(통관분) 3계정이 전부 동일한 전체 재고를 반환 → 뒤 단계의
+        # pk 합산 로직이 이를 서로 다른 로트로 오인해 3배로 집계됨(2026-07-21, 2307→6921박스).
+        # 세 계정 데이터가 같다고 확인돼서 일반 계정 하나만 쓰도록 제한.
+        users = [u for u in users if u[0] == "일반"]
+
+    for user_type, uid, pw, scustcd, scmdept in users:
         cache_key = (warehouse, user_type)
         try:
             with cache_lock:
@@ -63,7 +70,9 @@ def _crawl_single_row(row: pd.Series, session_cache: dict, cache_lock: threading
             if data is None or data.empty:
                 continue
 
-            data = data.drop_duplicates()
+            # drop_duplicates() 금지: 동일 BL/수량/유통기한이라도 별도 로트인 경우가 있음
+            # (#012와 동일한 유형의 버그 — 뒤 단계의 pk/uid 기준 groupby+합산이 중복을 처리하므로
+            # 여기서 행 단위로 먼저 지우면 유효한 박스 수량이 조용히 손실된다)
             data["창고"] = warehouse
 
             func = PROCESS_MAP.get(warehouse)

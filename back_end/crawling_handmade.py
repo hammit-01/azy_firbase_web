@@ -1,3 +1,4 @@
+import atexit
 import pandas as pd
 import re
 import time
@@ -19,6 +20,17 @@ def _selenium_driver():
 # 사이트별 로그인은 무겁고(브라우저 기동+로그인) 잦은 반복 로그인은 차단 위험 →
 # 사이클 간에는 같은 드라이버를 재사용하고, 죽었거나 세션이 만료됐을 때만 재로그인.
 _driver_cache: dict = {}
+
+
+@atexit.register
+def _quit_all_cached_drivers():
+    """프로세스 종료 시 캐시에 남은 헤드리스 크롬을 정리 — 안 그러면 스케줄러
+    재시작/종료 때마다 고아 chromedriver/chrome 프로세스가 계속 쌓인다."""
+    for driver in _driver_cache.values():
+        try:
+            driver.quit()
+        except Exception:
+            pass
 
 
 def _driver_alive(driver) -> bool:
@@ -107,29 +119,37 @@ def _krcs_fetch_instock(driver, url):
 
 
 def _ecms_fetch_cached(key, base_url, instock_url, user, pw):
-    """캐시된 드라이버로 조회 시도 → 없거나 세션 만료/오류면 재로그인 후 1회 재시도."""
-    driver = _get_cached_driver(key)
-    if driver is None:
-        driver = _selenium_driver()
-        _ecms_login(driver, base_url, user, pw)
-        _cache_driver(key, driver)
-
+    """캐시된 드라이버로 조회 시도 → 없거나 세션 만료/오류면 재로그인 후 1회 재시도.
+    로그인(_ecms_login) 자체가 타임아웃/예외를 던져도 여기서 삼킨다 — 안 그러면
+    crawling_handmade()가 통째로 죽어서, 같은 사이클에서 이미 정상 크롤된 다른
+    타창고(효성냉장 등) 데이터까지 MySQL 반영 전에 날아간다."""
     try:
-        records = _krcs_fetch_instock(driver, instock_url)
-    except Exception:
-        records = None
+        driver = _get_cached_driver(key)
+        if driver is None:
+            driver = _selenium_driver()
+            _ecms_login(driver, base_url, user, pw)
+            _cache_driver(key, driver)
 
-    if records is None:
-        _discard_driver(key)
-        driver = _selenium_driver()
-        _ecms_login(driver, base_url, user, pw)
-        _cache_driver(key, driver)
         try:
             records = _krcs_fetch_instock(driver, instock_url)
-        except Exception as e:
-            print(f"[{key}] 재시도 실패: {e}")
-            _discard_driver(key)
+        except Exception:
             records = None
+
+        if records is None:
+            _discard_driver(key)
+            driver = _selenium_driver()
+            _ecms_login(driver, base_url, user, pw)
+            _cache_driver(key, driver)
+            try:
+                records = _krcs_fetch_instock(driver, instock_url)
+            except Exception as e:
+                print(f"[{key}] 재시도 실패: {e}")
+                _discard_driver(key)
+                records = None
+    except Exception as e:
+        print(f"[{key}] 로그인 실패: {e}")
+        _discard_driver(key)
+        records = None
 
     return records or []
 
@@ -418,26 +438,33 @@ def kyunu_eda():
         print("[견우오아시스] selenium/bs4 미설치 → 건너뜀")
         return pd.DataFrame()
 
-    driver = _get_cached_driver(_KYUNU_KEY)
-    if driver is None:
-        driver = _selenium_driver()
-        _kyunu_login(driver)
-        _cache_driver(_KYUNU_KEY, driver)
-
     try:
-        records = _kyunu_do_fetch(driver)
-    except Exception:
-        # 세션 만료(로그인 페이지로 튕겨 JS 대상 엘리먼트가 없어 예외) → 재로그인 후 재시도
-        _discard_driver(_KYUNU_KEY)
-        driver = _selenium_driver()
-        _kyunu_login(driver)
-        _cache_driver(_KYUNU_KEY, driver)
+        driver = _get_cached_driver(_KYUNU_KEY)
+        if driver is None:
+            driver = _selenium_driver()
+            _kyunu_login(driver)
+            _cache_driver(_KYUNU_KEY, driver)
+
         try:
             records = _kyunu_do_fetch(driver)
-        except Exception as e:
-            print(f"[견우오아시스] 재시도 실패: {e}")
+        except Exception:
+            # 세션 만료(로그인 페이지로 튕겨 JS 대상 엘리먼트가 없어 예외) → 재로그인 후 재시도
             _discard_driver(_KYUNU_KEY)
-            records = []
+            driver = _selenium_driver()
+            _kyunu_login(driver)
+            _cache_driver(_KYUNU_KEY, driver)
+            try:
+                records = _kyunu_do_fetch(driver)
+            except Exception as e:
+                print(f"[견우오아시스] 재시도 실패: {e}")
+                _discard_driver(_KYUNU_KEY)
+                records = []
+    except Exception as e:
+        # 로그인(_kyunu_login) 자체가 타임아웃/예외를 던져도 여기서 삼킨다 — _ecms_fetch_cached와
+        # 동일한 이유(크롤링_handmade 전체가 죽어서 이미 크롤된 다른 타창고 데이터까지 날아감)
+        print(f"[견우오아시스] 로그인 실패: {e}")
+        _discard_driver(_KYUNU_KEY)
+        records = []
 
     if not records:
         print("[견우오아시스] 데이터 없음")

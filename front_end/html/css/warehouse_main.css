@@ -5,7 +5,7 @@ html {
 body {
     margin: 0;
     padding: 30px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo",
+    font-family: "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo",
                  "Malgun Gothic", "맑은 고딕", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -23,7 +23,7 @@ body {
 }
 
 h1 {
-    font-size: 26px;
+    font-size: 32px;
     margin: 0;
     font-weight: 800;
     color: #1e293b;
@@ -42,7 +42,7 @@ h1 {
 .sticky-header {
     flex-shrink: 0;
     z-index: 100;
-    background: #f5f5f5;
+    background: #eef1f5;
     margin: -20px -30px 0;
     padding: 20px 30px 0;
     box-sizing: border-box;
@@ -80,16 +80,6 @@ h1 {
 }
 
 
-.right-panel {
-    padding: 25px;
-    background: white;
-    border-radius: 14px;
-    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.07);
-    box-sizing: border-box;
-    width: 100%;
-    overflow-x: hidden;
-}
-
 .table-wrap {
     width: 100%;
     overflow-x: clip;
@@ -104,22 +94,27 @@ table {
 }
 
 th {
-    padding: 12px 8px;
+    padding: 15px 8px;
     text-align: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: 19px;
-    letter-spacing: -0.2px;
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: -0.1px;
 }
 
 td {
-    padding: 10px 8px;
+    padding: 13px 8px;
     text-align: center;
     word-break: break-word;
     overflow-wrap: break-word;
-    font-size: 19px;
+    font-size: 21px;
+    font-weight: 500;
+    letter-spacing: -0.1px;
+    color: #334155;
     border-bottom: 1px solid #f0f2f5;
+    font-variant-numeric: tabular-nums;
 }
 
 /* BL번호 열 한 줄 표시 */
@@ -142,8 +137,6 @@ tbody tr:hover td {
 thead {
     background: linear-gradient(180deg, #a0e600 0%, #8fce00 100%);
     color: #ffffff;
-    font-size: 19px;
-    font-weight: 700;
     position: sticky;
     top: 0;
     z-index: 50;
@@ -166,15 +159,17 @@ th.sort-active {
 
 
 /* ── 통합 툴바 ── */
+/* 3열 grid: 로고(왼쪽) / 필터·검색(가운데) / 로그인(오른쪽) — 가운데 열은 auto 폭이라
+   내용 크기 그대로 중앙에 놓이고, 양쪽 1fr 열이 로고·로그인 박스를 좌우 끝으로 밀어준다 */
 .toolbar {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
     gap: 16px;
     padding: 14px 22px;
     background: #ffffff;
     border-radius: 14px;
     box-shadow: 0 4px 18px rgba(15, 23, 42, 0.07);
-    flex-wrap: wrap;
     box-sizing: border-box;
     width: 100%;
 }
@@ -183,8 +178,171 @@ th.sort-active {
     display: flex;
     align-items: center;
     gap: 10px;
+    justify-self: start;
+}
+
+.toolbar-login {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-self: end;
+}
+
+.login-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 42px;
+    padding: 0 18px 0 8px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 24px;
+    background: #f9fafb;
+    color: #334155;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.login-btn:hover,
+.login-btn.active {
+    border-color: #8fce00;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(143,206,0,0.12);
+}
+
+.login-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    font-size: 15px;
     flex-shrink: 0;
 }
+
+/* 로그인 버튼 클릭 시 뜨는 팝오버 — 버튼과 같은 톤(회색 보더 + 초록 포커스)으로 통일 */
+.login-popover {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 230px;
+    padding: 18px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 14px 34px rgba(15,23,42,0.16), 0 2px 8px rgba(15,23,42,0.06);
+    opacity: 0;
+    transform: translateY(-6px);
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 60;
+    box-sizing: border-box;
+}
+
+.login-popover.open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.login-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.login-error {
+    font-size: 12px;
+    font-weight: 600;
+    color: #dc2626;
+    min-height: 14px;
+    margin: -4px 0 0;
+}
+
+.login-profile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 6px;
+}
+
+.login-profile-name {
+    font-size: 16px;
+    font-weight: 800;
+    color: #1e293b;
+}
+
+.login-profile-role {
+    font-size: 13px;
+    color: #94a3b8;
+    margin-bottom: 6px;
+}
+
+.logout-btn {
+    width: 100%;
+    height: 40px;
+    border: 1.5px solid #fecaca;
+    border-radius: 9px;
+    background: #fef2f2;
+    color: #b91c1c;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.logout-btn:hover { background: #fee2e2; border-color: #fca5a5; }
+
+.login-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #94a3b8;
+}
+
+.login-input {
+    height: 40px;
+    padding: 0 12px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 9px;
+    font-size: 14px;
+    background: #f9fafb;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.login-input:hover { border-color: #94a3b8; }
+.login-input:focus {
+    border-color: #8fce00;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(143,206,0,0.15);
+}
+
+.login-submit-btn {
+    height: 42px;
+    margin-top: 2px;
+    border: none;
+    border-radius: 9px;
+    background: #8fce00;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+}
+
+.login-submit-btn:hover { background: #7ab800; }
+.login-submit-btn:active { transform: translateY(1px); }
 
 .toolbar-title {
     display: flex;
@@ -192,11 +350,62 @@ th.sort-active {
     gap: 2px;
 }
 
+/* 행수·중량 / 박스수 / 선택요약 / 업데이트일자 — 한 줄씩 세로로 쌓음 */
+.table_size {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.table_size_main {
+    font-size: 24px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.table_size_weight {
+    font-size: 24px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.table_size_updated {
+    display: block;
+    font-size: 24px;
+    font-weight: 500;
+    color: #94a3b8;
+}
+
+/* 행 체크 시 뜨는 "총 N행, M박스 선택" — 테이블의 selected-row 초록과 동일 색 */
+.selection-summary {
+    display: none;
+    font-size: 24px;
+    font-weight: 700;
+    color: #3f7d00;
+    background: #eaffc2;
+    padding: 6px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+    width: fit-content;
+}
+.selection-summary.visible {
+    display: flex;
+    align-items: center;
+}
+
+/* 한 칸짜리 grid로 두면 열 너비가 가장 넓은 행(버튼 행)의 콘텐츠 너비로 정해지고,
+   나머지 행(검색창 있는 행)은 그 너비에 맞춰 늘어난다 — 버튼 없다고 값 하드코딩할 필요 없음 */
 .toolbar-right {
+    display: grid;
+    grid-template-columns: max-content;
+    row-gap: 10px;
+    justify-self: center;
+}
+
+.toolbar-row {
     display: flex;
     align-items: center;
     gap: 6px;
-    flex: 1;
     flex-wrap: wrap;
 }
 
@@ -210,7 +419,7 @@ th.sort-active {
     cursor: pointer;
     outline: none;
     transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
-    width: 90px;
+    width: 110px;
     flex-shrink: 0;
 }
 
@@ -244,62 +453,6 @@ th.sort-active {
     margin: 0 6px;
 }
 
-
-.update-panel, .insert-panel, .holding-panel {
-    display: block;
-}
-
-.item-btns {
-    display: flex;
-    gap: 5px;
-    justify-content: flex-end;
-}
-
-.selected-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    max-height: 35vh;
-    overflow-y: auto;
-    margin-bottom: 8px;
-    padding-right: 2px;
-}
-
-.selected-item {
-    padding: 8px 10px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-}
-
-.selected-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 8px;
-}
-
-.selected-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.selected-title {
-    font-size: 20px;
-    font-weight: 700;
-    color: #1e293b;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 6px;
-}
-
-.selected-meta {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 4px;
-    overflow: hidden;
-}
 
 .s-tag {
     display: inline-flex;
@@ -359,30 +512,9 @@ th.sort-active {
     font-weight: 700;
 }
 
-/* ── 버튼 레이아웃 ── */
-.btn {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
-}
-
-.crud-btn {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-}
-
-.all-btn {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-}
-
 /* ── 툴바 액션 버튼 ── */
 .rollback-btn, .clear-btn, .all-delete-btn,
-.insert-btn, .update-btn, .holding-btn,
-.changes-tab-btn {
+.insert-btn, .update-btn, .holding-btn {
     height: 42px;
     padding: 0 18px;
     border: none;
@@ -400,200 +532,6 @@ th.sort-active {
 .rollback-btn:active, .all-delete-btn:active {
     transform: translateY(1px);
 }
-
-/* ── 변경사항 탭 버튼 ── */
-.changes-tab-btn {
-    background: #f1f5f9;
-    color: #475569;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-.changes-tab-btn:hover { background: #e2e8f0; }
-.changes-tab-btn.tab-active {
-    background: #0f172a;
-    color: #fff;
-}
-.changes-tab-btn.has-issues .changes-badge {
-    animation: pulse-badge 1.5s infinite;
-}
-.changes-badge {
-    display: none;
-    align-items: center;
-    justify-content: center;
-    background: #ef4444;
-    color: #fff;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1;
-}
-@keyframes pulse-badge {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.5; }
-}
-
-/* ── 변경사항 컨테이너 ── */
-.changes-container {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    min-height: 0;
-    scrollbar-width: none;
-    padding: 4px 0;
-}
-.changes-container::-webkit-scrollbar { display: none; }
-
-.changes-empty {
-    text-align: center;
-    padding: 60px 0;
-    color: #94a3b8;
-    font-size: 18px;
-}
-
-/* ── 변경사항 카드 ── */
-.change-card {
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-    padding: 16px 20px;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    border-left: 5px solid #e2e8f0;
-}
-.change-card.over-qty    { border-left-color: #f59e0b; }
-.change-card.no-origin   { border-left-color: #ef4444; }
-.change-card.decrease-card { border-left-color: #6366f1; }
-.badge-decrease { background: #ede9fe; color: #4338ca; }
-.diff-label { color: #6366f1; font-weight: 600; }
-.confirm-nonhold-btn, .confirm-hold-btn {
-    padding: 6px 14px; border-radius: 8px; border: none;
-    font-size: 13px; cursor: pointer; font-weight: 600;
-}
-.confirm-nonhold-btn { background: #e0f2fe; color: #0369a1; }
-.confirm-hold-btn    { background: #ede9fe; color: #4338ca; }
-
-.change-info {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: 2;
-    flex-wrap: wrap;
-    min-width: 0;
-}
-.change-name {
-    font-size: 18px;
-    font-weight: 700;
-    color: #1e293b;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 200px;
-}
-.change-tag {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 10px;
-    background: #f1f5f9;
-    color: #475569;
-    border-radius: 20px;
-    font-size: 15px;
-    font-weight: 600;
-    white-space: nowrap;
-}
-.change-issue-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 10px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 700;
-    white-space: nowrap;
-}
-.badge-over {
-    background: #fef3c7;
-    color: #92400e;
-}
-.badge-none {
-    background: #fee2e2;
-    color: #b91c1c;
-}
-
-.change-qty-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex: 1;
-    font-size: 17px;
-    color: #334155;
-    white-space: nowrap;
-}
-.change-qty-row strong { color: #1e293b; font-size: 18px; }
-.arrow-sep { color: #94a3b8; }
-.no-origin-text { color: #ef4444; font-size: 15px; }
-
-.change-action {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-}
-.change-qty-label {
-    font-size: 15px;
-    color: #64748b;
-    white-space: nowrap;
-}
-.change-qty-input {
-    width: 80px;
-    height: 36px;
-    padding: 0 10px;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 16px;
-    text-align: center;
-    outline: none;
-    transition: border-color 0.15s;
-}
-.change-qty-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
-
-.change-done-btn {
-    height: 36px;
-    padding: 0 18px;
-    background: #22c55e;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 0.15s;
-    white-space: nowrap;
-}
-.change-done-btn:disabled {
-    background: #d1fae5;
-    color: #6ee7b7;
-    cursor: not-allowed;
-}
-.change-done-btn:not(:disabled):hover { background: #16a34a; }
-
-.change-cancel-btn {
-    height: 36px;
-    padding: 0 18px;
-    background: #fee2e2;
-    color: #b91c1c;
-    border: none;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 0.15s;
-    white-space: nowrap;
-}
-.change-cancel-btn:hover { background: #fca5a5; }
 
 /* ── footer / 카드 내부 버튼 ── */
 .all-insert-btn, .all-update-btn, .all-holding-btn,
@@ -633,11 +571,11 @@ th.sort-active {
     transform: scale(0.97);
 }
 
-.insert-btn, .all-insert-btn, .select-insert-btn {
+.insert-btn, .select-insert-btn, .all-insert-btn {
     background: #22c55e; color: #fff;
     box-shadow: 0 2px 8px rgba(34,197,94,0.28);
 }
-.insert-btn:hover, .all-insert-btn:hover, .select-insert-btn:hover {
+.insert-btn:hover, .select-insert-btn:hover, .all-insert-btn:hover {
     background: #16a34a;
 }
 
@@ -690,28 +628,6 @@ tbody tr {
 .freezed-row td{
     color:#6d28d9;
     font-weight:700;
-}
-
-.footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    align-items: center;
-}
-
-.top-bar {
-    display: flex;
-    justify-content: flex-end;
-}
-
-.insert-list {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-    max-height: 60vh;
-    overflow-y: auto;
-    padding-right: 4px;
-    align-content: start;
 }
 
 /* 사용불가 */
@@ -774,103 +690,206 @@ tbody tr {
     flex-wrap: wrap;
 }
 
-/* ── insert 폼 ── */
-.insert-header-wrap {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
+/* ── 상품 추가: 테이블 맨 위 입력행 ── */
+@keyframes insert-row-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
-.insert-header-title {
-    font-size: 17px;
+tr.insert-card, tr.update-row-edit, tr.holding-insert-row {
+    animation: insert-row-in 0.18s ease-out;
+}
+
+tr.insert-card td {
+    background: linear-gradient(180deg, #f0fdf4 0%, #e7fbe9 100%) !important;
+    padding: 8px 7px !important;
+    border-bottom: 2px solid #86efac !important;
+}
+
+/* 인라인 수정행 = 파랑(수정 버튼과 동일 색 계열) */
+tr.update-row-edit td {
+    background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%) !important;
+    padding: 8px 7px !important;
+    border-bottom: 2px solid #93c5fd !important;
+}
+
+/* 홀딩 입력행 = 하늘색(홀딩 버튼과 동일 색 계열) */
+tr.holding-insert-row td {
+    background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%) !important;
+    padding: 8px 7px !important;
+    border-bottom: 2px solid #7dd3fc !important;
+}
+
+/* 원본 행에서 그대로 가져오는 값(수정 불가) — 편집 가능한 입력값과 구분되게 흐리게 표시 */
+tr.holding-insert-row td.holding-inherited {
+    color: #64748b;
+    font-style: italic;
+}
+
+/* 담당자 선택 + 출고일자를 한 셀에 세로로 쌓음 (유통기한 칸은 원본 값 표시에 양보) */
+.hold-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.hold-stack select,
+.hold-stack input {
+    height: 24px !important;
+    font-size: 12px !important;
+    padding: 2px 6px !important;
+}
+
+/* ── 우하단 전체 처리 알림 바 (추가/수정/홀딩 입력 중일 때만 표시) ── */
+.bulk-action-bar {
+    position: fixed;
+    right: 28px;
+    bottom: 28px;
+    z-index: 300;
+    pointer-events: none;
+}
+
+.bulk-action-bar.visible {
+    pointer-events: auto;
+}
+
+.bulk-action-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 16px 14px 20px;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 12px 32px rgba(15,23,42,0.2), 0 2px 8px rgba(15,23,42,0.08);
+    border-left: 5px solid #cbd5e1;
+    opacity: 0;
+    transform: translateY(18px) scale(0.95);
+    transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.bulk-action-bar.visible .bulk-action-card {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.bulk-action-label {
+    font-size: 14px;
     font-weight: 700;
-    color: #1e293b;
+    color: #334155;
+    white-space: nowrap;
 }
 
-.insertRow-btn {
-    width: auto !important;
-    padding: 6px 14px !important;
-    font-size: 13px !important;
-    background: #f1f5f9 !important;
-    border: 1px solid #cbd5e1 !important;
-    color: #475569 !important;
-    border-radius: 8px !important;
+.bulk-action-card button {
+    border-radius: 9px !important;
+    white-space: nowrap;
 }
 
-.insertRow-btn:hover {
-    background: #e2e8f0 !important;
-}
+.bulk-action-card.bulk-insert  { border-left-color: #22c55e; }
+.bulk-action-card.bulk-update  { border-left-color: #3b82f6; }
+.bulk-action-card.bulk-holding { border-left-color: #0ea5e9; }
 
-.insert-card {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 14px;
-    margin-bottom: 10px;
-}
-
-.insert-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
-.form-col-2 {
-    grid-column: span 2;
-}
-
-.form-field {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-}
-
-.form-field input,
-.form-field select {
+tr.insert-card .cell-input,
+tr.update-row-edit .cell-input,
+tr.holding-insert-row .cell-input,
+tr.holding-insert-row select {
+    width: 100%;
+    box-sizing: border-box;
     margin-top: 0;
-    min-width: 0;
-    width: 100%;
-    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 1.5px solid #bbf7d0;
+    border-radius: 8px;
+    font-size: 19px;
+    background: #fff;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 
-.form-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #94a3b8;
-    letter-spacing: 0.3px;
+tr.update-row-edit .cell-input { border-color: #bfdbfe; }
+tr.holding-insert-row .cell-input, tr.holding-insert-row select { border-color: #bae6fd; height: 34px; }
+
+tr.insert-card .cell-input:hover { border-color: #86efac; }
+tr.update-row-edit .cell-input:hover { border-color: #60a5fa; }
+tr.holding-insert-row .cell-input:hover, tr.holding-insert-row select:hover { border-color: #38bdf8; }
+
+tr.insert-card .cell-input:focus {
+    outline: none;
+    border-color: #22c55e;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(34,197,94,0.15);
+}
+tr.update-row-edit .cell-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+tr.holding-insert-row .cell-input:focus, tr.holding-insert-row select:focus {
+    outline: none;
+    border-color: #0ea5e9;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(14,165,233,0.15);
 }
 
-.card-memo-field {
+tr.insert-card .cell-input::placeholder,
+tr.update-row-edit .cell-input::placeholder,
+tr.holding-insert-row .cell-input::placeholder {
+    color: #9ca3af;
+}
+
+/* 숫자 입력 스피너 제거 (재고/평중) — 다른 셀 입력과 시각적으로 통일 */
+tr.insert-card input[type="number"].cell-input,
+tr.update-row-edit input[type="number"].cell-input,
+tr.holding-insert-row input[type="number"].cell-input {
+    -moz-appearance: textfield;
+}
+tr.insert-card input[type="number"].cell-input::-webkit-outer-spin-button,
+tr.insert-card input[type="number"].cell-input::-webkit-inner-spin-button,
+tr.update-row-edit input[type="number"].cell-input::-webkit-outer-spin-button,
+tr.update-row-edit input[type="number"].cell-input::-webkit-inner-spin-button,
+tr.holding-insert-row input[type="number"].cell-input::-webkit-outer-spin-button,
+tr.holding-insert-row input[type="number"].cell-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.insert-row-memo-cell {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-bottom: 10px;
-}
-
-.card-memo-field .input-note {
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.insert-footer {
-    display: flex;
-    gap: 8px;
     align-items: center;
+    gap: 6px;
 }
 
-.insert-memo {
+.insert-row-memo-cell .cell-input {
     flex: 1;
-    min-width: 120px;
-    margin-top: 0 !important;
+    min-width: 0;
 }
 
-.card-top-bar {
+.insert-row-memo-cell .select-insert-btn,
+.insert-row-memo-cell .select-update-btn,
+.insert-row-memo-cell .select-holding-btn,
+.insert-row-memo-cell .select-delete-btn {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    padding: 0 !important;
+    font-size: 13px;
+    border-radius: 50%;
+    box-shadow: none;
     display: flex;
-    justify-content: flex-end;
-    margin-bottom: 6px;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, transform 0.1s;
+}
+
+.insert-row-memo-cell .select-insert-btn:active,
+.insert-row-memo-cell .select-update-btn:active,
+.insert-row-memo-cell .select-holding-btn:active,
+.insert-row-memo-cell .select-delete-btn:active {
+    transform: scale(0.94);
+}
+
+.insert-row-memo-cell .card-close-btn {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
 }
 
 .card-close-btn {
@@ -894,139 +913,48 @@ tbody tr {
     color: #b91c1c;
 }
 
-.insert-submit-btn {
-    flex-shrink: 0;
-    width: auto !important;
-    padding: 0 24px !important;
-    height: 40px;
-    background: #8fce00 !important;
-    color: #fff !important;
-    border: none !important;
-    border-radius: 9px !important;
-    font-weight: 700;
-    font-size: 16px;
+tr.insert-card td:first-child {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.add-insert-row-btn {
+    width: 18px;
+    height: 18px;
+    border: none;
+    border-radius: 50%;
+    background: #bbf7d0;
+    color: #15803d;
     cursor: pointer;
-    transition: 0.15s;
-    box-shadow: 0 2px 8px rgba(143,206,0,0.3);
-}
-
-.insert-submit-btn:hover {
-    background: #78b800 !important;
-}
-
-/* ── update 폼 ── */
-.update-card {
-    margin-top: 10px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 14px;
-}
-
-.update-footer {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    display: inline-flex;
     align-items: center;
-    margin-top: 8px;
+    justify-content: center;
+    padding: 0;
+    vertical-align: middle;
+    box-shadow: 0 1px 3px rgba(21,128,61,0.25);
+    transition: background 0.15s, transform 0.12s, box-shadow 0.15s;
 }
 
-.update-actions {
-    display: flex;
-    gap: 6px;
-    flex-shrink: 0;
+.add-insert-row-btn:hover {
+    background: #22c55e;
+    color: #fff;
+    transform: scale(1.08);
+    box-shadow: 0 2px 6px rgba(34,197,94,0.4);
 }
 
-.update-confirm-btn {
-    width: auto !important;
-    padding: 0 20px !important;
-    height: 40px;
-    background: #3b82f6 !important;
-    color: #fff !important;
-    border: none !important;
-    border-radius: 8px !important;
-    font-weight: 700;
-    font-size: 16px;
-    cursor: pointer;
-    transition: 0.15s;
+.add-insert-row-btn:active {
+    transform: scale(0.94);
 }
 
-.update-confirm-btn:hover {
-    background: #2563eb !important;
+tr.insert-card .remove-insert-btn {
+    transition: background 0.15s, transform 0.12s;
 }
 
-.update-delete-btn {
-    width: auto !important;
-    padding: 0 16px !important;
-    height: 40px;
-    background: #fee2e2 !important;
-    color: #b91c1c !important;
-    border: 1px solid #fca5a5 !important;
-    border-radius: 8px !important;
-    font-weight: 600;
-    font-size: 16px;
-    cursor: pointer;
-    transition: 0.15s;
-}
-
-.update-delete-btn:hover {
-    background: #fca5a5 !important;
-    color: #7f1d1d !important;
-}
-
-/* ── holding 폼 ── */
-.holding-card {
-    margin-top: 10px;
-    background: #f0f9ff;
-    border: 1px solid #bae6fd;
-    border-radius: 10px;
-    padding: 14px;
-}
-
-.holding-confirm-btn {
-    flex-shrink: 0;
-    width: auto !important;
-    padding: 0 24px !important;
-    height: 40px;
-    background: #0ea5e9 !important;
-    color: #fff !important;
-    border: none !important;
-    border-radius: 8px !important;
-    font-weight: 700;
-    font-size: 16px;
-    cursor: pointer;
-    transition: 0.15s;
-}
-
-.holding-confirm-btn:hover {
-    background: #0284c7 !important;
-}
-
-.panels-area .insert-panel:empty,
-.panels-area .update-panel:empty,
-.panels-area .holding-panel:empty {
-    display: none;
-}
-
-.panels-area.panels-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-    max-height: 60vh;
-    overflow-x: hidden;
-    overflow-y: auto;
-    align-content: start;
-}
-
-.panel-item-title {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 20px;
-    font-weight: 700;
-    color: #1e293b;
-    margin-bottom: 10px;
-    flex-wrap: wrap;
+tr.insert-card .remove-insert-btn:hover {
+    transform: scale(1.08);
 }
 
 .input-box {
@@ -1121,6 +1049,7 @@ tbody tr {
 .mobile-card {
     background: #fff;
     border: 1px solid #e2e8f0;
+    border-left: 4px solid transparent;
     border-radius: 12px;
     padding: 14px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
@@ -1131,11 +1060,26 @@ tbody tr {
 
 .mobile-card:active   { box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
 .mobile-selected      { background: #baff25 !important; border-color: #78b800; }
-.mobile-holding td,
-.mobile-holding       { color: #007de4; font-weight: 600; }
-.mobile-freeze        { color: #6d28d9; }
-.mobile-stopped       { color: #92400e; }
-.mobile-moving        { color: #ff8838; }
+
+/* 상태는 좌측 컬러바 + 배지로 표시 — 카드 전체 글자색을 바꾸면 오히려 읽기 힘들어서 뺌 */
+.mobile-holding { border-left-color: #3b82f6; }
+.mobile-freeze  { border-left-color: #8b5cf6; }
+.mobile-stopped { border-left-color: #f59e0b; }
+.mobile-moving  { border-left-color: #f97316; }
+
+.mc-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.badge-holding { background: #dbeafe; color: #1d4ed8; }
+.badge-freeze  { background: #ede9fe; color: #6d28d9; }
+.badge-stopped { background: #fef3c7; color: #92400e; }
+.badge-moving  { background: #ffedd5; color: #c2410c; }
 
 .mc-header {
     display: flex;
@@ -1159,6 +1103,32 @@ tbody tr {
     flex-wrap: wrap;
     gap: 5px;
     margin-bottom: 8px;
+}
+
+/* 재고 수량 + 유통기한 — 창고 직원이 제일 먼저 확인하는 값이라 카드에서 가장 크게 */
+.mc-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    background: #f8fafc;
+    border-radius: 10px;
+}
+
+.mc-qty {
+    font-size: 22px;
+    font-weight: 800;
+    color: #1d4ed8;
+    line-height: 1;
+}
+
+.mc-qty-unit {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    margin-left: 3px;
 }
 
 .mc-info {
@@ -1215,6 +1185,7 @@ tbody tr {
 
     /* ── 툴바 ── */
     .toolbar {
+        display: flex;
         flex-direction: column;
         align-items: stretch;
         gap: 10px;
@@ -1226,6 +1197,22 @@ tbody tr {
         justify-content: center;
     }
 
+    .toolbar-login {
+        order: -1;
+        justify-content: flex-end;
+    }
+
+    .login-btn {
+        height: 36px;
+        font-size: 13px;
+        padding: 0 14px 0 6px;
+    }
+
+    .login-icon {
+        width: 24px;
+        height: 24px;
+    }
+
     .logo {
         width: 80px;
     }
@@ -1234,25 +1221,48 @@ tbody tr {
         font-size: 20px;
     }
 
-    .table_size {
+    .table_size_main,
+    .table_size_weight,
+    .table_size_updated,
+    .selection-summary {
         font-size: 13px;
     }
 
+    /* 창고/브랜드/상태를 한 줄, 검색1/2를 한 줄, 버튼을 3+3으로 묶어 보여주려면
+       row 구획을 없애고(display:contents) toolbar-right 하나의 flex-wrap 흐름으로
+       합친 뒤 order로 재배치한다 — HTML 구조(row1=창고+검색1 등)는 그대로 두고 CSS만으로 재배치 */
     .toolbar-right {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 6px;
-        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
     }
 
+    .toolbar-row {
+        display: contents;
+    }
+
+    .show-warehouse { order: 1; }
+    .show-brand     { order: 2; }
+    .show-state     { order: 3; }
+    #searchInput2   { order: 4; }
+    #searchInput    { order: 5; }
+    .insert-btn     { order: 6; }
+    .update-btn     { order: 7; }
+    .holding-btn    { order: 8; }
+    .clear-btn      { order: 9; }
+    .rollback-btn   { order: 10; }
+    .all-delete-btn { order: 11; }
+
     .filter-sel {
-        width: 100%;
+        flex: 1 1 calc(33.333% - 6px);
+        min-width: 0;
         font-size: 14px;
         height: 40px;
     }
 
     .search-input {
-        grid-column: 1 / -1;
+        flex: 1 1 calc(50% - 4px);
+        min-width: 0;
         font-size: 14px;
         height: 40px;
     }
@@ -1263,66 +1273,15 @@ tbody tr {
 
     .rollback-btn, .clear-btn, .all-delete-btn,
     .insert-btn, .update-btn, .holding-btn {
+        flex: 1 1 calc(33.333% - 6px);
         height: 44px;
-        font-size: 14px;
-        padding: 0 8px;
-        width: 100%;
+        font-size: 13px;
+        padding: 0 4px;
+        width: auto;
         border-radius: 8px;
     }
 
-    /* ── 패널 영역 ── */
-    .right-panel {
-        padding: 10px 10px 16px;
-        box-sizing: border-box;
-        overflow-x: hidden;
-        max-width: 100%;
-    }
-
-    .selected-grid,
-    .panels-area,
-    .insert-list {
-        max-width: 100%;
-        overflow-x: hidden;
-    }
-
-    .selected-grid {
-        grid-template-columns: 1fr;
-        max-height: 30vh;
-    }
-
-    .selected-title { font-size: 14px; }
-    .s-tag          { font-size: 12px; padding: 2px 7px; }
-
-    .panels-area.panels-grid {
-        grid-template-columns: 1fr;
-        overflow-x: hidden;
-        gap: 12px;
-    }
-
-    .insert-list {
-        grid-template-columns: 1fr;
-        max-height: none;
-        gap: 12px;
-    }
-
-    /* ── 카드 공통 ── */
-    .insert-card,
-    .update-card,
-    .holding-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 14px;
-        padding: 14px 14px 12px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.07);
-        margin-bottom: 0;
-    }
-
-    .panel-item-title {
-        font-size: 15px;
-        font-weight: 700;
-        margin-bottom: 12px;
-        gap: 5px;
-    }
+    .s-tag { font-size: 12px; padding: 2px 7px; }
 
     .cancel-btn {
         width: 26px;
@@ -1330,148 +1289,142 @@ tbody tr {
         font-size: 14px;
     }
 
-    /* ── 입력 그리드 ── */
-    .insert-grid,
-    .update-pan.insert-grid,
-    .holding-pan.insert-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
-        margin-bottom: 10px;
+    /* ── 추가/수정/홀딩 입력행이 떠 있는 동안: 카드 목록 대신 테이블을 보여주되,
+       테이블 자체를 세로 카드 폼으로 재배치(가로 스크롤 제거) — 나머지 일반 행/헤더는 숨김 */
+    .left-panel:has(tr.insert-card, tr.update-row-edit, tr.holding-insert-row) #mobile-list {
+        display: none;
     }
-
-    .form-field {
-        min-width: 0 !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-        overflow: hidden;
-        gap: 5px;
+    .left-panel:has(tr.insert-card, tr.update-row-edit, tr.holding-insert-row) .table-wrap {
+        display: block;
+        overflow-x: visible;
     }
-
-    .form-label {
-        font-size: 11px !important;
-        font-weight: 700 !important;
-        color: #64748b !important;
-        text-transform: uppercase;
-        letter-spacing: 0.4px;
-    }
-
-    .form-field input,
-    .form-field select {
-        min-width: 0 !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        box-sizing: border-box !important;
-        font-size: 15px !important;
-        height: 44px !important;
-        border-radius: 9px !important;
-        border: 1.5px solid #d1d5db !important;
-        padding: 0 10px !important;
-        background: #f9fafb !important;
-        color: #1e293b !important;
-    }
-
-    .form-field input:focus,
-    .form-field select:focus {
-        border-color: #94d900 !important;
-        background: #fff !important;
-        outline: none !important;
-    }
-
-    .input-required {
-        background-color: #f0fff4 !important;
-        border-color: #bbf7d0 !important;
-    }
-
-    input[type="date"] {
-        min-width: 0 !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        box-sizing: border-box !important;
-        font-size: 13px !important;
-        height: 44px !important;
-        padding: 0 8px !important;
-        border-radius: 9px !important;
-        border: 1.5px solid #d1d5db !important;
-        background: #f9fafb !important;
-        overflow: hidden;
-        -webkit-appearance: none;
-        appearance: none;
-    }
-
-    /* ── 푸터 ── */
-    .insert-footer,
-    .update-footer {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 8px;
-    }
-
-    .card-memo-field {
-        margin-bottom: 12px;
-    }
-
-    .card-memo-field .input-note,
-    .insert-memo {
-        margin-top: 0 !important;
-        width: 100% !important;
-        height: 44px !important;
-        font-size: 15px !important;
-        border-radius: 9px !important;
-        border: 1.5px solid #d1d5db !important;
-        background: #f9fafb !important;
-        padding: 0 10px !important;
-        box-sizing: border-box !important;
-        color: #1e293b !important;
-    }
-
-    .card-memo-field .input-note:focus {
-        border-color: #94d900 !important;
-        background: #fff !important;
-        outline: none !important;
-    }
-
-    .insert-submit-btn,
-    .update-confirm-btn,
-    .holding-confirm-btn {
-        width: 100% !important;
-        height: 48px !important;
-        font-size: 16px !important;
-        border-radius: 10px !important;
-        padding: 0 !important;
-        letter-spacing: 0.5px;
-    }
-
-    .update-actions {
-        display: flex;
-        gap: 8px;
-    }
-
-    .update-confirm-btn { flex: 1; }
-
-    .update-delete-btn {
-        width: auto !important;
-        height: 48px !important;
-        padding: 0 18px !important;
-        font-size: 15px !important;
-        border-radius: 10px !important;
-        flex-shrink: 0;
-    }
-
-    .all-insert-btn, .all-update-btn, .all-holding-btn {
-        height: 48px;
-        font-size: 15px;
+    .left-panel:has(tr.insert-card, tr.update-row-edit, tr.holding-insert-row) .table-wrap table {
+        display: block;
+        min-width: 0;
         width: 100%;
-        border-radius: 10px;
+    }
+    .left-panel:has(tr.insert-card, tr.update-row-edit, tr.holding-insert-row) tbody {
+        display: block;
+    }
+    .left-panel:has(tr.insert-card, tr.update-row-edit, tr.holding-insert-row) thead {
+        display: none;
+    }
+    .left-panel:has(tr.insert-card, tr.update-row-edit, tr.holding-insert-row) tbody tr:not(.insert-card):not(.update-row-edit):not(.holding-insert-row) {
+        display: none;
     }
 
-    /* 추가 버튼 (행 추가) */
-    .insertRow-btn {
-        height: 40px !important;
+    tr.insert-card, tr.update-row-edit, tr.holding-insert-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        border-radius: 14px;
+        padding: 14px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 12px rgba(15,23,42,0.12);
+    }
+
+    /* 어떤 작업 중인지 색 있는 헤더 타이틀 — 마크업 안 건드리고 pseudo-element로만 표시 */
+    tr.insert-card::before, tr.update-row-edit::before, tr.holding-insert-row::before {
+        grid-column: 1 / -1;
+        display: block;
+        font-size: 15px;
+        font-weight: 800;
+        padding-bottom: 8px;
+        margin-bottom: 2px;
+        border-bottom: 2px solid currentColor;
+    }
+    tr.insert-card::before     { content: "✚ 상품 추가"; color: #16a34a; }
+    tr.update-row-edit::before { content: "✎ 상품 수정"; color: #2563eb; }
+    tr.holding-insert-row::before { content: "❄ 홀딩 등록"; color: #0284c7; }
+
+    tr.insert-card td, tr.update-row-edit td, tr.holding-insert-row td {
+        display: block;
+        padding: 0 !important;
+        border-bottom: none !important;
+        background: transparent !important;
+    }
+
+    tr.insert-card td[data-label]::before,
+    tr.update-row-edit td[data-label]::before,
+    tr.holding-insert-row td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        color: #94a3b8;
+        margin-bottom: 4px;
+    }
+
+    /* 상품명/BL/비고처럼 긴 값은 두 칸을 다 쓰고, 나머지 짧은 값은 자동으로 2개씩 짝지어짐 */
+    tr.insert-card td[data-label="상품명"], tr.update-row-edit td[data-label="상품명"],
+    tr.insert-card td[data-label="BL"],     tr.update-row-edit td[data-label="BL"],
+    tr.insert-card td[data-label="평중"],   tr.update-row-edit td[data-label="평중"],
+    tr.insert-card td[data-label="비고"],   tr.update-row-edit td[data-label="비고"],
+    tr.holding-insert-row td[data-label="상품명"],
+    tr.holding-insert-row td[data-label="BL"],
+    tr.holding-insert-row td[data-label="담당자 · 출고일자"],
+    tr.holding-insert-row td[data-label="비고"] {
+        grid-column: 1 / -1;
+    }
+
+    /* 체크박스 칸은 카드 뷰에서 불필요, +버튼 칸은 헤더 옆에 붙임 */
+    tr.update-row-edit td:first-child,
+    tr.holding-insert-row td:first-child {
+        display: none;
+    }
+    tr.insert-card td:first-child {
+        grid-column: 1 / -1;
+        text-align: right;
+        margin: -6px 0 -4px;
+    }
+
+    .hold-stack {
+        flex-direction: row;
+    }
+    .hold-stack select, .hold-stack input {
+        height: 34px !important;
         font-size: 14px !important;
     }
 
-    .insert-header-wrap {
-        margin-bottom: 10px;
+    /* 저장/삭제/취소를 조그만 원형 아이콘 대신 라벨 붙은 풀폭 버튼으로 */
+    tr.insert-card .insert-row-memo-cell,
+    tr.update-row-edit .insert-row-memo-cell,
+    tr.holding-insert-row .insert-row-memo-cell {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        margin-top: 4px;
+    }
+
+    tr.insert-card .insert-row-memo-cell button,
+    tr.update-row-edit .insert-row-memo-cell button,
+    tr.holding-insert-row .insert-row-memo-cell button {
+        width: 100%;
+        height: 42px;
+        border-radius: 9px;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    tr.insert-card .select-insert-btn::after     { content: " 저장"; }
+    tr.update-row-edit .select-update-btn::after { content: " 저장"; }
+    tr.update-row-edit .select-delete-btn::after { content: " 삭제"; }
+    tr.holding-insert-row .select-holding-btn::after { content: " 저장"; }
+    tr.insert-card .remove-insert-btn::after         { content: " 취소"; }
+    tr.update-row-edit .cancel-btn::after,
+    tr.holding-insert-row .cancel-btn::after {
+        content: " 취소";
+    }
+    tr.update-row-edit .cancel-btn,
+    tr.holding-insert-row .cancel-btn {
+        width: 100%;
+        height: 42px;
+        border-radius: 9px;
+        font-size: 14px;
+    }
+    tr.update-row-edit .select-delete-btn {
+        background: #fee2e2;
+        color: #b91c1c;
     }
 
     /* ── 모바일: 페이지 스크롤 복구 ── */
@@ -1517,61 +1470,6 @@ tbody tr {
         gap: 8px;
     }
 
-    /* ── 변경사항 탭 버튼 ── */
-    .changes-tab-btn {
-        width: 100%;
-        justify-content: center;
-        height: 44px;
-        font-size: 14px;
-    }
-
-    /* ── 변경사항 카드: 세로 스택 ── */
-    .change-card {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
-        padding: 14px 14px 12px;
-    }
-
-    .change-info {
-        flex: none;
-        width: 100%;
-    }
-
-    .change-name {
-        max-width: 100%;
-        font-size: 16px;
-    }
-
-    .change-qty-row {
-        flex: none;
-        white-space: normal;
-        font-size: 15px;
-        flex-wrap: wrap;
-    }
-
-    .change-qty-row strong { font-size: 16px; }
-
-    .change-action {
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-
-    .change-qty-label { font-size: 14px; }
-
-    .change-qty-input {
-        flex: 1;
-        min-width: 60px;
-        height: 40px;
-    }
-
-    .change-done-btn,
-    .change-cancel-btn {
-        flex: 1;
-        height: 40px;
-        font-size: 14px;
-        text-align: center;
-    }
 }
 
 /* ── 토스트 알림 ── */

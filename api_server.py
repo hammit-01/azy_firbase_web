@@ -1,5 +1,6 @@
 """FastAPI 서버 - 프론트엔드 ↔ MySQL CRUD."""
-import uuid, json as _json
+import uuid
+from datetime import datetime
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -9,7 +10,7 @@ from typing import Any
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
 from pipeline.mysql_db import (
-    get_conn,
+    get_conn, sync_freeze, sync_estno_prefix, log_change,
     upsert_inventory, delete_inventory,
     upsert_holding_record, delete_holding_record,
     upsert_azy_inventory, delete_azy_inventory,
@@ -45,23 +46,32 @@ def get_employees():
     return {"data": rows}
 
 
-@app.get("/api/pending_changes")
-def get_pending_changes():
+class LoginBody(BaseModel):
+    id: str
+    pw: str
+
+@app.post("/api/login")
+def login(body: LoginBody):
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id, data_json FROM pending_changes ORDER BY created_at DESC")
-            rows = cur.fetchall()
-    result = []
-    for row in rows:
-        item = {"id": row["id"]}
-        data = row["data_json"]
-        if isinstance(data, str):
-            try: data = _json.loads(data)
-            except Exception: data = {}
-        if isinstance(data, dict):
-            item.update(data)
-        result.append(item)
-    return {"data": result}
+            cur.execute("SELECT id, 이름, 권한 FROM employees WHERE id=%s AND pw=%s", (body.id, body.pw))
+            row = cur.fetchone()
+    if not row:
+        raise HTTPException(401, "아이디 또는 비밀번호가 올바르지 않습니다")
+    return row
+
+
+class ChangeLogBody(BaseModel):
+    uid: str = ""
+    target_table: str
+    target_id: str
+    action: str
+
+@app.post("/api/changes_log")
+def log_change_endpoint(body: ChangeLogBody):
+    with get_conn() as conn:
+        log_change(conn, body.uid, body.target_table, body.target_id, body.action)
+    return {"ok": True}
 
 
 # ── inventory CRUD ───────────────────────────────────────────
@@ -89,6 +99,10 @@ def update_item(item_id: str, body: ItemBody):
         fields = body.data
         if not fields:
             raise HTTPException(400, "empty update")
+        if "상품명" in fields:
+            sync_freeze(fields)
+        if "ESTNO" in fields:
+            sync_estno_prefix(fields)
         set_clause = ", ".join([f"`{k}`=%s" for k in fields])
         cur_vals   = list(fields.values()) + [item_id]
         with conn.cursor() as cur:
@@ -111,7 +125,7 @@ class HoldingBody(BaseModel):
 
 @app.post("/api/holding_records")
 def insert_holding(body: HoldingBody):
-    rec = {"id": body.id, **body.data}
+    rec = {"id": body.id, **body.data, "홀딩일자": datetime.now().strftime("%Y.%m.%d")}
     with get_conn() as conn:
         upsert_holding_record(conn, rec)
     return {"id": body.id}
@@ -144,14 +158,6 @@ def get_holding_detail(rec_id: str):
     if not row:
         raise HTTPException(404, "not found")
     return {"data": row}
-
-
-@app.delete("/api/pending_changes/{item_id}")
-def delete_pending(item_id: str):
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM pending_changes WHERE id=%s", (item_id,))
-    return {"ok": True}
 
 
 @app.get("/api/holding_records/count/{pk}")
@@ -194,6 +200,10 @@ def update_azy_item(item_id: str, body: ItemBody):
         fields = body.data
         if not fields:
             raise HTTPException(400, "empty update")
+        if "상품명" in fields:
+            sync_freeze(fields)
+        if "ESTNO" in fields:
+            sync_estno_prefix(fields)
         set_clause = ", ".join([f"`{k}`=%s" for k in fields])
         cur_vals   = list(fields.values()) + [item_id]
         with conn.cursor() as cur:
@@ -212,7 +222,7 @@ def delete_azy_item(item_id: str):
 
 @app.post("/api/azy_holding_records")
 def insert_azy_holding(body: HoldingBody):
-    rec = {"id": body.id, **body.data}
+    rec = {"id": body.id, **body.data, "홀딩일자": datetime.now().strftime("%Y.%m.%d")}
     with get_conn() as conn:
         upsert_azy_holding_record(conn, rec)
     return {"id": body.id}

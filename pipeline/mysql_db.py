@@ -1,5 +1,6 @@
 """MySQL 연결 및 공통 쿼리 유틸리티."""
 import os
+import re
 import pymysql
 import pymysql.cursors
 from contextlib import contextmanager
@@ -48,6 +49,38 @@ def _val(col, row):
     return v if v is not None else ""
 
 
+def sync_freeze(row: dict) -> dict:
+    """상품명과 상태(freeze/동결)를 서로 맞춘다.
+    상품명에 "동결"이 있으면 상태를 freeze로, 상태가 freeze면 상품명 앞에 "동결"을 붙인다."""
+    name = str(row.get("상품명") or "").strip()
+    if "동결" in name:
+        if row.get("상태") != "freeze":
+            row["상태"] = "freeze"
+    elif row.get("상태") == "freeze" and name:
+        row["상품명"] = f"동결 {name}"
+    return row
+
+
+_ESTNO_DIGIT_RE = re.compile(r'^\d+$')
+
+# (상품명/브랜드 조건, 붙일 접두어) — ESTNO가 순수 숫자일 때만 적용
+_ESTNO_PREFIX_RULES = [
+    (lambda row: row.get("상품명") == "곱창" and row.get("브랜드") == "AMP", "ME"),
+    (lambda row: row.get("상품명") in ("닭장각", "닭장각정육"), "SIF"),
+]
+
+def sync_estno_prefix(row: dict) -> dict:
+    """상품명/브랜드 조합에 따라 ESTNO가 순수 숫자면 정해진 접두어를 붙인다."""
+    estno = str(row.get("ESTNO") or "").strip()
+    if not estno or not _ESTNO_DIGIT_RE.match(estno):
+        return row
+    for condition, prefix in _ESTNO_PREFIX_RULES:
+        if condition(row):
+            row["ESTNO"] = prefix + estno
+            break
+    return row
+
+
 def upsert_inventory(conn, rows: list[dict]):
     """inventory 테이블 upsert (INSERT ... ON DUPLICATE KEY UPDATE)."""
     if not rows:
@@ -61,7 +94,7 @@ def upsert_inventory(conn, rows: list[dict]):
     sql = (f"INSERT INTO inventory ({col_names}) VALUES ({placeholders}) "
            f"ON DUPLICATE KEY UPDATE {update_part}")
     with conn.cursor() as cur:
-        data = [[_val(c, row) for c in cols] for row in rows]
+        data = [[_val(c, sync_estno_prefix(sync_freeze(row))) for c in cols] for row in rows]
         cur.executemany(sql, data)
 
 
@@ -84,7 +117,7 @@ def _hr_val(col, rec):
 
 
 def upsert_holding_record(conn, rec: dict):
-    cols = ["id","pk","BL","ESTNO","등급","수량","홀딩","출고일","메모"]
+    cols = ["id","pk","BL","ESTNO","등급","수량","홀딩","출고일","메모","uid","홀딩일자"]
     placeholders = ", ".join(["%s"] * len(cols))
     col_names    = ", ".join([f"`{c}`" for c in cols])
     update_part  = ", ".join([f"`{c}`=VALUES(`{c}`)" for c in cols if c != "id"])
@@ -170,7 +203,7 @@ def upsert_azy_inventory(conn, rows: list[dict]):
     sql = (f"INSERT INTO azy_inventory ({col_names}) VALUES ({placeholders}) "
            f"ON DUPLICATE KEY UPDATE {update_part}")
     with conn.cursor() as cur:
-        data = [[_val(c, row) for c in cols] for row in rows]
+        data = [[_val(c, sync_estno_prefix(sync_freeze(row))) for c in cols] for row in rows]
         cur.executemany(sql, data)
 
 
@@ -183,7 +216,7 @@ def delete_azy_inventory(conn, ids: list[str]):
 
 
 def upsert_azy_holding_record(conn, rec: dict):
-    cols = ["id","pk","BL","ESTNO","등급","수량","홀딩","출고일","메모"]
+    cols = ["id","pk","BL","ESTNO","등급","수량","홀딩","출고일","메모","uid","홀딩일자"]
     placeholders = ", ".join(["%s"] * len(cols))
     col_names    = ", ".join([f"`{c}`" for c in cols])
     update_part  = ", ".join([f"`{c}`=VALUES(`{c}`)" for c in cols if c != "id"])
@@ -202,3 +235,16 @@ def get_azy_holding_sum(conn) -> dict:
     with conn.cursor() as cur:
         cur.execute("SELECT pk, SUM(수량) as total FROM azy_holding_records WHERE pk != '' GROUP BY pk")
         return {row["pk"]: int(row["total"] or 0) for row in cur.fetchall()}
+
+
+# ── 변경 이력(changes_log) ───────────────────────────────────
+# 사용자가 inventory/azy_inventory 행을 삽입/수정/삭제/홀딩할 때마다 한 줄씩 기록.
+# 2달 지난 기록은 쌓아두지 않고 쓸 때마다 같이 정리(별도 배치 없이 자연히 롤링 삭제).
+def log_change(conn, uid: str, target_table: str, target_id: str, action: str):
+    # 매달 1일 자정에 pipeline/scheduler.py의 reset_changes_log 잡이 통째로 비움 —
+    # 여기서는 롤링 삭제 없이 그냥 쌓기만 한다
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO changes_log (uid, target_table, target_id, action) VALUES (%s,%s,%s,%s)",
+            (uid or "", target_table, target_id, action)
+        )

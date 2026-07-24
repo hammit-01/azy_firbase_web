@@ -489,6 +489,71 @@ for _col in ("수탁품", "상품명"):
 
 ---
 
+## #017 — drop_duplicates() 3중 잔존 → 대재 창고 중복 로트 박스 손실 (재발, #012 동일 유형)
+
+**발생일**: 2026-07-20  
+**발생 위치**: `pipeline/crawler.py` (`_crawl_single_row`), `back_end/eda_added.py` (`daejae`), `back_end/back_eda_main.py` (`list_eda` azy_data 병합부)
+
+**증상**  
+대재 창고 BL `OOLU2325409782`(뒷자리 9782)가 실제 사이트에는 10박스 로트가 2줄(총 20박스) 있는데, `azy_inventory`에는 1행·재고 10박스만 저장됨. DB 조회 결과 해당 BL은 정확히 1건뿐이었고, 원본재고=10으로 홀딩 차감도 아니었음.
+
+**원인**  
+#012에서 JNS 한정으로 제거했던 `drop_duplicates()`가 이후 MySQL 파이프라인(`1d8f404`, 2026-06-24) 리팩터링 때 **다른 3곳에 새로 생겨** 있었음:
+1. `pipeline/crawler.py:66` — 크롤 직후, 창고 구분 없이 원본 행 전체에 `data.drop_duplicates()` (모든 창고 공통, JNS도 `crawl_one()`으로 이 경로를 탐)
+2. `back_end/eda_added.py`의 `daejae()` — 원본 컬럼 기준 `drop_duplicates()`
+3. `back_end/back_eda_main.py`의 `list_eda()` — `azy_data` 병합 후 `drop_duplicates()` (중량까지 같으면 구분 불가)
+
+같은 상품·BL·유통기한·중량의 서로 다른 로트가 재고수량까지 우연히 같으면(이번 케이스: 10=10) 세 지점 중 어디서든 완전 동일 행으로 취급되어 한쪽이 통째로 사라짐. 뒤 단계(`scheduler.py`의 `_upload_azy()`)에 uid 기준 재고 합산 로직이 이미 있었지만, 그 앞에서 행이 먼저 지워지므로 합산할 대상 자체가 없었음.
+
+**해결**  
+세 지점 모두 "행 삭제" 대신 "수량 합산"으로 교체:
+- `crawler.py:66`: `drop_duplicates()` 제거 (주석만 남김, 뒷단 합산에 위임)
+- `eda_added.py daejae()`: `drop_duplicates()` 제거, 단순 `.copy()`로 대체
+- `back_eda_main.py list_eda()`: `azy_data.drop_duplicates()` → `재고수량` 제외 전체 컬럼 `groupby(dropna=False)` 후 `재고수량` sum으로 교체 (JNS `pk` 합산과 동일 패턴)
+
+**재발 방지**  
+- 이 코드베이스에서 `drop_duplicates()`는 원칙적으로 금지. 중복 로트 병합은 반드시 "식별 컬럼 groupby + 수량 컬럼 sum" 패턴만 사용 (JNS pk 합산이 표준 예시).
+- 새 크롤링/EDA 경로를 추가할 때 `git grep -n "drop_duplicates"` 로 우선 점검.
+- 타창고 EDA(`eda_added.py`의 huichang/hyosung/eastbelly/aurora/sinu/samil/beige/swc, `eda_else_df.py`의 kd/ki/sjn/dch/hl)에도 동일한 `data.drop_duplicates()` 패턴이 남아있어 잠재적으로 같은 버그를 안고 있음 — 아직 미수정, 필요 시 동일하게 groupby+sum으로 교체할 것.
+
+**현재 상태**: daejae 경로만 해결됨 ✓ (2026-07-20). 나머지 타창고 함수들은 동일 패턴 잔존 — 미해결 ⚠️
+
+---
+
+## #018 — crawling_handmade() 로그인 미가드 → 사이클 전체 실패, 효성냉장 등 타창고 데이터 MySQL 미반영
+
+**발생일**: 2026-07-21  
+**발생 위치**: `back_end/crawling_handmade.py` (`_ecms_fetch_cached`, `kyunu_eda`)
+
+**증상**  
+효성냉장을 `warehouse_list.xlsx`에서 활성화(ip포트 채움)한 직후 첫 파이프라인 사이클에서 효성냉장 8건이 정상 크롤·EDA까지 됐는데도 MySQL(`azy_inventory`)에는 반영 안 됨.
+
+```
+2026-07-21 09:46:08 crawler - ✓ 효성냉장: 8건
+...
+2026-07-21 09:48:33 [ERROR] scheduler - 파이프라인 오류: HTTPConnectionPool(host='localhost', port=50117): Read timed out. (read timeout=120)
+  ...back_end/crawling_handmade.py:126 in _ecms_fetch_cached → _ecms_login(driver, base_url, user, pw)
+  ...back_end/crawling_handmade.py:187 in korea_eda (고려냉장 로그인 중 헤드리스 Chrome 응답 없음)
+```
+
+**원인**  
+`_ecms_fetch_cached()`(고려/유상/미빙냉장 공용)와 `kyunu_eda()`(견우오아시스)에서 캐시된 드라이버가 없을 때 최초 로그인 호출(`_ecms_login()` / `_kyunu_login()`)이 `try/except`로 감싸여 있지 않았음. 재시도 단계의 조회(`_krcs_fetch_instock`/`_kyunu_do_fetch`)만 예외를 삼키고, 로그인 자체가 타임아웃/예외를 던지면 그대로 `crawling_handmade()` → `list_eda()` → `crawler.normalize()` → `run_pipeline()`까지 전파됨.
+
+`list_eda()`는 `crawling_handmade()` 호출 전에 이미 `added_df`(효성 포함 8개 창고)·`six_df`·`ch/plz/cs/irn`을 전부 EDA까지 끝낸 상태였지만, 마지막에 `hand_df = crawling_handmade()`에서 예외가 터지면서 `list_eda()`가 `return` 하기 전에 함수 전체가 죽어 **그 사이클에서 이미 완성된 azy_data 전체(효성 포함)가 MySQL에 한 번도 안 쓰이고 통째로 버려짐**.
+
+1분 간격 재시도 스케줄 덕분에 다음 사이클(90.6초 소요, 헤드리스 Chrome이 이번엔 응답)에서 저절로 복구되어 효성냉장 데이터가 들어가긴 했으나, 근본 원인은 미수정 상태였음.
+
+**해결**  
+`_ecms_fetch_cached()`와 `kyunu_eda()`의 로그인 호출부 전체를 최상위 `try/except`로 감싸 실패 시 빈 리스트/빈 DataFrame 반환하도록 수정. 해당 사이트 하나의 로그인 실패가 같은 사이클의 다른 타창고 데이터까지 물귀신처럼 날리지 않게 격리.
+
+**재발 방지**  
+- 새 수동 크롤링 사이트를 `crawling_handmade.py`에 추가할 때 로그인 호출은 반드시 함수 전체를 감싸는 `try/except` 안에 있어야 함(조회부만 감싸는 걸로는 부족).
+- `crawling_handmade()`는 4개 사이트를 한 번에 `pd.concat()`하므로, 한 사이트 함수가 예외를 던지면 나머지 사이트도 같이 실행 안 됨 — 원인은 이번에 잡았지만 구조적으로는 여전히 한 함수라도 새로 예외를 던지면 재발 가능한 지점.
+
+**현재 상태**: ✓ 해결 (2026-07-21)
+
+---
+
 ## 상태 요약 (2026-07-02 기준)
 
 | # | 오류 | 상태 |
@@ -509,6 +574,8 @@ for _col in ("수탁품", "상품명"):
 | 014 | 브랜드 NBSP → 치환 미적용 (5 STAR 267 등) | ✓ 해결 |
 | 015 | 다중 프로세스 동시 실행 → 박스 수 과다 (+3,737박스) | ✓ 해결 |
 | 016 | eda_standard 냉장_mask가 replace_name 이후 "냉장돈목잡" 생성 → 치환 미적용 | ✓ 해결 |
+| 017 | drop_duplicates() 3중 잔존 → 대재 중복 로트 박스 손실 (#012 재발) | ⚠️ daejae만 해결, 타창고 잔존 |
+| 018 | crawling_handmade() 로그인 미가드 → 사이클 전체 실패, 타창고 MySQL 미반영 | ✓ 해결 |
 
 ---
 

@@ -69,12 +69,14 @@ def extract_spec_plz(data):
             m.group(2)   # ESTNO
         ])
 
-    # 등급 없이 숫자만 있는 경우 (예: "()104") — ESTNO만이라도 추출
+    # 등급 없이 숫자만 있는 경우 (예: "()104") — 프라자 WMS는 브라질산 육류의
+    # SIF(위생감독청) 코드를 "SIF" 글자 없이 숫자만 적어놓음 — 원본엔 없지만
+    # 정식 EST 번호 표기는 SIF+숫자이므로 붙여서 복원.
     m = re.search(r"(\d+)", text)
     if m:
         return pd.Series([
             None,
-            m.group(1)   # ESTNO
+            f"SIF{m.group(1)}"   # ESTNO
         ])
 
     return pd.Series([
