@@ -1,5 +1,6 @@
 apscheduler==3.10.4
 firebase-admin
+pymysql
 pandas
 requests
 beautifulsoup4
