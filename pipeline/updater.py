@@ -70,13 +70,17 @@ def _df_to_dict(
         name   = to_str(row.get("수탁품", "")).strip()
         expire = to_date(row.get("유통기한"))
         qty    = to_int(row.get("재고수량"))
+        warehouse = to_str(row.get("창고", "")).strip()
         raw_total += qty
 
-        # doc_id: 코드_BL뒤4자리_식별번호뒤4자리_유통기한
+        # doc_id: 코드_BL뒤4자리_식별번호뒤4자리_유통기한_창고 — 창고도 키에 포함해
+        # 같은 상품이라도 창고가 다르면 별도 행으로 유지한다.
+        # (예전엔 창고가 달라도 합쳐서 재고만 더했는데, 그러면 실제로 어느 창고에
+        #  몇 개 있는지 정보가 사라져서 창고별로 분리했다.)
         expire_str = expire.replace("-", "") if expire else ""
         bl_last4   = _clean(bl[-4:] if len(bl) >= 4 else bl)
         est_last4  = _clean(est[-4:] if len(est) >= 4 else est) if est else ""
-        doc_id     = f"{_clean(code)}_{bl_last4}_{est_last4}_{expire_str}"
+        doc_id     = f"{_clean(code)}_{bl_last4}_{est_last4}_{expire_str}_{_clean(warehouse)}"
 
         if not doc_id or doc_id.replace("_", "") == "":
             skipped_rows += 1
@@ -136,7 +140,7 @@ def _df_to_dict(
                         "pk":              doc_id,
                         "상품명":          name,
                         "BL":              bl,
-                        "창고":            to_str(row.get("창고", "")).strip(),
+                        "창고":            warehouse,
                         "유통기한":        expire,
                         "diff":            diff,
                         "prev_nonhold":    prev_nonhold,
@@ -152,7 +156,7 @@ def _df_to_dict(
                         "pk":           doc_id,
                         "상품명":       name,
                         "BL":           bl,
-                        "창고":         to_str(row.get("창고", "")).strip(),
+                        "창고":         warehouse,
                         "유통기한":     expire,
                         "prev_raw":     prev_raw,
                         "curr_raw":     qty,
@@ -182,7 +186,7 @@ def _df_to_dict(
             "ESTNO":  to_str(row.get("ESTNO", "")).strip(),
             "재고":   net_qty,
             "BL":     bl,
-            "창고":   to_str(row.get("창고", "")).strip(),
+            "창고":   warehouse,
             "유통기한": expire,
             "중량":   to_float(row.get("중량")),
             "평중":   to_float(row.get("평균중량", "")),
@@ -193,7 +197,7 @@ def _df_to_dict(
             "_auto_메모": to_str(row.get("_auto_메모", "")).strip(),
         }
         if doc_id in result:
-            # 동일 pk: 창고 코드 달라도 같은 상품 → 재고 합산
+            # 완전히 동일한 pk(창고까지 같음) — 크롤 원본에 같은 행이 중복으로 잡힌 경우, 재고 합산
             merged_rows += 1
             merged_qty  += net_qty
             result[doc_id]["재고"] = (result[doc_id].get("재고") or 0) + net_qty
