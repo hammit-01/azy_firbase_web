@@ -24,7 +24,9 @@ def jns_eda(dfs):
     if "이력번호" in df.columns:
         df["식별번호"] = df["이력번호"].fillna("").astype(str).str.strip()
 
-    # PK 생성: 코드_BL뒤4자리_식별번호뒤4자리_유통기한
+    # PK 생성: 코드_BL뒤4자리_식별번호뒤4자리_유통기한_창고
+    # 창고를 안 넣으면 같은 상품이 창고만 다를 때 아래(back_eda_main.jns_only_eda)의
+    # pk 기준 재고 합산 단계에서 서로 다른 창고가 한 행으로 합쳐져버린다.
     if all(c in df.columns for c in ["코드", "BL번호", "유통기한"]):
         expire_str = df["유통기한"].fillna("미상").astype(str).str.replace("-", "", regex=False)
         bl_s       = df["BL번호"].astype(str).str.strip()
@@ -32,7 +34,9 @@ def jns_eda(dfs):
         code_clean = df["코드"].astype(str).str.strip().str.replace("/", "_", regex=False).str.replace(" ", "_", regex=False)
         id_s       = df["식별번호"].astype(str).str.strip() if "식별번호" in df.columns else ""
         id_last4   = id_s.str[-4:].where(id_s != "", "").str.replace("/", "_", regex=False).str.replace(" ", "_", regex=False)
-        df["pk"]   = code_clean + "_" + bl_last4 + "_" + id_last4 + "_" + expire_str
+        wh_clean   = (df["창고"].astype(str).str.strip().str.replace("/", "_", regex=False).str.replace(" ", "_", regex=False)
+                      if "창고" in df.columns else "")
+        df["pk"]   = code_clean + "_" + bl_last4 + "_" + id_last4 + "_" + expire_str + "_" + wh_clean
 
     # 불필요 컬럼 제거
     df = df.drop(
