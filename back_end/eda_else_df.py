@@ -9,7 +9,10 @@ def kd_eda(data):
     if data is None or data.empty:
         return
 
-    df = data.drop_duplicates().copy()
+    # drop_duplicates() 금지: 같은 상품이 수량만 다른 두 로트로 잡혀도 여기서
+    # 한쪽이 지워지면 박스 수가 손실된다. 중복 로트 합산은 list_eda()의
+    # azy_data 단계(groupby+재고수량 합산)에서 처리한다.
+    df = data.copy()
 
     # () 제거
     df["기타정보"] = (
@@ -72,7 +75,10 @@ def ki_eda(data1):
     if data1 is None or data1.empty:
         return data1
 
-    ki = data1.drop_duplicates().copy()
+    # drop_duplicates() 금지: 같은 상품이 수량만 다른 두 로트로 잡혀도 여기서
+    # 한쪽이 지워지면 박스 수가 손실된다. 중복 로트 합산은 list_eda()의
+    # azy_data 단계(groupby+재고수량 합산)에서 처리한다.
+    ki = data1.copy()
 
     # =====================================================
     # 1. 경인 (ki)
@@ -141,7 +147,10 @@ def sjn_eda(data1):
     if data1 is None or data1.empty:
             return
 
-    sjn = data1.drop_duplicates().copy()
+    # drop_duplicates() 금지: 같은 상품이 수량만 다른 두 로트로 잡혀도 여기서
+    # 한쪽이 지워지면 박스 수가 손실된다. 중복 로트 합산은 list_eda()의
+    # azy_data 단계(groupby+재고수량 합산)에서 처리한다.
+    sjn = data1.copy()
     # =====================================================
     # 2. 삼진 (sjn)
     # =====================================================
@@ -219,7 +228,10 @@ def dch_eda(data):
     if data is None or data.empty:
         return
 
-    dch = data.drop_duplicates().copy()
+    # drop_duplicates() 금지: 같은 상품이 수량만 다른 두 로트로 잡혀도 여기서
+    # 한쪽이 지워지면 박스 수가 손실된다. 중복 로트 합산은 list_eda()의
+    # azy_data 단계(groupby+재고수량 합산)에서 처리한다.
+    dch = data.copy()
 
     s = dch["기타정보"].fillna("").astype(str)
 
@@ -278,7 +290,10 @@ def hl_eda(data1):
     if data1 is None or data1.empty:
         return data1
 
-    hl = data1.drop_duplicates().copy()
+    # drop_duplicates() 금지: 같은 상품이 수량만 다른 두 로트로 잡혀도 여기서
+    # 한쪽이 지워지면 박스 수가 손실된다. 중복 로트 합산은 list_eda()의
+    # azy_data 단계(groupby+재고수량 합산)에서 처리한다.
+    hl = data1.copy()
 
     # =================================================
     # 평균중량

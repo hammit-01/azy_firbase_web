@@ -4,7 +4,10 @@ import re
 def huichang(data):
     if data is None or data.empty:
         return pd.DataFrame()
-    df = data.drop_duplicates().copy()
+    # drop_duplicates() 금지: 같은 상품이 수량만 다른 두 로트로 잡혀도 여기서
+    # 한쪽이 지워지면 박스 수가 손실된다. 중복 로트 합산은 list_eda()의
+    # azy_data 단계(groupby+재고수량 합산)에서 처리한다.
+    df = data.copy()
     # 문자 = 브랜드
     df["브랜드"] = df["규격단위중량"].str.extract(r"([A-Za-z\s]+)")
 
@@ -28,7 +31,10 @@ def huichang(data):
 def hyosung(data):
     if data is None or data.empty:
         return pd.DataFrame()
-    df = data.drop_duplicates().copy()
+    # drop_duplicates() 금지: 같은 상품이 수량만 다른 두 로트로 잡혀도 여기서
+    # 한쪽이 지워지면 박스 수가 손실된다. 중복 로트 합산은 list_eda()의
+    # azy_data 단계(groupby+재고수량 합산)에서 처리한다.
+    df = data.copy()
     # 평균중량
     s = (
         df["규격단위중량"]
@@ -58,7 +64,10 @@ def hyosung(data):
 def eastbelly(data):
     if data is None or data.empty:
         return pd.DataFrame()
-    df = data.drop_duplicates().copy()
+    # drop_duplicates() 금지: 같은 상품이 수량만 다른 두 로트로 잡혀도 여기서
+    # 한쪽이 지워지면 박스 수가 손실된다. 중복 로트 합산은 list_eda()의
+    # azy_data 단계(groupby+재고수량 합산)에서 처리한다.
+    df = data.copy()
     # 평균중량
     s = (
         df["규격단위중량"]
@@ -89,7 +98,10 @@ def eastbelly(data):
 def aurora(data):
     if data is None or data.empty:
         return pd.DataFrame()
-    df = data.drop_duplicates().copy()
+    # drop_duplicates() 금지: 같은 상품이 수량만 다른 두 로트로 잡혀도 여기서
+    # 한쪽이 지워지면 박스 수가 손실된다. 중복 로트 합산은 list_eda()의
+    # azy_data 단계(groupby+재고수량 합산)에서 처리한다.
+    df = data.copy()
     # 앞 숫자 = ESTNO
     df["ESTNO"] = (
         df["규격단위중량"]
@@ -185,10 +197,10 @@ def sinu(data):
     if data is None or data.empty:
         return pd.DataFrame()
 
-    # =================================================
-    # 중복 제거
-    # =================================================
-    df = data.drop_duplicates().copy()
+    # drop_duplicates() 금지: 같은 상품이 수량만 다른 두 로트로 잡혀도 여기서
+    # 한쪽이 지워지면 박스 수가 손실된다. 중복 로트 합산은 list_eda()의
+    # azy_data 단계(groupby+재고수량 합산)에서 처리한다.
+    df = data.copy()
 
     # 평균중량
     df["평균중량"] = (
@@ -278,7 +290,10 @@ def sinu(data):
 def samil(data):
     if data is None or data.empty:
         return pd.DataFrame()
-    df = data.drop_duplicates().copy()
+    # drop_duplicates() 금지: 같은 상품이 수량만 다른 두 로트로 잡혀도 여기서
+    # 한쪽이 지워지면 박스 수가 손실된다. 중복 로트 합산은 list_eda()의
+    # azy_data 단계(groupby+재고수량 합산)에서 처리한다.
+    df = data.copy()
     # ESTNO
     df["ESTNO"] = df["규격단위중량"].str.extract(r"\((.*?)\)")
 
@@ -319,8 +334,11 @@ def samil(data):
 def beige(data):
     if data is None or data.empty:
         return pd.DataFrame()
-    df = data.drop_duplicates().copy()
-    
+    # drop_duplicates() 금지: 같은 상품이 수량만 다른 두 로트로 잡혀도 여기서
+    # 한쪽이 지워지면 박스 수가 손실된다. 중복 로트 합산은 list_eda()의
+    # azy_data 단계(groupby+재고수량 합산)에서 처리한다.
+    df = data.copy()
+
     # 평균중량
     s = (
         df["규격단위중량"]
@@ -348,7 +366,10 @@ def beige(data):
 def swc(data):
     if data is None or data.empty:
         return pd.DataFrame()
-    df = data.drop_duplicates().copy()
+    # drop_duplicates() 금지: 같은 상품이 수량만 다른 두 로트로 잡혀도 여기서
+    # 한쪽이 지워지면 박스 수가 손실된다. 중복 로트 합산은 list_eda()의
+    # azy_data 단계(groupby+재고수량 합산)에서 처리한다.
+    df = data.copy()
 
     # =========================
     # 평균중량

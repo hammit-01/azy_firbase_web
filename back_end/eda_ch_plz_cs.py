@@ -222,7 +222,10 @@ def name_eda_plz(data):
 def ch_eda(data):
     if data is None or data.empty:
         return
-    ch = data.drop_duplicates().copy()
+    # drop_duplicates() 금지: 같은 상품이 수량만 다른 두 로트로 잡혀도 여기서
+    # 한쪽이 지워지면 박스 수가 손실된다. 중복 로트 합산은 list_eda()의
+    # azy_data 단계(groupby+재고수량 합산)에서 처리한다.
+    ch = data.copy()
 
     ch["창고"] = "CH"
 
@@ -262,7 +265,10 @@ def ch_eda(data):
 def plz_eda(data):
     if data is None or data.empty:
         return
-    plz = data.drop_duplicates().copy()
+    # drop_duplicates() 금지: 같은 상품이 수량만 다른 두 로트로 잡혀도 여기서
+    # 한쪽이 지워지면 박스 수가 손실된다. 중복 로트 합산은 list_eda()의
+    # azy_data 단계(groupby+재고수량 합산)에서 처리한다.
+    plz = data.copy()
 
     plz["창고"] = "프라자"
 
@@ -296,7 +302,10 @@ def cs_eda(data):
     if data is None or data.empty:
         return data
 
-    cs = data.drop_duplicates().copy()
+    # drop_duplicates() 금지: 같은 상품이 수량만 다른 두 로트로 잡혀도 여기서
+    # 한쪽이 지워지면 박스 수가 손실된다. 중복 로트 합산은 list_eda()의
+    # azy_data 단계(groupby+재고수량 합산)에서 처리한다.
+    cs = data.copy()
 
     cs["창고"] = "CS"
 
@@ -328,7 +337,10 @@ def irn_eda(data):
     if data is None or data.empty:
         return data
 
-    irn = data.drop_duplicates().copy()
+    # drop_duplicates() 금지: 같은 상품이 수량만 다른 두 로트로 잡혀도 여기서
+    # 한쪽이 지워지면 박스 수가 손실된다. 중복 로트 합산은 list_eda()의
+    # azy_data 단계(groupby+재고수량 합산)에서 처리한다.
+    irn = data.copy()
 
     irn["창고"] = "아이린냉장"
     # 브랜드/등급이 상품명에 뭉쳐 있고 분리 규칙이 아직 불확실 — 우선 비워둠
