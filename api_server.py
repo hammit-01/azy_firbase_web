@@ -41,7 +41,7 @@ def get_inventory():
 def get_employees():
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT * FROM employees ORDER BY 이름")
+            cur.execute("SELECT 이름, 권한 FROM employees ORDER BY 이름")
             rows = cur.fetchall()
     return {"data": rows}
 
