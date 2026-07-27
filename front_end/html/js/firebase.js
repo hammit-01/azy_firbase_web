@@ -38,10 +38,13 @@ export async function fetchAllData() {
             ]);
 
             // 일부 창고(예: 대청)는 통관분 계정과 일반 계정이 같은 재고를 그대로 보여줘서
-            // 두 테이블에 동일 BL이 통째로 중복 적재된다 — 화면에서는 통관분(main) 쪽을 우선하고
-            // 같은 BL이 이미 main에 있는 azy 행은 제외해 중복 표시/합계를 막는다.
-            const mainBLs = new Set(mainRows.map(r => r.BL).filter(Boolean));
-            const azyDeduped = azyRows.filter(r => !r.BL || !mainBLs.has(r.BL));
+            // 두 테이블에 동일 창고+BL이 통째로 중복 적재된다 — 화면에서는 통관분(main) 쪽을 우선하고
+            // 같은 창고+BL이 이미 main에 있는 azy 행은 제외해 중복 표시/합계를 막는다.
+            // (BL만으로 비교하면 같은 BL이 서로 다른 창고에 나뉘어 실린 정상 케이스까지 지워진다)
+            const mainBLWarehouses = new Set(
+                mainRows.filter(r => r.BL).map(r => `${r.BL}|${r.창고}`)
+            );
+            const azyDeduped = azyRows.filter(r => !r.BL || !mainBLWarehouses.has(`${r.BL}|${r.창고}`));
 
             state.allData = [
                 ...mainRows.map(r => ({ ...r, _source: "main", _rawId: r.id })),
