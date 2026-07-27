@@ -1,4 +1,5 @@
 import logging
+import logging.handlers
 import signal
 import sys
 import time
@@ -21,11 +22,17 @@ if hasattr(sys.stdout, "reconfigure"):
 LOG_DIR = Path("pipeline/logs")
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
+# 로테이션 없이 계속 쌓이던 문제 — 10MB x 5개(파일당)로 제한
+def _rotating_handler(path):
+    return logging.handlers.RotatingFileHandler(
+        path, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
+    )
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
     handlers=[
-        logging.FileHandler(LOG_DIR / "pipeline.log", encoding="utf-8"),
+        _rotating_handler(LOG_DIR / "pipeline.log"),
         logging.StreamHandler(sys.stdout),
     ],
 )
@@ -36,7 +43,7 @@ log = logging.getLogger("scheduler")
 ace_log = logging.getLogger("ace_scheduler")
 ace_log.setLevel(logging.INFO)
 ace_log.propagate = False
-_ace_handler = logging.FileHandler(LOG_DIR / "pipeline_ace.log", encoding="utf-8")
+_ace_handler = _rotating_handler(LOG_DIR / "pipeline_ace.log")
 _ace_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s - %(message)s"))
 ace_log.addHandler(_ace_handler)
 
@@ -44,7 +51,7 @@ ace_log.addHandler(_ace_handler)
 jns_log = logging.getLogger("jns_scheduler")
 jns_log.setLevel(logging.INFO)
 jns_log.propagate = False
-_jns_handler = logging.FileHandler(LOG_DIR / "pipeline_jns.log", encoding="utf-8")
+_jns_handler = _rotating_handler(LOG_DIR / "pipeline_jns.log")
 _jns_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s - %(message)s"))
 jns_log.addHandler(_jns_handler)
 
