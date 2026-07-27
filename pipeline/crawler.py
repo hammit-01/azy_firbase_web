@@ -57,6 +57,8 @@ def _crawl_single_row(row: pd.Series, session_cache: dict, cache_lock: threading
 
             if session is None or data is None:
                 # 세션 없음/만료 → 재로그인 후 캐시 갱신
+                if session is not None:
+                    session.close()  # 만료된 옛 세션 커넥션 정리
                 session = _new_session()
                 res = login(session, ip_port, path, uid, pw, warehouse)
                 if res is None:
@@ -84,7 +86,9 @@ def _crawl_single_row(row: pd.Series, session_cache: dict, cache_lock: threading
 
         except Exception as e:
             with cache_lock:
-                session_cache.pop(cache_key, None)
+                dead = session_cache.pop(cache_key, None)
+            if dead is not None:
+                dead.close()
             log.error(f"  [{warehouse}] {user_type} 오류: {e}")
 
     return warehouse, pd.concat(frames, ignore_index=True) if frames else None

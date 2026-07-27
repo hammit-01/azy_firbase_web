@@ -16,5 +16,5 @@ import uvicorn
 
 if __name__ == "__main__":
     acquire(LOCK_FILE, "API 프로세스")
-    print("[API] 서버 시작: http://localhost:8000 (파이프라인과 독립 실행)")
+    print("[API] 서버 시작: http://localhost:8000/warehouse_main.html (파이프라인과 독립 실행)")
     uvicorn.run("api_server:app", host="0.0.0.0", port=8000, log_level="warning")
