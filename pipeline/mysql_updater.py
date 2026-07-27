@@ -112,13 +112,13 @@ class MySQLUpdater:
 
     def _sync_missing_status(self, conn):
         """상품명/브랜드/등급/ESTNO 중 하나라도 비어있으면 상태=null, 다 채워지면 상태=없음으로
-        되돌림. 메모에 "검품"이 남아있으면 상태=특이품으로 강제. 홀딩 행은 건드리지 않음 —
+        되돌림. 메모에 "검품"이 남아있으면 상태=특이품으로 강제. 홀딩/동결 행은 건드리지 않음 —
         재고 증감 diff와 무관하게 매 사이클 실행."""
         try:
             with conn.cursor() as cur:
                 cur.execute(
                     "UPDATE inventory SET `상태`='null' "
-                    "WHERE `상태` NOT IN ('holding', '특이품', 'null') "
+                    "WHERE `상태` NOT IN ('holding', '특이품', 'null', 'freeze') "
                     "AND (`상품명`='' OR `브랜드`='' OR `등급`='' OR `ESTNO`='')"
                 )
                 cur.execute(
