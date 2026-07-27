@@ -4,6 +4,7 @@ import re
 import pymysql
 import pymysql.cursors
 from contextlib import contextmanager
+from dbutils.pooled_db import PooledDB
 
 _PASSWORD = os.environ.get("MYSQL_PASSWORD")
 if not _PASSWORD:
@@ -22,9 +23,24 @@ _CONFIG = {
     "autocommit": False,
 }
 
+# 파이프라인(1분 간격, 사이클당 5~6회 연결)과 API 서버(요청마다 연결)가
+# 매번 새 TCP+인증 핸드셰이크를 여는 대신 커넥션을 재사용한다.
+# ping=1(PING_CHECK)로 매 대여 전에 살아있는지 확인 후 죽었으면 재연결 —
+# 평일 08~17시만 돌아서 주말 새벽엔 커넥션이 MySQL wait_timeout보다
+# 오래 idle 상태로 남기 때문에 필요.
+_pool = PooledDB(
+    creator=pymysql,
+    maxconnections=10,
+    mincached=1,
+    maxcached=5,
+    blocking=True,
+    ping=1,
+    **_CONFIG,
+)
+
 @contextmanager
 def get_conn():
-    conn = pymysql.connect(**_CONFIG)
+    conn = _pool.connection()
     try:
         yield conn
         conn.commit()
