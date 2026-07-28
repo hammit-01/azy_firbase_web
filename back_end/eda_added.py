@@ -138,6 +138,41 @@ def aurora(data):
     )
     return df
 
+_DAEJAE_GRADE_RE = re.compile(r"(SE|CH|PS|PR)")
+_DAEJAE_BRAND_RE = re.compile(
+    r"(SHOWCASE\(5STAR\)|5STAR|EXCEL|SADIA|INCARLOPSA|PERDIGAO|PPCS|SWIFT|SEARA|NATIONAL)"
+)
+_DAEJAE_PAREN_RE = re.compile(r"\(.*?\)")
+_DAEJAE_ALNUM_RE = re.compile(r"^[A-Za-z0-9]*$")
+
+def _parse_daejae_info(text):
+    """기타정보에서 [상품코드 접두어][등급][브랜드][ESTNO]를 브랜드 위치를 기준으로 분리.
+    화이트리스트로 ESTNO를 통째로 매칭하던 예전 방식은 새 코드가 나올 때마다
+    계속 놓쳤음(267/208A/3D 실종 사고) — 브랜드 뒤에 남는 부분을 그대로 ESTNO로
+    쓰면 화이트리스트 없이도 새 코드에 자동 대응된다.
+    등급 앞에 남는 접두어(예: "알목심BS"의 "BS")는 상품명에서 잘못 떨어져 나온
+    것이므로 상품명에 다시 붙여준다."""
+    b = _DAEJAE_BRAND_RE.search(text)
+    if not b:
+        return "", None, None, None
+    prefix = text[:b.start()]
+    brand = b.group(1)
+
+    g = _DAEJAE_GRADE_RE.search(prefix)
+    if g:
+        grade = g.group(1)
+        name_prefix = prefix[:g.start()]
+    else:
+        grade = None
+        name_prefix = ""
+    if not _DAEJAE_ALNUM_RE.match(name_prefix):
+        # 영숫자가 아닌 잡음(괄호 등)이면 상품명에 붙이지 않고 버림
+        name_prefix = ""
+
+    estno = _DAEJAE_PAREN_RE.sub("", text[b.end():]).strip()
+    return name_prefix, grade, brand, (estno or None)
+
+
 def daejae(data):
     if data is None or data.empty:
         return pd.DataFrame()
@@ -153,7 +188,7 @@ def daejae(data):
         .str.extract(r"(\d+(?:\.\d+)?)\s*KG")[0],
         errors="coerce"
     )
-    
+
     s = (
         df["기타정보"]
         .astype(str)
@@ -161,26 +196,16 @@ def daejae(data):
         .str.strip()
     )
 
-    # =========================
-    # 등급
-    # =========================
-    df["등급"] = s.str.extract(
-        r"^(SE|CH|PS|PR)"
-    )[0]
+    parsed = s.apply(_parse_daejae_info)
+    df["등급"]  = parsed.apply(lambda t: t[1])
+    df["브랜드"] = parsed.apply(lambda t: t[2])
+    df["ESTNO"] = parsed.apply(lambda t: t[3])
 
-    # =========================
-    # 브랜드
-    # =========================
-    df["브랜드"] = s.str.extract(
-        r"(SHOWCASE\(5STAR\)|EXCEL|SADIA|INCARLOPSA|PERDIGAO|PPCS|SWIFT|SEARA|NATIONAL)"
-    )[0]
-
-    # =========================
-    # ESTNO
-    # =========================
-    df["ESTNO"] = s.str.extract(
-        r"(SIF\d+|86[A-Z]|969G?|562M|ME\d+|10\.\d+/\w+)"
-    )[0]
+    name_prefix = parsed.apply(lambda t: t[0])
+    has_prefix = name_prefix.astype(bool)
+    df.loc[has_prefix, "수탁품"] = (
+        df.loc[has_prefix, "수탁품"].astype(str) + name_prefix[has_prefix]
+    )
 
 
 
