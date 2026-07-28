@@ -2,7 +2,7 @@
 import { state } from "./state.js";
 import { renderTable, renderWarehouseOptions } from "./table.js";
 import { renderSelectData } from "./panel.js";
-import { fetchAllInventory, fetchEmployees } from "./api.js";
+import { fetchAllInventory, fetchEmployees, fetchMovingInventory } from "./api.js";
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000; // 5분
 
@@ -26,11 +26,39 @@ export async function subscribeData() {
 // 타창고 페이지(__AZY_API_MODE=true)는 기존처럼 azy_inventory만 그대로 보여준다.
 // id는 두 테이블 간 충돌을 막기 위해 타창고 쪽만 "azy:" 접두사를 붙이고,
 // 실제 백엔드 라우팅/쓰기에 쓸 원본 id는 _rawId, 출처는 _source로 각 행에 표시해둔다.
+// moving_inventory 행 → 테이블에서 쓰는 형태로 변환. 출고창고 정보가 없으므로
+// "창고" 컬럼 자리에는 이동창고(도착지)를 그대로 넣는다. _isMoving으로 표시해서
+// table.js가 노란 배경을 입히고 체크박스를 비활성화(읽기 전용, CRUD 대상 아님)한다.
+function normalizeMovingRow(r) {
+    return {
+        id: `moving:${r.id}`,
+        _rawId: r.id,
+        _isMoving: true,
+        상품명: r.상품명,
+        브랜드: r.브랜드,
+        등급: r.등급,
+        ESTNO: r.ESTNO,
+        재고: r.재고,
+        BL: r.BL,
+        창고: r.이동창고,
+    };
+}
+
 export async function fetchAllData() {
     try {
+        let movingRows = [];
+        try {
+            movingRows = (await fetchMovingInventory()).map(normalizeMovingRow);
+        } catch (e) {
+            console.warn("[API] moving_inventory 조회 실패:", e.message);
+        }
+
         if (window.__AZY_API_MODE) {
             const rows = await fetchAllInventory();
-            state.allData = rows.map(r => ({ ...r, _source: "azy", _rawId: r.id }));
+            state.allData = [
+                ...rows.map(r => ({ ...r, _source: "azy", _rawId: r.id })),
+                ...movingRows,
+            ];
         } else {
             const [mainRows, azyRows] = await Promise.all([
                 fetchAllInventory(false),
@@ -49,6 +77,7 @@ export async function fetchAllData() {
             state.allData = [
                 ...mainRows.map(r => ({ ...r, _source: "main", _rawId: r.id })),
                 ...azyDeduped.map(r => ({ ...r, _source: "azy", _rawId: r.id, id: `azy:${r.id}` })),
+                ...movingRows,
             ];
         }
         renderTable();

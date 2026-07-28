@@ -251,6 +251,17 @@ def run_pipeline():
             if failed:
                 log.warning(f"실패 창고: {', '.join(failed)}")
 
+            # 1-1. 이고(창고이동) 취합 시트 → moving_inventory 동기화 — azy_normalized와
+            # 무관하게 독립 실행(크롤 결과가 비어도 이고 동기화는 계속 돌아야 함)
+            try:
+                from pipeline.moving_reader import load_moving_rows
+                from pipeline.mysql_db import get_conn as _get_conn, sync_moving_inventory
+                moving_rows = load_moving_rows()
+                with _get_conn() as conn:
+                    sync_moving_inventory(conn, moving_rows)
+            except Exception as e:
+                log.warning(f"이고 동기화 실패: {e}")
+
             # 2. 정규화 (타창고 → azy_inventory. JNS는 어차피 crawl_all에서 빠졌으니 빈 값)
             _normalized, azy_normalized = crawler.normalize(results)
             if azy_normalized.empty:

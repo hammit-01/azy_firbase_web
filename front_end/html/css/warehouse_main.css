@@ -642,6 +642,11 @@ tbody tr {
     font-weight:700;
 }
 
+/* 이고(창고이동) 취합 시트에서 들어온 행 — moving_inventory 미러, 노란 배경으로 구분 */
+.moving-inventory-row td{
+    background:#fff3b0 !important;
+}
+
 /* 체크한 행 = 연초록 */
 .selected-row td{
     background:#d4f7a0 !important;
@@ -1066,6 +1071,7 @@ tr.insert-card .remove-insert-btn:hover {
 .mobile-freeze  { border-left-color: #8b5cf6; }
 .mobile-stopped { border-left-color: #f59e0b; }
 .mobile-moving  { border-left-color: #f97316; }
+.mobile-moving-inventory { background: #fff3b0; }
 
 .mc-status-badge {
     display: inline-flex;

@@ -46,6 +46,15 @@ def get_employees():
     return {"data": rows}
 
 
+@app.get("/api/moving_inventory")
+def get_moving_inventory():
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM moving_inventory")
+            rows = cur.fetchall()
+    return {"data": rows}
+
+
 class LoginBody(BaseModel):
     id: str
     pw: str

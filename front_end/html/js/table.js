@@ -106,6 +106,7 @@ function renderMobileView(data) {
         if (item.상태 === "freeze")  cardCls += " mobile-freeze";
         if (item.상태 === "stopped") cardCls += " mobile-stopped";
         if (item.상태 === "moving")  cardCls += " mobile-moving";
+        if (item._isMoving)          cardCls += " mobile-moving-inventory";
 
         const wh   = safeValue(item.창고);
         const name = safeValue(item.상품명);
@@ -542,6 +543,7 @@ export function renderTable() {
         if (item.상태 === "freeze")  rowClass += " freezed-row";
         if (item.상태 === "stopped") rowClass += " stopped-row";
         if (item.상태 === "moving")  rowClass += " moving-row";
+        if (item._isMoving)          rowClass += " moving-inventory-row";
 
         html += `
             <tr class="${rowClass}" data-id="${id}" data-출고일="${safeValue(item.출고일)}" data-홀딩="${safeValue(item.홀딩)}">
@@ -552,6 +554,7 @@ export function renderTable() {
                         class="row-check"
                         data-id="${id}"
                         ${checked ? "checked" : ""}
+                        ${item._isMoving ? "disabled title=\"이고 취합 시트 데이터 — 읽기 전용\"" : ""}
                     >
                 </td>
 

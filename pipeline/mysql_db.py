@@ -231,6 +231,20 @@ def delete_azy_inventory(conn, ids: list[str]):
         cur.execute(f"DELETE FROM azy_inventory WHERE id IN ({placeholders})", ids)
 
 
+def sync_moving_inventory(conn, rows: list[dict]):
+    """이고(창고이동) 취합 시트 → moving_inventory 통째로 교체.
+    이 테이블은 '오늘' 상태만 보여주는 용도라 매 사이클 전체 삭제 후 다시 채운다."""
+    cols = ["id", "상품명", "브랜드", "등급", "ESTNO", "재고", "BL", "이동창고"]
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM moving_inventory")
+        if rows:
+            placeholders = ", ".join(["%s"] * len(cols))
+            col_names    = ", ".join([f"`{c}`" for c in cols])
+            sql = f"INSERT INTO moving_inventory ({col_names}) VALUES ({placeholders})"
+            data = [[row.get(c, "") for c in cols] for row in rows]
+            cur.executemany(sql, data)
+
+
 def upsert_azy_holding_record(conn, rec: dict):
     cols = ["id","pk","BL","ESTNO","등급","수량","홀딩","출고일","메모","uid","홀딩일자"]
     placeholders = ", ".join(["%s"] * len(cols))
