@@ -1,8 +1,10 @@
+import faulthandler
 import logging
 import logging.handlers
 import signal
 import sys
 import time
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
@@ -21,6 +23,25 @@ if hasattr(sys.stdout, "reconfigure"):
 # ── 로깅 설정 ───────────────────────────────────────────
 LOG_DIR = Path("pipeline/logs")
 LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+# 사이클이 멈추면 원인 추적할 방법이 없던 문제(2026-07-28) — py-spy는 Windows에서
+# 관리자 권한으로도 세션 문제로 안 붙음(os error 87). 대신 프로세스가 스스로
+# 전체 스레드 스택을 덤프하는 stdlib faulthandler를 사이클마다 타이머로 걸어둔다.
+# 참고: dump_traceback_later는 프로세스 전역에 하나만 걸리므로, 메인/JNS 잡이
+# 동시에 걸리면 나중에 건 쪽 타이머만 유효함 — 진단용이라 감수.
+HANG_DUMP_PATH = LOG_DIR / "hang_dump.log"
+
+@contextmanager
+def _hang_watchdog(label: str, timeout: int = 90):
+    f = open(HANG_DUMP_PATH, "a", encoding="utf-8")
+    f.write(f"\n===== {datetime.now()} [{label}] {timeout}초 넘게 안 끝나면 아래 덤프 =====\n")
+    f.flush()
+    faulthandler.dump_traceback_later(timeout, repeat=False, file=f, exit=False)
+    try:
+        yield
+    finally:
+        faulthandler.cancel_dump_traceback_later()
+        f.close()
 
 # 로테이션 없이 계속 쌓이던 문제 — 10MB x 5개(파일당)로 제한
 def _rotating_handler(path):
@@ -222,21 +243,22 @@ def run_pipeline():
     log.info("파이프라인 시작")
 
     try:
-        # 1. 병렬 크롤링 (JNS 제외 — 별도 잡에서 독립 실행)
-        results = crawler.crawl_all(exclude=[JNS_WAREHOUSE])
+        with _hang_watchdog("run_pipeline"):
+            # 1. 병렬 크롤링 (JNS 제외 — 별도 잡에서 독립 실행)
+            results = crawler.crawl_all(exclude=[JNS_WAREHOUSE])
 
-        failed = [w for w, df in results.items() if df is None or (hasattr(df, "empty") and df.empty)]
-        if failed:
-            log.warning(f"실패 창고: {', '.join(failed)}")
+            failed = [w for w, df in results.items() if df is None or (hasattr(df, "empty") and df.empty)]
+            if failed:
+                log.warning(f"실패 창고: {', '.join(failed)}")
 
-        # 2. 정규화 (타창고 → azy_inventory. JNS는 어차피 crawl_all에서 빠졌으니 빈 값)
-        _normalized, azy_normalized = crawler.normalize(results)
-        if azy_normalized.empty:
-            log.warning("정규화 후 데이터 없음 - 이번 라운드 스킵")
-            return
+            # 2. 정규화 (타창고 → azy_inventory. JNS는 어차피 crawl_all에서 빠졌으니 빈 값)
+            _normalized, azy_normalized = crawler.normalize(results)
+            if azy_normalized.empty:
+                log.warning("정규화 후 데이터 없음 - 이번 라운드 스킵")
+                return
 
-        # 3. azy_inventory 업데이트
-        _upload_azy(azy_normalized)
+            # 3. azy_inventory 업데이트
+            _upload_azy(azy_normalized)
 
         elapsed = time.time() - start
         log.info(f"완료 | azy {len(azy_normalized)}건 | {elapsed:.1f}초 소요")
@@ -254,23 +276,24 @@ def run_jns_pipeline():
     jns_log.info("JNS 파이프라인 시작")
 
     try:
-        # 1. 단독 크롤링
-        jns_raw = crawler.crawl_one(JNS_WAREHOUSE)
-        if jns_raw is None or jns_raw.empty:
-            jns_log.warning("JNS 크롤링 실패/데이터 없음 - 이번 라운드 스킵")
-            return
+        with _hang_watchdog("run_jns_pipeline"):
+            # 1. 단독 크롤링
+            jns_raw = crawler.crawl_one(JNS_WAREHOUSE)
+            if jns_raw is None or jns_raw.empty:
+                jns_log.warning("JNS 크롤링 실패/데이터 없음 - 이번 라운드 스킵")
+                return
 
-        # 2. 정규화 (list_eda()의 JNS 처리 블록만 재사용)
-        from back_end.back_eda_main import jns_only_eda
-        normalized = jns_only_eda(jns_raw)
-        if normalized.empty:
-            jns_log.warning("정규화 후 데이터 없음 - 이번 라운드 스킵")
-            return
+            # 2. 정규화 (list_eda()의 JNS 처리 블록만 재사용)
+            from back_end.back_eda_main import jns_only_eda
+            normalized = jns_only_eda(jns_raw)
+            if normalized.empty:
+                jns_log.warning("정규화 후 데이터 없음 - 이번 라운드 스킵")
+                return
 
-        # 3. inventory diff 업데이트
-        prev = snapshot.load()
-        changed, new_snap = updater.update_diff(normalized, prev)
-        snapshot.save(new_snap)
+            # 3. inventory diff 업데이트
+            prev = snapshot.load()
+            changed, new_snap = updater.update_diff(normalized, prev)
+            snapshot.save(new_snap)
 
         import pandas as _pd
         eda_qty = int(_pd.to_numeric(normalized["재고수량"], errors="coerce").fillna(0).sum()) \
@@ -296,21 +319,22 @@ def run_ace_pipeline():
     ace_log.info("에이스 파이프라인 시작")
 
     try:
-        from back_end.crawling_handmade import crawling_ace
-        from back_end.replace_name import replace_name
-        from back_end.eda_standard import eda_standard
+        with _hang_watchdog("run_ace_pipeline"):
+            from back_end.crawling_handmade import crawling_ace
+            from back_end.replace_name import replace_name
+            from back_end.eda_standard import eda_standard
 
-        ace_df = crawling_ace()
-        if ace_df is None or ace_df.empty:
-            ace_log.warning("에이스 데이터 없음 - 이번 라운드 스킵")
-            return
+            ace_df = crawling_ace()
+            if ace_df is None or ace_df.empty:
+                ace_log.warning("에이스 데이터 없음 - 이번 라운드 스킵")
+                return
 
-        ace_df = replace_name(ace_df)
-        ace_df = eda_standard(ace_df)
-        ace_df = replace_name(ace_df)
-        ace_df = ace_df.drop_duplicates().reset_index(drop=True)
+            ace_df = replace_name(ace_df)
+            ace_df = eda_standard(ace_df)
+            ace_df = replace_name(ace_df)
+            ace_df = ace_df.drop_duplicates().reset_index(drop=True)
 
-        _upload_azy(ace_df)
+            _upload_azy(ace_df)
 
         elapsed = time.time() - start
         ace_log.info(f"완료 | {len(ace_df)}건 | {elapsed:.1f}초 소요")
@@ -341,6 +365,10 @@ def _in_operating_hours(dt: datetime) -> bool:
 
 
 def main():
+    from back_end.crawling_handmade import cleanup_orphaned_chrome
+    log.info("이전 실행에서 남은 좀비 헤드리스 크롬 정리 중...")
+    cleanup_orphaned_chrome()
+
     log.info("=" * 50)
     log.info("창고 재고 파이프라인 서비스 시작")
     log.info("스케줄: 나머지창고/JNS 평일 08:00~17:00 1분 간격(서로 독립) + 에이스 정각 1시간 간격 별도")

@@ -1,8 +1,29 @@
 import atexit
+import subprocess
 import pandas as pd
 import re
 import time
 from back_end.eda_column import column_replace
+
+
+def cleanup_orphaned_chrome():
+    """이전 파이프라인 프로세스가 강제 종료(작업 스케줄러 stop 등)되면
+    atexit이 못 돌고 남은 헤드리스 크롬을 정리한다. chromedriver는 chrome을
+    독립 프로세스로 띄워서 부모가 죽어도 안 따라 죽는다 — 2026-07-28에 이게
+    수백 개까지 누적되며 리소스 고갈로 파이프라인 전체가 멈추는 사고로 이어짐.
+    프로세스 시작 시 1회만 호출. --headless로만 걸러서 실사용자 브라우저는 안 건드림."""
+    try:
+        subprocess.run(
+            [
+                "powershell", "-NoProfile", "-Command",
+                "Get-CimInstance Win32_Process -Filter \"Name='chrome.exe'\" "
+                "| Where-Object { $_.CommandLine -like '*--headless*' } "
+                "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }",
+            ],
+            timeout=30, capture_output=True,
+        )
+    except Exception:
+        pass
 
 
 def _selenium_driver():
@@ -13,7 +34,12 @@ def _selenium_driver():
     opts.add_argument("--no-sandbox")
     opts.add_argument("--disable-dev-shm-usage")
     opts.add_argument("--window-size=1920,1080")
-    return webdriver.Chrome(options=opts)
+    driver = webdriver.Chrome(options=opts)
+    # 명시적 타임아웃 없으면 사이트가 느려지거나 죽었을 때 driver.get()이 무한정
+    # 매달림 — 2026-07-28에 이것 때문에 파이프라인 전체가 몇 분씩 멈추는 사고 발생.
+    driver.set_page_load_timeout(20)
+    driver.set_script_timeout(20)
+    return driver
 
 
 # ── 드라이버(=로그인 세션) 캐시 ──────────────────────────────
