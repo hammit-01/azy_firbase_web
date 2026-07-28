@@ -13,6 +13,14 @@ log = logging.getLogger("crawler")
 WAREHOUSE_XLSX = "back_end/data/warehouse_list.xlsx"
 TIMEOUT_SEC    = 120  # 창고 수 증가로 여유 확보
 
+# 여러 계정으로 로그인해도 완전히 동일한 전체 재고를 반환하는 창고 — 일반 계정만 사용.
+# 확인된 목록(직접 원본 크롤 데이터 비교로 검증됨). 새로 의심되는 창고가 생기면
+# 여기 추가하기 전에 반드시 crawl_one()으로 계정별 원본을 직접 비교해서 확인할 것 —
+# 일부 창고는 통관분 계정이 실제로 다른(별도 병합이 필요한) 재고를 반환할 수 있음.
+_DUPLICATE_ACCOUNT_WAREHOUSES = {
+    "대재", "강동2", "삼일물류", "SWC", "신우냉장", "오로라CS", "한라곤지암", "한라동탄", "시에이치물류",
+}
+
 
 def _load_active_warehouses() -> pd.DataFrame:
     df = pd.read_excel(WAREHOUSE_XLSX)
@@ -38,10 +46,12 @@ def _crawl_single_row(row: pd.Series, session_cache: dict, cache_lock: threading
     frames    = []
 
     users = get_users(row)
-    if warehouse == "대재":
-        # 일반/웹출고/웹출고(통관분) 3계정이 전부 동일한 전체 재고를 반환 → 뒤 단계의
-        # pk 합산 로직이 이를 서로 다른 로트로 오인해 3배로 집계됨(2026-07-21, 2307→6921박스).
-        # 세 계정 데이터가 같다고 확인돼서 일반 계정 하나만 쓰도록 제한.
+    if warehouse in _DUPLICATE_ACCOUNT_WAREHOUSES:
+        # 계정 2개 이상(일반/웹출고/통관분/웹출고(통관분))이 전부 동일한 전체 재고를
+        # 반환하는 창고 — 뒤 단계의 pk 합산 로직이 이를 서로 다른 로트로 오인해
+        # 계정 수만큼 배로 집계됨(대재 2026-07-21 3배 사고, 2026-07-28 강동2/삼일물류/
+        # SWC/신우냉장/오로라CS/한라곤지암/시에이치물류 2배 사고 — 원본 크롤 데이터가
+        # 계정별로 100% 완전히 중복되는 것을 직접 확인함). 일반 계정 하나만 쓰도록 제한.
         users = [u for u in users if u[0] == "일반"]
 
     for user_type, uid, pw, scustcd, scmdept in users:
