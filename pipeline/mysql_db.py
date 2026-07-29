@@ -264,15 +264,24 @@ def _table_for_warehouse(warehouse: str) -> str:
     return "inventory" if str(warehouse or "").startswith("곤") else "azy_inventory"
 
 
-def apply_moving_deductions(conn, moving_rows: list[dict]) -> list[dict]:
+def apply_moving_deductions(conn, moving_rows: list[dict], deduct_targets=("inventory", "azy_inventory")) -> list[dict]:
     """moving_inventory 행을 상품명/브랜드/등급/ESTNO/BL 기준으로 처리한다.
 
     1) 이동창고(도착지) 쪽에 이미 같은 조건으로 재고가 이고 수량 이상 들어와 있으면
        "입고 완료"로 보고 이 행을 결과에서 제외한다 (호출부가 moving_inventory에서
        빼는 데 씀 — 이고분 취합 시트 체크박스가 안 풀려도 우리 쪽 표시에선 사라짐).
+       입고 감지는 항상 양쪽 테이블 다 본다 (어느 쪽으로 입고되든 감지해야 함).
     2) 아직 미입고인 나머지 행은 출고창고(곤 접두 → inventory, 그 외 → azy_inventory)의
        매칭 재고에서 이고 수량만큼 뺀다 — 홀딩과 동일하게 매 사이클 다시 계산되는
        방식이라 별도 이력 테이블 없이 여기서 매번 다시 적용한다.
+
+       inventory(JNS)와 azy_inventory는 서로 다른 독립 스케줄(run_jns_pipeline/
+       run_pipeline)에서 각자 크롤 원본으로 재고를 통째로 덮어쓴다. 두 잡이 매번
+       양쪽 다 차감해버리면, 자기 테이블이 아직 안 갱신된 사이클에 남의 차감을
+       또 빼서 이중 차감되거나, 반대로 상대 잡이 방금 원본으로 덮어써서 차감이
+       지워진 채로 남는다. deduct_targets로 "이번 호출에서 내가 방금 원본을
+       갱신한 테이블"만 차감하도록 호출부(run_pipeline/run_jns_pipeline)가 범위를
+       좁힌다.
 
     반환값: 아직 미입고라 moving_inventory에 그대로 남겨야 하는 행 목록.
     """
@@ -293,6 +302,8 @@ def apply_moving_deductions(conn, moving_rows: list[dict]) -> list[dict]:
 
         for row in remaining:
             src_table = _table_for_warehouse(row["출고창고"])
+            if src_table not in deduct_targets:
+                continue
             where = " AND ".join(f"{c}=%s" for c in _MOVING_MATCH_COLS) + " AND 창고=%s"
             params = (row["재고"],) + tuple(row[c] for c in _MOVING_MATCH_COLS) + (row["출고창고"],)
             cur.execute(

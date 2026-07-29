@@ -270,7 +270,9 @@ def run_pipeline():
                 from pipeline.mysql_db import get_conn as _get_conn, sync_moving_inventory, apply_moving_deductions
                 moving_rows = load_moving_rows()
                 with _get_conn() as conn:
-                    remaining_rows = apply_moving_deductions(conn, moving_rows)
+                    # inventory(JNS)는 run_jns_pipeline이 독립 스케줄로 원본을 덮어쓰므로
+                    # 여기서는 방금 갱신한 azy_inventory만 차감한다 (이중/유실 차감 방지).
+                    remaining_rows = apply_moving_deductions(conn, moving_rows, deduct_targets=("azy_inventory",))
                     sync_moving_inventory(conn, remaining_rows)
             except Exception as e:
                 log.warning(f"이고 동기화 실패: {e}")
@@ -309,6 +311,22 @@ def run_jns_pipeline():
             prev = snapshot.load()
             changed, new_snap = updater.update_diff(normalized, prev)
             snapshot.save(new_snap)
+
+            # 3-1. 이고 차감 재적용 — 방금 크롤 원본으로 inventory 재고가 덮였으므로
+            # moving_inventory에 남아있는(미입고) 행 기준으로 inventory 쪽만 다시 뺀다.
+            # moving_inventory 자체는 run_pipeline이 시트에서 다시 읽어 갱신하므로
+            # 여기선 현재 저장된 내용만 읽어 재적용한다.
+            try:
+                from pipeline.mysql_db import get_conn as _get_conn, apply_moving_deductions
+                with _get_conn() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            "SELECT 상품명, 브랜드, 등급, ESTNO, BL, 재고, 출고창고, 이동창고 FROM moving_inventory"
+                        )
+                        current_moving = cur.fetchall()
+                    apply_moving_deductions(conn, current_moving, deduct_targets=("inventory",))
+            except Exception as e:
+                jns_log.warning(f"이고 차감 재적용 실패: {e}")
 
         import pandas as _pd
         eda_qty = int(_pd.to_numeric(normalized["재고수량"], errors="coerce").fillna(0).sum()) \
