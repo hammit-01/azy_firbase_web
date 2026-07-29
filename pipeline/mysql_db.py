@@ -90,6 +90,29 @@ _ESTNO_PREFIX_RULES = [
     (lambda row: row.get("상품명") == "안창살" and row.get("브랜드") == "GREENLEA", "ME"),
 ]
 
+# 조건 만족 시 해당 행을 아예 저장하지 않음(신규 삽입 차단) — 기존에 이미 들어간 행은
+# 별도로 직접 DELETE 필요(이 필터는 앞으로 다시 안 들어오게만 막음)
+_EXCLUDE_RULES = [
+    lambda row: row.get("상품명") == "돈목뼈" and row.get("브랜드") == "SWIFT",
+]
+
+def is_excluded(row: dict) -> bool:
+    return any(cond(row) for cond in _EXCLUDE_RULES)
+
+
+# (조건, 새 상품명) — 조건 만족 시 상품명을 강제로 바꿔치기
+_NAME_RENAME_RULES = [
+    (lambda row: row.get("상품명") == "양지OFF" and str(row.get("창고") or "").startswith("곤"), "양지ON"),
+]
+
+def sync_name_rename(row: dict) -> dict:
+    for condition, new_name in _NAME_RENAME_RULES:
+        if condition(row):
+            row["상품명"] = new_name
+            break
+    return row
+
+
 def sync_estno_prefix(row: dict) -> dict:
     """상품명/브랜드 조합에 따라 ESTNO를 고정값으로 맞추거나(FORCE),
     원본이 순수 숫자일 때만 정해진 접두어를 붙인다(PREFIX)."""
@@ -110,6 +133,7 @@ def sync_estno_prefix(row: dict) -> dict:
 
 def upsert_inventory(conn, rows: list[dict]):
     """inventory 테이블 upsert (INSERT ... ON DUPLICATE KEY UPDATE)."""
+    rows = [r for r in rows if not is_excluded(r)]
     if not rows:
         return
     cols = ["id","pk","상품명","브랜드","등급","ESTNO","재고","BL","창고",
@@ -121,7 +145,7 @@ def upsert_inventory(conn, rows: list[dict]):
     sql = (f"INSERT INTO inventory ({col_names}) VALUES ({placeholders}) "
            f"ON DUPLICATE KEY UPDATE {update_part}")
     with conn.cursor() as cur:
-        data = [[_val(c, sync_estno_prefix(sync_freeze(row))) for c in cols] for row in rows]
+        data = [[_val(c, sync_name_rename(sync_estno_prefix(sync_freeze(row)))) for c in cols] for row in rows]
         cur.executemany(sql, data)
 
 
@@ -219,6 +243,7 @@ def get_snapshot(conn) -> dict:
 # ── 타창고(azy) 전용 함수 ─────────────────────────────────────
 
 def upsert_azy_inventory(conn, rows: list[dict]):
+    rows = [r for r in rows if not is_excluded(r)]
     if not rows:
         return
     cols = ["id","pk","상품명","브랜드","등급","ESTNO","재고","BL","창고",
@@ -230,7 +255,7 @@ def upsert_azy_inventory(conn, rows: list[dict]):
     sql = (f"INSERT INTO azy_inventory ({col_names}) VALUES ({placeholders}) "
            f"ON DUPLICATE KEY UPDATE {update_part}")
     with conn.cursor() as cur:
-        data = [[_val(c, sync_estno_prefix(sync_freeze(row))) for c in cols] for row in rows]
+        data = [[_val(c, sync_name_rename(sync_estno_prefix(sync_freeze(row)))) for c in cols] for row in rows]
         cur.executemany(sql, data)
 
 
