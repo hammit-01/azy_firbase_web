@@ -297,6 +297,27 @@ def sinu(data):
         df.loc[mask, "ESTNO"] = est
 
     # =================================================
+    # 등급 + ESTNO 폴백 (부채살/탕갈비 등)
+    # 대부분 상품은 "브랜드+임의숫자코드+ESTNO" 구조라 등급이 아예 없는데,
+    # 일부는 "브랜드+임의숫자코드+등급+ESTNO"로 한 토큰 더 있어서(예: SWIFT6571CHO969)
+    # 위 화이트리스트로 못 찾음. 위에서 여전히 못 찾은 행만: 브랜드(맨 앞 영문)와
+    # 숫자코드(그 다음 숫자열)를 떼어내고, 남은 부분 앞쪽 영문 구간을 등급,
+    # 나머지를 ESTNO로 잡는다. 화이트리스트/SIF로 이미 잡힌 행은 안 건드림.
+    # =================================================
+    mask_still_no_est = df["ESTNO"].isna()
+    if mask_still_no_est.any():
+        remainder = (
+            df.loc[mask_still_no_est, "기타정보"]
+            .astype(str)
+            .str.replace(r"^[A-Z]+", "", regex=True)
+            .str.replace(r"^\d{4}", "", regex=True)  # 임의숫자4자리 코드만 떼어냄(ESTNO 앞자리 숫자까지 먹지 않도록)
+        )
+        fallback = remainder.str.extract(r"^([A-Z]+)(.+)$")
+        df.loc[mask_still_no_est, "등급"] = fallback[0]
+        estno_fallback = fallback[1].where(fallback[1].astype(str).str.strip() != "", None)
+        df.loc[mask_still_no_est, "ESTNO"] = estno_fallback
+
+    # =================================================
     # 빈 문자열 처리
     # =================================================
     df["브랜드"] = df["브랜드"].replace("", pd.NA)
