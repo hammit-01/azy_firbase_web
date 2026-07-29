@@ -213,9 +213,9 @@ def eda_standard(df):
     df["_auto_상태"] = ""
     df["_auto_메모"] = ""
 
-    # 1) 상품명에 파손/상이품/반품 포함 → 상품명에서 제거하고 상태=특이품, 메모=사유
+    # 1) 상품명에 파손/상이품/반품/검품 포함 → 상품명에서 제거하고 상태=특이품, 메모=사유
     # "반품입고"처럼 뒤에 "입고"가 붙어 나오는 경우가 많아 같이 제거 (메모는 사유만 저장)
-    qualifier_pattern = r"(진공파손|파손|상이품|반품)"
+    qualifier_pattern = r"(진공파손|파손|상이품|반품|검품)"
     extracted = df["수탁품"].astype(str).str.extract(qualifier_pattern)[0]
     has_qualifier = extracted.notna()
     df.loc[has_qualifier, "수탁품"] = (
