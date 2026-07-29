@@ -13,7 +13,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.combining import OrTrigger
 
 from pipeline.crawler import CrawlerPool
-from pipeline.mysql_updater import MySQLUpdater
+from pipeline.mysql_updater import MySQLUpdater, _diff_fields
 from pipeline.snapshot import Snapshot
 
 # stdout UTF-8 강제 (Windows 콘솔 CP949 대응)
@@ -224,6 +224,8 @@ def _upload_azy(azy_df, warehouse_scope=None):
                 else:
                     data["상태"] = "없음"
                     data["메모"] = prev_memo
+
+            data["changed_fields"] = "__NEW__" if prev is None else _diff_fields(prev, data)
 
         stale_ids = [uid for uid in existing if uid not in rows]
 

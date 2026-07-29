@@ -610,6 +610,17 @@ th.sort-active {
     white-space: nowrap;
 }
 
+/* 신규 행 = 주황, 변경 행 = 파랑 (배경만 옅게 — 텍스트 가독성 유지) */
+.changes-row-new td { background: #fff1e0; }
+.changes-row-updated td { background: #e0edff; }
+
+/* 실제로 값이 바뀐 열만 굵고 크게 — 한눈에 어디가 바뀌었는지 보이게 */
+.changes-cell-changed {
+    font-weight: 800;
+    font-size: 16px;
+    color: #1e293b;
+}
+
 .logo-link {
     display: block;
     flex-shrink: 0;

@@ -645,6 +645,11 @@ export function renderChangesTab() {
         return `${d.getMonth() + 1}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
     };
 
+    // changed_fields: 파이프라인이 써준 값 — "__NEW__"(신규) / "상품명,재고"(변경된 열 목록) / ""(그 외, 수동 CRUD 등)
+    const CHANGED_COLS = ["상품명", "브랜드", "등급", "ESTNO", "재고", "BL", "창고"];
+    const cell = (changedSet, key, innerHtml) =>
+        `<td class="${changedSet.has(key) ? "changes-cell-changed" : ""}">${innerHtml}</td>`;
+
     let html = `<div class="changes-count">최근 24시간 신규/변경 ${rows.length}건</div>`;
     html += `
         <table class="changes-table">
@@ -655,18 +660,25 @@ export function renderChangesTab() {
                 </tr>
             </thead>
             <tbody>
-                ${rows.map(({ item, t }) => `
-                    <tr>
-                        <td>${safeValue(item.상품명)}</td>
-                        <td>${safeValue(item.브랜드)}</td>
-                        <td>${safeValue(item.등급)}</td>
-                        <td>${safeValue(item.ESTNO)}</td>
-                        <td>${safeValue(item.재고)}</td>
-                        <td>${safeValue(item.BL)}</td>
-                        <td>${whTag(item.창고)}</td>
-                        <td>${fmt(t)}</td>
-                    </tr>
-                `).join("") || `
+                ${rows.map(({ item, t }) => {
+                    const isNew = item.changed_fields === "__NEW__";
+                    const changedSet = !isNew && item.changed_fields
+                        ? new Set(item.changed_fields.split(",").filter(Boolean))
+                        : new Set();
+                    const rowCls = isNew ? "changes-row-new" : (item.changed_fields ? "changes-row-updated" : "");
+                    return `
+                        <tr class="${rowCls}">
+                            ${cell(changedSet, "상품명", safeValue(item.상품명))}
+                            ${cell(changedSet, "브랜드", safeValue(item.브랜드))}
+                            ${cell(changedSet, "등급", safeValue(item.등급))}
+                            ${cell(changedSet, "ESTNO", safeValue(item.ESTNO))}
+                            ${cell(changedSet, "재고", safeValue(item.재고))}
+                            ${cell(changedSet, "BL", safeValue(item.BL))}
+                            ${cell(changedSet, "창고", whTag(item.창고))}
+                            <td>${fmt(t)}</td>
+                        </tr>
+                    `;
+                }).join("") || `
                     <tr><td colspan="8" style="text-align:center; padding:40px; color:#9ca3af;">최근 24시간 내 변경 없음</td></tr>
                 `}
             </tbody>

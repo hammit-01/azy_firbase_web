@@ -138,7 +138,7 @@ def upsert_inventory(conn, rows: list[dict]):
         return
     cols = ["id","pk","상품명","브랜드","등급","ESTNO","재고","BL","창고",
             "유통기한","중량","평중","출고일","홀딩","상태","메모","수집일",
-            "holdingTotal","holdingRecordId","이상","원본재고"]
+            "holdingTotal","holdingRecordId","이상","원본재고","changed_fields"]
     placeholders = ", ".join(["%s"] * len(cols))
     col_names    = ", ".join([f"`{c}`" for c in cols])
     update_part  = ", ".join([f"`{c}`=VALUES(`{c}`)" for c in cols if c != "id"])
@@ -248,7 +248,7 @@ def upsert_azy_inventory(conn, rows: list[dict]):
         return
     cols = ["id","pk","상품명","브랜드","등급","ESTNO","재고","BL","창고",
             "유통기한","중량","평중","출고일","홀딩","상태","메모","수집일",
-            "holdingTotal","holdingRecordId","이상","원본재고"]
+            "holdingTotal","holdingRecordId","이상","원본재고","changed_fields"]
     placeholders = ", ".join(["%s"] * len(cols))
     col_names    = ", ".join([f"`{c}`" for c in cols])
     update_part  = ", ".join([f"`{c}`=VALUES(`{c}`)" for c in cols if c != "id"])
