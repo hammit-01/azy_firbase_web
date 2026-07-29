@@ -87,6 +87,7 @@ _ESTNO_FORCE_RULES = [
 # (상품명/브랜드 조건, 붙일 접두어) — ESTNO가 순수 숫자일 때만 적용
 _ESTNO_PREFIX_RULES = [
     (lambda row: row.get("상품명") in ("닭장각", "닭장각정육"), "SIF"),
+    (lambda row: row.get("상품명") == "안창살" and row.get("브랜드") == "GREENLEA", "ME"),
 ]
 
 def sync_estno_prefix(row: dict) -> dict:

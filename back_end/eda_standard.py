@@ -3,6 +3,17 @@ from datetime import date
 
 
 def eda_standard(df):
+    # 제니스(곤지암): 수탁품이 "삼겹(4P)"처럼 상품명 뒤에 괄호 등급이 붙어서 오는 경우가
+    # 많음(소갈비(T), 벌집목살(0055), 깐양(20KG) 등 다수 확인) — 상품명과 등급을 분리한다.
+    jns_paren_mask = (
+        (df["창고"] == "제니스(곤지암)") &
+        df["수탁품"].astype(str).str.match(r"^.+\([A-Za-z0-9]+\)$")
+    )
+    if jns_paren_mask.any():
+        extracted = df.loc[jns_paren_mask, "수탁품"].astype(str).str.extract(r"^(.+)\(([A-Za-z0-9]+)\)$")
+        df.loc[jns_paren_mask, "수탁품"] = extracted[0].str.strip()
+        df.loc[jns_paren_mask, "등급"] = extracted[1]
+
     # ── 등급 정규화 ───────────────────────────────────────────────────
     df.loc[
         (df["브랜드"] == "EXCEL") &
@@ -101,6 +112,15 @@ def eda_standard(df):
         .str.strip()
         .replace({"nan": "", "None": ""})
     )
+
+    # 곤(지암)권역 창고: 삼겹/TONNIES인데 등급이 없으면 3P로 채움
+    tonnies_mask = (
+        df["창고"].astype(str).str.startswith("곤") &
+        (df["수탁품"] == "삼겹") &
+        (df["브랜드"] == "TONNIES") &
+        (df["등급"] == "")
+    )
+    df.loc[tonnies_mask, "등급"] = "3P"
 
     # ESTNO "PDTO" 제거
     df["ESTNO"] = (
