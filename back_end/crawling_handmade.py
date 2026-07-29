@@ -549,8 +549,8 @@ def parse_product_yousang(text):
     # 수탁품 추출
     product_match = re.match(r'^([가-힣A-Za-z]+)', text)
 
-    # E.숫자 추출
-    estno_match = re.search(r'E\.(\d+)', text)
+    # E.숫자(+뒤에 붙는 문자, 예: E.245E -> 245E) 추출
+    estno_match = re.search(r'E\.(\d+[A-Za-z]*)', text)
 
     return pd.Series({
         '수탁품': product_match.group(1) if product_match else None,
