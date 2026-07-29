@@ -79,14 +79,24 @@ def sync_freeze(row: dict) -> dict:
 
 _ESTNO_DIGIT_RE = re.compile(r'^\d+$')
 
+# (상품명/브랜드 조건, 고정 ESTNO) — 원본 ESTNO가 비어있든 숫자든 무조건 이 값으로 덮어씀
+_ESTNO_FORCE_RULES = [
+    (lambda row: row.get("상품명") == "곱창" and row.get("브랜드") == "AMP", "ME103"),
+]
+
 # (상품명/브랜드 조건, 붙일 접두어) — ESTNO가 순수 숫자일 때만 적용
 _ESTNO_PREFIX_RULES = [
-    (lambda row: row.get("상품명") == "곱창" and row.get("브랜드") == "AMP", "ME"),
     (lambda row: row.get("상품명") in ("닭장각", "닭장각정육"), "SIF"),
 ]
 
 def sync_estno_prefix(row: dict) -> dict:
-    """상품명/브랜드 조합에 따라 ESTNO가 순수 숫자면 정해진 접두어를 붙인다."""
+    """상품명/브랜드 조합에 따라 ESTNO를 고정값으로 맞추거나(FORCE),
+    원본이 순수 숫자일 때만 정해진 접두어를 붙인다(PREFIX)."""
+    for condition, value in _ESTNO_FORCE_RULES:
+        if condition(row):
+            row["ESTNO"] = value
+            return row
+
     estno = str(row.get("ESTNO") or "").strip()
     if not estno or not _ESTNO_DIGIT_RE.match(estno):
         return row
