@@ -227,7 +227,7 @@ def korea_eda():
         print("[고려냉장] 데이터 없음")
         return pd.DataFrame()
 
-    # 컬럼: 1=수탁품목, 2=규격, 7=재고수량, 14=B/L No, 21=유효일자
+    # 컬럼: 1=수탁품목, 2=규격, 7=재고수량, 14=B/L No, 17=브랜드, 19=가공공장, 21=유효일자
     korea = pd.DataFrame()
     korea["수탁품"] = [r[1] if len(r) > 1 else "" for r in records]
     korea["평균중량"] = [r[2] if len(r) > 2 else "" for r in records]
@@ -237,10 +237,14 @@ def korea_eda():
     korea["창고"] = "고려"
 
     korea["브랜드"] = [r[17] if len(r) > 17 else "" for r in records]
+    # ESTNO: 원본 사이트의 "가공공장" 열 값을 그대로 사용 (수탁품 텍스트엔 ESTNO 정보가 없음)
+    korea["ESTNO"] = [r[19] if len(r) > 19 else "" for r in records]
     korea = korea.dropna(subset=["수탁품"])
     if korea.empty:
         return pd.DataFrame()
-    korea[["수탁품", "등급", "ESTNO"]] = korea["수탁품"].apply(_parse_korea_web)
+    parsed = korea["수탁품"].apply(_parse_korea_web)
+    korea["수탁품"] = parsed["수탁품"]
+    korea["등급"] = parsed["등급"]
 
     return korea
 
