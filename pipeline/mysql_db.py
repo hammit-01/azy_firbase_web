@@ -256,6 +256,53 @@ def sync_moving_inventory(conn, rows: list[dict]):
             cur.executemany(sql, data)
 
 
+_MOVING_MATCH_COLS = ("상품명", "브랜드", "등급", "ESTNO", "BL")
+
+
+def _table_for_warehouse(warehouse: str) -> str:
+    # JNS(제니스) 하위창고는 전부 "곤" 접두 — inventory 테이블, 그 외 타창고는 azy_inventory
+    return "inventory" if str(warehouse or "").startswith("곤") else "azy_inventory"
+
+
+def apply_moving_deductions(conn, moving_rows: list[dict]) -> list[dict]:
+    """moving_inventory 행을 상품명/브랜드/등급/ESTNO/BL 기준으로 처리한다.
+
+    1) 이동창고(도착지) 쪽에 이미 같은 조건으로 재고가 이고 수량 이상 들어와 있으면
+       "입고 완료"로 보고 이 행을 결과에서 제외한다 (호출부가 moving_inventory에서
+       빼는 데 씀 — 이고분 취합 시트 체크박스가 안 풀려도 우리 쪽 표시에선 사라짐).
+    2) 아직 미입고인 나머지 행은 출고창고(곤 접두 → inventory, 그 외 → azy_inventory)의
+       매칭 재고에서 이고 수량만큼 뺀다 — 홀딩과 동일하게 매 사이클 다시 계산되는
+       방식이라 별도 이력 테이블 없이 여기서 매번 다시 적용한다.
+
+    반환값: 아직 미입고라 moving_inventory에 그대로 남겨야 하는 행 목록.
+    """
+    def _matched_qty(cur, table, row, warehouse):
+        where = " AND ".join(f"{c}=%s" for c in _MOVING_MATCH_COLS) + " AND 창고=%s"
+        params = tuple(row[c] for c in _MOVING_MATCH_COLS) + (warehouse,)
+        cur.execute(f"SELECT COALESCE(SUM(재고), 0) AS qty FROM {table} WHERE {where}", params)
+        return int(cur.fetchone()["qty"] or 0)
+
+    remaining = []
+    with conn.cursor() as cur:
+        for row in moving_rows:
+            dest_table = _table_for_warehouse(row["이동창고"])
+            arrived_qty = _matched_qty(cur, dest_table, row, row["이동창고"])
+            if arrived_qty >= row["재고"]:
+                continue  # 입고 완료 — 이 이고 항목은 더 이상 표시 안 함
+            remaining.append(row)
+
+        for row in remaining:
+            src_table = _table_for_warehouse(row["출고창고"])
+            where = " AND ".join(f"{c}=%s" for c in _MOVING_MATCH_COLS) + " AND 창고=%s"
+            params = (row["재고"],) + tuple(row[c] for c in _MOVING_MATCH_COLS) + (row["출고창고"],)
+            cur.execute(
+                f"UPDATE {src_table} SET 재고 = GREATEST(재고 - %s, 0) WHERE {where}",
+                params,
+            )
+
+    return remaining
+
+
 def upsert_azy_holding_record(conn, rec: dict):
     cols = ["id","pk","BL","ESTNO","등급","수량","홀딩","출고일","메모","uid","홀딩일자"]
     placeholders = ", ".join(["%s"] * len(cols))

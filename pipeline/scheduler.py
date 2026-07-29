@@ -251,17 +251,6 @@ def run_pipeline():
             if failed:
                 log.warning(f"실패 창고: {', '.join(failed)}")
 
-            # 1-1. 이고(창고이동) 취합 시트 → moving_inventory 동기화 — azy_normalized와
-            # 무관하게 독립 실행(크롤 결과가 비어도 이고 동기화는 계속 돌아야 함)
-            try:
-                from pipeline.moving_reader import load_moving_rows
-                from pipeline.mysql_db import get_conn as _get_conn, sync_moving_inventory
-                moving_rows = load_moving_rows()
-                with _get_conn() as conn:
-                    sync_moving_inventory(conn, moving_rows)
-            except Exception as e:
-                log.warning(f"이고 동기화 실패: {e}")
-
             # 2. 정규화 (타창고 → azy_inventory. JNS는 어차피 crawl_all에서 빠졌으니 빈 값)
             _normalized, azy_normalized = crawler.normalize(results)
             if azy_normalized.empty:
@@ -270,6 +259,21 @@ def run_pipeline():
 
             # 3. azy_inventory 업데이트
             _upload_azy(azy_normalized)
+
+            # 3-1. 이고(창고이동) 취합 시트 → moving_inventory 동기화 + 재고 반영.
+            # azy_inventory에 이번 사이클 최신 재고가 막 반영된 직후에 돌려야
+            # 이고 차감이 이번 크롤로 곧바로 덮어써지지 않는다(다음 사이클까지 안 밀림).
+            # 1) 이동창고에 이미 이고 수량만큼 입고돼 있으면 그 행은 제외(입고 완료).
+            # 2) 남은(미입고) 행만 출고창고 쪽 재고에서 차감 — 홀딩처럼 매 사이클 재계산.
+            try:
+                from pipeline.moving_reader import load_moving_rows
+                from pipeline.mysql_db import get_conn as _get_conn, sync_moving_inventory, apply_moving_deductions
+                moving_rows = load_moving_rows()
+                with _get_conn() as conn:
+                    remaining_rows = apply_moving_deductions(conn, moving_rows)
+                    sync_moving_inventory(conn, remaining_rows)
+            except Exception as e:
+                log.warning(f"이고 동기화 실패: {e}")
 
         elapsed = time.time() - start
         log.info(f"완료 | azy {len(azy_normalized)}건 | {elapsed:.1f}초 소요")
