@@ -71,7 +71,10 @@ class MySQLUpdater:
             elif _row_sig(db_prev) != _row_sig(data):
                 merged = {**data}
                 for f in _PRESERVE_ON_UPDATE:
-                    if f in db_prev:
+                    # db_prev 값이 비어있으면 보존하지 않고 새 크롤/파싱 결과를 그대로 씀 —
+                    # 안 그러면 원래 비어있거나 잘못 들어간 값이 영원히 안 고쳐짐
+                    # (2026-07-29, eda_standard 파싱 개선이 기존 행엔 전혀 안 먹던 사고).
+                    if db_prev.get(f) not in (None, ""):
                         merged[f] = db_prev[f]
                 merged["홀딩"] = db_prev.get("홀딩", "")
                 merged["상태"] = db_prev.get("상태", "없음")
