@@ -15,6 +15,7 @@ _COL = {
     "estno":        "EST",
     "qty":          "수량",
     "bl":           "BL",
+    "warehouse":    "출고창고",
     "to_warehouse": "이고창고",
 }
 
@@ -67,6 +68,7 @@ def load_moving_rows() -> list[dict]:
             "ESTNO":  str(row.get(_COL["estno"], "") or "").strip(),
             "재고":    qty,
             "BL":     str(row.get(_COL["bl"], "") or "").strip(),
+            "출고창고": str(row.get(_COL["warehouse"], "") or "").strip(),
             "이동창고": str(row.get(_COL["to_warehouse"], "") or "").strip(),
         })
 

@@ -245,7 +245,7 @@ def delete_azy_inventory(conn, ids: list[str]):
 def sync_moving_inventory(conn, rows: list[dict]):
     """이고(창고이동) 취합 시트 → moving_inventory 통째로 교체.
     이 테이블은 '오늘' 상태만 보여주는 용도라 매 사이클 전체 삭제 후 다시 채운다."""
-    cols = ["id", "상품명", "브랜드", "등급", "ESTNO", "재고", "BL", "이동창고"]
+    cols = ["id", "상품명", "브랜드", "등급", "ESTNO", "재고", "BL", "출고창고", "이동창고"]
     with conn.cursor() as cur:
         cur.execute("DELETE FROM moving_inventory")
         if rows:
