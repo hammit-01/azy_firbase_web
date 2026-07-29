@@ -114,6 +114,7 @@ export function bindEvents() {
 
         const checkbox = target.querySelector(".row-check");
         if (!checkbox) return;
+        if (checkbox.disabled) return; // 이고(moving) 행 등 선택 금지된 행은 더블클릭으로도 선택 못 하게
 
         const id = checkbox.dataset.id;
         const item = state.allData.find(d => d.id === id);
