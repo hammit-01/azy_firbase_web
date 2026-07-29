@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd
 import requests
 
-from back_end.crawling_list import login, get_data, get_users, PROCESS_MAP, USER_AGENT
+from back_end.crawling_list import login, get_data, get_users, PROCESS_MAP, USER_AGENT, get_eastbelly_brand_map
 from back_end.back_eda_main import list_eda
 
 log = logging.getLogger("crawler")
@@ -81,6 +81,12 @@ def _crawl_single_row(row: pd.Series, session_cache: dict, cache_lock: threading
 
             if data is None or data.empty:
                 continue
+
+            if warehouse == "이스트밸리" and "B/L NO,식별번호" in data.columns:
+                # 기본 재고조회(rtv_stock.do)에는 브랜드 컬럼이 없어서 브랜드가 있는
+                # 별도 화면(rtv_stock02.do)을 한 번 더 조회해 B/L No+식별번호로 매칭해 채운다.
+                brand_map = get_eastbelly_brand_map(session, scustcd, scmdept)
+                data["브랜드"] = data["B/L NO,식별번호"].map(brand_map).fillna("")
 
             # drop_duplicates() 금지: 동일 BL/수량/유통기한이라도 별도 로트인 경우가 있음
             # (#012와 동일한 유형의 버그 — 뒤 단계의 pk/uid 기준 groupby+합산이 중복을 처리하므로

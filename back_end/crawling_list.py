@@ -1,3 +1,4 @@
+import re
 from bs4 import BeautifulSoup
 import pandas as pd
 from back_end.eda_common import eda_common
@@ -244,6 +245,50 @@ def get_data(session, ip_port, path, scustcd, scmdept, warehouse, date=None):
     except Exception as e:
         print(f"데이터 수집 실패: {e}")
         return pd.DataFrame()
+
+
+def get_eastbelly_brand_map(session, scustcd, scmdept) -> dict:
+    """이스트밸리 전용 — rtv_stock.do(기본 재고조회)에는 브랜드 컬럼이 없어서,
+    브랜드가 있는 rtv_stock02.do(nav_num=0107)를 별도로 조회해 "B/L No+식별번호" 키로
+    매핑을 만든다. 값 형식이 "IBP (N)", "OLYMEL(270A)" 처럼 브랜드명 뒤에 괄호가
+    붙어있어 괄호 부분은 제거하고 브랜드명만 남긴다."""
+    url = "http://nwill.net:8080/estdst/rtv_stock02.do"
+    payload = {
+        "nav_num": "0107",
+        "scmdept": scmdept if pd.notna(scmdept) else "00",
+        "swms_cd": "",
+        "scustcd": scustcd,
+        "pmname": "",
+        "blno": "",
+        "dt": pd.Timestamp.now().strftime("%Y%m%d"),
+        "pass_fg": "*",
+    }
+    try:
+        res = session.post(url, data=payload, timeout=15)
+        res.raise_for_status()
+        soup = BeautifulSoup(res.text, "html.parser")
+        header_row = soup.select_one("thead tr")
+        if not header_row:
+            return {}
+        headers = [th.get_text(strip=True) for th in header_row.find_all(["th", "td"])]
+        if "B/L NO" not in headers or "식별번호" not in headers or "브랜드" not in headers:
+            return {}
+        bl_idx, id_idx, brand_idx = headers.index("B/L NO"), headers.index("식별번호"), headers.index("브랜드")
+
+        result = {}
+        for row in soup.select("tbody tr"):
+            cells = [td.get_text(strip=True) for td in row.find_all("td")]
+            if len(cells) <= max(bl_idx, id_idx, brand_idx):
+                continue
+            key = cells[bl_idx] + cells[id_idx]
+            brand = re.sub(r"\(.*?\)", "", cells[brand_idx]).strip()
+            if key and brand:
+                result[key] = brand
+        return result
+    except Exception as e:
+        print(f"[이스트밸리] 브랜드 조회 실패: {e}")
+        return {}
+
 
 PROCESS_MAP = {
     "베이지박스투": beige,

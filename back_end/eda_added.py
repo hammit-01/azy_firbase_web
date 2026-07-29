@@ -81,10 +81,13 @@ def eastbelly(data):
     )
 
     df["기타정보"] = df["기타정보"].str.replace(r"\[.*?\]", "", regex=True)
-    
+
     df["등급"] = df["기타정보"].str.extract(r"([A-Z]+)")
 
-    df["브랜드"] = ""
+    # 브랜드는 rtv_stock.do 자체엔 없어서 crawler.py가 rtv_stock02.do에서 별도로
+    # 조회해 채워둔 값을 그대로 씀(괄호 부분은 거기서 이미 제거됨) — 매칭 실패한
+    # 행만 빈 값으로 남음
+    df["브랜드"] = df["브랜드"].fillna("") if "브랜드" in df.columns else ""
 
     df = df.drop(
         columns=[
