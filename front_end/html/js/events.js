@@ -1,5 +1,5 @@
 import { state } from "./state.js";
-import { renderTable, updateSortHeaders, renderBulkActionBar } from "./table.js";
+import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab } from "./table.js";
 import { renderSelectData, renderInsert, createInsertRow } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
@@ -10,6 +10,17 @@ import { fetchAllData } from "./firebase.js";
 import { showToast, showError, showConfirm } from "./ui.js";
 
 export function bindEvents() {
+
+    // 화면 맨 위(고정 헤더) 빈 공간 클릭 시 테이블 스크롤 맨 위로 — 버튼/입력 등
+    // 실제 컨트롤을 클릭한 경우는 그쪽 핸들러가 처리하니 헤더 배경 자체를 클릭했을 때만 동작
+    const stickyHeader = document.querySelector(".sticky-header");
+    const tableContainer = document.querySelector(".table-container");
+    if (stickyHeader && tableContainer) {
+        stickyHeader.addEventListener("click", (e) => {
+            if (e.target !== stickyHeader) return;
+            tableContainer.scrollTo({ top: 0, behavior: "smooth" });
+        });
+    }
 
     // 출고일·홀딩 hover 카드
     const hoverCard = document.createElement("div");
@@ -260,6 +271,19 @@ async function handleClick(e) {
         if (state.selectedItems.size === 0) { showError("홀딩할 상품을 선택하세요."); return; }
         state.crudData = state.crudData === "holding" ? null : "holding";
         renderTable();
+        return;
+    }
+
+    // 업데이트 탭 — 최근 24시간 신규/변경 데이터만 모아보기 (테이블과 서로 배타적으로 토글)
+    if (e.target.classList.contains("changes-tab-btn")) {
+        const tableContainer = document.querySelector(".table-container");
+        const changesContainer = document.querySelector(".changes-container");
+        if (!tableContainer || !changesContainer) return;
+        const opening = changesContainer.style.display === "none";
+        changesContainer.style.display = opening ? "" : "none";
+        tableContainer.style.display = opening ? "none" : "";
+        e.target.classList.toggle("active", opening);
+        if (opening) renderChangesTab();
         return;
     }
 

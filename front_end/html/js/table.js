@@ -308,12 +308,12 @@ export function renderTableSize(count, size, mean) {
             <div class="table_size_main"></div>
             <div class="table_size_weight"></div>
             <div class="selection-summary"></div>
-            <span class="table_size_updated"></span>
         `;
         mainEl = container.querySelector(".table_size_main");
     }
     const weightEl = container.querySelector(".table_size_weight");
-    const updatedEl = container.querySelector(".table_size_updated");
+    // 로그인 박스 밑에 고정 배치된 엘리먼트 — .table_size 컨테이너 밖에 있어 전역 조회
+    const updatedEl = document.querySelector(".table_size_updated");
 
     const timestamps = state.allData
         .map(item => item.updated_at)
@@ -616,6 +616,64 @@ export function renderTable() {
         totalWeight,
         mean
     );
+
+    renderChangesTab();
+}
+
+// =========================
+// 업데이트(신규/갱신) 탭 — updated_at이 최근 24시간 이내인 행만 모아 보여줌
+// (moving_inventory에서 온 행은 updated_at이 없고 매 사이클 통째로 갈아끼우는
+// 데이터라 "신규/갱신" 의미가 없으므로 제외)
+// =========================
+const CHANGES_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+export function renderChangesTab() {
+    const container = document.querySelector(".changes-container");
+    const listEl = document.getElementById("changes-list");
+    if (!container || !listEl || container.style.display === "none") return;
+
+    const now = Date.now();
+    const rows = state.allData
+        .filter(item => !item._isMoving && item.updated_at)
+        .map(item => ({ item, t: new Date(item.updated_at).getTime() }))
+        .filter(({ t }) => !isNaN(t) && now - t <= CHANGES_WINDOW_MS)
+        .sort((a, b) => b.t - a.t);
+
+    const pad = n => String(n).padStart(2, "0");
+    const fmt = t => {
+        const d = new Date(t);
+        return `${d.getMonth() + 1}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
+    let html = `<div class="changes-count">최근 24시간 신규/변경 ${rows.length}건</div>`;
+    html += `
+        <table class="changes-table">
+            <thead>
+                <tr>
+                    <th>상품명</th><th>브랜드</th><th>등급</th><th>ESTNO</th>
+                    <th>재고</th><th>BL</th><th>창고</th><th>업데이트</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows.map(({ item, t }) => `
+                    <tr>
+                        <td>${safeValue(item.상품명)}</td>
+                        <td>${safeValue(item.브랜드)}</td>
+                        <td>${safeValue(item.등급)}</td>
+                        <td>${safeValue(item.ESTNO)}</td>
+                        <td>${safeValue(item.재고)}</td>
+                        <td>${safeValue(item.BL)}</td>
+                        <td>${whTag(item.창고)}</td>
+                        <td>${fmt(t)}</td>
+                    </tr>
+                `).join("") || `
+                    <tr><td colspan="8" style="text-align:center; padding:40px; color:#9ca3af;">최근 24시간 내 변경 없음</td></tr>
+                `}
+            </tbody>
+        </table>
+    `;
+
+    listEl.innerHTML = html;
 }
 
 
