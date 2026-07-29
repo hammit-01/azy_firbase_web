@@ -41,6 +41,8 @@ function normalizeMovingRow(r) {
         재고: r.재고,
         BL: r.BL,
         창고: r.이동창고,
+        메모: r.비고,
+        상태: r.상태,
     };
 }
 
