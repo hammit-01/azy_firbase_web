@@ -554,15 +554,21 @@ def parse_product_yousang(text):
     })
 
 
+_KOREA_WEB_NOT_GRADE = {"ACC"}  # 브랜드 코드인데 등급으로 잘못 뽑히던 것들 — 브랜드는 별도 컬럼에서 이미 채워짐
+
 def _parse_korea_web(text):
-    """고려냉장 웹 수탁품명 파싱: 대창(8788610)ACC → 대창, ACC등급"""
+    """고려/미빙냉장 웹 수탁품명 파싱: 대창(8788610)PS → 대창, PS등급.
+    끝에 붙은 대문자 코드가 등급이 아니라 브랜드 코드인 경우(ACC 등)는 등급으로 안 뽑음."""
     if pd.isna(text):
         return pd.Series({"수탁품": None, "등급": None, "ESTNO": None})
     text = str(text).strip()
     cleaned = re.sub(r"\(\d+\)", "", text).strip()
     m = re.match(r"^([가-힣\s]+)([A-Z/\-]+)$", cleaned)
     if m:
-        return pd.Series({"수탁품": m.group(1).strip(), "등급": m.group(2), "ESTNO": None})
+        grade = m.group(2)
+        if grade in _KOREA_WEB_NOT_GRADE:
+            grade = None
+        return pd.Series({"수탁품": m.group(1).strip(), "등급": grade, "ESTNO": None})
     return pd.Series({"수탁품": cleaned, "등급": None, "ESTNO": None})
 
 
