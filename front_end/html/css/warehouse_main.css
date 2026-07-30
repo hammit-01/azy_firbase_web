@@ -582,11 +582,28 @@ th.sort-active {
 }
 
 .changes-count {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     font-size: 15px;
     font-weight: 700;
     color: #475569;
     margin-bottom: 10px;
 }
+
+.changes-download-btn {
+    height: 30px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 7px;
+    background: #16a34a;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.changes-download-btn:hover { background: #15803d; }
 
 .changes-table {
     width: 100%;

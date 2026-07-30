@@ -625,6 +625,11 @@ export function renderTable() {
 // (moving_inventory에서 온 행은 updated_at이 없고 매 사이클 통째로 갈아끼우는
 // 데이터라 "신규/갱신" 의미가 없으므로 제외)
 // =========================
+let _lastChangesRows = [];
+export function getChangesTabRows() {
+    return _lastChangesRows;
+}
+
 export function renderChangesTab() {
     const container = document.querySelector(".changes-container");
     const listEl = document.getElementById("changes-list");
@@ -646,12 +651,20 @@ export function renderChangesTab() {
         return `${d.getMonth() + 1}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
     };
 
+    // 다운로드 버튼에서 그대로 쓸 수 있게 지금 화면에 뜬 행을 저장해둠
+    _lastChangesRows = rows.map(({ item, t }) => ({ ...item, _changesUpdatedAt: fmt(t) }));
+
     // changed_fields: 파이프라인이 써준 값 — "__NEW__"(신규) / "상품명,재고"(변경된 열 목록) / ""(그 외, 수동 CRUD 등)
     const CHANGED_COLS = ["상품명", "브랜드", "등급", "ESTNO", "재고", "BL", "창고"];
     const cell = (changedSet, key, innerHtml) =>
         `<td class="${changedSet.has(key) ? "changes-cell-changed" : ""}">${innerHtml}</td>`;
 
-    let html = `<div class="changes-count">오늘 신규/변경 ${rows.length}건</div>`;
+    let html = `
+        <div class="changes-count">
+            오늘 신규/변경 ${rows.length}건
+            <button class="changes-download-btn">엑셀 다운로드</button>
+        </div>
+    `;
     html += `
         <table class="changes-table">
             <thead>

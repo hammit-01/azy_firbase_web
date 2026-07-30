@@ -1,5 +1,5 @@
 import { state } from "./state.js";
-import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab } from "./table.js";
+import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows } from "./table.js";
 import { renderSelectData, renderInsert, createInsertRow } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
@@ -274,7 +274,7 @@ async function handleClick(e) {
         return;
     }
 
-    // 업데이트 탭 — 최근 24시간 신규/변경 데이터만 모아보기 (테이블과 서로 배타적으로 토글)
+    // 업데이트 탭 — 오늘 신규/변경 데이터만 모아보기 (테이블과 서로 배타적으로 토글)
     if (e.target.classList.contains("changes-tab-btn")) {
         const tableContainer = document.querySelector(".table-container");
         const changesContainer = document.querySelector(".changes-container");
@@ -284,6 +284,32 @@ async function handleClick(e) {
         tableContainer.style.display = opening ? "none" : "";
         e.target.classList.toggle("active", opening);
         if (opening) renderChangesTab();
+        return;
+    }
+
+    // 업데이트 탭 다운로드 — 지금 화면에 뜬 행을 CSV(엑셀 호환)로 내려받기
+    if (e.target.classList.contains("changes-download-btn")) {
+        const rows = getChangesTabRows();
+        const headers = ["구분", "상품명", "브랜드", "등급", "ESTNO", "재고", "BL", "창고", "업데이트"];
+        const esc = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+        const lines = [headers.map(esc).join(",")];
+        for (const item of rows) {
+            const gubun = item.changed_fields === "__NEW__" ? "신규" : "변경";
+            lines.push([
+                gubun, item.상품명, item.브랜드, item.등급, item.ESTNO,
+                item.재고, item.BL, item.창고, item._changesUpdatedAt,
+            ].map(esc).join(","));
+        }
+        const csv = "﻿" + lines.join("\r\n"); // BOM — 엑셀에서 한글 깨짐 방지
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const today = new Date();
+        const pad = n => String(n).padStart(2, "0");
+        a.href = url;
+        a.download = `업데이트_${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
         return;
     }
 
