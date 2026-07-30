@@ -621,22 +621,23 @@ export function renderTable() {
 }
 
 // =========================
-// 업데이트(신규/갱신) 탭 — updated_at이 최근 24시간 이내인 행만 모아 보여줌
+// 업데이트(신규/갱신) 탭 — updated_at이 오늘 날짜(자정 이후)인 행만 모아 보여줌
 // (moving_inventory에서 온 행은 updated_at이 없고 매 사이클 통째로 갈아끼우는
 // 데이터라 "신규/갱신" 의미가 없으므로 제외)
 // =========================
-const CHANGES_WINDOW_MS = 24 * 60 * 60 * 1000;
-
 export function renderChangesTab() {
     const container = document.querySelector(".changes-container");
     const listEl = document.getElementById("changes-list");
     if (!container || !listEl || container.style.display === "none") return;
 
-    const now = Date.now();
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayStartMs = todayStart.getTime();
+
     const rows = state.allData
         .filter(item => !item._isMoving && item.updated_at)
         .map(item => ({ item, t: new Date(item.updated_at).getTime() }))
-        .filter(({ t }) => !isNaN(t) && now - t <= CHANGES_WINDOW_MS)
+        .filter(({ t }) => !isNaN(t) && t >= todayStartMs)
         .sort((a, b) => b.t - a.t);
 
     const pad = n => String(n).padStart(2, "0");
@@ -650,7 +651,7 @@ export function renderChangesTab() {
     const cell = (changedSet, key, innerHtml) =>
         `<td class="${changedSet.has(key) ? "changes-cell-changed" : ""}">${innerHtml}</td>`;
 
-    let html = `<div class="changes-count">최근 24시간 신규/변경 ${rows.length}건</div>`;
+    let html = `<div class="changes-count">오늘 신규/변경 ${rows.length}건</div>`;
     html += `
         <table class="changes-table">
             <thead>
@@ -679,7 +680,7 @@ export function renderChangesTab() {
                         </tr>
                     `;
                 }).join("") || `
-                    <tr><td colspan="8" style="text-align:center; padding:40px; color:#9ca3af;">최근 24시간 내 변경 없음</td></tr>
+                    <tr><td colspan="8" style="text-align:center; padding:40px; color:#9ca3af;">오늘 변경 없음</td></tr>
                 `}
             </tbody>
         </table>
