@@ -194,7 +194,7 @@ def _upload_azy(azy_df, warehouse_scope=None):
             data["홀딩"] = prev.get("홀딩", "") if prev else ""
 
             if prev:
-                for f in ("상품명", "브랜드", "등급", "ESTNO", "평중", "유통기한", "출고일"):
+                for f in ("상품명", "브랜드", "등급", "ESTNO", "BL", "창고", "평중", "유통기한", "출고일"):
                     if prev.get(f) not in (None, ""):
                         data[f] = prev[f]
 
