@@ -588,7 +588,7 @@ def _finalize_handmade(result):
     )
 
     result["유통기한"] = (
-        pd.to_datetime(result["유통기한"])
+        pd.to_datetime(result["유통기한"], errors="coerce")
         .dt.strftime("%Y.%m.%d")
     )
     return result
