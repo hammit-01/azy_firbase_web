@@ -13,7 +13,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.combining import OrTrigger
 
 from pipeline.crawler import CrawlerPool
-from pipeline.mysql_updater import MySQLUpdater, _diff_fields
+from pipeline.mysql_updater import MySQLUpdater
 from pipeline.snapshot import Snapshot
 
 # stdout UTF-8 강제 (Windows 콘솔 CP949 대응)
@@ -195,9 +195,9 @@ def _upload_azy(azy_df, warehouse_scope=None):
 
             if prev:
                 # 재고는 절대 여기 넣지 않음 — 매 사이클 크롤 원본 기준으로 다시 계산돼야 함
-                # (2026-07-31: BL/창고는 여기 추가했지만 existing SELECT에 그 컬럼들이
-                # 빠져 있어서 prev.get()이 항상 None → 보존이 실제로는 한 번도 안 먹히고
-                # changed_fields만 매번 "BL,창고,재고"로 오검출되던 사고 — SELECT 쪽도 같이 수정함)
+                # (2026-07-31: BL/창고를 여기 추가했는데 existing SELECT에 그 컬럼들이
+                # 빠져있어서 prev.get()이 항상 None이라 실제로는 한 번도 안 먹히던 사고 —
+                # SELECT 쪽(위 existing 조회)에 BL/창고/재고 컬럼 추가로 같이 수정함)
                 for f in ("상품명", "브랜드", "등급", "ESTNO", "BL", "창고", "평중", "유통기한", "출고일"):
                     if prev.get(f) not in (None, ""):
                         data[f] = prev[f]
@@ -228,8 +228,6 @@ def _upload_azy(azy_df, warehouse_scope=None):
                 else:
                     data["상태"] = "없음"
                     data["메모"] = prev_memo
-
-            data["changed_fields"] = "__NEW__" if prev is None else _diff_fields(prev, data)
 
         stale_ids = [uid for uid in existing if uid not in rows]
 
@@ -382,6 +380,19 @@ def run_ace_pipeline():
         ace_log.error(f"에이스 파이프라인 오류: {e}", exc_info=True)
 
 
+def run_daily_snapshot():
+    """평일 장 마감(17:10) 직후 1회 — 오늘 최종 재고를 yesterday_* 테이블로 복사.
+    업데이트 탭이 다음날 이 스냅샷과 비교해서 "어제 대비 뭐가 바뀌었나"를 보여준다."""
+    log.info("일일 스냅샷(yesterday_inventory) 갱신 시작")
+    try:
+        from pipeline.mysql_db import get_conn, snapshot_daily
+        with get_conn() as conn:
+            snapshot_daily(conn)
+        log.info("일일 스냅샷 갱신 완료")
+    except Exception as e:
+        log.error(f"일일 스냅샷 갱신 실패: {e}", exc_info=True)
+
+
 def reset_changes_log():
     """changes_log 월간 초기화 — 매달 1일 자정에 통째로 비움."""
     log.info("changes_log 월간 초기화")
@@ -463,6 +474,13 @@ def main():
         reset_changes_log,
         CronTrigger(day=1, hour=0, minute=0, timezone="Asia/Seoul"),
         id="changes_log_reset",
+    )
+
+    # 평일 장 마감(17:10, 메인/JNS 17:00·에이스 16:59 마지막 실행 이후) 스냅샷
+    scheduler.add_job(
+        run_daily_snapshot,
+        CronTrigger(hour="17", minute="10", day_of_week="mon-fri", timezone="Asia/Seoul"),
+        id="daily_snapshot",
     )
 
     def _shutdown(signum, frame):

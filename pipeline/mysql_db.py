@@ -138,7 +138,7 @@ def upsert_inventory(conn, rows: list[dict]):
         return
     cols = ["id","pk","상품명","브랜드","등급","ESTNO","재고","BL","창고",
             "유통기한","중량","평중","출고일","홀딩","상태","메모","수집일",
-            "holdingTotal","holdingRecordId","이상","원본재고","changed_fields"]
+            "holdingTotal","holdingRecordId","이상","원본재고"]
     placeholders = ", ".join(["%s"] * len(cols))
     col_names    = ", ".join([f"`{c}`" for c in cols])
     update_part  = ", ".join([f"`{c}`=VALUES(`{c}`)" for c in cols if c != "id"])
@@ -248,7 +248,7 @@ def upsert_azy_inventory(conn, rows: list[dict]):
         return
     cols = ["id","pk","상품명","브랜드","등급","ESTNO","재고","BL","창고",
             "유통기한","중량","평중","출고일","홀딩","상태","메모","수집일",
-            "holdingTotal","holdingRecordId","이상","원본재고","changed_fields"]
+            "holdingTotal","holdingRecordId","이상","원본재고"]
     placeholders = ", ".join(["%s"] * len(cols))
     col_names    = ", ".join([f"`{c}`" for c in cols])
     update_part  = ", ".join([f"`{c}`=VALUES(`{c}`)" for c in cols if c != "id"])
@@ -265,6 +265,18 @@ def delete_azy_inventory(conn, ids: list[str]):
     placeholders = ", ".join(["%s"] * len(ids))
     with conn.cursor() as cur:
         cur.execute(f"DELETE FROM azy_inventory WHERE id IN ({placeholders})", ids)
+
+
+def snapshot_daily(conn):
+    """하루 마감 시점(평일 17:10)의 inventory/azy_inventory를 yesterday_* 테이블로
+    통째로 복사(교체) — 업데이트 탭이 다음날 "어제 대비 뭐가 바뀌었나"를 비교하는 기준.
+    inventory/azy_inventory 원본은 절대 건드리지 않는다(홀딩/동결/마스터필드 보존 상태가
+    거기 계속 살아있어야 함)."""
+    with conn.cursor() as cur:
+        cur.execute("TRUNCATE TABLE yesterday_inventory")
+        cur.execute("INSERT INTO yesterday_inventory SELECT * FROM inventory")
+        cur.execute("TRUNCATE TABLE yesterday_azy_inventory")
+        cur.execute("INSERT INTO yesterday_azy_inventory SELECT * FROM azy_inventory")
 
 
 def sync_moving_inventory(conn, rows: list[dict]):

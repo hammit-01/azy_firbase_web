@@ -274,7 +274,7 @@ async function handleClick(e) {
         return;
     }
 
-    // 업데이트 탭 — 오늘 신규/변경 데이터만 모아보기 (테이블과 서로 배타적으로 토글)
+    // 업데이트 탭 — 어제 마감 스냅샷 대비 신규/변경 데이터만 모아보기 (테이블과 서로 배타적으로 토글)
     if (e.target.classList.contains("changes-tab-btn")) {
         const tableContainer = document.querySelector(".table-container");
         const changesContainer = document.querySelector(".changes-container");
@@ -290,14 +290,14 @@ async function handleClick(e) {
     // 업데이트 탭 다운로드 — 지금 화면에 뜬 행을 CSV(엑셀 호환)로 내려받기
     if (e.target.classList.contains("changes-download-btn")) {
         const rows = getChangesTabRows();
-        const headers = ["구분", "상품명", "브랜드", "등급", "ESTNO", "재고", "BL", "창고", "업데이트"];
+        const headers = ["구분", "상품명", "브랜드", "등급", "ESTNO", "어제재고", "오늘재고", "BL", "창고"];
         const esc = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
         const lines = [headers.map(esc).join(",")];
         for (const item of rows) {
             const gubun = item.changed_fields === "__NEW__" ? "신규" : "변경";
             lines.push([
                 gubun, item.상품명, item.브랜드, item.등급, item.ESTNO,
-                item.재고, item.BL, item.창고, item._changesUpdatedAt,
+                item._prevQty, item.재고, item.BL, item.창고,
             ].map(esc).join(","));
         }
         const csv = "﻿" + lines.join("\r\n"); // BOM — 엑셀에서 한글 깨짐 방지

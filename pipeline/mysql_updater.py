@@ -16,13 +16,6 @@ log = logging.getLogger("mysql_updater")
 # 사용자가 UI에서 직접 고칠 수 있는 마스터 필드 — 기존 행이면 크롤값으로 덮어쓰지 않고 보존
 _PRESERVE_ON_UPDATE = ("상품명", "브랜드", "등급", "ESTNO", "BL", "창고", "유통기한", "평중", "출고일")
 
-# 업데이트 탭에서 "어떤 열이 바뀌었는지" 표시할 때 비교 대상 — 화면에 실제 보이는 필드만
-_DISPLAY_FIELDS = _PRESERVE_ON_UPDATE + ("재고", "메모")
-
-
-def _diff_fields(prev: dict, cur: dict) -> str:
-    return ",".join(f for f in _DISPLAY_FIELDS if str(prev.get(f) or "") != str(cur.get(f) or ""))
-
 
 class MySQLUpdater:
     def update_diff(self, new_df, prev_snapshot: dict) -> tuple:
@@ -81,8 +74,7 @@ class MySQLUpdater:
                 # 신규 행: 파손/상이품/반품·필수값 결측 자동 감지 결과를 초기 상태로 사용
                 auto_state = data.get("_auto_상태", "")
                 auto_memo  = data.get("_auto_메모", "")
-                to_insert[pk] = {**data, "홀딩": "", "상태": auto_state or "없음", "메모": auto_memo,
-                                  "changed_fields": "__NEW__"}
+                to_insert[pk] = {**data, "홀딩": "", "상태": auto_state or "없음", "메모": auto_memo}
             elif _row_sig(db_prev) != _row_sig(data):
                 merged = {**data}
                 for f in _PRESERVE_ON_UPDATE:
@@ -94,7 +86,6 @@ class MySQLUpdater:
                 merged["홀딩"] = db_prev.get("홀딩", "")
                 merged["상태"] = db_prev.get("상태", "없음")
                 merged["메모"] = db_prev.get("메모", "")
-                merged["changed_fields"] = _diff_fields(db_prev, merged)
                 to_update[pk] = merged
 
         for pk in db_snapshot:

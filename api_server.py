@@ -37,6 +37,15 @@ def get_inventory():
     return {"data": rows}
 
 
+@app.get("/api/yesterday_inventory")
+def get_yesterday_inventory():
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM yesterday_inventory")
+            rows = cur.fetchall()
+    return {"data": rows}
+
+
 @app.get("/api/employees")
 def get_employees():
     with get_conn() as conn:
@@ -185,6 +194,15 @@ def get_azy_inventory():
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM azy_inventory ORDER BY 상품명, 브랜드, 등급")
+            rows = cur.fetchall()
+    return {"data": rows}
+
+
+@app.get("/api/yesterday_azy_inventory")
+def get_yesterday_azy_inventory():
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM yesterday_azy_inventory")
             rows = cur.fetchall()
     return {"data": rows}
 

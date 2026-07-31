@@ -2,7 +2,7 @@
 import { state } from "./state.js";
 import { renderTable, renderWarehouseOptions } from "./table.js";
 import { renderSelectData } from "./panel.js";
-import { fetchAllInventory, fetchEmployees, fetchMovingInventory } from "./api.js";
+import { fetchAllInventory, fetchEmployees, fetchMovingInventory, fetchYesterdayInventory } from "./api.js";
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000; // 5분
 
@@ -49,6 +49,27 @@ function normalizeMovingRow(r) {
     };
 }
 
+// 업데이트 탭 비교 기준(어제 마감 스냅샷) 로드 — 실패해도 오늘 데이터 표시엔 지장 없게 조용히 무시
+async function loadYesterdaySnapshot() {
+    try {
+        const map = new Map();
+        if (window.__AZY_API_MODE) {
+            const rows = await fetchYesterdayInventory();
+            rows.forEach(r => map.set(`azy:${r.id}`, r));
+        } else {
+            const [mainRows, azyRows] = await Promise.all([
+                fetchYesterdayInventory(false),
+                fetchYesterdayInventory(true),
+            ]);
+            mainRows.forEach(r => map.set(`main:${r.id}`, r));
+            azyRows.forEach(r => map.set(`azy:${r.id}`, r));
+        }
+        state.yesterdayById = map;
+    } catch (e) {
+        console.warn("[API] yesterday_inventory 조회 실패:", e.message);
+    }
+}
+
 export async function fetchAllData() {
     try {
         let movingRows = [];
@@ -57,6 +78,8 @@ export async function fetchAllData() {
         } catch (e) {
             console.warn("[API] moving_inventory 조회 실패:", e.message);
         }
+
+        loadYesterdaySnapshot(); // 렌더를 막지 않게 병행 — 도착하면 다음 렌더부터 반영됨
 
         if (window.__AZY_API_MODE) {
             const rows = await fetchAllInventory();

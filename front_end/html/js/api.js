@@ -7,6 +7,7 @@ function _resolvePath(p, azy) {
     const useAzy = azy ?? window.__AZY_API_MODE;
     if (!useAzy) return p;
     return p
+        .replace(/^\/api\/yesterday_inventory/, "/api/yesterday_azy_inventory")
         .replace(/^\/api\/inventory/, "/api/azy_inventory")
         .replace(/^\/api\/holding_records/, "/api/azy_holding_records");
 }
@@ -24,6 +25,11 @@ export async function apiFetch(path, options = {}, azy) {
 
 export async function fetchAllInventory(azy) {
     const r = await apiFetch("/api/inventory", {}, azy);
+    return r.data;
+}
+
+export async function fetchYesterdayInventory(azy) {
+    const r = await apiFetch("/api/yesterday_inventory", {}, azy);
     return r.data;
 }
 

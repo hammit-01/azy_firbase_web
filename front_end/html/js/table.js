@@ -621,10 +621,12 @@ export function renderTable() {
 }
 
 // =========================
-// 업데이트(신규/갱신) 탭 — updated_at이 오늘 날짜(자정 이후)인 행만 모아 보여줌
-// (moving_inventory에서 온 행은 updated_at이 없고 매 사이클 통째로 갈아끼우는
-// 데이터라 "신규/갱신" 의미가 없으므로 제외)
+// 업데이트(신규/갱신) 탭 — 어제 마감 스냅샷(state.yesterdayById)과 지금 데이터를
+// 직접 비교해서 신규/변경된 행만 모아 보여줌. moving_inventory 행은 매 사이클
+// 통째로 갈아끼우는 데이터라 "신규/갱신" 개념이 안 맞으므로 제외.
 // =========================
+const _COMPARE_FIELDS = ["상품명", "브랜드", "등급", "ESTNO", "BL", "창고", "유통기한", "평중", "출고일", "재고", "메모"];
+
 let _lastChangesRows = [];
 export function getChangesTabRows() {
     return _lastChangesRows;
@@ -635,33 +637,45 @@ export function renderChangesTab() {
     const listEl = document.getElementById("changes-list");
     if (!container || !listEl || container.style.display === "none") return;
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayStartMs = todayStart.getTime();
+    const results = [];
+    for (const item of state.allData) {
+        if (item._isMoving) continue;
+        const prev = state.yesterdayById.get(`${item._source}:${item._rawId}`);
+        if (!prev) {
+            results.push({ item, prev: null, isNew: true, changedSet: new Set() });
+            continue;
+        }
+        const changedSet = new Set(
+            _COMPARE_FIELDS.filter(f => String(prev[f] ?? "") !== String(item[f] ?? ""))
+        );
+        if (changedSet.size > 0) {
+            results.push({ item, prev, isNew: false, changedSet });
+        }
+    }
 
-    const rows = state.allData
-        .filter(item => !item._isMoving && item.updated_at)
-        .map(item => ({ item, t: new Date(item.updated_at).getTime() }))
-        .filter(({ t }) => !isNaN(t) && t >= todayStartMs)
-        .sort((a, b) => b.t - a.t);
-
-    const pad = n => String(n).padStart(2, "0");
-    const fmt = t => {
-        const d = new Date(t);
-        return `${d.getMonth() + 1}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    };
+    // 신규 먼저, 그다음 상품명 가나다순
+    results.sort((a, b) => (b.isNew - a.isNew) || String(a.item.상품명 ?? "").localeCompare(String(b.item.상품명 ?? ""), "ko"));
 
     // 다운로드 버튼에서 그대로 쓸 수 있게 지금 화면에 뜬 행을 저장해둠
-    _lastChangesRows = rows.map(({ item, t }) => ({ ...item, _changesUpdatedAt: fmt(t) }));
+    _lastChangesRows = results.map(({ item, prev, isNew }) => ({
+        ...item,
+        changed_fields: isNew ? "__NEW__" : "변경",
+        _prevQty: prev ? prev.재고 : "",
+    }));
 
-    // changed_fields: 파이프라인이 써준 값 — "__NEW__"(신규) / "상품명,재고"(변경된 열 목록) / ""(그 외, 수동 CRUD 등)
-    const CHANGED_COLS = ["상품명", "브랜드", "등급", "ESTNO", "재고", "BL", "창고"];
     const cell = (changedSet, key, innerHtml) =>
         `<td class="${changedSet.has(key) ? "changes-cell-changed" : ""}">${innerHtml}</td>`;
+    // 재고는 바뀐 경우 "이전값 → 현재값"으로 차이가 바로 보이게
+    const qtyCell = ({ item, prev, changedSet }) => {
+        if (changedSet.has("재고") && prev) {
+            return `<td class="changes-cell-changed">${safeValue(prev.재고)} → ${safeValue(item.재고)}</td>`;
+        }
+        return cell(changedSet, "재고", safeValue(item.재고));
+    };
 
     let html = `
         <div class="changes-count">
-            오늘 신규/변경 ${rows.length}건
+            어제 대비 신규/변경 ${results.length}건
             <button class="changes-download-btn">엑셀 다운로드</button>
         </div>
     `;
@@ -669,31 +683,28 @@ export function renderChangesTab() {
         <table class="changes-table">
             <thead>
                 <tr>
-                    <th>상품명</th><th>브랜드</th><th>등급</th><th>ESTNO</th>
-                    <th>재고</th><th>BL</th><th>창고</th><th>업데이트</th>
+                    <th>구분</th><th>상품명</th><th>브랜드</th><th>등급</th><th>ESTNO</th>
+                    <th>재고</th><th>BL</th><th>창고</th>
                 </tr>
             </thead>
             <tbody>
-                ${rows.map(({ item, t }) => {
-                    const isNew = item.changed_fields === "__NEW__";
-                    const changedSet = !isNew && item.changed_fields
-                        ? new Set(item.changed_fields.split(",").filter(Boolean))
-                        : new Set();
-                    const rowCls = isNew ? "changes-row-new" : (item.changed_fields ? "changes-row-updated" : "");
+                ${results.map(r => {
+                    const { item, isNew, changedSet } = r;
+                    const rowCls = isNew ? "changes-row-new" : "changes-row-updated";
                     return `
                         <tr class="${rowCls}">
+                            <td>${isNew ? "신규" : "변경"}</td>
                             ${cell(changedSet, "상품명", safeValue(item.상품명))}
                             ${cell(changedSet, "브랜드", safeValue(item.브랜드))}
                             ${cell(changedSet, "등급", safeValue(item.등급))}
                             ${cell(changedSet, "ESTNO", safeValue(item.ESTNO))}
-                            ${cell(changedSet, "재고", safeValue(item.재고))}
+                            ${qtyCell(r)}
                             ${cell(changedSet, "BL", safeValue(item.BL))}
                             ${cell(changedSet, "창고", whTag(item.창고))}
-                            <td>${fmt(t)}</td>
                         </tr>
                     `;
                 }).join("") || `
-                    <tr><td colspan="8" style="text-align:center; padding:40px; color:#9ca3af;">오늘 변경 없음</td></tr>
+                    <tr><td colspan="8" style="text-align:center; padding:40px; color:#9ca3af;">어제 대비 변경 없음</td></tr>
                 `}
             </tbody>
         </table>
