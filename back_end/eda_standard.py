@@ -15,7 +15,12 @@ def eda_standard(df):
     if jns_paren_mask.any():
         extracted = df.loc[jns_paren_mask, "수탁품"].astype(str).str.extract(r"^(.+)\(([A-Za-z0-9]+)\)$")
         df.loc[jns_paren_mask, "수탁품"] = extracted[0].str.strip()
-        df.loc[jns_paren_mask, "등급"] = extracted[1]
+        # 괄호 안 값은 "등급이 비어서 상품명에 붙어오는 경우"를 보정하려는 거라,
+        # 원본이 등급을 이미 따로 주는 상품(예: 조각탕갈비=UN)까지 덮어쓰면 안 됨 —
+        # 비어있을 때만 채운다 (2026-07-31, 조각탕갈비(MEATY)가 정상 등급 UN을
+        # 매 사이클 MEATY로 계속 덮어써서 헛갱신을 반복하던 사고 발견).
+        existing_grade = df.loc[jns_paren_mask, "등급"]
+        df.loc[jns_paren_mask, "등급"] = existing_grade.where(existing_grade.astype(str) != "", extracted[1])
 
     # ── 등급 정규화 ───────────────────────────────────────────────────
     df.loc[
