@@ -175,13 +175,13 @@ def _upload_azy(azy_df, warehouse_scope=None):
             if warehouse_scope:
                 placeholders = ", ".join(["%s"] * len(warehouse_scope))
                 cur.execute(
-                    "SELECT id, 홀딩, 상태, 메모, 상품명, 브랜드, 등급, ESTNO, 평중, 유통기한, 출고일 "
+                    "SELECT id, 홀딩, 상태, 메모, 상품명, 브랜드, 등급, ESTNO, BL, 창고, 재고, 평중, 유통기한, 출고일 "
                     f"FROM azy_inventory WHERE 수집일 != '' AND 창고 IN ({placeholders})",
                     tuple(warehouse_scope),
                 )
             else:
                 cur.execute(
-                    "SELECT id, 홀딩, 상태, 메모, 상품명, 브랜드, 등급, ESTNO, 평중, 유통기한, 출고일 "
+                    "SELECT id, 홀딩, 상태, 메모, 상품명, 브랜드, 등급, ESTNO, BL, 창고, 재고, 평중, 유통기한, 출고일 "
                     "FROM azy_inventory WHERE 수집일 != ''"
                 )
             existing = {row["id"]: row for row in cur.fetchall()}
@@ -194,6 +194,10 @@ def _upload_azy(azy_df, warehouse_scope=None):
             data["홀딩"] = prev.get("홀딩", "") if prev else ""
 
             if prev:
+                # 재고는 절대 여기 넣지 않음 — 매 사이클 크롤 원본 기준으로 다시 계산돼야 함
+                # (2026-07-31: BL/창고는 여기 추가했지만 existing SELECT에 그 컬럼들이
+                # 빠져 있어서 prev.get()이 항상 None → 보존이 실제로는 한 번도 안 먹히고
+                # changed_fields만 매번 "BL,창고,재고"로 오검출되던 사고 — SELECT 쪽도 같이 수정함)
                 for f in ("상품명", "브랜드", "등급", "ESTNO", "BL", "창고", "평중", "유통기한", "출고일"):
                     if prev.get(f) not in (None, ""):
                         data[f] = prev[f]
