@@ -77,6 +77,10 @@ class MySQLUpdater:
                 to_insert[pk] = {**data, "홀딩": "", "상태": auto_state or "없음", "메모": auto_memo,
                                   "changed_fields": "__NEW__"}
             elif _row_sig(db_prev) != _row_sig(data):
+                from pipeline.updater import COMPARE_FIELDS as _CF
+                _trigger = [f for f in _CF if str(db_prev.get(f) or "") != str(data.get(f) or "")]
+                log.info(f"  [진단-트리거] {str(data.get('상품명',''))[:15]} pk={pk[:25]} 트리거필드={_trigger} "
+                         f"prev={ {f: db_prev.get(f) for f in _trigger} } cur={ {f: data.get(f) for f in _trigger} }")
                 merged = {**data}
                 for f in _PRESERVE_ON_UPDATE:
                     # db_prev 값이 비어있으면 보존하지 않고 새 크롤/파싱 결과를 그대로 씀 —
