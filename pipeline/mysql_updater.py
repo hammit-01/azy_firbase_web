@@ -7,6 +7,7 @@ from pipeline.mysql_db import (
     get_conn, upsert_inventory, delete_inventory,
     get_holding_sum, get_holding_records_by_key,
     get_holding_rows_by_bl, get_employees, get_snapshot,
+    sync_freeze, sync_estno_prefix, sync_name_rename,
 )
 from pipeline.updater import _df_to_dict, _row_sig
 
@@ -69,6 +70,12 @@ class MySQLUpdater:
         to_delete = []
 
         for pk, data in new_data.items():
+            # ESTNO 강제규칙/상품명 치환규칙은 원래 upsert_inventory()에서 DB 쓰기 직전에만
+            # 적용됐는데, 그러면 크롤 원본(예: ESTNO "103")과 저장값(규칙 적용된 "ME103")이
+            # 매 사이클 달라 보여서 아래 _row_sig 비교가 영원히 "변경"으로 오판정하고 매번
+            # 헛돌며 재기록했다 — 비교 전에 먼저 규칙을 적용해 원본 쪽도 최종값으로 맞춘다
+            # (2026-07-31, [진단-트리거] 로그로 확인).
+            data = sync_name_rename(sync_estno_prefix(sync_freeze(data)))
             db_prev = db_snapshot.get(pk)
             if db_prev is None:
                 # 신규 행: 파손/상이품/반품·필수값 결측 자동 감지 결과를 초기 상태로 사용
@@ -77,10 +84,6 @@ class MySQLUpdater:
                 to_insert[pk] = {**data, "홀딩": "", "상태": auto_state or "없음", "메모": auto_memo,
                                   "changed_fields": "__NEW__"}
             elif _row_sig(db_prev) != _row_sig(data):
-                from pipeline.updater import COMPARE_FIELDS as _CF
-                _trigger = [f for f in _CF if str(db_prev.get(f) or "") != str(data.get(f) or "")]
-                log.info(f"  [진단-트리거] {str(data.get('상품명',''))[:15]} pk={pk[:25]} 트리거필드={_trigger} "
-                         f"prev={ {f: db_prev.get(f) for f in _trigger} } cur={ {f: data.get(f) for f in _trigger} }")
                 merged = {**data}
                 for f in _PRESERVE_ON_UPDATE:
                     # db_prev 값이 비어있으면 보존하지 않고 새 크롤/파싱 결과를 그대로 씀 —
