@@ -92,9 +92,11 @@ _ESTNO_PREFIX_RULES = [
 
 # 조건 만족 시 해당 행을 아예 저장하지 않음(신규 삽입 차단) — 기존에 이미 들어간 행은
 # 별도로 직접 DELETE 필요(이 필터는 앞으로 다시 안 들어오게만 막음)
-_EXCLUDE_RULES = [
-    lambda row: row.get("상품명") == "돈목뼈" and row.get("브랜드") == "SWIFT",
-]
+# (2026-07-29에 돈목뼈/SWIFT 특정 이상 배치 하나를 막으려고 상품명+브랜드로 걸었다가,
+# 2026-08-03에 같은 조건의 정상 신규 입고분(BL=ONEYRICGS0272500, 133개)까지
+# 통째로 막아버린 사고 발견 — 규칙 삭제. 앞으로 비슷한 요청이 오면 반드시 BL/ESTNO
+# 등 그 배치만 특정할 수 있는 조건으로 좁혀서 걸 것, 상품명+브랜드처럼 넓은 조건 금지)
+_EXCLUDE_RULES = []
 
 def is_excluded(row: dict) -> bool:
     return any(cond(row) for cond in _EXCLUDE_RULES)
