@@ -376,7 +376,21 @@ def run_ace_pipeline():
             ace_df = replace_name(ace_df)
             ace_df = eda_standard(ace_df)
             ace_df = replace_name(ace_df)
-            ace_df = ace_df.drop_duplicates().reset_index(drop=True)
+            # drop_duplicates()는 쓰지 않음: 서로 다른 로트가 상품/BL/재고수량/유통기한까지
+            # 우연히 완전히 같으면 한쪽이 통째로 삭제되어 박스 수가 조용히 손실된다
+            # (이 코드베이스 전역에서 금지하는 패턴 — back_eda_main.py의 azy_data와
+            # 동일하게 재고수량만 별도로 합산). 2026-08-03, 다른 창고들엔 이미 적용된
+            # 이 보호가 에이스 경로에만 빠져있던 걸 발견해 같이 맞춤.
+            if "재고수량" in ace_df.columns:
+                import pandas as _pd
+                ace_df["재고수량"] = _pd.to_numeric(
+                    ace_df["재고수량"].astype(str).str.replace(",", "", regex=False),
+                    errors="coerce"
+                ).fillna(0).astype(int)
+                group_cols = [c for c in ace_df.columns if c != "재고수량"]
+                ace_df = ace_df.groupby(group_cols, dropna=False, sort=False)["재고수량"].sum().reset_index()
+            else:
+                ace_df = ace_df.drop_duplicates().reset_index(drop=True)
 
             # 창고 하나(예: 용인)의 재고가 전부 빠져서 이번 크롤 결과에 그 창고 행이
             # 하나도 없으면, _upload_azy의 자동 scope(azy_df["창고"] 기준)가 그 창고를
