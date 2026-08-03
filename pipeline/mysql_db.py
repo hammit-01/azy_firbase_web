@@ -418,6 +418,78 @@ def apply_moving_deductions(conn, moving_rows: list[dict], deduct_targets=("inve
     return remaining
 
 
+def apply_holding_sheet(conn, holding_rows: list[dict]) -> dict:
+    """홀딩 취합 시트 행을 상품명/브랜드/등급/ESTNO/BL/창고로 소스 재고를 찾아
+    자동 홀딩 처리한다(프론트 "홀딩" 버튼과 동일하게: 소스 행 재고를 줄이거나
+    삭제하고, holding_records(또는 azy_holding_records)에 홀딩 기록을 남기고,
+    수집일=''/상태='holding'인 홀딩 표시 행을 새로 만든다).
+
+    한 시트 행이 매 사이클 다시 읽혀도 재고가 반복 차감되면 안 되므로, 시트 행
+    id(예: "20260803_1") 기반의 결정적 holding_records id로 "이미 처리했는지"를
+    판단해 한 번만 적용한다(2026-08-03, "홀딩" 시트 자동화 도입).
+    소스 행을 못 찾거나(0건/2건 이상 매칭) 재고가 모자라면 이번 사이클은
+    건너뛰고 다음 사이클에 다시 시도한다(아직 크롤이 안 따라잡았을 수 있음).
+
+    반환값: {"applied": [...], "skipped": [(row, 사유), ...]} — 호출부 로깅용.
+    """
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    applied, skipped = [], []
+    today_str = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y.%m.%d")
+
+    with conn.cursor() as cur:
+        for row in holding_rows:
+            table = _table_for_warehouse(row["창고"])
+            hr_table = "holding_records" if table == "inventory" else "azy_holding_records"
+            hold_id = f"sheet_{row['id']}"
+
+            cur.execute(f"SELECT id FROM {hr_table} WHERE id=%s", (hold_id,))
+            if cur.fetchone():
+                continue  # 이미 처리된 시트 행 — 재적용 안 함
+
+            cur.execute(
+                f"SELECT id, pk, 재고 FROM {table} WHERE 상품명=%s AND 브랜드=%s AND 등급=%s "
+                f"AND ESTNO=%s AND BL=%s AND 창고=%s AND 수집일 != ''",
+                (row["상품명"], row["브랜드"], row["등급"], row["ESTNO"], row["BL"], row["창고"]),
+            )
+            matches = cur.fetchall()
+            if len(matches) != 1:
+                skipped.append((row, f"매칭 {len(matches)}건"))
+                continue
+            src = matches[0]
+            if (src["재고"] or 0) < row["재고"]:
+                skipped.append((row, f"재고 부족(현재 {src['재고']})"))
+                continue
+
+            remain = (src["재고"] or 0) - row["재고"]
+            pk = src["pk"] or src["id"]
+
+            if remain <= 0:
+                cur.execute(f"DELETE FROM {table} WHERE id=%s", (src["id"],))
+            else:
+                cur.execute(f"UPDATE {table} SET 재고=%s WHERE id=%s", (remain, src["id"]))
+
+            cur.execute(
+                f"INSERT INTO {hr_table} (id, pk, BL, ESTNO, 등급, 수량, 홀딩, 출고일, 메모, uid, 홀딩일자) "
+                f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                (hold_id, pk, row["BL"], row["ESTNO"], row["등급"], row["재고"],
+                 row["거래처"], "", f"홀딩 시트 자동 처리 - {row['거래처']}", "sheet_auto", today_str),
+            )
+
+            hold_row_id = f"{pk}_{hold_id}"
+            cur.execute(
+                f"INSERT INTO {table} "
+                "(id, pk, 상품명, 브랜드, 등급, ESTNO, 재고, BL, 창고, 상태, 수집일, 홀딩, holdingRecordId) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,'holding','',%s,%s)",
+                (hold_row_id, pk, row["상품명"], row["브랜드"], row["등급"], row["ESTNO"],
+                 row["재고"], row["BL"], row["창고"], row["거래처"], hold_id),
+            )
+            applied.append(row)
+
+    return {"applied": applied, "skipped": skipped}
+
+
 def upsert_azy_holding_record(conn, rec: dict):
     cols = ["id","pk","BL","ESTNO","등급","수량","홀딩","출고일","메모","uid","홀딩일자"]
     placeholders = ", ".join(["%s"] * len(cols))
