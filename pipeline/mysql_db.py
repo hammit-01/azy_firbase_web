@@ -67,8 +67,13 @@ def _val(col, row):
 
 def sync_freeze(row: dict) -> dict:
     """상품명과 상태(freeze/동결)를 서로 맞춘다.
-    상품명에 "동결"이 있으면 상태를 freeze로, 상태가 freeze면 상품명 앞에 "동결"을 붙인다."""
+    상품명에 "동결"이 있으면 상태를 freeze로, 상태가 freeze면 상품명 앞에 "동결"을 붙인다.
+    단, 홀딩(holding) 중이면 건드리지 않음 — 사용자가 직접 건 홀딩이 자동 동결
+    재적용보다 우선해야 하는데, 예전엔 이 구분이 없어서 동결 상품을 홀딩해도
+    다음 파이프라인 사이클에 상태가 다시 freeze로 되돌아갔다(2026-08-03 발견)."""
     name = str(row.get("상품명") or "").strip()
+    if row.get("상태") == "holding":
+        return row
     if "동결" in name:
         if row.get("상태") != "freeze":
             row["상태"] = "freeze"
