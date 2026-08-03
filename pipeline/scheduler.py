@@ -110,6 +110,12 @@ def _upload_azy(azy_df, warehouse_scope=None):
 
     with get_conn() as conn:
         holding_sum = get_azy_holding_sum(conn)
+        with conn.cursor() as cur:
+            # 대청은 통관분(JNS/곤대청) 계정과 일반(azy/대청) 계정이 같은 재고를 그대로
+            # 보여줘서 BL이 겹치면 두 테이블에 통째로 중복 적재된다(2026-08-03, DB에
+            # 실제 중복 7건 발견 후 삭제) — 곤대청에 이미 있는 BL은 azy 쪽에 아예 안 쌓음.
+            cur.execute("SELECT BL FROM inventory WHERE 창고='곤대청' AND BL != ''")
+            gon_daecheong_bls = {row["BL"] for row in cur.fetchall()}
 
     rows = {}
     for _, r in azy_df.iterrows():
@@ -118,6 +124,8 @@ def _upload_azy(azy_df, warehouse_scope=None):
         grade = _s(r.get("등급"))
         wh    = _s(r.get("창고"))
         name  = _s(r.get("수탁품"))
+        if wh == "대청" and bl in gon_daecheong_bls:
+            continue
         # 등급·상품명도 식별자에 포함 — 같은 BL+ESTNO라도 등급(CH/UN 등)이 다르면 별도 재고이고,
         # 같은 BL+ESTNO+등급이라도 상품명이 다르면(한 BL에 서로 다른 상품이 같이 실려온 경우) 별도 상품이므로
         # 로트/저장위치 중복 합산 대상이 아님
