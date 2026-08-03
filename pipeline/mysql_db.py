@@ -390,6 +390,20 @@ def apply_moving_deductions(conn, moving_rows: list[dict], deduct_targets=("inve
         cur.execute(f"SELECT COALESCE(SUM(재고), 0) AS qty FROM {table} WHERE {where}", params)
         return int(cur.fetchone()["qty"] or 0)
 
+    def _new_lot_arrived(cur, table, yesterday_table, row, warehouse):
+        """어제는 없었는데 오늘 새로 생긴 로트(유통기한까지 포함된 id)가 이고 수량
+        이상이면 그 자체로 입고 완료로 본다. 합계 기준 비교(arrived_qty)만 쓰면,
+        같은 BL을 쓰는 다른 무관한 로트가 이 이고와 별개로 같은 시기에 줄어들 때
+        그 감소분이 실제 입고분을 상쇄해서 놓치는 경우가 있다(2026-08-04, 실사용
+        중 발견 — 삼겹양지/EXCEL/UN/86E: 83개 새 로트가 정확히 도착했는데 기존
+        다른 로트가 3개 줄어서 순증가가 80으로 계산돼 미입고로 오판정)."""
+        where, params = _row_where(row, warehouse)
+        cur.execute(f"SELECT id, 재고 FROM {table} WHERE {where}", params)
+        now_rows = cur.fetchall()
+        cur.execute(f"SELECT id FROM {yesterday_table} WHERE {where}", params)
+        yesterday_ids = {r["id"] for r in cur.fetchall()}
+        return any(r["id"] not in yesterday_ids and (r["재고"] or 0) >= row["재고"] for r in now_rows)
+
     _YESTERDAY_TABLE = {"inventory": "yesterday_inventory", "azy_inventory": "yesterday_azy_inventory"}
 
     remaining = []
@@ -400,6 +414,8 @@ def apply_moving_deductions(conn, moving_rows: list[dict], deduct_targets=("inve
             baseline_qty = _matched_qty(cur, _YESTERDAY_TABLE[dest_table], row, row["이동창고"])
             if arrived_qty >= baseline_qty + row["재고"]:
                 continue  # 어제보다 이고 수량만큼 늘었음 — 입고 완료, 더 이상 표시 안 함
+            if _new_lot_arrived(cur, dest_table, _YESTERDAY_TABLE[dest_table], row, row["이동창고"]):
+                continue  # 어제 없던 새 로트가 이고 수량 이상으로 생김 — 입고 완료
             remaining.append(row)
 
         for row in remaining:
