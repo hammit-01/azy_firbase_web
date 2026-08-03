@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 
 log = logging.getLogger("moving_reader")
 
-SHEET_ID  = "1Tm8Qm35npwv7zgHI4EqJiMf2AQt50Pj_B_ri1qtrM1w"
+SHEET_ID  = "1z7nYU9lfQT7d5boRwiU-zttwx90uVlUw2Y77Ydok6LY"  # 2026-08-03, "창고 이고"+"창고 홀딩" 통합된 "창고 취합"으로 교체
 CRED_PATH = "azycompany-2c80615785a2.json"
 
 _COL = {
@@ -24,7 +24,7 @@ _COL = {
 def _tab_name(dt=None) -> str:
     if dt is None:
         dt = datetime.now(ZoneInfo("Asia/Seoul"))
-    return dt.strftime("%Y-%m-%d")
+    return "이고_" + dt.strftime("%Y-%m-%d")
 
 
 def load_moving_rows() -> list[dict]:
@@ -37,7 +37,7 @@ def load_moving_rows() -> list[dict]:
         return []
 
     tab = _tab_name()
-    today = tab.replace("-", "")
+    today = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y%m%d")
     try:
         gc = gspread.service_account(filename=CRED_PATH)
         sh = gc.open_by_key(SHEET_ID)
