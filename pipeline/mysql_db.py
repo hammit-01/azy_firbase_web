@@ -316,7 +316,8 @@ def _table_for_warehouse(warehouse: str) -> str:
     return "inventory" if str(warehouse or "").startswith("곤") else "azy_inventory"
 
 
-def apply_moving_deductions(conn, moving_rows: list[dict], deduct_targets=("inventory", "azy_inventory")) -> list[dict]:
+def apply_moving_deductions(conn, moving_rows: list[dict], deduct_targets=("inventory", "azy_inventory"),
+                             deduct_warehouses=None) -> list[dict]:
     """moving_inventory 행을 상품명/브랜드/등급/ESTNO/BL 기준으로 처리한다.
 
     1) 이동창고(도착지) 쪽 재고가 "어제 마감 대비" 이고 수량만큼 늘어나 있으면
@@ -338,6 +339,14 @@ def apply_moving_deductions(conn, moving_rows: list[dict], deduct_targets=("inve
        지워진 채로 남는다. deduct_targets로 "이번 호출에서 내가 방금 원본을
        갱신한 테이블"만 차감하도록 호출부(run_pipeline/run_jns_pipeline)가 범위를
        좁힌다.
+
+       azy_inventory는 이 문제가 테이블 단위보다 더 세분화된다 — 에이스(에이스기흥/
+       처인/용인)는 run_ace_pipeline이 1시간에 한 번만 원본을 갱신하는데, 일반
+       run_pipeline은 azy_inventory 전체를 대상으로 1분마다 이 함수를 부른다. 그러면
+       에이스 창고 행은 원본이 그대로인 1시간 동안 1분마다 계속 차감을 반복 적용해
+       버려서 재고가 순식간에 0까지 떨어진다(2026-08-03, 실사용 중 발견). deduct_warehouses
+       로 "이번 호출에서 내가 방금 원본을 갱신한 창고"만 차감하도록 추가로 좁힌다
+       (None이면 deduct_targets 범위 내 전체 창고 — 기존 동작 그대로).
 
     반환값: 아직 미입고라 moving_inventory에 그대로 남겨야 하는 행 목록.
     """
@@ -362,6 +371,8 @@ def apply_moving_deductions(conn, moving_rows: list[dict], deduct_targets=("inve
         for row in remaining:
             src_table = _table_for_warehouse(row["출고창고"])
             if src_table not in deduct_targets:
+                continue
+            if deduct_warehouses is not None and row["출고창고"] not in deduct_warehouses:
                 continue
             where = " AND ".join(f"{c}=%s" for c in _MOVING_MATCH_COLS) + " AND 창고=%s"
             params = (row["재고"],) + tuple(row[c] for c in _MOVING_MATCH_COLS) + (row["출고창고"],)

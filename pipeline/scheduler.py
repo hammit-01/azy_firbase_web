@@ -77,6 +77,7 @@ _jns_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)
 jns_log.addHandler(_jns_handler)
 
 JNS_WAREHOUSE = "제니스(곤지암)"
+ACE_WAREHOUSES = {"에이스기흥", "에이스처인", "에이스용인"}
 
 # ── 컴포넌트 싱글턴 ─────────────────────────────────────
 snapshot = Snapshot(Path("pipeline/snapshot.pkl"))
@@ -291,7 +292,15 @@ def run_pipeline():
                 with _get_conn() as conn:
                     # inventory(JNS)는 run_jns_pipeline이 독립 스케줄로 원본을 덮어쓰므로
                     # 여기서는 방금 갱신한 azy_inventory만 차감한다 (이중/유실 차감 방지).
-                    remaining_rows = apply_moving_deductions(conn, moving_rows, deduct_targets=("azy_inventory",))
+                    # 에이스(에이스기흥/처인/용인)는 azy_inventory 안에 있지만 원본 갱신은
+                    # run_ace_pipeline이 1시간에 한 번만 하므로, 여기서 매분 같이 차감해버리면
+                    # 원본이 안 바뀌는 사이 반복 차감돼 순식간에 0까지 떨어진다(2026-08-03
+                    # 발견) — 에이스 창고는 제외하고 run_ace_pipeline이 자기 사이클 직후
+                    # 별도로 재적용한다.
+                    deduct_warehouses = set(crawled_scope) - ACE_WAREHOUSES
+                    remaining_rows = apply_moving_deductions(
+                        conn, moving_rows, deduct_targets=("azy_inventory",), deduct_warehouses=deduct_warehouses
+                    )
                     sync_moving_inventory(conn, remaining_rows)
             except Exception as e:
                 log.warning(f"이고 동기화 실패: {e}")
@@ -405,7 +414,28 @@ def run_ace_pipeline():
             # stale 삭제 범위에서 빠뜨려 마지막 재고가 영원히 안 지워지고 남는다
             # (2026-08-03, 에이스용인 5일 전 재고가 안 지워지고 남아있던 사고 발견) —
             # 에이스 3개 창고는 항상 고정 scope로 명시.
-            _upload_azy(ace_df, warehouse_scope=["에이스기흥", "에이스처인", "에이스용인"])
+            _upload_azy(ace_df, warehouse_scope=list(ACE_WAREHOUSES))
+
+            # 이고 차감 재적용 — 방금 크롤 원본으로 에이스 창고 재고가 덮였으므로
+            # moving_inventory에 남아있는(미입고) 행 기준으로 에이스 창고만 다시 뺀다.
+            # run_pipeline은 azy_inventory를 1분마다 차감하지만 에이스 창고는 제외했으므로
+            # (원본을 run_ace_pipeline만 갱신 — 안 그러면 매분 반복 차감돼 순식간에 0까지
+            # 떨어짐, 2026-08-03 발견) 여기서 자기 사이클 직후 별도로 재적용해야 한다.
+            # moving_inventory 자체는 run_pipeline이 시트에서 다시 읽어 갱신하므로
+            # 여기선 현재 저장된 내용만 읽어 재적용한다.
+            try:
+                from pipeline.mysql_db import get_conn as _get_conn, apply_moving_deductions
+                with _get_conn() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            "SELECT 상품명, 브랜드, 등급, ESTNO, BL, 재고, 출고창고, 이동창고 FROM moving_inventory"
+                        )
+                        current_moving = cur.fetchall()
+                    apply_moving_deductions(
+                        conn, current_moving, deduct_targets=("azy_inventory",), deduct_warehouses=ACE_WAREHOUSES
+                    )
+            except Exception as e:
+                ace_log.warning(f"이고 차감 재적용 실패: {e}")
 
         elapsed = time.time() - start
         ace_log.info(f"완료 | {len(ace_df)}건 | {elapsed:.1f}초 소요")
