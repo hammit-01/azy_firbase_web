@@ -115,6 +115,19 @@ def sync_name_rename(row: dict) -> dict:
     return row
 
 
+# 조건 만족 시 등급을 비움 — 돈목뼈/SWIFT는 사이트 원본이 등급 자리에 중량 코드를 줌
+_GRADE_CLEAR_RULES = [
+    lambda row: row.get("상품명") == "돈목뼈" and row.get("브랜드") == "SWIFT" and row.get("등급") == "15.88KG",
+]
+
+def sync_grade_clear(row: dict) -> dict:
+    for condition in _GRADE_CLEAR_RULES:
+        if condition(row):
+            row["등급"] = ""
+            break
+    return row
+
+
 def sync_estno_prefix(row: dict) -> dict:
     """상품명/브랜드 조합에 따라 ESTNO를 고정값으로 맞추거나(FORCE),
     원본이 순수 숫자일 때만 정해진 접두어를 붙인다(PREFIX)."""
@@ -147,7 +160,7 @@ def upsert_inventory(conn, rows: list[dict]):
     sql = (f"INSERT INTO inventory ({col_names}) VALUES ({placeholders}) "
            f"ON DUPLICATE KEY UPDATE {update_part}")
     with conn.cursor() as cur:
-        data = [[_val(c, sync_name_rename(sync_estno_prefix(sync_freeze(row)))) for c in cols] for row in rows]
+        data = [[_val(c, sync_grade_clear(sync_name_rename(sync_estno_prefix(sync_freeze(row))))) for c in cols] for row in rows]
         cur.executemany(sql, data)
 
 
@@ -257,7 +270,7 @@ def upsert_azy_inventory(conn, rows: list[dict]):
     sql = (f"INSERT INTO azy_inventory ({col_names}) VALUES ({placeholders}) "
            f"ON DUPLICATE KEY UPDATE {update_part}")
     with conn.cursor() as cur:
-        data = [[_val(c, sync_name_rename(sync_estno_prefix(sync_freeze(row)))) for c in cols] for row in rows]
+        data = [[_val(c, sync_grade_clear(sync_name_rename(sync_estno_prefix(sync_freeze(row))))) for c in cols] for row in rows]
         cur.executemany(sql, data)
 
 
