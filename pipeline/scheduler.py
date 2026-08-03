@@ -262,7 +262,14 @@ def run_pipeline():
                 return
 
             # 3. azy_inventory 업데이트
-            _upload_azy(azy_normalized)
+            # stale 삭제 범위를 azy_normalized["창고"]로 자동 추론하면, 어떤 창고의
+            # 재고가 전부 빠져 이번 크롤 결과에 그 창고 행이 하나도 없을 때 그 창고가
+            # 범위에서 통째로 빠져서 마지막 재고가 영원히 안 지워지고 남는다(2026-08-03,
+            # 에이스용인 사고와 같은 패턴). 크롤 자체가 성공한(df가 None이 아닌) 창고는
+            # 결과가 0건이어도 범위에 포함 — 크롤이 실패(None)한 창고만 제외해서
+            # 일시적 장애로 기존 정상 데이터가 잘못 지워지는 건 막는다.
+            crawled_scope = [w for w, df in results.items() if df is not None]
+            _upload_azy(azy_normalized, warehouse_scope=crawled_scope)
 
             # 3-1. 이고(창고이동) 취합 시트 → moving_inventory 동기화 + 재고 반영.
             # azy_inventory에 이번 사이클 최신 재고가 막 반영된 직후에 돌려야
@@ -371,7 +378,12 @@ def run_ace_pipeline():
             ace_df = replace_name(ace_df)
             ace_df = ace_df.drop_duplicates().reset_index(drop=True)
 
-            _upload_azy(ace_df)
+            # 창고 하나(예: 용인)의 재고가 전부 빠져서 이번 크롤 결과에 그 창고 행이
+            # 하나도 없으면, _upload_azy의 자동 scope(azy_df["창고"] 기준)가 그 창고를
+            # stale 삭제 범위에서 빠뜨려 마지막 재고가 영원히 안 지워지고 남는다
+            # (2026-08-03, 에이스용인 5일 전 재고가 안 지워지고 남아있던 사고 발견) —
+            # 에이스 3개 창고는 항상 고정 scope로 명시.
+            _upload_azy(ace_df, warehouse_scope=["에이스기흥", "에이스처인", "에이스용인"])
 
         elapsed = time.time() - start
         ace_log.info(f"완료 | {len(ace_df)}건 | {elapsed:.1f}초 소요")
