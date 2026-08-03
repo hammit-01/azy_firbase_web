@@ -640,6 +640,7 @@ export function renderChangesTab() {
     const results = [];
     for (const item of state.allData) {
         if (item._isMoving) continue;
+        if (item.상태 === "holding") continue; // 홀딩 중인 행은 신규/변경 집계에서 제외
         const prev = state.yesterdayById.get(`${item._source}:${item._rawId}`);
         if (!prev) {
             results.push({ item, prev: null, isNew: true, changedSet: new Set() });
