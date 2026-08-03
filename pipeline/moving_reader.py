@@ -17,6 +17,7 @@ _COL = {
     "bl":           "BL",
     "warehouse":    "출고창고",
     "to_warehouse": "이고창고",
+    "note":         "수정사항",
 }
 
 
@@ -60,6 +61,14 @@ def load_moving_rows() -> list[dict]:
             qty = int(float(str(row.get(_COL["qty"], "") or "0").replace(",", "")))
         except (ValueError, TypeError):
             qty = 0
+        bl = str(row.get(_COL["bl"], "") or "").strip()
+        # BL을 미리 알 수 없는 이고 항목("출고분")은 BL 자리에 "OO 출고분" 같은
+        # 안내 문구만 있고, 대신 수정사항 열에 이력번호를 미리 적어둔다 — 도착/출발
+        # 매칭을 BL 대신 이력번호(뒤 4자리, id 안에 포함돼 있음)로 대체한다
+        # (2026-08-04, 사용자 설명으로 도입).
+        note = str(row.get(_COL["note"], "") or "").strip()
+        history_last4 = note[-4:] if ("출고분" in bl and note) else ""
+
         result.append({
             "id":     f"{today}_{i}",
             "상품명":  item,
@@ -67,7 +76,8 @@ def load_moving_rows() -> list[dict]:
             "등급":    str(row.get(_COL["grade"], "") or "").strip(),
             "ESTNO":  str(row.get(_COL["estno"], "") or "").strip(),
             "재고":    qty,
-            "BL":     str(row.get(_COL["bl"], "") or "").strip(),
+            "BL":     bl,
+            "이력번호": history_last4,
             "출고창고": str(row.get(_COL["warehouse"], "") or "").strip(),
             "이동창고": str(row.get(_COL["to_warehouse"], "") or "").strip(),
         })

@@ -349,7 +349,7 @@ def run_jns_pipeline():
                 with _get_conn() as conn:
                     with conn.cursor() as cur:
                         cur.execute(
-                            "SELECT 상품명, 브랜드, 등급, ESTNO, BL, 재고, 출고창고, 이동창고 FROM moving_inventory"
+                            "SELECT 상품명, 브랜드, 등급, ESTNO, BL, 이력번호, 재고, 출고창고, 이동창고 FROM moving_inventory"
                         )
                         current_moving = cur.fetchall()
                     apply_moving_deductions(conn, current_moving, deduct_targets=("inventory",))
@@ -428,7 +428,7 @@ def run_ace_pipeline():
                 with _get_conn() as conn:
                     with conn.cursor() as cur:
                         cur.execute(
-                            "SELECT 상품명, 브랜드, 등급, ESTNO, BL, 재고, 출고창고, 이동창고 FROM moving_inventory"
+                            "SELECT 상품명, 브랜드, 등급, ESTNO, BL, 이력번호, 재고, 출고창고, 이동창고 FROM moving_inventory"
                         )
                         current_moving = cur.fetchall()
                     apply_moving_deductions(

@@ -319,7 +319,7 @@ def snapshot_daily(conn):
 def sync_moving_inventory(conn, rows: list[dict]):
     """이고(창고이동) 취합 시트 → moving_inventory 통째로 교체.
     이 테이블은 '오늘' 상태만 보여주는 용도라 매 사이클 전체 삭제 후 다시 채운다."""
-    cols = ["id", "상품명", "브랜드", "등급", "ESTNO", "재고", "BL", "출고창고", "이동창고"]
+    cols = ["id", "상품명", "브랜드", "등급", "ESTNO", "재고", "BL", "이력번호", "출고창고", "이동창고"]
     with conn.cursor() as cur:
         cur.execute("DELETE FROM moving_inventory")
         if rows:
@@ -328,9 +328,6 @@ def sync_moving_inventory(conn, rows: list[dict]):
             sql = f"INSERT INTO moving_inventory ({col_names}) VALUES ({placeholders})"
             data = [[row.get(c, "") for c in cols] for row in rows]
             cur.executemany(sql, data)
-
-
-_MOVING_MATCH_COLS = ("상품명", "브랜드", "등급", "ESTNO", "BL")
 
 
 def _table_for_warehouse(warehouse: str) -> str:
@@ -372,9 +369,24 @@ def apply_moving_deductions(conn, moving_rows: list[dict], deduct_targets=("inve
 
     반환값: 아직 미입고라 moving_inventory에 그대로 남겨야 하는 행 목록.
     """
+    def _row_where(row, warehouse):
+        """BL을 미리 알 수 없는 "출고분" 이고 항목은 row["이력번호"](수정사항 열, 뒤
+        4자리)가 채워져 있다 — 이 경우 BL 대신 상품명/브랜드/등급/ESTNO+창고에 더해
+        id에 그 이력번호가 포함되는지로 매칭한다(2026-08-04, 사용자 설명으로 도입).
+        평소(BL 있음)엔 기존처럼 BL로 매칭."""
+        base_cols = ("상품명", "브랜드", "등급", "ESTNO")
+        where = " AND ".join(f"{c}=%s" for c in base_cols) + " AND 창고=%s"
+        params = tuple(row[c] for c in base_cols) + (warehouse,)
+        if row.get("이력번호"):
+            where += " AND id LIKE %s"
+            params += (f"%_{row['이력번호']}_%",)
+        else:
+            where += " AND BL=%s"
+            params += (row["BL"],)
+        return where, params
+
     def _matched_qty(cur, table, row, warehouse):
-        where = " AND ".join(f"{c}=%s" for c in _MOVING_MATCH_COLS) + " AND 창고=%s"
-        params = tuple(row[c] for c in _MOVING_MATCH_COLS) + (warehouse,)
+        where, params = _row_where(row, warehouse)
         cur.execute(f"SELECT COALESCE(SUM(재고), 0) AS qty FROM {table} WHERE {where}", params)
         return int(cur.fetchone()["qty"] or 0)
 
@@ -396,8 +408,8 @@ def apply_moving_deductions(conn, moving_rows: list[dict], deduct_targets=("inve
                 continue
             if deduct_warehouses is not None and row["출고창고"] not in deduct_warehouses:
                 continue
-            where = " AND ".join(f"{c}=%s" for c in _MOVING_MATCH_COLS) + " AND 창고=%s"
-            params = (row["재고"],) + tuple(row[c] for c in _MOVING_MATCH_COLS) + (row["출고창고"],)
+            where, where_params = _row_where(row, row["출고창고"])
+            params = (row["재고"],) + where_params
             cur.execute(
                 f"UPDATE {src_table} SET 재고 = GREATEST(재고 - %s, 0) WHERE {where}",
                 params,
