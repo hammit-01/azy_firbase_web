@@ -7,7 +7,7 @@ from pipeline.mysql_db import (
     get_conn, upsert_inventory, delete_inventory,
     get_holding_sum, get_holding_records_by_key,
     get_holding_rows_by_bl, get_employees, get_snapshot,
-    sync_freeze, sync_estno_prefix, sync_name_rename, sync_grade_clear,
+    sync_freeze, sync_estno_prefix, sync_name_rename, sync_grade_clear, sync_field_fill,
 )
 from pipeline.updater import _df_to_dict, _row_sig
 
@@ -68,7 +68,7 @@ class MySQLUpdater:
             # 매 사이클 달라 보여서 아래 _row_sig 비교가 영원히 "변경"으로 오판정하고 매번
             # 헛돌며 재기록했다 — 비교 전에 먼저 규칙을 적용해 원본 쪽도 최종값으로 맞춘다
             # (2026-07-31, [진단-트리거] 로그로 확인).
-            data = sync_grade_clear(sync_name_rename(sync_estno_prefix(sync_freeze(data))))
+            data = sync_field_fill(sync_grade_clear(sync_name_rename(sync_estno_prefix(sync_freeze(data)))))
             db_prev = db_snapshot.get(pk)
             if db_prev is None:
                 # 신규 행: 파손/상이품/반품·필수값 결측 자동 감지 결과를 초기 상태로 사용

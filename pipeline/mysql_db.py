@@ -133,6 +133,23 @@ def sync_grade_clear(row: dict) -> dict:
     return row
 
 
+# (조건, {필드: 값}) — 조건 만족 시 비어있는 필드만 채움(이미 값 있으면 안 건드림).
+# BL로 좁혀서 건다 — 상품명만으로 걸면 다른 브랜드의 동명 상품까지 잘못 덮어씀
+# (2026-07-29 돈목뼈/SWIFT 전체 제외 사고와 같은 실수 반복 방지).
+_FIELD_FILL_RULES = [
+    (lambda row: row.get("BL") == "HLCUSYD251245191", {"브랜드": "MERAMIST", "등급": "A", "ESTNO": "3416"}),
+]
+
+def sync_field_fill(row: dict) -> dict:
+    for condition, fields in _FIELD_FILL_RULES:
+        if condition(row):
+            for f, v in fields.items():
+                if not str(row.get(f) or "").strip():
+                    row[f] = v
+            break
+    return row
+
+
 def sync_estno_prefix(row: dict) -> dict:
     """상품명/브랜드 조합에 따라 ESTNO를 고정값으로 맞추거나(FORCE),
     원본이 순수 숫자일 때만 정해진 접두어를 붙인다(PREFIX)."""
@@ -165,7 +182,7 @@ def upsert_inventory(conn, rows: list[dict]):
     sql = (f"INSERT INTO inventory ({col_names}) VALUES ({placeholders}) "
            f"ON DUPLICATE KEY UPDATE {update_part}")
     with conn.cursor() as cur:
-        data = [[_val(c, sync_grade_clear(sync_name_rename(sync_estno_prefix(sync_freeze(row))))) for c in cols] for row in rows]
+        data = [[_val(c, sync_field_fill(sync_grade_clear(sync_name_rename(sync_estno_prefix(sync_freeze(row)))))) for c in cols] for row in rows]
         cur.executemany(sql, data)
 
 
@@ -275,7 +292,7 @@ def upsert_azy_inventory(conn, rows: list[dict]):
     sql = (f"INSERT INTO azy_inventory ({col_names}) VALUES ({placeholders}) "
            f"ON DUPLICATE KEY UPDATE {update_part}")
     with conn.cursor() as cur:
-        data = [[_val(c, sync_grade_clear(sync_name_rename(sync_estno_prefix(sync_freeze(row))))) for c in cols] for row in rows]
+        data = [[_val(c, sync_field_fill(sync_grade_clear(sync_name_rename(sync_estno_prefix(sync_freeze(row)))))) for c in cols] for row in rows]
         cur.executemany(sql, data)
 
 
