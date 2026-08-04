@@ -486,20 +486,25 @@ def apply_holding_sheet(conn, holding_rows: list[dict]) -> dict:
             else:
                 cur.execute(f"UPDATE {table} SET 재고=%s WHERE id=%s", (remain, src["id"]))
 
+            # "홀딩" 컬럼은 프론트에서 "담당자"(hold-note) 입력값이 들어가는 자리라
+            # 자동 처리를 표시하는 마커를 넣고, 거래처명은 실제 "비고"(hold-memo → 메모)
+            # 자리에 넣는다 — 사람이 수동 홀딩할 때 거래처를 비고에 적는 것과 동일하게
+            # 맞춤(2026-08-04, 사용자 지적으로 수정 — 처음엔 반대로 넣었었음).
+            assignee_marker = "자동(시트)"
             cur.execute(
                 f"INSERT INTO {hr_table} (id, pk, BL, ESTNO, 등급, 수량, 홀딩, 출고일, 메모, uid, 홀딩일자) "
                 f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                 (hold_id, pk, row["BL"], row["ESTNO"], row["등급"], row["재고"],
-                 row["거래처"], "", f"홀딩 시트 자동 처리 - {row['거래처']}", "sheet_auto", today_str),
+                 assignee_marker, "", row["거래처"], "sheet_auto", today_str),
             )
 
             hold_row_id = f"{pk}_{hold_id}"
             cur.execute(
                 f"INSERT INTO {table} "
-                "(id, pk, 상품명, 브랜드, 등급, ESTNO, 재고, BL, 창고, 상태, 수집일, 홀딩, holdingRecordId) "
-                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,'holding','',%s,%s)",
+                "(id, pk, 상품명, 브랜드, 등급, ESTNO, 재고, BL, 창고, 상태, 수집일, 홀딩, 메모, holdingRecordId) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,'holding','',%s,%s,%s)",
                 (hold_row_id, pk, row["상품명"], row["브랜드"], row["등급"], row["ESTNO"],
-                 row["재고"], row["BL"], row["창고"], row["거래처"], hold_id),
+                 row["재고"], row["BL"], row["창고"], assignee_marker, row["거래처"], hold_id),
             )
             applied.append(row)
 
