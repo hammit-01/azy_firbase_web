@@ -464,6 +464,19 @@ def apply_holding_sheet(conn, holding_rows: list[dict]) -> dict:
             if cur.fetchone():
                 continue  # 이미 처리된 시트 행 — 재적용 안 함
 
+            # 같은 요청이 시트에 다른 행 인덱스로 중복 입력된 경우 방지
+            # (2026-08-04, 같은 BL/수량/거래처가 오늘 이미 처리됐으면 스킵 —
+            # 실제로 7건이 중복 적용된 사고 후 추가).
+            cur.execute(
+                f"SELECT id FROM {hr_table} WHERE id LIKE 'sheet_%%' AND BL=%s "
+                f"AND 수량=%s AND 메모=%s AND 홀딩일자=%s",
+                (row["BL"], row["재고"], row["거래처"], today_str),
+            )
+            dup = cur.fetchone()
+            if dup:
+                skipped.append((row, f"오늘 이미 동일 요청 처리됨({dup['id']})"))
+                continue
+
             cur.execute(
                 f"SELECT id, pk, 재고 FROM {table} WHERE 상품명=%s AND 브랜드=%s AND 등급=%s "
                 f"AND ESTNO=%s AND BL=%s AND 창고=%s AND 수집일 != ''",
