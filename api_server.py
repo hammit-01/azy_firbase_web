@@ -131,7 +131,16 @@ def update_item(item_id: str, body: ItemBody):
 @app.delete("/api/inventory/{item_id}")
 def delete_item(item_id: str):
     with get_conn() as conn:
+        # 홀딩 표시 행을 그냥 지우면 짝지어진 holding_records가 안 지워져서, 그 수량이
+        # 매 사이클 정상 재고 계산(크롤원본-홀딩합계)에서 계속 빠진 채로 유령처럼 남는다
+        # (2026-08-05, 실사용 중 20박스가 홀딩 표시도 정상 재고도 아닌 채로 사라진 사고
+        # 발견). 삭제할 행이 홀딩 행이면 holding_records도 같이 지운다.
+        with conn.cursor() as cur:
+            cur.execute("SELECT holdingRecordId FROM inventory WHERE id=%s", (item_id,))
+            row = cur.fetchone()
         delete_inventory(conn, [item_id])
+        if row and row.get("holdingRecordId"):
+            delete_holding_record(conn, row["holdingRecordId"])
     return {"ok": True}
 
 
@@ -241,7 +250,12 @@ def update_azy_item(item_id: str, body: ItemBody):
 @app.delete("/api/azy_inventory/{item_id}")
 def delete_azy_item(item_id: str):
     with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT holdingRecordId FROM azy_inventory WHERE id=%s", (item_id,))
+            row = cur.fetchone()
         delete_azy_inventory(conn, [item_id])
+        if row and row.get("holdingRecordId"):
+            delete_azy_holding_record(conn, row["holdingRecordId"])
     return {"ok": True}
 
 

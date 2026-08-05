@@ -315,24 +315,9 @@ def run_pipeline():
             except Exception as e:
                 log.warning(f"이고 동기화 실패: {e}")
 
-            # 3-2. 홀딩 취합 시트 → 자동 홀딩 처리. 소스 재고를 직접 찾아 줄이고
-            # holding_records를 남기는 1회성 작업이라(GREATEST 방식 재계산이 아님)
-            # 어느 잡 사이클에서 돌든 상관없다 — apply_holding_sheet() 자체의
-            # 시트-행 단위 멱등성(이미 처리된 건 건너뜀)으로 반복 적용을 막는다.
-            try:
-                from pipeline.holding_reader import load_holding_rows
-                from pipeline.mysql_db import get_conn as _get_conn2, apply_holding_sheet
-                holding_rows = load_holding_rows()
-                if holding_rows:
-                    with _get_conn2() as conn:
-                        result = apply_holding_sheet(conn, holding_rows)
-                    if result["applied"]:
-                        log.info(f"  [홀딩시트] {len(result['applied'])}건 자동 처리")
-                    if result["skipped"]:
-                        for row, reason in result["skipped"]:
-                            log.warning(f"  [홀딩시트] 스킵 - {row['상품명']}/{row['BL']}: {reason}")
-            except Exception as e:
-                log.warning(f"홀딩 시트 처리 실패: {e}")
+            # 홀딩 취합 시트 자동 처리는 비활성화함(2026-08-05, 사용자 요청 —
+            # 유령 홀딩/신규 요청 무한 스킵 사고 이후 자동 반영 자체를 중단).
+            # load_holding_rows()/apply_holding_sheet()는 코드는 남겨두되 호출 안 함.
 
         elapsed = time.time() - start
         log.info(f"완료 | azy {len(azy_normalized)}건 | {elapsed:.1f}초 소요")
