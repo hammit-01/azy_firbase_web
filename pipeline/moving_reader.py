@@ -18,7 +18,10 @@ _COL = {
     "warehouse":    "출고창고",
     "to_warehouse": "이고창고",
     "note":         "수정사항",
+    "processed":    "처리",
 }
+
+_TRUTHY = (True, "TRUE", "true", "True", 1, "1")
 
 
 def _tab_name(dt=None) -> str:
@@ -56,6 +59,10 @@ def load_moving_rows() -> list[dict]:
     for i, row in enumerate(rows, start=1):
         item = str(row.get(_COL["item"], "") or "").strip()
         if not item:
+            continue
+        if row.get(_COL["processed"]) in _TRUTHY:
+            # 이미 '처리' 열에 체크된(입고 완료로 확정 표시된) 행 — 매 사이클
+            # 도착 재확인을 반복할 필요 없이 그냥 건너뛴다.
             continue
         try:
             qty = int(float(str(row.get(_COL["qty"], "") or "0").replace(",", "")))
