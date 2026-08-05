@@ -77,7 +77,7 @@
                 <div class="toolbar-row">
                     <select class="show-state filter-sel">
                         <option value="">상태</option>
-                        <option value="holding">홀딩</option>
+                        <option value="holding">예약</option>
                         <option value="freeze">동결</option>
                         <option value="stopped">사용불가</option>
                         <option value="moving">이고</option>
@@ -88,7 +88,7 @@
                     <!-- CRUD 버튼 -->
                     <button class="insert-btn">추가</button>
                     <button class="update-btn">수정</button>
-                    <button class="holding-btn">홀딩</button>
+                    <button class="holding-btn">예약</button>
 
                     <div class="tb-sep"></div>
 
@@ -143,12 +143,14 @@
                         <col style="width:11%"> <!--브랜드-->
                         <col style="width:5%">  <!--등급-->
                         <col style="width:8%">  <!--ESTNO-->
-                        <col style="width:7%">  <!--재고-->
-                        <col style="width:14%"> <!--BL번호-->
+                        <col style="width:4%">  <!--재고(실재고)-->
+                        <col style="width:5%">  <!--예약-->
+                        <col style="width:5%">  <!--가용-->
+                        <col style="width:11%"> <!--BL번호-->
                         <col style="width:9%">  <!--창고-->
                         <col style="width:10%"> <!--유통기한-->
                         <col style="width:5%">  <!--평균-->
-                        <col style="width:14%"> <!--비고-->
+                        <col style="width:12%"> <!--비고-->
                     </colgroup>
                     <thead>
                         <tr>
@@ -158,6 +160,8 @@
                             <th data-key="등급" class="sortable">등급</th>
                             <th data-key="ESTNO" class="sortable">ESTNO</th>
                             <th data-key="재고" class="sortable">재고</th>
+                            <th data-key="예약수량" class="sortable">예약</th>
+                            <th data-key="가용재고" class="sortable">가용</th>
                             <th data-key="BL" class="sortable">BL</th>
                             <th data-key="창고" class="sortable">창고</th>
                             <th data-key="유통기한" class="sortable">유통기한</th>

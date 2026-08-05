@@ -1,4 +1,4 @@
-import { updateItem, insertItem, insertHoldingRecordWithId, getHoldingCountByPk, updateHoldingRecord, moveHoldingToHistory, deleteItem as _deleteItem } from "./firestoreService.js";
+import { updateItem, insertItem, updateHoldingRecord, moveHoldingToHistory, deleteItem as _deleteItem, createReservation } from "./firestoreService.js";
 import { fetchAllData } from "./firebase.js";
 import { pushUndo } from "./crud_history.js";
 import { showError } from "./ui.js";
@@ -17,17 +17,13 @@ function _rawId(item) {
     return item?._rawId ?? item?.raw?._rawId ?? item?.id;
 }
 
+// 실재고/예약 분리 재설계(2026-08-05) — 예약은 소스 재고(item)를 전혀 건드리지 않는다.
+// weight 인자는 옛 모델(홀딩 전용 행에 평중을 따로 저장)의 흔적으로, 새 모델에선 예약이
+// 별도 행을 만들지 않아 의미가 없어져 받기만 하고 안 쓴다(호출부 시그니처 유지 목적).
 export async function holdingData(item, holdQty, releaseDate, note, memo = "", weight = null, noUndo = false) {
 
     if (!holdQty || holdQty <= 0) {
-        showError("홀딩 수량을 1 이상 입력해주세요.");
-        return null;
-    }
-
-    const remainQty = item.qty - holdQty;
-
-    if (remainQty < 0) {
-        showError("수량이 부족합니다.");
+        showError("예약 수량을 1 이상 입력해주세요.");
         return null;
     }
 
@@ -35,89 +31,29 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "", w
     const rawId = _rawId(item);
 
     try {
-
-        // 전량 홀딩이면 0박스 행이 남지 않도록 삭제, 부분 홀딩이면 차감
-        if (remainQty === 0) {
-            await _deleteItem(rawId, azy);
-        } else {
-            await updateItem(rawId, { 재고: remainQty }, azy);
-        }
-
-        // 1. holding_data 생성
-        //    전량 홀딩(remainQty=0): holdId = pk 그대로
-        //    부분 홀딩(remainQty>0): holdId = {pk}hold01, hold02, ...
-        const pk = item.raw?.pk || rawId;
-        let holdId;
-        if (remainQty === 0) {
-            holdId = pk;
-        } else {
-            const count = await getHoldingCountByPk(pk, azy);
-            holdId = `${pk}hold${String(count + 1).padStart(2, "0")}`;
-        }
-        const holdRef = await insertHoldingRecordWithId(holdId, {
-            pk:     pk,
-            BL:     item.bl    || "",
+        const rec = await createReservation({
+            상품명: item.name,
+            브랜드: item.brand || "",
+            등급:   item.grade || "",
             ESTNO:  item.estNo || "",
-            등급:   item.grade  || "",
+            BL:     item.bl,
+            창고:   item.warehouse,
             수량:   holdQty,
-            홀딩:   note?.trim() || "",
+            거래처: memo || item.memo || "",
+            담당자: note?.trim() || "",
             출고일: releaseDate || "",
-            메모:   memo || item.memo || "",
-            uid:    getStoredUser()?.id || ""
-        }, azy);
-
-        // 2. all_data에 홀딩 row 추가 (테이블 표시용 필드 포함)
-        // 수집일: "" → updater.py의 where(수집일 == "") 쿼리로 홀딩 row 식별 가능
-        const docRef = await insertItem({
-            pk:              pk,
-            상품명:          item.name,
-            브랜드:          item.brand,
-            등급:            item.grade || "",
-            ESTNO:           item.estNo || "",
-            창고:            item.warehouse,
-            재고:            holdQty,
-            BL:              item.bl,
-            홀딩:            note?.trim() || "",
-            출고일:          releaseDate || "",
-            유통기한:        item.dueDate || "",
-            평중:            weight !== null ? Number(weight) : (item.weight || ""),
-            메모:            memo || item.memo || "",
-            상태:            "holding",
-            수집일:          "",
-            holdingRecordId: holdRef.id
-        }, azy);
-
-        // 전량 홀딩은 원본 row가 삭제되므로 undo 시 재삽입할 수 있도록 원본 데이터 보존
-        const wasDeleted = remainQty === 0;
-        const { _source: _s, _rawId: _r, ...originalDataClean } = item.raw || {};
-        const originalData = wasDeleted ? { ...originalDataClean, 재고: item.qty } : null;
-
-        if (!noUndo) pushUndo({
-            type:            "holding",
-            originalId:      rawId,
-            originalQty:     item.qty,
-            wasDeleted,
-            originalData,
-            holdingId:       docRef.id,
-            holdingRecordId: holdRef.id,
-            azy
         });
 
-        _logChange(azy, rawId, "홀딩");
+        if (!noUndo) pushUndo({ type: "reservation", id: rec.id });
+
+        _logChange(azy, rawId, "예약");
 
         await fetchAllData();
-        return {
-            originalId:      rawId,
-            originalQty:     item.qty,
-            wasDeleted,
-            originalData,
-            holdingId:       docRef.id,
-            holdingRecordId: holdRef.id,
-            azy
-        };
+        return { reservationId: rec.id, azy };
 
     } catch (error) {
-        console.error("업데이트 실패:", error);
+        console.error("예약 실패:", error);
+        showError(error.message || "예약에 실패했습니다.");
         return null;
     }
 }

@@ -1,30 +1,29 @@
 // firestoreService.js — MySQL API 버전
 import {
     apiInsertItem, apiUpdateItem, apiDeleteItem,
-    apiInsertHoldingRecord, apiUpdateHoldingRecord, apiDeleteHoldingRecord,
-    apiGetHoldingCount, apiFetch,
+    apiUpdateHoldingRecord, apiDeleteHoldingRecord, apiFetch,
+    apiCreateReservation, apiCancelReservation, apiCompleteReservation,
+    apiGetReservationsByPk,
 } from "./api.js";
+
+// 예약 생성/취소/완료 — 실재고와 완전히 분리된 새 모델(2026-08-05).
+// product: {상품명, 브랜드, 등급, ESTNO, BL, 창고, 수량, 거래처, 담당자, 출고일}
+export async function createReservation(product) {
+    return apiCreateReservation(product);
+}
+export async function cancelReservation(id) {
+    return apiCancelReservation(id);
+}
+export async function completeReservation(id) {
+    return apiCompleteReservation(id);
+}
+export async function getReservationsByPk(pk) {
+    return apiGetReservationsByPk(pk);
+}
 
 // 추가
 export async function insertItem(data, azy) {
     return await apiInsertItem(data, azy);
-}
-
-// 홀딩 기록 추가 (지정 ID)
-export async function insertHoldingRecordWithId(holdId, data, azy) {
-    await apiInsertHoldingRecord(holdId, data, azy);
-    return { id: holdId };
-}
-
-// pk 기준 기존 홀딩 건수 조회
-export async function getHoldingCountByPk(pk, azy) {
-    return await apiGetHoldingCount(pk, azy);
-}
-
-// holdingRecordId에서 원본 pk 추출
-export function extractPkFromHoldingId(holdingRecordId) {
-    if (!holdingRecordId) return null;
-    return holdingRecordId.replace(/hold\d+$/, "");
 }
 
 // 홀딩 기록 수정

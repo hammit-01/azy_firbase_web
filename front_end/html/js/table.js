@@ -27,7 +27,7 @@ function dueDateTag(dateStr, limitDate) {
 }
 
 const STATUS_BADGE = {
-    holding: ["홀딩", "badge-holding"],
+    holding: ["예약", "badge-holding"],
     freeze:  ["동결", "badge-freeze"],
     stopped: ["사용불가", "badge-stopped"],
     moving:  ["이고", "badge-moving"],
@@ -37,6 +37,16 @@ function statusBadge(state) {
     const entry = STATUS_BADGE[state];
     if (!entry) return "";
     return `<span class="mc-status-badge ${entry[1]}">${entry[0]}</span>`;
+}
+
+// 가용재고 — 예약이 실재고보다 많아져 0 이하가 되면(수동 재고 조정 등으로 드물게 발생)
+// 빨간 배지로 눈에 띄게 표시. 이고 취합 행 등 이 값 자체가 없는 행은 빈칸.
+function availableCell(value) {
+    if (value === undefined || value === null || value === "") return "";
+    const n = Number(value);
+    if (isNaN(n)) return "";
+    if (n <= 0) return `<span class="due-tag-urgent">${n}</span>`;
+    return String(n);
 }
 
 function whTag(warehouse) {
@@ -130,10 +140,12 @@ function renderMobileView(data) {
                 ${dueDateTag(item.유통기한, limitDate)}
             </div>
             <div class="mc-info">
+                ${Number(item.예약수량) > 0 ? `<div class="mc-row"><span class="mc-label">예약</span>${safeValue(item.예약수량)}</div>` : ""}
+                ${Number(item.예약수량) > 0 ? `<div class="mc-row"><span class="mc-label">가용</span>${availableCell(item.가용재고)}</div>` : ""}
                 ${safeValue(item.평중)   ? `<div class="mc-row"><span class="mc-label">평중</span>${safeValue(item.평중)}</div>` : ""}
                 ${safeValue(item.BL)     ? `<div class="mc-row mc-full"><span class="mc-label">BL</span>${safeValue(item.BL)}</div>` : ""}
                 ${safeValue(item.출고일) ? `<div class="mc-row"><span class="mc-label">출고일</span>${safeValue(item.출고일)}</div>` : ""}
-                ${safeValue(item.홀딩)   ? `<div class="mc-row mc-full"><span class="mc-label">홀딩</span>${safeValue(item.홀딩)}</div>` : ""}
+                ${safeValue(item.홀딩)   ? `<div class="mc-row mc-full"><span class="mc-label">예약자</span>${safeValue(item.홀딩)}</div>` : ""}
                 ${safeValue(item.메모)   ? `<div class="mc-row mc-full"><span class="mc-label">비고</span>${safeValue(item.메모)}</div>` : ""}
             </div>
         </div>`;
@@ -161,6 +173,8 @@ function createUpdateRow(item) {
             <td data-label="등급"><input type="text" class="update-grade cell-input" data-id="${id}" value="${safeValue(item.등급)}"></td>
             <td data-label="ESTNO"><input type="text" class="update-estNo cell-input" data-id="${id}" value="${safeValue(item.ESTNO)}"></td>
             <td data-label="재고"><input type="number" class="update-qty cell-input" data-id="${id}" value="${safeValue(item.재고)}"></td>
+            <td class="holding-inherited" data-label="예약">${Number(item.예약수량) > 0 ? safeValue(item.예약수량) : ""}</td>
+            <td class="holding-inherited" data-label="가용">${availableCell(item.가용재고)}</td>
             <td data-label="BL"><input type="text" class="update-bl cell-input" data-id="${id}" value="${safeValue(item.BL)}"></td>
             <td data-label="창고"><input type="text" class="update-warehouse cell-input" data-id="${id}" value="${safeValue(item.창고)}"></td>
             <td data-label="유통기한"><input type="date" class="update-dueDate cell-input" data-id="${id}" value="${toDateInputValue(item.유통기한)}"></td>
@@ -196,6 +210,8 @@ function createHoldingInsertRow(item) {
             <td class="holding-inherited" data-label="등급">${safeValue(item.등급)}</td>
             <td class="holding-inherited" data-label="ESTNO">${safeValue(item.ESTNO)}</td>
             <td data-label="수량"><input type="number" class="hold-qty cell-input" data-id="${id}" placeholder="수량"></td>
+            <td class="holding-inherited" data-label="예약">${Number(item.예약수량) > 0 ? safeValue(item.예약수량) : ""}</td>
+            <td class="holding-inherited" data-label="가용">${availableCell(item.가용재고)}</td>
             <td class="holding-inherited" data-label="BL">${safeValue(item.BL)}</td>
             <td data-label="담당자 · 출고일자">
                 <div class="hold-stack">
@@ -233,7 +249,7 @@ export function renderBulkActionBar() {
     } else if (updateCount > 0) {
         cls = "bulk-update"; label = `${updateCount}개 항목 수정 중`; btnLabel = "전체 수정"; btnCls = "all-update-btn";
     } else if (holdingCount > 0) {
-        cls = "bulk-holding"; label = `${holdingCount}개 항목 홀딩 입력 중`; btnLabel = "전체 홀딩"; btnCls = "all-holding-btn";
+        cls = "bulk-holding"; label = `${holdingCount}개 항목 예약 입력 중`; btnLabel = "전체 예약"; btnCls = "all-holding-btn";
     }
 
     if (!cls) {
@@ -275,7 +291,7 @@ export function renderWarehouseOptions() {
 // =========================
 const SORT_LABELS = {
     "상품명": "상품명", "브랜드": "브랜드", "등급": "등급",
-    "ESTNO": "ESTNO", "재고": "재고", "BL": "BL",
+    "ESTNO": "ESTNO", "재고": "재고", "예약수량": "예약", "가용재고": "가용", "BL": "BL",
     "창고": "창고", "유통기한": "유통기한", "평중": "평균", "메모": "비고"
 };
 
@@ -332,6 +348,22 @@ export function renderTableSize(count, size, mean) {
     weightEl.textContent = `총 중량 ${mean.toFixed(2)} KG`;
     updatedEl.textContent = lastUpdatedText;
     updatedEl.style.display = lastUpdatedText ? "" : "none";
+}
+
+// =========================
+// 예약 목록 (예약수량 클릭 시 아코디언으로 펼쳐서 보여줌 — 취소 버튼 포함)
+// =========================
+export function createReservationListRow(pk, reservations) {
+    if (!reservations || reservations.length === 0) {
+        return `<tr class="reservation-list-row"><td colspan="13">예약 내역이 없습니다</td></tr>`;
+    }
+    const items = reservations.map(r => `
+        <span class="reservation-list-item">
+            ${safeValue(r.메모) || "(거래처 미입력)"} · ${safeValue(r.수량)}박스${safeValue(r.홀딩) ? ` · ${safeValue(r.홀딩)}` : ""}
+            <button class="reservation-cancel-btn" data-id="${r.id}">취소</button>
+        </span>
+    `).join("");
+    return `<tr class="reservation-list-row" data-pk="${pk}"><td colspan="13">${items}</td></tr>`;
 }
 
 // =========================
@@ -429,7 +461,7 @@ export function renderTable() {
                 if (!av && !bv) continue;
                 if (!av) return 1;
                 if (!bv) return -1;
-                if (key === "재고" || key === "평중") {
+                if (key === "재고" || key === "평중" || key === "예약수량" || key === "가용재고") {
                     const an = Number(av), bn = Number(bv);
                     if (!isNaN(an) && !isNaN(bn)) {
                         const r = (an - bn) * factor;
@@ -563,6 +595,10 @@ export function renderTable() {
                 <td>${safeValue(item.등급)}</td>
                 <td>${safeValue(item.ESTNO)}</td>
                 <td>${safeValue(item.재고)}</td>
+                <td>${Number(item.예약수량) > 0
+                    ? `<button class="view-reservations-btn" data-pk="${item._rawId ?? id}">${safeValue(item.예약수량)}</button>`
+                    : ""}</td>
+                <td>${availableCell(item.가용재고)}</td>
                 <td>${safeValue(item.BL)}</td>
                 <td>${whTag(item.창고)}</td>
                 <td>${dueDateTag(item.유통기한, limitDate)}</td>
@@ -583,7 +619,7 @@ export function renderTable() {
     if (data.length === 0) {
         html = `
             <tr>
-                <td colspan="12" style="text-align:center; padding:40px; color:#9ca3af; font-size:15px;">
+                <td colspan="13" style="text-align:center; padding:40px; color:#9ca3af; font-size:15px;">
                     검색된 데이터가 없습니다
                 </td>
             </tr>

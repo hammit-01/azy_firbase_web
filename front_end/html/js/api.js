@@ -17,7 +17,13 @@ export async function apiFetch(path, options = {}, azy) {
         headers: { "Content-Type": "application/json" },
         ...options,
     });
-    if (!res.ok) throw new Error(`API ${path} 실패: ${res.status}`);
+    if (!res.ok) {
+        // FastAPI HTTPException은 {"detail": "사유"} 형태로 옴 — 있으면 그대로 보여준다
+        // (예: 예약 생성 실패 시 "가용재고 부족(가용 42, 요청 47)"처럼 구체적인 사유).
+        let detail = "";
+        try { detail = (await res.json())?.detail || ""; } catch {}
+        throw new Error(detail || `API ${path} 실패: ${res.status}`);
+    }
     return res.json();
 }
 
@@ -88,13 +94,8 @@ export async function apiDeleteItem(id, azy) {
 }
 
 // ── holding_records CRUD ───────────────────────────────────
-
-export async function apiInsertHoldingRecord(holdId, data, azy) {
-    return apiFetch("/api/holding_records", {
-        method: "POST",
-        body: JSON.stringify({ id: holdId, data }),
-    }, azy);
-}
+// (예약 생성/취소는 apiCreateReservation/apiCancelReservation으로 대체됨 — 아래
+// update/delete는 옛 "상태를 holding으로 직접 수정" 편집 경로에서 아직 씀)
 
 export async function apiUpdateHoldingRecord(id, fields, azy) {
     return apiFetch(`/api/holding_records/${encodeURIComponent(id)}`, {
@@ -109,7 +110,25 @@ export async function apiDeleteHoldingRecord(id, azy) {
     }, azy);
 }
 
-export async function apiGetHoldingCount(pk, azy) {
-    const r = await apiFetch(`/api/holding_records/count/${encodeURIComponent(pk)}`, {}, azy);
-    return r.count;
+// ── 예약(홀딩) — 실재고/예약 분리 재설계(2026-08-05) ──────────
+// 서버가 창고명으로 inventory/azy_inventory를 알아서 판별하므로 azy 인자가 필요 없다.
+
+export async function apiGetReservationsByPk(pk) {
+    const r = await apiFetch(`/api/reservations/by_pk/${encodeURIComponent(pk)}`, {});
+    return r.data;
+}
+
+export async function apiCreateReservation(product) {
+    return apiFetch("/api/reservations", {
+        method: "POST",
+        body: JSON.stringify(product),
+    });
+}
+
+export async function apiCancelReservation(id) {
+    return apiFetch(`/api/reservations/${encodeURIComponent(id)}/cancel`, { method: "POST" });
+}
+
+export async function apiCompleteReservation(id) {
+    return apiFetch(`/api/reservations/${encodeURIComponent(id)}/complete`, { method: "POST" });
 }

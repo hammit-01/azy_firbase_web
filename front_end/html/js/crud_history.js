@@ -1,4 +1,4 @@
-import { updateItem, insertItem, moveHoldingToHistory, deleteItem as _deleteItem } from "./firestoreService.js";
+import { updateItem, insertItem, moveHoldingToHistory, deleteItem as _deleteItem, cancelReservation } from "./firestoreService.js";
 import { showToast, showError } from "./ui.js";
 import { getStoredUser } from "./login.js";
 
@@ -45,6 +45,12 @@ function _buildFn(desc) {
                 await _deleteItem(desc.holdingId, desc.azy);
                 if (desc.holdingRecordId) await moveHoldingToHistory(desc.holdingRecordId, "취소", desc.azy);
             };
+
+        case "reservation":
+            return async () => cancelReservation(desc.id);
+
+        case "bulk-reservation":
+            return async () => { for (const id of desc.ids) await cancelReservation(id); };
 
         case "delete":
             return async () => insertItem(desc.restoreData, desc.azy);

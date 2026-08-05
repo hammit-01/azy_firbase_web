@@ -1,8 +1,9 @@
 import { state } from "./state.js";
-import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows } from "./table.js";
+import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows, createReservationListRow } from "./table.js";
 import { renderSelectData, renderInsert, createInsertRow } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
+import { getReservationsByPk, cancelReservation } from "./firestoreService.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
@@ -40,7 +41,7 @@ export function bindEvents() {
             if (!출고일 && !홀딩) { hoverCard.style.display = "none"; return; }
             hoverCard.innerHTML =
                 (출고일 ? `<div><span class="hc-label">출고일</span>${출고일}</div>` : "") +
-                (홀딩   ? `<div><span class="hc-label">홀딩</span>${홀딩}</div>`   : "");
+                (홀딩   ? `<div><span class="hc-label">예약자</span>${홀딩}</div>`   : "");
             const rect = tr.getBoundingClientRect();
             hoverCard.style.top   = (rect.bottom + 4) + "px";
             hoverCard.style.left  = "auto";
@@ -212,6 +213,37 @@ function handleChange(e) {
 }
 
 async function handleClick(e) {
+    // 예약 수량 클릭 — 아코디언으로 펼쳐서 거래처별 예약 목록 + 취소 버튼 표시
+    if (e.target.classList.contains("view-reservations-btn")) {
+        const pk = e.target.dataset.pk;
+        const tr = e.target.closest("tr");
+        const existing = tr?.nextElementSibling;
+        if (existing?.classList.contains("reservation-list-row")) {
+            existing.remove();
+            return;
+        }
+        document.querySelectorAll("tr.reservation-list-row").forEach(r => r.remove());
+        const reservations = await getReservationsByPk(pk);
+        tr?.insertAdjacentHTML("afterend", createReservationListRow(pk, reservations));
+        return;
+    }
+
+    // 예약 취소
+    if (e.target.classList.contains("reservation-cancel-btn")) {
+        const id = e.target.dataset.id;
+        const ok = await showConfirm("이 예약을 취소할까요?");
+        if (!ok) return;
+        try {
+            await cancelReservation(id);
+            document.querySelectorAll("tr.reservation-list-row").forEach(r => r.remove());
+            showToast("✓ 예약 취소 완료");
+            await fetchAllData();
+        } catch (err) {
+            showError(err.message || "취소 실패");
+        }
+        return;
+    }
+
     // 전체 선택 (현재 필터된 행만)
     if (e.target.classList.contains("select-all")) {
         const visible = state.filteredData.length > 0 ? state.filteredData : state.allData;
@@ -268,7 +300,7 @@ async function handleClick(e) {
 
     // 홀딩 버튼 — 선택한 행 밑에 홀딩 입력행을 추가(다시 누르면 해제)
     if (e.target.classList.contains("holding-btn")) {
-        if (state.selectedItems.size === 0) { showError("홀딩할 상품을 선택하세요."); return; }
+        if (state.selectedItems.size === 0) { showError("예약할 상품을 선택하세요."); return; }
         state.crudData = state.crudData === "holding" ? null : "holding";
         renderTable();
         return;
@@ -419,14 +451,14 @@ async function handleClick(e) {
         const result = await holdingData(item, Number(qty), date, note, memo, weight !== "" ? weight : null);
         if (!result) { state.selectedItems.set(id, item); return; }
 
-        const flashId = result.azy ? `azy:${result.holdingId}` : result.holdingId;
-        state.flashIds.add(flashId);
+        // 예약은 새 행을 안 만들고 원본 행의 예약/가용 숫자만 바뀌므로, 원본 행 자체를 깜빡인다
+        state.flashIds.add(id);
         if (state.selectedItems.size === 0) state.crudData = null;
         renderTable();
         renderSelectData();
 
-        showToast("✓ 홀딩 완료");
-        setTimeout(() => { state.flashIds.delete(flashId); renderTable(); }, 1500);
+        showToast("✓ 예약 완료");
+        setTimeout(() => { state.flashIds.delete(id); renderTable(); }, 1500);
         return;
     }
 
@@ -535,11 +567,11 @@ async function handleClick(e) {
             if (result) backups.push(result);
         }
         if (backups.length > 0) {
-            pushUndo({ type: "bulk-holding", backups: backups.map(b => ({ originalId: b.originalId, originalQty: b.originalQty, wasDeleted: b.wasDeleted, originalData: b.originalData, holdingId: b.holdingId, holdingRecordId: b.holdingRecordId, azy: b.azy })) });
+            pushUndo({ type: "bulk-reservation", ids: backups.map(b => b.reservationId) });
         }
         state.selectedItems.clear();
         state.crudData = null;
-        showToast("✓ 홀딩 완료");
+        showToast("✓ 예약 완료");
         await fetchAllData();
         return;
     }

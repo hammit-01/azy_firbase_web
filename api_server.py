@@ -15,6 +15,8 @@ from pipeline.mysql_db import (
     upsert_holding_record, delete_holding_record,
     upsert_azy_inventory, delete_azy_inventory,
     upsert_azy_holding_record, delete_azy_holding_record,
+    create_reservation, cancel_reservation, complete_reservation,
+    get_active_reservations_by_pk,
 )
 
 app = FastAPI()
@@ -30,9 +32,19 @@ app.add_middleware(
 
 @app.get("/api/inventory")
 def get_inventory():
+    """가용재고는 저장해두지 않고 조회 시점에 "실재고 − ACTIVE 예약 합계"로 계산한다
+    (2026-08-05 재설계) — 예약을 아무리 잘못 만들어도 실재고(원본) 자체는 항상
+    정확하고, 화면에 보여줄 값만 매번 다시 계산되므로 어긋난 채로 굳어질 수 없다."""
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT * FROM inventory ORDER BY 상품명, 브랜드, 등급")
+            cur.execute(
+                "SELECT i.*, COALESCE(r.예약수량, 0) AS 예약수량, "
+                "i.재고 - COALESCE(r.예약수량, 0) AS 가용재고 "
+                "FROM inventory i "
+                "LEFT JOIN (SELECT pk, CAST(SUM(수량) AS SIGNED) AS 예약수량 FROM holding_records "
+                "           WHERE status='ACTIVE' GROUP BY pk) r ON i.id = r.pk "
+                "ORDER BY i.상품명, i.브랜드, i.등급"
+            )
             rows = cur.fetchall()
     return {"data": rows}
 
@@ -200,9 +212,17 @@ def count_holding_by_pk(pk: str):
 
 @app.get("/api/azy_inventory")
 def get_azy_inventory():
+    """가용재고는 조회 시점 계산(get_inventory와 동일 원칙 — 2026-08-05 재설계)."""
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT * FROM azy_inventory ORDER BY 상품명, 브랜드, 등급")
+            cur.execute(
+                "SELECT i.*, COALESCE(r.예약수량, 0) AS 예약수량, "
+                "i.재고 - COALESCE(r.예약수량, 0) AS 가용재고 "
+                "FROM azy_inventory i "
+                "LEFT JOIN (SELECT pk, CAST(SUM(수량) AS SIGNED) AS 예약수량 FROM azy_holding_records "
+                "           WHERE status='ACTIVE' GROUP BY pk) r ON i.id = r.pk "
+                "ORDER BY i.상품명, i.브랜드, i.등급"
+            )
             rows = cur.fetchall()
     return {"data": rows}
 
@@ -305,6 +325,58 @@ def count_azy_holding_by_pk(pk: str):
             cur.execute("SELECT COUNT(*) as cnt FROM azy_holding_records WHERE pk=%s", (pk,))
             row = cur.fetchone()
     return {"count": row["cnt"]}
+
+
+# ── 예약(홀딩) — 실재고/예약 분리 재설계(2026-08-05) ──────────
+# 소스 재고는 절대 건드리지 않고 holding_records/azy_holding_records에만 쌓는다.
+# 취소/완료도 물리 삭제 대신 status 변경 — 삭제 시 짝지어진 데이터가 안 지워져
+# 재고가 유령처럼 사라지던 사고(2026-08-05)를 구조적으로 막기 위함.
+
+class ReservationBody(BaseModel):
+    상품명: str
+    브랜드: str = ""
+    등급:   str = ""
+    ESTNO:  str = ""
+    BL:     str
+    창고:   str
+    수량:   int
+    거래처: str = ""
+    담당자: str = ""
+    출고일: str = ""
+
+@app.get("/api/reservations/by_pk/{pk}")
+def list_reservations_by_pk(pk: str):
+    with get_conn() as conn:
+        rows = get_active_reservations_by_pk(conn, pk)
+    return {"data": rows}
+
+
+@app.post("/api/reservations")
+def create_reservation_endpoint(body: ReservationBody):
+    with get_conn() as conn:
+        try:
+            rec = create_reservation(conn, body.dict())
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    return rec
+
+
+@app.post("/api/reservations/{rec_id}/cancel")
+def cancel_reservation_endpoint(rec_id: str):
+    with get_conn() as conn:
+        ok = cancel_reservation(conn, rec_id)
+    if not ok:
+        raise HTTPException(404, "예약을 찾을 수 없거나 이미 종료됨")
+    return {"ok": True}
+
+
+@app.post("/api/reservations/{rec_id}/complete")
+def complete_reservation_endpoint(rec_id: str):
+    with get_conn() as conn:
+        ok = complete_reservation(conn, rec_id)
+    if not ok:
+        raise HTTPException(404, "예약을 찾을 수 없거나 이미 종료됨")
+    return {"ok": True}
 
 
 # ── 정적 파일 (프론트엔드) ───────────────────────────────────

@@ -518,6 +518,46 @@ th.sort-active {
     font-weight: 700;
 }
 
+/* ── 예약 수량(클릭하면 예약 목록/취소) ── */
+.view-reservations-btn {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 2px 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.view-reservations-btn:hover {
+    background: #dbeafe;
+}
+
+.reservation-list-row td {
+    background: #f8fafc;
+    padding: 8px 12px;
+}
+.reservation-list-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 4px 10px;
+    margin: 2px 6px 2px 0;
+    font-size: 14px;
+}
+.reservation-cancel-btn {
+    border: none;
+    background: #fee2e2;
+    color: #b91c1c;
+    border-radius: 6px;
+    padding: 2px 6px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
 /* ── 툴바 액션 버튼 ── */
 .rollback-btn, .clear-btn, .all-delete-btn, .changes-tab-btn,
 .insert-btn, .update-btn, .holding-btn {
@@ -1421,7 +1461,7 @@ tr.insert-card .remove-insert-btn:hover {
     }
     tr.insert-card::before     { content: "✚ 상품 추가"; color: #16a34a; }
     tr.update-row-edit::before { content: "✎ 상품 수정"; color: #2563eb; }
-    tr.holding-insert-row::before { content: "❄ 홀딩 등록"; color: #0284c7; }
+    tr.holding-insert-row::before { content: "❄ 예약 등록"; color: #0284c7; }
 
     tr.insert-card td, tr.update-row-edit td, tr.holding-insert-row td {
         display: block;

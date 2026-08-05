@@ -137,10 +137,11 @@ def _upload_azy(azy_df, warehouse_scope=None):
             raw_qty = 0
         if raw_qty <= 0:
             continue
+        # 예약(홀딩) 시스템 재설계(2026-08-05) 이후 재고는 실재고 그대로 저장 —
+        # 가용재고(=실재고−ACTIVE 예약)는 API가 조회 시점에 계산한다. holdingTotal은
+        # 화면 참고용 스냅샷일 뿐 이 값으로 재고를 깎지 않는다.
+        qty   = raw_qty
         h_qty = holding_sum.get(uid, 0)
-        qty   = raw_qty - h_qty
-        if qty <= 0:
-            continue
         try:
             avg_w = float(r.get("평균중량") or r.get("평중", None))
             if math.isnan(avg_w):
@@ -184,13 +185,13 @@ def _upload_azy(azy_df, warehouse_scope=None):
             if warehouse_scope:
                 placeholders = ", ".join(["%s"] * len(warehouse_scope))
                 cur.execute(
-                    "SELECT id, 홀딩, 상태, 메모, 상품명, 브랜드, 등급, ESTNO, BL, 창고, 재고, 평중, 유통기한, 출고일 "
+                    "SELECT id, 홀딩, 상태, 메모, 상품명, 브랜드, 등급, ESTNO, BL, 창고, 재고, 평중, 유통기한, 출고일, stock_version "
                     f"FROM azy_inventory WHERE 수집일 != '' AND 창고 IN ({placeholders})",
                     tuple(warehouse_scope),
                 )
             else:
                 cur.execute(
-                    "SELECT id, 홀딩, 상태, 메모, 상품명, 브랜드, 등급, ESTNO, BL, 창고, 재고, 평중, 유통기한, 출고일 "
+                    "SELECT id, 홀딩, 상태, 메모, 상품명, 브랜드, 등급, ESTNO, BL, 창고, 재고, 평중, 유통기한, 출고일, stock_version "
                     "FROM azy_inventory WHERE 수집일 != ''"
                 )
             existing = {row["id"]: row for row in cur.fetchall()}
@@ -212,6 +213,11 @@ def _upload_azy(azy_df, warehouse_scope=None):
                 for f in ("상품명", "브랜드", "등급", "ESTNO", "BL", "창고", "평중", "유통기한", "출고일"):
                     if prev.get(f) not in (None, ""):
                         data[f] = prev[f]
+                # 실재고가 실제로 바뀐 경우에만 버전 증가(예약 화면의 "재고 변경 여부" 판단 기준)
+                if (prev.get("재고") or 0) != (data.get("재고") or 0):
+                    data["stock_version"] = (prev.get("stock_version") or 0) + 1
+                else:
+                    data["stock_version"] = prev.get("stock_version") or 0
 
             prev_state = prev.get("상태", "없음") if prev else "없음"
             if prev_state == "holding":
@@ -317,7 +323,9 @@ def run_pipeline():
 
             # 홀딩 취합 시트 자동 처리는 비활성화함(2026-08-05, 사용자 요청 —
             # 유령 홀딩/신규 요청 무한 스킵 사고 이후 자동 반영 자체를 중단).
-            # load_holding_rows()/apply_holding_sheet()는 코드는 남겨두되 호출 안 함.
+            # 예약(홀딩) 시스템 자체를 mysql_db.py::create_reservation()으로 재설계했고,
+            # 시트 기반 자동 생성은 다시 넣지 않기로 함 — 홀딩_reader.load_holding_rows()도
+            # 더 이상 아무도 안 부름(코드는 남겨둠).
 
         elapsed = time.time() - start
         log.info(f"완료 | azy {len(azy_normalized)}건 | {elapsed:.1f}초 소요")

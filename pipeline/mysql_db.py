@@ -51,7 +51,7 @@ def get_conn():
         conn.close()
 
 
-_INT_COLS   = {"재고", "holdingTotal", "원본재고"}
+_INT_COLS   = {"재고", "holdingTotal", "원본재고", "stock_version"}
 _FLOAT_COLS = {"평중", "중량"}
 
 def _val(col, row):
@@ -175,7 +175,7 @@ def upsert_inventory(conn, rows: list[dict]):
         return
     cols = ["id","pk","상품명","브랜드","등급","ESTNO","재고","BL","창고",
             "유통기한","중량","평중","출고일","홀딩","상태","메모","수집일",
-            "holdingTotal","holdingRecordId","이상","원본재고"]
+            "holdingTotal","holdingRecordId","이상","원본재고","stock_version"]
     placeholders = ", ".join(["%s"] * len(cols))
     col_names    = ", ".join([f"`{c}`" for c in cols])
     update_part  = ", ".join([f"`{c}`=VALUES(`{c}`)" for c in cols if c != "id"])
@@ -221,9 +221,9 @@ def delete_holding_record(conn, rec_id: str):
 
 
 def get_holding_sum(conn) -> dict:
-    """pk → 수량 합계 (holding_records 기준)."""
+    """pk → ACTIVE 예약 수량 합계 (holding_records 기준)."""
     with conn.cursor() as cur:
-        cur.execute("SELECT pk, SUM(수량) as total FROM holding_records WHERE pk != '' GROUP BY pk")
+        cur.execute("SELECT pk, SUM(수량) as total FROM holding_records WHERE pk != '' AND status='ACTIVE' GROUP BY pk")
         return {row["pk"]: int(row["total"] or 0) for row in cur.fetchall()}
 
 
@@ -264,12 +264,6 @@ def get_holding_rows_by_bl(conn) -> dict:
     return result
 
 
-def get_employees(conn) -> set:
-    with conn.cursor() as cur:
-        cur.execute("SELECT 이름 FROM employees")
-        return {row["이름"] for row in cur.fetchall()}
-
-
 def get_snapshot(conn) -> dict:
     """현재 inventory 크롤행 → prev_snapshot 형식으로 반환."""
     with conn.cursor() as cur:
@@ -285,7 +279,7 @@ def upsert_azy_inventory(conn, rows: list[dict]):
         return
     cols = ["id","pk","상품명","브랜드","등급","ESTNO","재고","BL","창고",
             "유통기한","중량","평중","출고일","홀딩","상태","메모","수집일",
-            "holdingTotal","holdingRecordId","이상","원본재고"]
+            "holdingTotal","holdingRecordId","이상","원본재고","stock_version"]
     placeholders = ", ".join(["%s"] * len(cols))
     col_names    = ", ".join([f"`{c}`" for c in cols])
     update_part  = ", ".join([f"`{c}`=VALUES(`{c}`)" for c in cols if c != "id"])
@@ -434,94 +428,132 @@ def apply_moving_deductions(conn, moving_rows: list[dict], deduct_targets=("inve
     return remaining
 
 
-def apply_holding_sheet(conn, holding_rows: list[dict]) -> dict:
-    """홀딩 취합 시트 행을 상품명/브랜드/등급/ESTNO/BL/창고로 소스 재고를 찾아
-    자동 홀딩 처리한다(프론트 "홀딩" 버튼과 동일하게: 소스 행 재고를 줄이거나
-    삭제하고, holding_records(또는 azy_holding_records)에 홀딩 기록을 남기고,
-    수집일=''/상태='holding'인 홀딩 표시 행을 새로 만든다).
+def create_reservation(conn, product: dict) -> dict:
+    """예약(홀딩) 생성 — 실재고와 예약을 분리하는 새 모델(2026-08-05 재설계).
 
-    한 시트 행이 매 사이클 다시 읽혀도 재고가 반복 차감되면 안 되므로, 시트 행
-    id(예: "20260803_1") 기반의 결정적 holding_records id로 "이미 처리했는지"를
-    판단해 한 번만 적용한다(2026-08-03, "홀딩" 시트 자동화 도입).
-    소스 행을 못 찾거나(0건/2건 이상 매칭) 재고가 모자라면 이번 사이클은
-    건너뛰고 다음 사이클에 다시 시도한다(아직 크롤이 안 따라잡았을 수 있음).
+    기존 apply_holding_sheet()와 달리 소스 재고(실재고)는 절대 건드리지 않는다 —
+    크롤러만 실재고를 갱신하고, 예약은 holding_records/azy_holding_records에만
+    쌓인다. 가용재고는 API 조회 시점에 "실재고 − ACTIVE 예약 합계"로 계산한다.
 
-    반환값: {"applied": [...], "skipped": [(row, 사유), ...]} — 호출부 로깅용.
+    재고 행과 기존 ACTIVE 예약 합계를 FOR UPDATE로 잠그고 가용재고를 확인한 뒤
+    INSERT까지 한 트랜잭션 안에서 처리해, 두 사람이 동시에 같은 재고를 예약해도
+    한쪽만 성공하도록 한다(직렬화 지점은 재고 행 락 — 같은 pk를 노리는 두 트랜잭션은
+    이 락에서 순서가 정해지고, 뒤에 도는 쪽은 앞쪽이 커밋한 예약까지 반영된 합계로
+    다시 계산되므로 중복 예약이 불가능하다).
+
+    product: {상품명, 브랜드, 등급, ESTNO, BL, 창고, 수량, 거래처, 담당자}
+    실패 시 ValueError(사유) — 호출부(API)가 400으로 변환해서 응답.
     """
+    import uuid
     from datetime import datetime
     from zoneinfo import ZoneInfo
 
-    applied, skipped = [], []
-    today_str = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y.%m.%d")
+    reserve_qty = int(product.get("수량") or 0)
+    if reserve_qty <= 0:
+        raise ValueError("수량은 1 이상이어야 합니다")
+
+    table = _table_for_warehouse(product["창고"])
+    hr_table = "holding_records" if table == "inventory" else "azy_holding_records"
 
     with conn.cursor() as cur:
-        for row in holding_rows:
-            table = _table_for_warehouse(row["창고"])
-            hr_table = "holding_records" if table == "inventory" else "azy_holding_records"
-            hold_id = f"sheet_{row['id']}"
+        cur.execute(
+            f"SELECT id, pk, 재고, stock_version FROM {table} WHERE 상품명=%s AND 브랜드=%s "
+            f"AND 등급=%s AND ESTNO=%s AND BL=%s AND 창고=%s AND 수집일 != '' FOR UPDATE",
+            (product["상품명"], product.get("브랜드", ""), product.get("등급", ""),
+             product.get("ESTNO", ""), product["BL"], product["창고"]),
+        )
+        matches = cur.fetchall()
+        if len(matches) != 1:
+            raise ValueError(f"재고 매칭 {len(matches)}건 — 정확히 1건이어야 예약 가능")
+        src = matches[0]
+        pk  = src["pk"] or src["id"]
 
-            cur.execute(f"SELECT id FROM {hr_table} WHERE id=%s", (hold_id,))
-            if cur.fetchone():
-                continue  # 이미 처리된 시트 행 — 재적용 안 함
+        cur.execute(
+            f"SELECT COALESCE(SUM(수량),0) AS total FROM {hr_table} WHERE pk=%s AND status='ACTIVE' FOR UPDATE",
+            (pk,),
+        )
+        active_sum = int(cur.fetchone()["total"] or 0)
+        available  = (src["재고"] or 0) - active_sum
+        if reserve_qty > available:
+            raise ValueError(f"가용재고 부족(가용 {available}, 요청 {reserve_qty})")
 
-            # 같은 요청이 시트에 다른 행 인덱스로 중복 입력된 경우 방지
-            # (2026-08-04, 같은 BL/수량/거래처가 오늘 이미 처리됐으면 스킵 —
-            # 실제로 7건이 중복 적용된 사고 후 추가).
+        rec_id    = uuid.uuid4().hex
+        today_str = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y.%m.%d")
+        cur.execute(
+            f"INSERT INTO {hr_table} "
+            "(id, pk, BL, ESTNO, 등급, 수량, 홀딩, 출고일, 메모, uid, 홀딩일자, status, "
+            "stock_when_reserved, available_when_reserved, stock_version_when_reserved, released_at) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'ACTIVE',%s,%s,%s,'')",
+            (rec_id, pk, product["BL"], product.get("ESTNO", ""), product.get("등급", ""), reserve_qty,
+             product.get("담당자", ""), product.get("출고일", ""), product.get("거래처", ""), "reservation", today_str,
+             src["재고"], available, src.get("stock_version") or 0),
+        )
+
+    return {
+        "id": rec_id, "pk": pk, "table": hr_table, "수량": reserve_qty,
+        "실재고_당시": src["재고"], "가용재고_당시": available,
+        "stock_version_당시": src.get("stock_version") or 0,
+    }
+
+
+def cancel_reservation(conn, rec_id: str) -> bool:
+    """예약 취소 — 물리 삭제 대신 status=CANCEL로 남겨서 이력을 보존한다
+    (삭제하면 짝지어진 데이터가 안 지워져 유령으로 남는 사고를 원천 차단 — 2026-08-05).
+    클라이언트가 어느 테이블 소속인지 몰라도 되도록 양쪽 다 시도한다."""
+    return _set_reservation_status(conn, rec_id, "CANCEL")
+
+
+def complete_reservation(conn, rec_id: str) -> bool:
+    """예약 완료 처리(실제로 출고됨) — 매뉴얼/자동 완료가 이 함수 하나만 호출한다."""
+    return _set_reservation_status(conn, rec_id, "COMPLETED")
+
+
+def _set_reservation_status(conn, rec_id: str, status: str) -> bool:
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    now = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")
+    with conn.cursor() as cur:
+        for hr_table in ("holding_records", "azy_holding_records"):
             cur.execute(
-                f"SELECT id FROM {hr_table} WHERE id LIKE 'sheet_%%' AND BL=%s "
-                f"AND 수량=%s AND 메모=%s AND 홀딩일자=%s",
-                (row["BL"], row["재고"], row["거래처"], today_str),
+                f"UPDATE {hr_table} SET status=%s, released_at=%s WHERE id=%s AND status='ACTIVE'",
+                (status, now, rec_id),
             )
-            dup = cur.fetchone()
-            if dup:
-                skipped.append((row, f"오늘 이미 동일 요청 처리됨({dup['id']})"))
-                continue
+            if cur.rowcount:
+                return True
+    return False
 
+
+def try_auto_complete_by_shipment(conn, bl: str, estno: str, grade: str, shipped_qty: int) -> bool:
+    """출고 기록 시트에 찍힌 실제 출고와 ACTIVE 예약을 대조해, 애매하지 않을 때만
+    자동으로 완료 처리한다: 해당 BL/ESTNO/등급의 ACTIVE 예약이 정확히 1건이고,
+    그 예약 수량이 출고 수량과 정확히 일치할 때만. 하나라도 안 맞으면 손대지 않고
+    False 반환 — 호출부가 사람 확인 목록으로 남긴다.
+
+    JNS/곤 창고(holding_records)만 대상 — 출고 기록 시트가 그쪽 기준으로 운영됨.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id, 수량 FROM holding_records WHERE BL=%s AND ESTNO=%s AND 등급=%s AND status='ACTIVE'",
+            (bl, estno, grade),
+        )
+        matches = cur.fetchall()
+    if len(matches) != 1 or int(matches[0]["수량"] or 0) != int(shipped_qty):
+        return False
+    return complete_reservation(conn, matches[0]["id"])
+
+
+def get_active_reservations_by_pk(conn, pk: str) -> list[dict]:
+    """화면에서 "이 상품 예약 N건"을 눌렀을 때 상세 목록(취소 버튼 포함)을 보여주기 위한 조회.
+    어느 테이블 소속인지 몰라도 되도록 양쪽 다 찾는다."""
+    result = []
+    with conn.cursor() as cur:
+        for hr_table in ("holding_records", "azy_holding_records"):
             cur.execute(
-                f"SELECT id, pk, 재고 FROM {table} WHERE 상품명=%s AND 브랜드=%s AND 등급=%s "
-                f"AND ESTNO=%s AND BL=%s AND 창고=%s AND 수집일 != ''",
-                (row["상품명"], row["브랜드"], row["등급"], row["ESTNO"], row["BL"], row["창고"]),
+                f"SELECT id, 수량, 홀딩, 메모, 홀딩일자 FROM {hr_table} WHERE pk=%s AND status='ACTIVE'",
+                (pk,),
             )
-            matches = cur.fetchall()
-            if len(matches) != 1:
-                skipped.append((row, f"매칭 {len(matches)}건"))
-                continue
-            src = matches[0]
-            if (src["재고"] or 0) < row["재고"]:
-                skipped.append((row, f"재고 부족(현재 {src['재고']})"))
-                continue
-
-            remain = (src["재고"] or 0) - row["재고"]
-            pk = src["pk"] or src["id"]
-
-            if remain <= 0:
-                cur.execute(f"DELETE FROM {table} WHERE id=%s", (src["id"],))
-            else:
-                cur.execute(f"UPDATE {table} SET 재고=%s WHERE id=%s", (remain, src["id"]))
-
-            # "홀딩" 컬럼은 프론트에서 "담당자"(hold-note) 입력값이 들어가는 자리라
-            # 자동 처리를 표시하는 마커를 넣고, 거래처명은 실제 "비고"(hold-memo → 메모)
-            # 자리에 넣는다 — 사람이 수동 홀딩할 때 거래처를 비고에 적는 것과 동일하게
-            # 맞춤(2026-08-04, 사용자 지적으로 수정 — 처음엔 반대로 넣었었음).
-            assignee_marker = "자동(시트)"
-            cur.execute(
-                f"INSERT INTO {hr_table} (id, pk, BL, ESTNO, 등급, 수량, 홀딩, 출고일, 메모, uid, 홀딩일자) "
-                f"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                (hold_id, pk, row["BL"], row["ESTNO"], row["등급"], row["재고"],
-                 assignee_marker, "", row["거래처"], "sheet_auto", today_str),
-            )
-
-            hold_row_id = f"{pk}_{hold_id}"
-            cur.execute(
-                f"INSERT INTO {table} "
-                "(id, pk, 상품명, 브랜드, 등급, ESTNO, 재고, BL, 창고, 상태, 수집일, 홀딩, 메모, holdingRecordId) "
-                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,'holding','',%s,%s,%s)",
-                (hold_row_id, pk, row["상품명"], row["브랜드"], row["등급"], row["ESTNO"],
-                 row["재고"], row["BL"], row["창고"], assignee_marker, row["거래처"], hold_id),
-            )
-            applied.append(row)
-
-    return {"applied": applied, "skipped": skipped}
+            result.extend(cur.fetchall())
+    return result
 
 
 def upsert_azy_holding_record(conn, rec: dict):
@@ -541,8 +573,9 @@ def delete_azy_holding_record(conn, rec_id: str):
 
 
 def get_azy_holding_sum(conn) -> dict:
+    """pk → ACTIVE 예약 수량 합계 (azy_holding_records 기준)."""
     with conn.cursor() as cur:
-        cur.execute("SELECT pk, SUM(수량) as total FROM azy_holding_records WHERE pk != '' GROUP BY pk")
+        cur.execute("SELECT pk, SUM(수량) as total FROM azy_holding_records WHERE pk != '' AND status='ACTIVE' GROUP BY pk")
         return {row["pk"]: int(row["total"] or 0) for row in cur.fetchall()}
 
 

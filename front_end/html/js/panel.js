@@ -15,7 +15,7 @@ export function employeeSelect(cls, dataId = "", currentVal = "") {
 // show-state 필터와 동일한 어휘 — 추가/수정 폼에서 상태를 직접 고를 때도 같은 옵션을 씀
 const STATE_OPTIONS = [
     ["없음", "없음"],
-    ["holding", "홀딩"],
+    ["holding", "예약"],
     ["freeze", "동결"],
     ["stopped", "사용불가"],
     ["moving", "이고"],
