@@ -195,6 +195,8 @@ def _upload_azy(azy_df, warehouse_scope=None):
                 )
             existing = {row["id"]: row for row in cur.fetchall()}
 
+        prev_total = sum(row["재고"] or 0 for row in existing.values())
+
         # 사용자가 UI에서 직접 고칠 수 있는 마스터 필드 — 기존 행이면 크롤값으로 덮어쓰지 않고 보존
         for uid, data in rows.items():
             prev = existing.get(uid)
@@ -244,7 +246,15 @@ def _upload_azy(azy_df, warehouse_scope=None):
         if stale_ids:
             delete_azy_inventory(conn, stale_ids)
 
-    log.info(f"  [azy] {len(rows)}건 갱신 / {len(stale_ids)}건 삭제 → azy_inventory 완료")
+    new_total = sum(r["재고"] for r in rows.values())
+    diff_note = ""
+    if prev_total and abs(new_total - prev_total) / prev_total >= 0.2:
+        # 크롤이 부분적으로만 성공해도(에러 없이 일부 창고만 빈 결과) EDA 단계는 통과할 수
+        # 있어서, 정규화 전후 비교(crawler.py)만으로는 못 잡는다 — 직전 사이클 대비 총량이
+        # 20% 이상 튀면 실제 재고 변동인지 크롤 이상인지 사람이 확인하도록 경고만 남긴다.
+        diff_note = f" ★ 직전 대비 {prev_total}→{new_total}박스 ({new_total - prev_total:+d})"
+        log.warning(f"  [azy 수량경고] 총 재고 {prev_total} → {new_total}박스로 급변 (범위: {warehouse_scope})")
+    log.info(f"  [azy] {len(rows)}건 갱신 / {len(stale_ids)}건 삭제 → azy_inventory 완료{diff_note}")
 
 
 def run_pipeline():

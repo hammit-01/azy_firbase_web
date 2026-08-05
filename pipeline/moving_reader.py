@@ -82,5 +82,20 @@ def load_moving_rows() -> list[dict]:
             "이동창고": str(row.get(_COL["to_warehouse"], "") or "").strip(),
         })
 
-    log.info(f"  [이고] '{tab}' 탭 {len(result)}건 로드")
-    return result
+    # 같은 이고 요청이 시트에 행만 다르게 중복 입력된 경우 방지 — apply_moving_deductions는
+    # id(행 인덱스) 기준 이력이 없어 매 사이클 moving_rows를 그대로 다시 차감하므로,
+    # 여기서 걸러두지 않으면 홀딩 시트에서 났던 것과 같은 중복 차감이 그대로 재현된다
+    # (2026-08-05, 홀딩 시트 중복 처리 버그 수정 후 같은 패턴 점검하며 추가).
+    seen: dict = {}
+    deduped = []
+    for row in result:
+        key = (row["상품명"], row["브랜드"], row["등급"], row["ESTNO"],
+               row["BL"], row["이력번호"], row["출고창고"], row["이동창고"], row["재고"])
+        if key in seen:
+            log.warning(f"  [이고] 중복 행 스킵: {row['상품명'][:20]} / {row['BL']} (첫 등장: {seen[key]})")
+            continue
+        seen[key] = row["id"]
+        deduped.append(row)
+
+    log.info(f"  [이고] '{tab}' 탭 {len(deduped)}건 로드" + (f" ({len(result)-len(deduped)}건 중복 제외)" if len(deduped) != len(result) else ""))
+    return deduped

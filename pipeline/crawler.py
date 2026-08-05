@@ -172,23 +172,35 @@ class CrawlerPool:
         others   = [df for w, df in success.items() if w != "제니스(곤지암)"]
         final_df = pd.concat(others, ignore_index=True) if others else pd.DataFrame()
 
-        raw_qty = 0
-        if not jns_df.empty and "재고수량" in jns_df.columns:
-            raw_qty = int(pd.to_numeric(
-                jns_df["재고수량"].astype(str).str.replace(",", "", regex=False),
+        def _qty_sum(df):
+            if df.empty or "재고수량" not in df.columns:
+                return 0
+            return int(pd.to_numeric(
+                df["재고수량"].astype(str).str.replace(",", "", regex=False),
                 errors="coerce"
             ).fillna(0).sum())
+
+        raw_qty     = _qty_sum(jns_df)
+        raw_qty_azy = _qty_sum(final_df)
+        if raw_qty:
             log.info(f"  [정규화 전] 원본: {len(jns_df)}행 / {raw_qty}박스")
+        if raw_qty_azy:
+            log.info(f"  [정규화 전-azy] 원본: {len(final_df)}행 / {raw_qty_azy}박스")
 
         _, normalized, azy_normalized = list_eda(final_df, jns_df)
 
-        if not normalized.empty and "재고수량" in normalized.columns:
-            eda_qty = int(pd.to_numeric(normalized["재고수량"], errors="coerce").fillna(0).sum())
+        eda_qty = _qty_sum(normalized)
+        if not normalized.empty:
             log.info(f"  [정규화 후] EDA: {len(normalized)}행 / {eda_qty}박스")
             if raw_qty and raw_qty != eda_qty:
                 log.warning(f"  [정규화 경고] 박스 수 변동: {raw_qty} → {eda_qty} ({eda_qty - raw_qty:+d}박스)")
 
+        eda_qty_azy = _qty_sum(azy_normalized)
         if not azy_normalized.empty:
-            log.info(f"  [azy] {len(azy_normalized)}건")
+            log.info(f"  [azy] {len(azy_normalized)}건 / {eda_qty_azy}박스")
+            # 크롤 직후(EDA 전) 총량과 azy EDA 완료 후 총량을 비교 — eda_standard/replace_name
+            # 등 파이프라인 어딘가에서 박스 수가 조용히 늘거나 줄면 여기서 잡힌다.
+            if raw_qty_azy and raw_qty_azy != eda_qty_azy:
+                log.warning(f"  [azy 정규화 경고] 박스 수 변동: {raw_qty_azy} → {eda_qty_azy} ({eda_qty_azy - raw_qty_azy:+d}박스)")
 
         return normalized, azy_normalized
