@@ -1,14 +1,31 @@
 import { state } from "./state.js";
-import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows, createReservationListRow } from "./table.js";
+import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows, createReservationListRow, renderReservationsTab } from "./table.js";
 import { renderSelectData, renderInsert, createInsertRow } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
-import { getReservationsByPk, cancelReservation } from "./firestoreService.js";
+import { getReservationsByPk } from "./firestoreService.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
 import { fetchAllData } from "./firebase.js";
 import { showToast, showError, showConfirm } from "./ui.js";
+
+// rows(배열의 배열, 헤더 포함)를 CSV(엑셀 호환)로 내려받기 — 업데이트 탭/메인 테이블
+// 다운로드가 공유하는 헬퍼(2026-08-06).
+function downloadCsv(filenamePrefix, headers, rows) {
+    const esc = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const lines = [headers.map(esc).join(","), ...rows.map(r => r.map(esc).join(","))];
+    const csv = "﻿" + lines.join("\r\n"); // BOM — 엑셀에서 한글 깨짐 방지
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const today = new Date();
+    const pad = n => String(n).padStart(2, "0");
+    a.href = url;
+    a.download = `${filenamePrefix}_${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
 
 export function bindEvents() {
 
@@ -31,17 +48,47 @@ export function bindEvents() {
     let _hoveredTr = null;
     const tableEl = document.querySelector(".table-wrap table");
     if (tableEl) {
-        tableEl.addEventListener("mouseover", (e) => {
+        tableEl.addEventListener("mouseover", async (e) => {
             const tr = e.target.closest("tbody tr");
             if (tr === _hoveredTr) return;
             _hoveredTr = tr;
             if (!tr) { hoverCard.style.display = "none"; return; }
+
             const 출고일 = tr.dataset.출고일 || "";
             const 홀딩   = tr.dataset.홀딩   || "";
-            if (!출고일 && !홀딩) { hoverCard.style.display = "none"; return; }
+            const pk     = tr.dataset.pk || "";
+            const hasReservation = Number(tr.dataset.예약수량 || 0) > 0;
+
+            if (!출고일 && !홀딩 && !hasReservation) { hoverCard.style.display = "none"; return; }
+
+            // 예약이 있으면 실제 예약 레코드(담당자/출고일자/비고)를 가져와서 보여준다 —
+            // 행 자체의 홀딩/출고일 필드는 예약과 분리된 이후로는 안 채워지는 옛 필드라
+            // 여기서 실제 예약 정보를 따로 조회해야 함(2026-08-06).
+            let reservationsHtml = "";
+            if (hasReservation && pk) {
+                try {
+                    const reservations = await getReservationsByPk(pk);
+                    if (tr !== _hoveredTr) return; // 그 사이 다른 행으로 넘어갔으면 무시(오래된 응답)
+                    reservationsHtml = reservations.map(r => `
+                        <div class="hc-reservation">
+                            <div><span class="hc-label">담당자</span>${r.홀딩 || "(미지정)"}</div>
+                            <div><span class="hc-label">출고일자</span>${r.출고일 || "-"}</div>
+                            <div><span class="hc-label">비고</span>${r.메모 || "-"}</div>
+                        </div>
+                    `).join("");
+                } catch {
+                    reservationsHtml = "";
+                }
+            }
+            if (tr !== _hoveredTr) return;
+
             hoverCard.innerHTML =
                 (출고일 ? `<div><span class="hc-label">출고일</span>${출고일}</div>` : "") +
-                (홀딩   ? `<div><span class="hc-label">예약자</span>${홀딩}</div>`   : "");
+                (홀딩   ? `<div><span class="hc-label">예약자</span>${홀딩}</div>`   : "") +
+                reservationsHtml;
+
+            if (!hoverCard.innerHTML) { hoverCard.style.display = "none"; return; }
+
             const rect = tr.getBoundingClientRect();
             hoverCard.style.top   = (rect.bottom + 4) + "px";
             hoverCard.style.left  = "auto";
@@ -70,7 +117,7 @@ export function bindEvents() {
         }
     });
 
-    ["상품명", "브랜드", "등급", "ESTNO", "재고", "BL", "창고", "유통기한", "평중", "메모"].forEach(key => {
+    ["상품명", "브랜드", "등급", "ESTNO", "재고", "예약수량", "가용재고", "BL", "창고", "유통기한", "평중", "메모"].forEach(key => {
         document.querySelector(`th[data-key="${key}"]`)?.addEventListener("click", () => {
             const idx = state.sortColumns.findIndex(s => s.key === key);
             if (idx === -1) {
@@ -97,7 +144,7 @@ export function bindEvents() {
     });
 
     let filterTimer = null;
-    ["show-warehouse", "show-brand", "show-state"].forEach(cls => {
+    ["show-warehouse", "show-product-name", "show-brand", "show-state"].forEach(cls => {
         document.querySelector(`.${cls}`)?.addEventListener("change", () => {
             clearTimeout(filterTimer);
             filterTimer = setTimeout(() => renderTable(), 100);
@@ -106,6 +153,10 @@ export function bindEvents() {
 
     document.addEventListener("change", (e) => {
         if (e.target.classList.contains("row-check")) handleChange(e);
+        if (e.target.id === "reservations-filter") {
+            state.reservationsFilter = e.target.value;
+            renderReservationsTab();
+        }
     });
 
     document.addEventListener("input", (e) => {
@@ -213,7 +264,8 @@ function handleChange(e) {
 }
 
 async function handleClick(e) {
-    // 예약 수량 클릭 — 아코디언으로 펼쳐서 거래처별 예약 목록 + 취소 버튼 표시
+    // 예약 수량 클릭 — 아코디언으로 펼쳐서 거래처별 예약 목록 표시 (조회 전용, 취소 버튼 없음 —
+    // 취소가 여러 군데서 가능하면 혼란스러워질 수 있어 2026-08-06 제거)
     if (e.target.classList.contains("view-reservations-btn")) {
         const pk = e.target.dataset.pk;
         const tr = e.target.closest("tr");
@@ -225,22 +277,6 @@ async function handleClick(e) {
         document.querySelectorAll("tr.reservation-list-row").forEach(r => r.remove());
         const reservations = await getReservationsByPk(pk);
         tr?.insertAdjacentHTML("afterend", createReservationListRow(pk, reservations));
-        return;
-    }
-
-    // 예약 취소
-    if (e.target.classList.contains("reservation-cancel-btn")) {
-        const id = e.target.dataset.id;
-        const ok = await showConfirm("이 예약을 취소할까요?");
-        if (!ok) return;
-        try {
-            await cancelReservation(id);
-            document.querySelectorAll("tr.reservation-list-row").forEach(r => r.remove());
-            showToast("✓ 예약 취소 완료");
-            await fetchAllData();
-        } catch (err) {
-            showError(err.message || "취소 실패");
-        }
         return;
     }
 
@@ -260,6 +296,7 @@ async function handleClick(e) {
     // 필터 셀렉트 클릭 (change 이벤트 보완용)
     if (
         e.target.classList.contains("show-warehouse") ||
+        e.target.classList.contains("show-product-name") ||
         e.target.classList.contains("show-brand") ||
         e.target.classList.contains("show-state")
     ) {
@@ -310,38 +347,55 @@ async function handleClick(e) {
     if (e.target.classList.contains("changes-tab-btn")) {
         const tableContainer = document.querySelector(".table-container");
         const changesContainer = document.querySelector(".changes-container");
+        const reservationsContainer = document.querySelector(".reservations-container");
         if (!tableContainer || !changesContainer) return;
         const opening = changesContainer.style.display === "none";
         changesContainer.style.display = opening ? "" : "none";
         tableContainer.style.display = opening ? "none" : "";
+        if (reservationsContainer) reservationsContainer.style.display = "none";
+        document.querySelector(".reservations-tab-btn")?.classList.remove("active");
         e.target.classList.toggle("active", opening);
         if (opening) renderChangesTab();
         return;
     }
 
+    // 예약 현황 탭 — 편집자는 담당자별 전체, 사원은 본인 예약만 (테이블/업데이트 탭과 배타적)
+    if (e.target.classList.contains("reservations-tab-btn")) {
+        const tableContainer = document.querySelector(".table-container");
+        const changesContainer = document.querySelector(".changes-container");
+        const reservationsContainer = document.querySelector(".reservations-container");
+        if (!tableContainer || !reservationsContainer) return;
+        const opening = reservationsContainer.style.display === "none";
+        reservationsContainer.style.display = opening ? "" : "none";
+        tableContainer.style.display = opening ? "none" : "";
+        if (changesContainer) changesContainer.style.display = "none";
+        document.querySelector(".changes-tab-btn")?.classList.remove("active");
+        e.target.classList.toggle("active", opening);
+        if (opening) renderReservationsTab();
+        return;
+    }
+
     // 업데이트 탭 다운로드 — 지금 화면에 뜬 행을 CSV(엑셀 호환)로 내려받기
     if (e.target.classList.contains("changes-download-btn")) {
-        const rows = getChangesTabRows();
         const headers = ["구분", "상품명", "브랜드", "등급", "ESTNO", "어제재고", "오늘재고", "BL", "창고"];
-        const esc = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
-        const lines = [headers.map(esc).join(",")];
-        for (const item of rows) {
-            const gubun = item.changed_fields === "__NEW__" ? "신규" : "변경";
-            lines.push([
-                gubun, item.상품명, item.브랜드, item.등급, item.ESTNO,
-                item._prevQty, item.재고, item.BL, item.창고,
-            ].map(esc).join(","));
-        }
-        const csv = "﻿" + lines.join("\r\n"); // BOM — 엑셀에서 한글 깨짐 방지
-        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        const today = new Date();
-        const pad = n => String(n).padStart(2, "0");
-        a.href = url;
-        a.download = `업데이트_${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
+        const rows = getChangesTabRows().map(item => [
+            item.changed_fields === "__NEW__" ? "신규" : "변경",
+            item.상품명, item.브랜드, item.등급, item.ESTNO,
+            item._prevQty, item.재고, item.BL, item.창고,
+        ]);
+        downloadCsv("업데이트", headers, rows);
+        return;
+    }
+
+    // 메인 테이블 다운로드 — 검색/필터 적용된 상태 그대로(state.filteredData) 내려받기
+    if (e.target.classList.contains("main-download-btn")) {
+        const headers = ["상품명", "브랜드", "등급", "ESTNO", "재고", "예약", "가용", "BL", "창고", "유통기한", "평중", "비고"];
+        const rows = state.filteredData.map(item => [
+            item.상품명, item.브랜드, item.등급, item.ESTNO, item.재고,
+            item.예약수량 || "", item.가용재고 ?? "", item.BL, item.창고,
+            item.유통기한, item.평중, item.메모,
+        ]);
+        downloadCsv("재고", headers, rows);
         return;
     }
 

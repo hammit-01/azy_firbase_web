@@ -16,7 +16,7 @@ from pipeline.mysql_db import (
     upsert_azy_inventory, delete_azy_inventory,
     upsert_azy_holding_record, delete_azy_holding_record,
     create_reservation, cancel_reservation, complete_reservation,
-    get_active_reservations_by_pk,
+    get_active_reservations_by_pk, get_all_active_reservations,
 )
 
 app = FastAPI()
@@ -343,6 +343,13 @@ class ReservationBody(BaseModel):
     거래처: str = ""
     담당자: str = ""
     출고일: str = ""
+
+@app.get("/api/reservations")
+def list_all_reservations():
+    with get_conn() as conn:
+        rows = get_all_active_reservations(conn)
+    return {"data": rows}
+
 
 @app.get("/api/reservations/by_pk/{pk}")
 def list_reservations_by_pk(pk: str):

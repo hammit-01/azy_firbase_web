@@ -159,26 +159,41 @@ th.sort-active {
 
 
 /* ── 통합 툴바 ── */
-/* 3열 grid: 로고(왼쪽) / 필터·검색(가운데) / 로그인(오른쪽) — 가운데 열은 auto 폭이라
-   내용 크기 그대로 중앙에 놓이고, 양쪽 1fr 열이 로고·로그인 박스를 좌우 끝으로 밀어준다 */
+/* 3열 grid: 로고(왼쪽) / 필터·검색 / 로그인+버튼들 — 셋 다 auto라 각자 내용 폭만큼만
+   차지(2026-08-06) */
 .toolbar {
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
+    grid-template-columns: 1fr auto;
+    /* center가 아니라 start — 전체 처리 바가 나타나 .toolbar-login 높이가 늘어나도
+       .toolbar-section 기준선이 밀리지 않게(2026-08-06, 바 생기면 로그인/업데이트일자가
+       위로 튀던 문제) */
+    align-items: start;
     gap: 16px;
-    padding: 14px 22px;
+    padding: 20px 50px;
     background: #ffffff;
     border-radius: 14px;
     box-shadow: 0 4px 18px rgba(15, 23, 42, 0.07);
     box-sizing: border-box;
     width: 100%;
+    align-items: end;
 }
 
+/* 로고 칸(1번째)과 필터·검색 칸(2번째)을 하나의 클래스로 묶고, 위치로 구분(2026-08-06) */
 .toolbar-left {
     display: flex;
-    align-items: center;
     gap: 10px;
-    justify-self: start;
+    flex-direction: row;
+    align-items: center;
+    /* .toolbar를 start로 바꾼 뒤(전체 처리 바 튐 방지) 로고/제목이 위로 붙어버려서
+       이 칸만 다시 세로 중앙으로 — 이 칸 자체는 높이가 안 바뀌니 튐 문제와 무관(2026-08-06) */
+}
+
+.toolbar-right {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    justify-self: end;
+    flex-wrap: wrap;
 }
 
 .toolbar-login {
@@ -186,7 +201,7 @@ th.sort-active {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 4px;
+    gap: 6px;
     justify-self: end;
 }
 
@@ -352,27 +367,57 @@ th.sort-active {
 
 .toolbar-title {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    align-items: center;
+    gap: 10px;
 }
 
-/* 행수·중량 / 박스수 / 선택요약 / 업데이트일자 — 한 줄씩 세로로 쌓음 */
+.toolbar-section {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    justify-content: space-between;
+}
+
+/* 행수·중량 / 박스수 / 선택요약 / 업데이트일자 — 한 줄씩 세로로 쌓음
+   (2026-08-06: h1이 32px인데 이 통계 줄이 24px라 제목이랑 크기 차이가 거의 없어
+   위계가 안 보이던 걸 정리 — 작고 은은하게, 대신 살짝 꾸며서 심심하지 않게) */
 .table_size {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+/* 선택 요약 배지를 총 행/박스 배지 바로 옆(같은 줄)에 배치(2026-08-06) */
+.table_size_top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .table_size_main {
-    font-size: 24px;
-    font-weight: 600;
-    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: fit-content;
+    font-size: 14px;
+    font-weight: 700;
+    color: #334155;
+    background: #f1f5f9;
+    padding: 4px 12px;
+    border-radius: 20px;
+}
+
+.table_size_main::before {
+    content: "📦";
+    font-size: 13px;
 }
 
 .table_size_weight {
-    font-size: 24px;
+    font-size: 12px;
     font-weight: 600;
-    color: #475569;
+    color: #94a3b8;
+    padding-left: 4px;
 }
 
 .table_size_updated {
@@ -385,10 +430,10 @@ th.sort-active {
 /* 행 체크 시 뜨는 "총 N행, M박스 선택" — 테이블의 selected-row 초록과 동일 색 */
 .selection-summary {
     display: none;
-    font-size: 24px;
+    font-size: 12px;
     font-weight: 700;
-    color: #3f7d00;
-    background: #eaffc2;
+    /* color: #3f7d00; */
+    background: #f1f5f9;
     padding: 6px 14px;
     border-radius: 20px;
     white-space: nowrap;
@@ -399,20 +444,24 @@ th.sort-active {
     align-items: center;
 }
 
-/* 한 칸짜리 grid로 두면 열 너비가 가장 넓은 행(버튼 행)의 콘텐츠 너비로 정해지고,
-   나머지 행(검색창 있는 행)은 그 너비에 맞춰 늘어난다 — 버튼 없다고 값 하드코딩할 필요 없음 */
-.toolbar-right {
-    display: grid;
-    grid-template-columns: max-content;
-    row-gap: 10px;
-    justify-self: center;
-}
-
 .toolbar-row {
     display: flex;
-    align-items: center;
     gap: 6px;
+    align-items: flex-end;
     flex-wrap: wrap;
+}
+
+/* 액션 버튼 줄(추가/수정/예약 등)만 오른쪽 끝에 붙임(2026-08-06) */
+.toolbar-row-actions {
+    justify-content: flex-end;
+    width: 540px;
+}
+
+/* 예약 현황/업데이트/엑셀 다운로드 3개는 남는 폭을 나눠 가지며 줄 너비에 맞게 늘어남 */
+.toolbar-row-actions .reservations-tab-btn,
+.toolbar-row-actions .changes-tab-btn,
+.toolbar-row-actions .main-download-btn {
+    flex: 1;
 }
 
 .filter-sel {
@@ -548,19 +597,9 @@ th.sort-active {
     margin: 2px 6px 2px 0;
     font-size: 14px;
 }
-.reservation-cancel-btn {
-    border: none;
-    background: #fee2e2;
-    color: #b91c1c;
-    border-radius: 6px;
-    padding: 2px 6px;
-    cursor: pointer;
-    font-size: 12px;
-}
-
 /* ── 툴바 액션 버튼 ── */
-.rollback-btn, .clear-btn, .all-delete-btn, .changes-tab-btn,
-.insert-btn, .update-btn, .holding-btn {
+.rollback-btn, .clear-btn, .all-delete-btn, .changes-tab-btn, .reservations-tab-btn,
+.insert-btn, .update-btn, .holding-btn, .main-download-btn {
     height: 42px;
     padding: 0 18px;
     border: none;
@@ -575,7 +614,8 @@ th.sort-active {
 }
 
 .insert-btn:active, .update-btn:active, .holding-btn:active,
-.rollback-btn:active, .all-delete-btn:active, .changes-tab-btn:active {
+.rollback-btn:active, .all-delete-btn:active, .changes-tab-btn:active,
+.reservations-tab-btn:active {
     transform: translateY(1px);
 }
 
@@ -608,6 +648,13 @@ th.sort-active {
 .changes-tab-btn { background: #e0e7ff; color: #3730a3; }
 .changes-tab-btn:hover { background: #c7d2fe; }
 .changes-tab-btn.active { background: #4f46e5; color: #fff; }
+
+.reservations-tab-btn { background: #ccfbf1; color: #0f766e; }
+.reservations-tab-btn:hover { background: #99f6e4; }
+.reservations-tab-btn.active { background: #0d9488; color: #fff; }
+
+.main-download-btn { background: #dcfce7; color: #15803d; }
+.main-download-btn:hover { background: #bbf7d0; }
 
 /* ── 업데이트(신규/갱신) 탭 ── */
 .changes-container {
@@ -676,6 +723,83 @@ th.sort-active {
     font-weight: 800;
     font-size: 16px;
     color: #1e293b;
+}
+
+/* ── 예약 현황 탭 ── */
+.reservations-container {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-sizing: border-box;
+}
+
+.reservations-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.reservations-filter-bar label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #475569;
+}
+.reservations-filter-select {
+    height: 38px;
+    padding: 0 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #f9fafb;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+.reservations-filter-select:hover { border-color: #94a3b8; }
+.reservations-filter-select:focus { border-color: #0d9488; background: #fff; box-shadow: 0 0 0 3px rgba(13,148,136,0.15); }
+
+.reservations-group { margin-bottom: 24px; }
+.reservations-group h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 8px;
+}
+.reservations-group-count {
+    font-weight: 500;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.reservations-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 8px;
+}
+.reservations-table th {
+    padding: 10px 8px;
+    text-align: center;
+    font-size: 13px;
+    color: #64748b;
+    border-bottom: 2px solid #e2e8f0;
+    white-space: nowrap;
+}
+.reservations-table td {
+    padding: 10px 8px;
+    text-align: center;
+    font-size: 14px;
+    border-bottom: 1px solid #f1f5f9;
+    white-space: nowrap;
+}
+
+.reservations-empty {
+    text-align: center;
+    padding: 40px;
+    color: #9ca3af;
 }
 
 .logo-link {
@@ -803,6 +927,17 @@ tbody tr {
     margin-right: 6px;
 }
 
+#hover-info-card .hc-reservation {
+    padding-top: 6px;
+    margin-top: 6px;
+    border-top: 1px dashed #e2e8f0;
+}
+#hover-info-card .hc-reservation:first-of-type {
+    border-top: none;
+    margin-top: 0;
+    padding-top: 0;
+}
+
 .text {
     margin: 10px;
 }
@@ -863,13 +998,26 @@ tr.holding-insert-row td.holding-inherited {
     padding: 2px 6px !important;
 }
 
-/* ── 우하단 전체 처리 알림 바 (추가/수정/홀딩 입력 중일 때만 표시) ── */
+/* ── 전체 처리 알림 바 (추가/수정/예약 입력 중일 때만 표시) ──
+   기본은 우하단 고정(azy_warehouse.html처럼 로그인 영역이 없는 페이지용).
+   warehouse_main.html에선 .toolbar-login 안에 넣어 업데이트일자 바로 밑에 배치 —
+   이 경우 아래 .toolbar-login .bulk-action-bar가 고정 위치를 덮어써서 툴바 흐름에
+   자연스럽게 끼워진다(2026-08-06). */
 .bulk-action-bar {
     position: fixed;
     right: 28px;
     bottom: 28px;
     z-index: 300;
     pointer-events: none;
+}
+
+.toolbar-login .bulk-action-bar {
+    position: static;
+    right: auto;
+    bottom: auto;
+    /* 카드가 없을 때도 자리를 미리 확보 — 안 그러면 나타날 때 그 아래(버튼 줄)가
+       훅 밀려 내려가는 레이아웃 튐이 생김(2026-08-06) */
+    min-height: 46px;
 }
 
 .bulk-action-bar.visible {
@@ -890,6 +1038,13 @@ tr.holding-insert-row td.holding-inherited {
     transition: opacity 0.22s ease, transform 0.22s ease;
 }
 
+.toolbar-login .bulk-action-card {
+    padding: 8px 12px 8px 14px;
+    gap: 10px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(15,23,42,0.12);
+}
+
 .bulk-action-bar.visible .bulk-action-card {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -901,6 +1056,9 @@ tr.holding-insert-row td.holding-inherited {
     color: #334155;
     white-space: nowrap;
 }
+
+.toolbar-login .bulk-action-label { font-size: 12px; }
+.toolbar-login .bulk-action-card button { height: 30px; padding: 0 12px; font-size: 13px; }
 
 .bulk-action-card button {
     border-radius: 9px !important;
@@ -1354,8 +1512,9 @@ tr.insert-card .remove-insert-btn:hover {
     }
 
     /* 창고/브랜드/상태를 한 줄, 검색1/2를 한 줄, 버튼을 3+3으로 묶어 보여주려면
-       row 구획을 없애고(display:contents) toolbar-right 하나의 flex-wrap 흐름으로
-       합친 뒤 order로 재배치한다 — HTML 구조(row1=창고+검색1 등)는 그대로 두고 CSS만으로 재배치 */
+       row 구획을 없애고(display:contents) .toolbar-right 하나의 flex-wrap 흐름으로
+       합친 뒤 order로 재배치한다 — HTML 구조(row1=상품명+브랜드+검색1 등)는 그대로
+       두고 CSS만으로 재배치 */
     .toolbar-right {
         display: flex;
         flex-wrap: wrap;
@@ -1366,18 +1525,21 @@ tr.insert-card .remove-insert-btn:hover {
         display: contents;
     }
 
-    .show-warehouse { order: 1; }
+    .show-product-name { order: 1; }
     .show-brand     { order: 2; }
-    .show-state     { order: 3; }
-    #searchInput2   { order: 4; }
-    #searchInput    { order: 5; }
-    .insert-btn     { order: 6; }
-    .update-btn     { order: 7; }
-    .holding-btn    { order: 8; }
-    .clear-btn      { order: 9; }
-    .rollback-btn   { order: 10; }
-    .all-delete-btn { order: 11; }
-    .changes-tab-btn { order: 12; }
+    #searchInput    { order: 3; }
+    .show-warehouse { order: 4; }
+    .show-state     { order: 5; }
+    #searchInput2   { order: 6; }
+    .insert-btn     { order: 7; }
+    .update-btn     { order: 8; }
+    .holding-btn    { order: 9; }
+    .clear-btn      { order: 10; }
+    .rollback-btn   { order: 11; }
+    .all-delete-btn { order: 12; }
+    .reservations-tab-btn { order: 13; }
+    .changes-tab-btn { order: 14; }
+    .main-download-btn { order: 15; }
 
     .filter-sel {
         flex: 1 1 calc(33.333% - 6px);
@@ -1397,8 +1559,8 @@ tr.insert-card .remove-insert-btn:hover {
         display: none;
     }
 
-    .rollback-btn, .clear-btn, .all-delete-btn, .changes-tab-btn,
-    .insert-btn, .update-btn, .holding-btn {
+    .rollback-btn, .clear-btn, .all-delete-btn, .changes-tab-btn, .reservations-tab-btn,
+    .insert-btn, .update-btn, .holding-btn, .main-download-btn {
         flex: 1 1 calc(33.333% - 6px);
         height: 44px;
         font-size: 13px;

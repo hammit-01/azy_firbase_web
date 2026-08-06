@@ -1,6 +1,6 @@
 // firebase.js — MySQL API 버전 (Firebase SDK 제거)
 import { state } from "./state.js";
-import { renderTable, renderWarehouseOptions } from "./table.js";
+import { renderTable, renderWarehouseOptions, renderBrandOptions, renderProductNameOptions } from "./table.js";
 import { renderSelectData } from "./panel.js";
 import { fetchAllInventory, fetchEmployees, fetchMovingInventory, fetchYesterdayInventory } from "./api.js";
 
@@ -110,6 +110,8 @@ export async function fetchAllData() {
         }
         renderTable();
         renderWarehouseOptions();
+        renderBrandOptions();
+        renderProductNameOptions();
         const panelOpen = !!document.querySelector(".holding-card, .update-card, .insert-card");
         if (!panelOpen) renderSelectData();
     } catch (e) {

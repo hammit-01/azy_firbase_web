@@ -2,6 +2,7 @@ import { state } from "./state.js";
 import { dom } from "./dom.js";
 import { employeeSelect, stateSelect } from "./panel.js";
 import { getStoredUser } from "./login.js";
+import { getAllReservations } from "./firestoreService.js";
 
 const WH_CLASS = {
     "곤지암": "wh-곤지암",
@@ -253,7 +254,11 @@ export function renderBulkActionBar() {
     }
 
     if (!cls) {
+        // innerHTML을 비워야 카드가 DOM에서 사라져 차지하던 자리도 없어짐 —
+        // visible 클래스만 떼면 opacity/transform으로 안 보이기만 하고 레이아웃
+        // 공간은 그대로 남아있었음(2026-08-06 발견).
         bar.classList.remove("visible");
+        bar.innerHTML = "";
         return;
     }
 
@@ -284,6 +289,48 @@ export function renderWarehouseOptions() {
         warehouses.map(w => `<option value="${w}">${w}</option>`).join("");
 
     if (warehouses.includes(current)) select.value = current;
+}
+
+// =========================
+// 브랜드 필터 옵션 — 창고와 동일한 방식: 고정 목록 대신 현재 데이터에 실제로
+// 존재하는 브랜드만 가나다순으로(2026-08-06 — 하드코딩 목록이라 새 브랜드가
+// 추가돼도 필터에 안 나타나던 문제 수정)
+// =========================
+export function renderBrandOptions() {
+    const select = document.querySelector(".show-brand");
+    if (!select) return;
+
+    const current = select.value;
+
+    const brands = [...new Set(
+        state.allData.map(item => String(item.브랜드 ?? "").trim()).filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b, "ko"));
+
+    select.innerHTML =
+        `<option value="">브랜드</option>` +
+        brands.map(b => `<option value="${b}">${b}</option>`).join("");
+
+    if (brands.includes(current)) select.value = current;
+}
+
+// =========================
+// 상품명 필터 옵션 — 창고/브랜드와 동일한 방식(2026-08-06)
+// =========================
+export function renderProductNameOptions() {
+    const select = document.querySelector(".show-product-name");
+    if (!select) return;
+
+    const current = select.value;
+
+    const names = [...new Set(
+        state.allData.map(item => String(item.상품명 ?? "").trim()).filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b, "ko"));
+
+    select.innerHTML =
+        `<option value="">상품명</option>` +
+        names.map(n => `<option value="${n}">${n}</option>`).join("");
+
+    if (names.includes(current)) select.value = current;
 }
 
 // =========================
@@ -321,9 +368,11 @@ export function renderTableSize(count, size, mean) {
     let mainEl = container.querySelector(".table_size_main");
     if (!mainEl) {
         container.innerHTML = `
-            <div class="table_size_main"></div>
+            <div class="table_size_top">
+                <div class="table_size_main"></div>
+                <div class="selection-summary"></div>
+            </div>
             <div class="table_size_weight"></div>
-            <div class="selection-summary"></div>
         `;
         mainEl = container.querySelector(".table_size_main");
     }
@@ -351,7 +400,7 @@ export function renderTableSize(count, size, mean) {
 }
 
 // =========================
-// 예약 목록 (예약수량 클릭 시 아코디언으로 펼쳐서 보여줌 — 취소 버튼 포함)
+// 예약 목록 (예약수량 클릭 시 아코디언으로 펼쳐서 보여줌 — 조회 전용, 취소는 안 됨)
 // =========================
 export function createReservationListRow(pk, reservations) {
     if (!reservations || reservations.length === 0) {
@@ -360,7 +409,6 @@ export function createReservationListRow(pk, reservations) {
     const items = reservations.map(r => `
         <span class="reservation-list-item">
             ${safeValue(r.메모) || "(거래처 미입력)"} · ${safeValue(r.수량)}박스${safeValue(r.홀딩) ? ` · ${safeValue(r.홀딩)}` : ""}
-            <button class="reservation-cancel-btn" data-id="${r.id}">취소</button>
         </span>
     `).join("");
     return `<tr class="reservation-list-row" data-pk="${pk}"><td colspan="13">${items}</td></tr>`;
@@ -421,6 +469,8 @@ export function renderTable() {
 
     const warehouse =
         document.querySelector(".show-warehouse").value;
+    const productName =
+        document.querySelector(".show-product-name")?.value || "";
     const brand =
         document.querySelector(".show-brand").value;
     const dataState =
@@ -429,13 +479,21 @@ export function renderTable() {
     if (warehouse && warehouse !== "non") {
         data = data.filter(item => item.창고 === warehouse);
     }
-    
+
+    if (productName && productName !== "non") {
+        data = data.filter(item => item.상품명 === productName);
+    }
+
     if (brand && brand !== "non") {
         data = data.filter(item => item.브랜드 === brand);
     }
-    
+
     if (dataState && dataState !== "non") {
-        data = data.filter(item => item.상태 === dataState);
+        // "예약"(value=holding)은 더 이상 상태 컬럼에 안 찍힘(예약이 실재고 행과 분리돼서
+        // 별도 표시 행을 안 만듦) — 예약수량 > 0인 행을 보여주는 걸로 대체
+        data = dataState === "holding"
+            ? data.filter(item => Number(item.예약수량) > 0)
+            : data.filter(item => item.상태 === dataState);
     }
 
     // 박스 합계는 빈 상품 제거 전 기준으로 계산
@@ -578,7 +636,7 @@ export function renderTable() {
         if (item._isMoving)          rowClass += " moving-inventory-row";
 
         html += `
-            <tr class="${rowClass}" data-id="${id}" data-출고일="${safeValue(item.출고일)}" data-홀딩="${safeValue(item.홀딩)}">
+            <tr class="${rowClass}" data-id="${id}" data-출고일="${safeValue(item.출고일)}" data-홀딩="${safeValue(item.홀딩)}" data-pk="${item._rawId ?? id}" data-예약수량="${Number(item.예약수량) || 0}">
 
                 <td>
                     <input
@@ -748,6 +806,100 @@ export function renderChangesTab() {
     `;
 
     listEl.innerHTML = html;
+}
+
+// =========================
+// 예약 현황 탭 — 편집자는 담당자별로 묶어서 전체를 보고, 사원은 자기 예약만 본다.
+// =========================
+function reservationRowHtml(r) {
+    return `
+        <tr>
+            <td>${safeValue(r.담당자) || "(미지정)"}</td>
+            <td>${safeValue(r.상품명)}</td>
+            <td>${safeValue(r.브랜드)}</td>
+            <td>${safeValue(r.등급)}</td>
+            <td>${safeValue(r.ESTNO)}</td>
+            <td>${safeValue(r.수량)}</td>
+            <td>${safeValue(r.BL)}</td>
+            <td>${whTag(r.창고)}</td>
+            <td>${safeValue(r.거래처)}</td>
+            <td>${safeValue(r.홀딩일자)}</td>
+        </tr>
+    `;
+}
+
+const RESERVATIONS_HEAD = `
+    <thead>
+        <tr>
+            <th>담당자</th><th>상품명</th><th>브랜드</th><th>등급</th><th>ESTNO</th>
+            <th>수량</th><th>BL</th><th>창고</th><th>거래처</th><th>예약일</th>
+        </tr>
+    </thead>
+`;
+
+export async function renderReservationsTab() {
+    const container = document.querySelector(".reservations-container");
+    const listEl = document.getElementById("reservations-list");
+    if (!container || !listEl || container.style.display === "none") return;
+
+    const user = getStoredUser();
+    const isEditor = user?.권한 === "편집자";
+
+    let rows = [];
+    try {
+        rows = await getAllReservations();
+    } catch (e) {
+        listEl.innerHTML = `<p class="reservations-empty">예약 현황을 불러오지 못했습니다.</p>`;
+        return;
+    }
+
+    if (!isEditor) {
+        rows = rows.filter(r => r.담당자 === user?.이름);
+    }
+
+    if (isEditor) {
+        const groups = {};
+        rows.forEach(r => {
+            const key = r.담당자 || "(미지정)";
+            (groups[key] = groups[key] || []).push(r);
+        });
+        const allNames = Object.keys(groups).sort((a, b) => a.localeCompare(b, "ko"));
+
+        // 이전에 골랐던 담당자가 이번엔 예약이 하나도 없으면(전부 취소 등) 필터 초기화
+        if (state.reservationsFilter && !allNames.includes(state.reservationsFilter)) {
+            state.reservationsFilter = "";
+        }
+        const filterHtml = `
+            <div class="reservations-filter-bar">
+                <label for="reservations-filter">담당자</label>
+                <select id="reservations-filter" class="reservations-filter-select">
+                    <option value="">전체 (${rows.length}건)</option>
+                    ${allNames.map(name => `<option value="${name}" ${name === state.reservationsFilter ? "selected" : ""}>${name} (${groups[name].length}건)</option>`).join("")}
+                </select>
+            </div>
+        `;
+
+        const names = state.reservationsFilter ? [state.reservationsFilter] : allNames;
+        const body = names.length ? names.map(name => `
+            <div class="reservations-group">
+                <h3>${name} <span class="reservations-group-count">${groups[name].length}건</span></h3>
+                <table class="reservations-table">
+                    ${RESERVATIONS_HEAD}
+                    <tbody>${groups[name].map(reservationRowHtml).join("")}</tbody>
+                </table>
+            </div>
+        `).join("") : `<p class="reservations-empty">현재 활성 예약이 없습니다.</p>`;
+
+        listEl.innerHTML = filterHtml + body;
+    } else {
+        listEl.innerHTML = `
+            <table class="reservations-table">
+                ${RESERVATIONS_HEAD}
+                <tbody>${rows.map(reservationRowHtml).join("") ||
+                    `<tr><td colspan="10" style="text-align:center; padding:40px; color:#9ca3af;">내가 예약한 항목이 없습니다.</td></tr>`}</tbody>
+            </table>
+        `;
+    }
 }
 
 

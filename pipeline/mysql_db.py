@@ -302,7 +302,13 @@ def snapshot_daily(conn):
     """하루 마감 시점(평일 17:10)의 inventory/azy_inventory를 yesterday_* 테이블로
     통째로 복사(교체) — 업데이트 탭이 다음날 "어제 대비 뭐가 바뀌었나"를 비교하는 기준.
     inventory/azy_inventory 원본은 절대 건드리지 않는다(홀딩/동결/마스터필드 보존 상태가
-    거기 계속 살아있어야 함)."""
+    거기 계속 살아있어야 함).
+
+    주의: SELECT *라서 inventory/azy_inventory에 컬럼을 추가하면 yesterday_*에도 반드시
+    같이 추가해야 함 — 안 그러면 "Column count doesn't match"로 매일 조용히 실패하고
+    (예외는 run_daily_snapshot()이 로그만 남기고 삼킴) yesterday_* 테이블이 텅 비어서
+    업데이트 탭이 전 품목을 "신규"로 오판정한다(2026-08-06, stock_version 추가 때 이
+    테이블들을 빠뜨려서 실제로 겪은 사고)."""
     with conn.cursor() as cur:
         cur.execute("TRUNCATE TABLE yesterday_inventory")
         cur.execute("INSERT INTO yesterday_inventory SELECT * FROM inventory")
@@ -543,14 +549,31 @@ def try_auto_complete_by_shipment(conn, bl: str, estno: str, grade: str, shipped
 
 
 def get_active_reservations_by_pk(conn, pk: str) -> list[dict]:
-    """화면에서 "이 상품 예약 N건"을 눌렀을 때 상세 목록(취소 버튼 포함)을 보여주기 위한 조회.
-    어느 테이블 소속인지 몰라도 되도록 양쪽 다 찾는다."""
+    """화면에서 "이 상품 예약 N건"을 눌렀을 때(또는 마우스오버 카드에) 상세 목록을
+    보여주기 위한 조회. 어느 테이블 소속인지 몰라도 되도록 양쪽 다 찾는다."""
     result = []
     with conn.cursor() as cur:
         for hr_table in ("holding_records", "azy_holding_records"):
             cur.execute(
-                f"SELECT id, 수량, 홀딩, 메모, 홀딩일자 FROM {hr_table} WHERE pk=%s AND status='ACTIVE'",
+                f"SELECT id, 수량, 홀딩, 메모, 출고일, 홀딩일자 FROM {hr_table} WHERE pk=%s AND status='ACTIVE'",
                 (pk,),
+            )
+            result.extend(cur.fetchall())
+    return result
+
+
+def get_all_active_reservations(conn) -> list[dict]:
+    """전체 ACTIVE 예약 + 상품 정보(상품명/브랜드/창고 등) 조인 — "예약 현황" 탭에서
+    담당자별로 묶어 보여주거나(편집자), 내 예약만 필터링(사원)할 때 씀."""
+    result = []
+    pairs = [("holding_records", "inventory"), ("azy_holding_records", "azy_inventory")]
+    with conn.cursor() as cur:
+        for hr_table, inv_table in pairs:
+            cur.execute(
+                f"SELECT r.id, r.pk, r.수량, r.홀딩 AS 담당자, r.메모 AS 거래처, r.홀딩일자, "
+                f"i.상품명, i.브랜드, i.등급, i.ESTNO, i.BL, i.창고 "
+                f"FROM {hr_table} r LEFT JOIN {inv_table} i ON r.pk = i.id "
+                f"WHERE r.status='ACTIVE' ORDER BY r.홀딩일자 DESC"
             )
             result.extend(cur.fetchall())
     return result

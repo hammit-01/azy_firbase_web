@@ -18,73 +18,58 @@
         <!-- ── 고정 헤더 (툴바 + 패널) ── -->
         <div class="sticky-header">
         <div class="toolbar">
-            <div class="toolbar-left">
-                <a href="/main.html" class="logo-link" title="메인으로">
-                    <img src="./css/logo.png" class="logo">
-                </a>
-                <div class="toolbar-title">
-                    <h1>타창고 에이젯유통 재고 리스트</h1>
-                    <div class="table_size"></div>
+            <div class="toolbar-section">
+                <div class="toolbar-left">
+                    <a href="/main.html" class="logo-link" title="메인으로">
+                        <img src="./css/logo.png" class="logo">
+                    </a>
+                    <div class="toolbar-title">
+                        <h1>타창고 에이젯유통 재고 리스트</h1>
+                        <div class="table_size"></div>
+                    </div>
                 </div>
-            </div>
+                <div class="toolbar-right">
+                    <div class="toolbar-row">
+                        <select class="show-product-name filter-sel">
+                            <option value="">상품명</option>
+                            <!-- 실제 옵션은 현재 데이터 기준으로 js/table.js의 renderProductNameOptions()가 가나다순으로 채움 -->
+                        </select>
+                        <select class="show-brand filter-sel">
+                            <option value="">브랜드</option>
+                            <!-- 실제 옵션은 현재 데이터 기준으로 js/table.js의 renderBrandOptions()가 가나다순으로 채움 -->
+                        </select>
+                        <input id="searchInput" class="search-input" placeholder="검색1">
+                    </div>
+                    <div class="toolbar-row">
+                        <select class="show-warehouse filter-sel">
+                            <option value="">창고</option>
+                            <!-- 실제 옵션은 현재 크롤링된 데이터 기준으로 js/table.js의 renderWarehouseOptions()가 가나다순으로 채움 -->
+                        </select>
+                        <select class="show-state filter-sel">
+                            <option value="">상태</option>
+                            <option value="holding">예약</option>
+                            <option value="freeze">동결</option>
+                            <option value="stopped">사용불가</option>
+                            <option value="moving">이고</option>
+                            <option value="특이품">특이품</option>
+                            <option value="null">null(정보누락)</option>
+                        </select>
+                        <input id="searchInput2" class="search-input" placeholder="검색2">
+                    </div>
+                    <div class="toolbar-row toolbar-row-actions">
+                        <!-- CRUD 버튼 -->
+                        <button class="insert-btn">추가</button>
+                        <button class="update-btn">수정</button>
+                        <button class="holding-btn">예약</button>
 
-            <div class="toolbar-right">
-                <div class="toolbar-row">
-                    <select class="show-warehouse filter-sel">
-                        <option value="">창고</option>
-                        <!-- 실제 옵션은 현재 크롤링된 데이터 기준으로 js/table.js의 renderWarehouseOptions()가 가나다순으로 채움 -->
-                    </select>
-                    <input id="searchInput" class="search-input" placeholder="검색1">
-                </div>
+                        <div class="tb-sep"></div>
 
-                <div class="toolbar-row">
-                    <select class="show-brand filter-sel">
-                        <option value="">브랜드</option>
-                        <option value="AGROSUPER">AGROSUPER</option>
-                        <option value="AMH">AMH</option>
-                        <option value="CLASSIC">CLASSIC</option>
-                        <option value="EXCEL">EXCEL</option>
-                        <option value="GREENLEA">GREENLEA</option>
-                        <option value="IBP">IBP</option>
-                        <option value="KILCOY">KILCOY</option>
-                        <option value="LOCKS">LOCKS</option>
-                        <option value="OLYMEL">OLYMEL</option>
-                        <option value="PERDIGAO">PERDIGAO</option>
-                        <option value="PPCS">PPCS</option>
-                        <option value="SADIA">SADIA</option>
-                        <option value="SEARA">SEARA</option>
-                        <option value="SMITHFIELD">SMITHFIELD</option>
-                        <option value="SWIFT">SWIFT</option>
-                        <option value="TCH">TCH</option>
-                        <option value="TEYS">TEYS</option>
-                        <option value="TONNIES">TONNIES</option>
-                        <option value="VIBRA">VIBRA</option>
-                    </select>
-                    <input id="searchInput2" class="search-input" placeholder="검색2">
-                </div>
-
-                <div class="toolbar-row">
-                    <select class="show-state filter-sel">
-                        <option value="">상태</option>
-                        <option value="holding">예약</option>
-                        <option value="freeze">동결</option>
-                        <option value="stopped">사용불가</option>
-                        <option value="moving">이고</option>
-                        <option value="특이품">특이품</option>
-                        <option value="null">null(정보누락)</option>
-                    </select>
-
-                    <!-- CRUD 버튼 -->
-                    <button class="insert-btn">추가</button>
-                    <button class="update-btn">수정</button>
-                    <button class="holding-btn">예약</button>
-
-                    <div class="tb-sep"></div>
-
-                    <!-- 유틸 버튼 -->
-                    <button class="rollback-btn">되돌리기</button>
-                    <button class="clear-btn" data-action="clear-selection">전체 취소</button>
-                    <button class="all-delete-btn">전체 삭제</button>
+                        <!-- 유틸 버튼 -->
+                        <button class="rollback-btn">되돌리기</button>
+                        <button class="clear-btn" data-action="clear-selection">전체 취소</button>
+                        <button class="all-delete-btn">전체 삭제</button>
+                        <button class="main-download-btn">엑셀 다운로드</button>
+                    </div>
                 </div>
             </div>
         </div>

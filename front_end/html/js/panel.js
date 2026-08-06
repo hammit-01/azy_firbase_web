@@ -45,7 +45,7 @@ export function renderSelectData() {
     let qty = 0;
     state.selectedItems.forEach(item => { qty += Number(item.qty) || 0; });
 
-    summary.textContent = `총 ${state.selectedItems.size}행, ${qty}박스 선택`;
+    summary.textContent = `총 ${state.selectedItems.size}행,\n${qty}박스 선택`;
     summary.classList.add("visible");
 }
 
@@ -65,6 +65,8 @@ export function createInsertRow() {
             <td data-label="등급"><input type="text" class="insert-grade cell-input" placeholder="등급"></td>
             <td data-label="ESTNO"><input type="text" class="insert-estNo cell-input" placeholder="ESTNO"></td>
             <td data-label="재고"><input type="number" class="insert-qty cell-input" placeholder="재고"></td>
+            <td data-label="예약"></td>
+            <td data-label="가용"></td>
             <td data-label="BL"><input type="text" class="insert-bl cell-input" placeholder="BL"></td>
             <td data-label="창고"><input type="text" class="insert-warehouse cell-input" placeholder="창고"></td>
             <td data-label="유통기한"><input type="date" class="insert-dueDate cell-input"></td>

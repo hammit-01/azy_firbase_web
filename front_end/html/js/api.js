@@ -113,6 +113,11 @@ export async function apiDeleteHoldingRecord(id, azy) {
 // ── 예약(홀딩) — 실재고/예약 분리 재설계(2026-08-05) ──────────
 // 서버가 창고명으로 inventory/azy_inventory를 알아서 판별하므로 azy 인자가 필요 없다.
 
+export async function apiGetAllReservations() {
+    const r = await apiFetch("/api/reservations", {});
+    return r.data;
+}
+
 export async function apiGetReservationsByPk(pk) {
     const r = await apiFetch(`/api/reservations/by_pk/${encodeURIComponent(pk)}`, {});
     return r.data;

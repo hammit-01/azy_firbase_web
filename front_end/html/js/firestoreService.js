@@ -3,7 +3,7 @@ import {
     apiInsertItem, apiUpdateItem, apiDeleteItem,
     apiUpdateHoldingRecord, apiDeleteHoldingRecord, apiFetch,
     apiCreateReservation, apiCancelReservation, apiCompleteReservation,
-    apiGetReservationsByPk,
+    apiGetReservationsByPk, apiGetAllReservations,
 } from "./api.js";
 
 // 예약 생성/취소/완료 — 실재고와 완전히 분리된 새 모델(2026-08-05).
@@ -19,6 +19,9 @@ export async function completeReservation(id) {
 }
 export async function getReservationsByPk(pk) {
     return apiGetReservationsByPk(pk);
+}
+export async function getAllReservations() {
+    return apiGetAllReservations();
 }
 
 // 추가
