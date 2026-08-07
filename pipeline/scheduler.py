@@ -246,7 +246,23 @@ def _upload_azy(azy_df, warehouse_scope=None):
                     data["상태"] = "없음"
                     data["메모"] = prev_memo
 
-        stale_ids = [uid for uid in existing if uid not in rows]
+        stale_ids = []
+        for uid, prev in existing.items():
+            if uid in rows:
+                continue
+            if holding_sum.get(uid, 0) > 0:
+                # 크롤에서 사라진(재고 0/일시 누락) 항목이라도 ACTIVE 예약이 걸려 있으면
+                # 지우지 않는다 — 지우면 azy_holding_records.pk가 가리킬 곳이 없어져
+                # 예약이 "예약 현황"에서 조용히 고아가 돼버린다(2026-08-07, 운영 DB에서
+                # 실제 발견: 170박스 예약이 재고 소진과 함께 화면에서 사라짐).
+                rows[uid] = {
+                    **prev, "id": uid, "pk": "", "재고": 0, "중량": None,
+                    "수집일": today, "holdingTotal": holding_sum.get(uid, 0),
+                    "holdingRecordId": "", "이상": "", "원본재고": 0,
+                    "stock_version": (prev.get("stock_version") or 0) + 1,
+                }
+            else:
+                stale_ids.append(uid)
 
         upsert_azy_inventory(conn, list(rows.values()))
         if stale_ids:

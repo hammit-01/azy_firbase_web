@@ -77,7 +77,19 @@ class MySQLUpdater:
                 to_update[pk] = merged
 
         for pk in db_snapshot:
-            if pk not in new_data:
+            if pk in new_data:
+                continue
+            if holding_sum.get(pk, 0) > 0:
+                # 크롤 결과에서 사라진(재고 0/일시 누락) 항목이라도 ACTIVE 예약이 걸려
+                # 있으면 행을 지우지 않는다 — 지우면 holding_records.pk가 가리킬 곳이
+                # 없어져 예약이 "예약 현황"에서 조용히 고아가 돼버린다(2026-08-07,
+                # 실제 운영 DB에서 발견). 재고만 0으로 남겨 예약 화면에 계속 보이게 한다.
+                db_prev = db_snapshot[pk]
+                to_update[pk] = {
+                    **db_prev, "재고": 0,
+                    "stock_version": (db_prev.get("stock_version") or 0) + 1,
+                }
+            else:
                 to_delete.append(pk)
 
         total = len(to_insert) + len(to_update) + len(to_delete)
