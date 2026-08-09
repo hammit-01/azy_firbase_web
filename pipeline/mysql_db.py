@@ -514,6 +514,38 @@ def complete_reservation(conn, rec_id: str) -> bool:
     return _set_reservation_status(conn, rec_id, "COMPLETED")
 
 
+def use_reservation(conn, rec_id: str, use_qty: int) -> bool:
+    """예약 사용 완료(부분/전체) — 입력한 수량만큼 예약 수량에서 차감한다.
+    남은 수량이 0이 되면 COMPLETED로 종료, 남으면 ACTIVE인 채로 수량만 줄어든다.
+    실재고는 안 건드림 — 가용재고는 조회 시점에 재계산되므로 자동 반영."""
+    if use_qty <= 0:
+        raise ValueError("사용 수량은 1 이상이어야 합니다")
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    now = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")
+    with conn.cursor() as cur:
+        for hr_table in ("holding_records", "azy_holding_records"):
+            cur.execute(
+                f"SELECT 수량 FROM {hr_table} WHERE id=%s AND status='ACTIVE' FOR UPDATE",
+                (rec_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                continue
+            remaining = int(row["수량"] or 0)
+            if use_qty > remaining:
+                raise ValueError(f"예약 수량({remaining})보다 많이 사용 완료할 수 없습니다")
+            if use_qty == remaining:
+                cur.execute(
+                    f"UPDATE {hr_table} SET status='COMPLETED', released_at=%s WHERE id=%s",
+                    (now, rec_id),
+                )
+            else:
+                cur.execute(f"UPDATE {hr_table} SET 수량=수량-%s WHERE id=%s", (use_qty, rec_id))
+            return True
+    return False
+
+
 def _set_reservation_status(conn, rec_id: str, status: str) -> bool:
     from datetime import datetime
     from zoneinfo import ZoneInfo

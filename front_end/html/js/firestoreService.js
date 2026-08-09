@@ -2,7 +2,7 @@
 import {
     apiInsertItem, apiUpdateItem, apiDeleteItem,
     apiUpdateHoldingRecord, apiDeleteHoldingRecord, apiFetch,
-    apiCreateReservation, apiCancelReservation, apiCompleteReservation,
+    apiCreateReservation, apiCancelReservation, apiCompleteReservation, apiUseReservation,
     apiGetReservationsByPk, apiGetAllReservations,
 } from "./api.js";
 
@@ -16,6 +16,9 @@ export async function cancelReservation(id) {
 }
 export async function completeReservation(id) {
     return apiCompleteReservation(id);
+}
+export async function useReservation(id, qty) {
+    return apiUseReservation(id, qty);
 }
 export async function getReservationsByPk(pk) {
     return apiGetReservationsByPk(pk);

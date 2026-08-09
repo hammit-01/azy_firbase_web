@@ -802,6 +802,21 @@ th.sort-active {
     color: #9ca3af;
 }
 
+.use-reservation-btn, .cancel-reservation-btn {
+    height: 28px;
+    padding: 0 10px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    margin: 0 2px;
+}
+.use-reservation-btn { background: #dcfce7; color: #15803d; }
+.use-reservation-btn:hover { background: #bbf7d0; }
+.cancel-reservation-btn { background: #fee2e2; color: #b91c1c; }
+.cancel-reservation-btn:hover { background: #fca5a5; }
+
 .logo-link {
     display: block;
     flex-shrink: 0;

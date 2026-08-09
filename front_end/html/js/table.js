@@ -813,7 +813,7 @@ export function renderChangesTab() {
 // =========================
 function reservationRowHtml(r) {
     return `
-        <tr>
+        <tr data-reservation-id="${r.id}">
             <td>${safeValue(r.담당자) || "(미지정)"}</td>
             <td>${safeValue(r.상품명)}</td>
             <td>${safeValue(r.브랜드)}</td>
@@ -824,6 +824,10 @@ function reservationRowHtml(r) {
             <td>${whTag(r.창고)}</td>
             <td>${safeValue(r.거래처)}</td>
             <td>${safeValue(r.홀딩일자)}</td>
+            <td>
+                <button class="use-reservation-btn" data-id="${r.id}">사용완료</button>
+                <button class="cancel-reservation-btn" data-id="${r.id}">홀딩취소</button>
+            </td>
         </tr>
     `;
 }
@@ -832,7 +836,7 @@ const RESERVATIONS_HEAD = `
     <thead>
         <tr>
             <th>담당자</th><th>상품명</th><th>브랜드</th><th>등급</th><th>ESTNO</th>
-            <th>수량</th><th>BL</th><th>창고</th><th>거래처</th><th>예약일</th>
+            <th>수량</th><th>BL</th><th>창고</th><th>거래처</th><th>예약일</th><th>액션</th>
         </tr>
     </thead>
 `;
@@ -896,7 +900,7 @@ export async function renderReservationsTab() {
             <table class="reservations-table">
                 ${RESERVATIONS_HEAD}
                 <tbody>${rows.map(reservationRowHtml).join("") ||
-                    `<tr><td colspan="10" style="text-align:center; padding:40px; color:#9ca3af;">내가 예약한 항목이 없습니다.</td></tr>`}</tbody>
+                    `<tr><td colspan="11" style="text-align:center; padding:40px; color:#9ca3af;">내가 예약한 항목이 없습니다.</td></tr>`}</tbody>
             </table>
         `;
     }

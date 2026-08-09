@@ -3,7 +3,7 @@ import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, 
 import { renderSelectData, renderInsert, createInsertRow } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
-import { getReservationsByPk } from "./firestoreService.js";
+import { getReservationsByPk, cancelReservation, useReservation } from "./firestoreService.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
@@ -372,6 +372,41 @@ async function handleClick(e) {
         document.querySelector(".changes-tab-btn")?.classList.remove("active");
         e.target.classList.toggle("active", opening);
         if (opening) renderReservationsTab();
+        return;
+    }
+
+    // 예약 현황 탭 — 사용완료(입력한 수량만큼 예약 수량 차감, 전량이면 종료 처리)
+    if (e.target.classList.contains("use-reservation-btn")) {
+        const id = e.target.dataset.id;
+        const row = e.target.closest("tr");
+        const maxQty = Number(row?.children[5]?.textContent || 0);
+        const input = prompt(`사용 완료 수량을 입력하세요 (예약 수량: ${maxQty})`, String(maxQty));
+        if (input === null) return;
+        const qty = Number(input);
+        if (!Number.isInteger(qty) || qty <= 0) { showError("올바른 수량을 입력하세요."); return; }
+        try {
+            await useReservation(id, qty);
+            showToast("✓ 사용 완료 처리됨");
+            renderReservationsTab();
+            fetchAllData();
+        } catch (err) {
+            showError(err.message || "처리에 실패했습니다.");
+        }
+        return;
+    }
+
+    // 예약 현황 탭 — 홀딩취소(예약 수량 전체 취소)
+    if (e.target.classList.contains("cancel-reservation-btn")) {
+        const id = e.target.dataset.id;
+        if (!await showConfirm("이 예약을 취소합니다.\n계속하시겠습니까?")) return;
+        try {
+            await cancelReservation(id);
+            showToast("✓ 예약 취소됨");
+            renderReservationsTab();
+            fetchAllData();
+        } catch (err) {
+            showError(err.message || "취소에 실패했습니다.");
+        }
         return;
     }
 

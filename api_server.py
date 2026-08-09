@@ -15,7 +15,7 @@ from pipeline.mysql_db import (
     upsert_holding_record, delete_holding_record,
     upsert_azy_inventory, delete_azy_inventory,
     upsert_azy_holding_record, delete_azy_holding_record,
-    create_reservation, cancel_reservation, complete_reservation,
+    create_reservation, cancel_reservation, complete_reservation, use_reservation,
     get_active_reservations_by_pk, get_all_active_reservations,
 )
 
@@ -381,6 +381,21 @@ def cancel_reservation_endpoint(rec_id: str):
 def complete_reservation_endpoint(rec_id: str):
     with get_conn() as conn:
         ok = complete_reservation(conn, rec_id)
+    if not ok:
+        raise HTTPException(404, "예약을 찾을 수 없거나 이미 종료됨")
+    return {"ok": True}
+
+
+class UseReservationBody(BaseModel):
+    수량: int
+
+@app.post("/api/reservations/{rec_id}/use")
+def use_reservation_endpoint(rec_id: str, body: UseReservationBody):
+    with get_conn() as conn:
+        try:
+            ok = use_reservation(conn, rec_id, body.수량)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
     if not ok:
         raise HTTPException(404, "예약을 찾을 수 없거나 이미 종료됨")
     return {"ok": True}

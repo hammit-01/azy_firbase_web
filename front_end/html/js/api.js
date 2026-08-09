@@ -137,3 +137,10 @@ export async function apiCancelReservation(id) {
 export async function apiCompleteReservation(id) {
     return apiFetch(`/api/reservations/${encodeURIComponent(id)}/complete`, { method: "POST" });
 }
+
+export async function apiUseReservation(id, qty) {
+    return apiFetch(`/api/reservations/${encodeURIComponent(id)}/use`, {
+        method: "POST",
+        body: JSON.stringify({ 수량: qty }),
+    });
+}
