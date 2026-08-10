@@ -79,6 +79,16 @@ jns_log.addHandler(_jns_handler)
 JNS_WAREHOUSE = "제니스(곤지암)"
 ACE_WAREHOUSES = {"에이스기흥", "에이스처인", "에이스용인"}
 
+# crawler.py가 반환하는 창고명은 로그인 계정 기준 사이트키인데, 일부는 EDA
+# 단계(eda_ch_plz_cs.py)에서 azy_inventory에 실제 저장되는 이름으로 재지정된다
+# ("프라자로지스"→"프라자", "시에이치물류"→"CH"). run_pipeline()의 stale 삭제
+# scope가 사이트키 그대로 쓰면 DB의 창고명과 안 겹쳐서, 그 두 창고는 재고가
+# 사라진 상품 행이 영원히 안 지워지고 남는다(2026-08-10, 프라자 BL
+# EGLV602500024834가 5일째 재고 235로 안 지워진 채 남아있던 사고로 발견 —
+# 원래 취지는 정반대로 2026-08-03 에이스용인 사고 때 stale 범위 누락을 막으려던
+# 코드였는데, 이름 불일치 케이스에서 같은 증상을 새로 만들어냄).
+SITE_TO_WAREHOUSE_NAME = {"프라자로지스": "프라자", "시에이치물류": "CH"}
+
 # ── 컴포넌트 싱글턴 ─────────────────────────────────────
 snapshot = Snapshot(Path("pipeline/snapshot.pkl"))
 updater  = MySQLUpdater()
@@ -309,7 +319,7 @@ def run_pipeline():
             # 에이스용인 사고와 같은 패턴). 크롤 자체가 성공한(df가 None이 아닌) 창고는
             # 결과가 0건이어도 범위에 포함 — 크롤이 실패(None)한 창고만 제외해서
             # 일시적 장애로 기존 정상 데이터가 잘못 지워지는 건 막는다.
-            crawled_scope = [w for w, df in results.items() if df is not None]
+            crawled_scope = [SITE_TO_WAREHOUSE_NAME.get(w, w) for w, df in results.items() if df is not None]
             _upload_azy(azy_normalized, warehouse_scope=crawled_scope)
 
             # 3-1. 이고(창고이동) 취합 시트 → moving_inventory 동기화 + 재고 반영.
