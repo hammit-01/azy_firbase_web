@@ -1623,6 +1623,23 @@ tr.insert-card .remove-insert-btn:hover {
         display: none !important;
     }
 
+    /* 로그인 팝오버 — 데스크톱은 버튼 아래 붙는 작은 드롭다운(230px)인데, 좁은 화면에서는
+       그대로 두면 잘리거나 너무 작아서 화면 중앙에 뜨는 팝업으로 전환 */
+    .login-popover {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        right: auto;
+        width: calc(100vw - 48px);
+        max-width: 320px;
+        transform: translate(-50%, -50%) scale(0.96);
+        z-index: 1000;
+    }
+
+    .login-popover.open {
+        transform: translate(-50%, -50%) scale(1);
+    }
+
     .s-tag { font-size: 12px; padding: 2px 7px; }
 
     .cancel-btn {
