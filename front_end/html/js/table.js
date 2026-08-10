@@ -811,6 +811,38 @@ export function renderChangesTab() {
 // =========================
 // 예약 현황 탭 — 편집자는 담당자별로 묶어서 전체를 보고, 사원은 자기 예약만 본다.
 // =========================
+// 모바일 카드 뷰 — 데스크톱 .reservations-table과 같은 데이터를 카드로 보여줌
+// (max-width:768px에서 CSS가 테이블 대신 이걸 노출 — 좁은 화면에서 표가 잘려
+// 사용완료/홀딩취소 버튼에 손이 안 닿던 문제 수정)
+function reservationCardHtml(r) {
+    return `
+        <div class="mobile-card reservation-card" data-reservation-id="${r.id}">
+            <div class="mc-header">
+                <span class="mc-name">${safeValue(r.상품명)}</span>
+                ${whTag(r.창고)}
+            </div>
+            <div class="mc-tags">
+                ${safeValue(r.브랜드) ? `<span class="s-tag">${safeValue(r.브랜드)}</span>` : ""}
+                ${safeValue(r.등급)   ? `<span class="s-tag">${safeValue(r.등급)}</span>`   : ""}
+                ${safeValue(r.ESTNO)  ? `<span class="s-tag">${safeValue(r.ESTNO)}</span>`  : ""}
+            </div>
+            <div class="mc-hero">
+                <div class="mc-qty">${safeValue(r.수량) || 0}<span class="mc-qty-unit">박스</span></div>
+            </div>
+            <div class="mc-info">
+                <div class="mc-row"><span class="mc-label">담당자</span>${safeValue(r.담당자) || "(미지정)"}</div>
+                <div class="mc-row"><span class="mc-label">예약일</span>${safeValue(r.홀딩일자)}</div>
+                ${safeValue(r.거래처) ? `<div class="mc-row"><span class="mc-label">거래처</span>${safeValue(r.거래처)}</div>` : ""}
+                ${safeValue(r.BL) ? `<div class="mc-row mc-full"><span class="mc-label">BL</span>${safeValue(r.BL)}</div>` : ""}
+            </div>
+            <div class="reservation-card-actions">
+                <button class="use-reservation-btn" data-id="${r.id}">사용완료</button>
+                <button class="cancel-reservation-btn" data-id="${r.id}">홀딩취소</button>
+            </div>
+        </div>
+    `;
+}
+
 function reservationRowHtml(r) {
     return `
         <tr data-reservation-id="${r.id}">
@@ -891,18 +923,20 @@ export async function renderReservationsTab() {
                     ${RESERVATIONS_HEAD}
                     <tbody>${groups[name].map(reservationRowHtml).join("")}</tbody>
                 </table>
+                <div class="reservations-mobile-list">${groups[name].map(reservationCardHtml).join("")}</div>
             </div>
         `).join("") : `<p class="reservations-empty">현재 활성 예약이 없습니다.</p>`;
 
         listEl.innerHTML = filterHtml + body;
     } else {
-        listEl.innerHTML = `
+        const empty = `<p class="reservations-empty">내가 예약한 항목이 없습니다.</p>`;
+        listEl.innerHTML = rows.length ? `
             <table class="reservations-table">
                 ${RESERVATIONS_HEAD}
-                <tbody>${rows.map(reservationRowHtml).join("") ||
-                    `<tr><td colspan="11" style="text-align:center; padding:40px; color:#9ca3af;">내가 예약한 항목이 없습니다.</td></tr>`}</tbody>
+                <tbody>${rows.map(reservationRowHtml).join("")}</tbody>
             </table>
-        `;
+            <div class="reservations-mobile-list">${rows.map(reservationCardHtml).join("")}</div>
+        ` : empty;
     }
 }
 

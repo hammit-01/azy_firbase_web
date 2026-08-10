@@ -802,6 +802,15 @@ th.sort-active {
     color: #9ca3af;
 }
 
+/* 데스크톱에서는 표만, 768px 이하에서는 카드만 보이도록 토글(모바일 미디어쿼리에서 뒤집음) */
+.reservations-mobile-list { display: none; }
+
+.reservation-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
 .use-reservation-btn, .cancel-reservation-btn {
     height: 28px;
     padding: 0 10px;
@@ -1771,6 +1780,26 @@ tr.insert-card .remove-insert-btn:hover {
     .footer {
         flex-wrap: wrap;
         gap: 8px;
+    }
+
+    /* ── 예약 현황 탭: 좁은 화면에서 표가 잘려 사용완료/홀딩취소 버튼에 손이
+       안 닿던 문제 — 표 대신 카드로 전환 ── */
+    .reservations-table { display: none; }
+    .reservations-mobile-list {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+    .reservation-card-actions button {
+        flex: 1;
+        height: 40px;
+        font-size: 14px;
+    }
+
+    /* ── 업데이트 탭: 표가 화면보다 넓으면 잘라내지 말고 가로 스크롤로 ── */
+    .changes-container {
+        overflow-x: auto;
     }
 
 }

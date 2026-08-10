@@ -18,6 +18,7 @@
 10. [웹 UI 구조](#10-웹-ui-구조)
 11. [API 서버](#11-api-서버)
 12. [트러블슈팅](#12-트러블슈팅)
+13. [알려진 이슈](#13-알려진-이슈)
 
 ---
 
@@ -591,3 +592,72 @@ Remove-Item pipeline\snapshot.pkl
 ### `back_eda_main.py` 경로 오류
 
 파일 내 `sys.path.append('C:\\Users\\ASUS\\...')` 하드코딩이 있습니다. 다른 PC에서 실행 시 수정 필요.
+
+---
+
+## 13. 알려진 이슈
+
+`azy_inventory` stale 행(재고가 사라진 상품) 자동 삭제 로직(`pipeline/scheduler.py::_upload_azy`,
+`run_pipeline()`/`run_ace_pipeline()`)의 "이번 사이클에 어느 창고가 정상 크롤됐는지" 판단 범위(scope)가
+실제와 어긋나는 세 가지 유형이 발견됨(2026-08-10~11).
+
+### 13-1. [해결됨] 사이트키 ↔ 창고명 불일치 (프라자, CH)
+
+**증상:** 프라자·CH 창고는 상품이 실제로 빠져나가도 `azy_inventory`에서 영원히 안 지워짐.
+
+**원인:** `crawler.py`가 반환하는 창고 식별자는 로그인 계정 기준 사이트키(`"프라자로지스"`,
+`"시에이치물류"`)인데, EDA 단계(`eda_ch_plz_cs.py`)에서 실제 DB `창고` 컬럼값은 짧은 이름
+(`"프라자"`, `"CH"`)으로 재지정됨. `run_pipeline()`의 stale 삭제 scope가 사이트키를 그대로 써서
+DB 값과 안 겹침.
+
+**수정:** `pipeline/scheduler.py`의 `SITE_TO_WAREHOUSE_NAME` 매핑으로 scope 계산 시 정규화
+(커밋 `9820ace`). 회귀 테스트: `pipeline/test_azy_scope_mapping.py`.
+
+### 13-2. [미해결] 수동 크롤링 창고가 scope에 아예 안 잡힘 (고려, 유상, 견우오아시스, 미빙냉장)
+
+**증상:** 이 4개 창고는 상품이 빠져나가도 절대 자동으로 안 지워짐 (수동 삭제로 임시 대응 중).
+
+**원인:** 이 4개 창고는 표준 크롤러(`crawling_list.py` PROCESS_MAP)가 아니라
+`crawling_handmade.py::crawling_handmade()`를 통해 `back_eda_main.py::list_eda()` 내부에서
+별도로 크롤링됨 — `pipeline/crawler.py::crawl_all()`의 `results` 딕셔너리에 아예 안 나타나므로
+`run_pipeline()`의 `crawled_scope`에 절대 포함되지 않음.
+
+**수정 보류 이유:** `crawling_handmade.py`의 `_ecms_fetch_cached()`가 로그인 실패·타임아웃·파싱
+실패·진짜 0건을 전부 빈 리스트(`[]`)로 뭉개서 반환 — "크롤 시도 자체가 실패"와 "크롤은 됐는데
+진짜 0건"을 구분 못 함. 이 상태로 4개 창고를 scope에 넣으면, 파싱 실패(고려/유상은 DevExpress
+Blazor 그리드라 `<table>` 파싱이 원래 안 먹힌다는 TODO가 코드에 남아있음 — `crawling_handmade.py`
+184번째 줄)를 "재고 전부 빠짐"으로 오판해서 **진짜 재고를 삭제**할 위험이 있음. 유령 데이터
+누적(현재 상태)보다 실재고 오삭제가 더 심각한 사고라 신중히 접근 중.
+
+**다음 단계:** `_ecms_fetch_cached()`가 실패 시 `None`, 진짜 빈 결과 시 `[]`을 구분해서 반환하도록
+수정 → `korea_eda()`/`yousang_eda()`/`mibing_eda()`/`kyunu_eda()` → `crawling_handmade()`(창고별
+성공 여부 집합 같이 반환) → `list_eda()`/`crawler.normalize()` → `run_pipeline()`의
+`crawled_scope`까지 성공 여부를 그대로 전달. 4개 파일에 걸친 반환값 시그니처 변경이라 실제
+사이트 대고 검증 없이 배포하기보다, 우선 성공/실패만 로그로 며칠 관찰한 뒤 진행 권장.
+
+### 13-3. [미해결] 에이스 3개 사업소 중 하나만 실패해도 전체가 오삭제 대상이 됨
+
+**증상:** 에이스기흥/처인/용인 중 특정 사업소만 그날 크롤 실패해도(shows: 로그에 실제로 여러 번
+확인된 셀레니움 세션 크래시 — `InvalidSessionIdException` 등) 그 사업소의 실재고가 삭제 또는
+0으로 처리될 수 있음. 2026-08-07 "한울에프앤에스 170박스 예약이 재고 소진과 함께 사라짐" 사고
+(커밋 `4dcd7ff`로 증상만 완화— ACTIVE 예약 있으면 삭제 대신 재고 0 보존)의 근본 원인으로 추정.
+
+**원인:** `run_ace_pipeline()`은 `_upload_azy(ace_df, warehouse_scope=list(ACE_WAREHOUSES))`로
+3개 사업소를 **항상 고정 scope**에 포함시킴. `crawling_ace()`는 `pd.concat([aceGH_eda(),
+aceCHIN_eda(), aceYOGIN_eda()])`로 3개를 하나로 합치는데, `_ace_fetch_depot()`이 개별 사업소
+실패 시에도 `[]`(빈 리스트)만 반환해 다른 2개가 정상이면 `ace_df` 전체는 비어있지 않음 → 함수
+맨 앞의 `if ace_df is None or ace_df.empty: 스킵` 가드를 안 타고 그대로 진행 → 실패한 사업소만
+"이번 사이클에 재고 없음"으로 오판됨.
+
+**수정 방향:** `crawling_ace()`가 사업소별 성공 여부를 같이 반환하도록 수정해서, 실패한 사업소는
+`warehouse_scope`(현재 `list(ACE_WAREHOUSES)` 고정값)에서 그 사이클만 제외. 13-2와 같은 유형의
+수정이라 함께 설계하는 게 효율적.
+
+### 13-4. 확인 결과 안전한 경로
+
+- **JNS(제니스/곤지암)** — `run_jns_pipeline()`은 크롤 실패/빈 결과 시 전체 라운드를 스킵하는
+  all-or-nothing 방식이라 이 버그 유형에 해당 없음.
+- **표준 크롤러 나머지 17~18개 창고** (베이지박스투·삼일물류·신우냉장·희창냉장·오로라CS·
+  효성냉장·이스트밸리·SWC·대청·대재·한라동탄·한라곤지암·강동1·강동2·경인·삼진1·삼진2·CS·
+  아이린냉장) — `CrawlerPool`이 창고별 성공/실패(`df is None`)를 개별 추적하고, 사이트키와 DB
+  `창고`값도 모두 일치함(13-1과 달리 EDA 단계에서 재지정 안 됨). 안전.
