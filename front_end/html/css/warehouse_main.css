@@ -1510,6 +1510,8 @@ tr.insert-card .remove-insert-btn:hover {
     .toolbar-login   { display: contents; }
 
     .toolbar-left {
+        flex-direction: column;
+        align-items: flex-start;
         justify-content: center;
         order: 1;
     }
