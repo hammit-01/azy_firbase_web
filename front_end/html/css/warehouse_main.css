@@ -1612,6 +1612,17 @@ tr.insert-card .remove-insert-btn:hover {
         border-radius: 8px;
     }
 
+    /* 추가/수정/전체삭제는 모바일에서 숨김 — 인라인 표 편집 UI가 좁은 화면에 안 맞아
+       카드 폼으로 바뀌긴 하지만 여전히 불편해서, 모바일에서는 조회/예약 위주로만 노출 */
+    .insert-btn, .update-btn, .all-delete-btn {
+        display: none !important;
+    }
+
+    /* "N개 상품 입력 중 / 전체 추가" 같은 대량 처리 바도 같은 이유로 모바일에서 숨김 */
+    .bulk-action-bar {
+        display: none !important;
+    }
+
     .s-tag { font-size: 12px; padding: 2px 7px; }
 
     .cancel-btn {
