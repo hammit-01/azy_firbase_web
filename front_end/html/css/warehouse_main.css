@@ -1491,10 +1491,15 @@ tr.insert-card .remove-insert-btn:hover {
     }
 
     /* ── 툴바 ── */
+    /* row+wrap으로 바꾸고 필터/액션 줄에 flex-basis:100%를 줘서 강제 줄바꿈시키는
+       방식(flexbox "row break" 트릭) — toolbar-left/로그인버튼/table_size_updated는
+       너비 제약이 없어 한 줄에 나란히 앉고, 100% 줄이 그 다음부터 새 줄을 강제한다
+       (2026-08-11, "toolbar-left랑 로그인버튼이랑 table_size_updated를 한 행에" 요청) */
     .toolbar {
         display: flex;
-        flex-direction: column;
-        align-items: stretch;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
         gap: 10px;
         padding: 12px;
         margin: 0 0 6px 0;
@@ -1518,7 +1523,6 @@ tr.insert-card .remove-insert-btn:hover {
 
     .login-btn, .table_size_updated {
         order: 2;
-        align-self: flex-end;
     }
 
     .login-btn {
@@ -1558,6 +1562,7 @@ tr.insert-card .remove-insert-btn:hover {
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
+        flex-basis: 100%;
         gap: 8px;
         order: 3;
     }
@@ -1598,6 +1603,7 @@ tr.insert-card .remove-insert-btn:hover {
        넘쳐서 버튼이 안 보이던 원인이었음. 폭을 100%로 풀고 여기서만 wrap시킨다. */
     .toolbar-row-actions {
         width: 100%;
+        flex-basis: 100%;
         justify-content: flex-start;
         order: 4;
     }
