@@ -1505,7 +1505,11 @@ tr.insert-card .remove-insert-btn:hover {
     }
 
     .toolbar-login {
-        order: -1;
+        /* 로그인 버튼과 액션 버튼 줄이 데스크톱 구조상 여기 같이 들어있어서
+           (2026-08-06 개편) 필터보다 먼저 뜨면 어색함 — 필터 다음 순서로.
+           flex-direction은 데스크톱 column 그대로 둠 — 로그인 버튼 줄 / 액션 버튼 줄이
+           각자 세로로 쌓이고, 액션 버튼 줄 안에서만 가로로 wrap(아래 참고) */
+        order: 1;
         justify-content: flex-end;
     }
 
@@ -1535,17 +1539,23 @@ tr.insert-card .remove-insert-btn:hover {
         font-size: 13px;
     }
 
-    /* 창고/브랜드/상태를 한 줄, 검색1/2를 한 줄, 버튼을 3+3으로 묶어 보여주려면
-       row 구획을 없애고(display:contents) .toolbar-right 하나의 flex-wrap 흐름으로
-       합친 뒤 order로 재배치한다 — HTML 구조(row1=상품명+브랜드+검색1 등)는 그대로
-       두고 CSS만으로 재배치 */
+    /* 상품명+브랜드를 한 줄(50%씩), 검색1을 한 줄(100%), 창고+상태를 한 줄(50%씩),
+       검색2를 한 줄(100%)로 보여주려면 row 구획을 없애고(display:contents)
+       .toolbar-right 하나의 flex-wrap 흐름으로 합친 뒤 order로 재배치한다 —
+       HTML 구조(row1=상품명+브랜드+검색1 등)는 그대로 두고 CSS만으로 재배치.
+       *** .toolbar-right는 데스크톱에서 flex-direction:column이라 여기서
+       row로 다시 안 돌려주면 flex-wrap이 안 먹혀서 전부 세로 한 줄로 쌓인다
+       (2026-08-11 발견 — 필터가 한 줄에 하나씩만 보이던 원인) ***/
     .toolbar-right {
         display: flex;
+        flex-direction: row;
         flex-wrap: wrap;
         gap: 8px;
     }
 
-    .toolbar-row {
+    /* 액션 버튼 줄(.toolbar-row-actions)은 .toolbar-right가 아니라 .toolbar-login
+       안에 있어서 이 규칙 대상이 아님 — 자기 자신의 mobile 규칙(아래)을 따로 받음 */
+    .toolbar-right .toolbar-row {
         display: contents;
     }
 
@@ -1555,25 +1565,16 @@ tr.insert-card .remove-insert-btn:hover {
     .show-warehouse { order: 4; }
     .show-state     { order: 5; }
     #searchInput2   { order: 6; }
-    .insert-btn     { order: 7; }
-    .update-btn     { order: 8; }
-    .holding-btn    { order: 9; }
-    .clear-btn      { order: 10; }
-    .rollback-btn   { order: 11; }
-    .all-delete-btn { order: 12; }
-    .reservations-tab-btn { order: 13; }
-    .changes-tab-btn { order: 14; }
-    .main-download-btn { order: 15; }
 
     .filter-sel {
-        flex: 1 1 calc(33.333% - 6px);
+        flex: 1 1 calc(50% - 4px);
         min-width: 0;
         font-size: 14px;
         height: 40px;
     }
 
     .search-input {
-        flex: 1 1 calc(50% - 4px);
+        flex: 1 1 100%;
         min-width: 0;
         font-size: 14px;
         height: 40px;
@@ -1582,6 +1583,24 @@ tr.insert-card .remove-insert-btn:hover {
     .tb-sep {
         display: none;
     }
+
+    /* 액션 버튼 줄 — 데스크톱은 justify-content:flex-end에 width:540px 고정인데,
+       .toolbar-login이 flex-direction:column인 채로는(위 참고) 그 540px가 화면 밖으로
+       넘쳐서 버튼이 안 보이던 원인이었음. 폭을 100%로 풀고 여기서만 wrap시킨다. */
+    .toolbar-row-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .insert-btn     { order: 1; }
+    .update-btn     { order: 2; }
+    .holding-btn    { order: 3; }
+    .rollback-btn   { order: 4; }
+    .clear-btn      { order: 5; }
+    .all-delete-btn { order: 6; }
+    .reservations-tab-btn { order: 7; }
+    .changes-tab-btn { order: 8; }
+    .main-download-btn { order: 9; }
 
     .rollback-btn, .clear-btn, .all-delete-btn, .changes-tab-btn, .reservations-tab-btn,
     .insert-btn, .update-btn, .holding-btn, .main-download-btn {
