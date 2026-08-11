@@ -307,7 +307,7 @@ def hl_eda(data1):
         hl["재고수량"].astype(str).str.replace(",", "", regex=False),
         errors="coerce"
     )
-    hl["평균중량"] = _weight / _qty
+    hl["평균중량"] = (_weight / _qty).round(2)
 
     # =================================================
     # 기타정보

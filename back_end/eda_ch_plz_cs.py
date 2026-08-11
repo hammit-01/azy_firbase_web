@@ -239,7 +239,7 @@ def ch_eda(data):
         ch["재고수량"].astype(str).str.replace(",", "", regex=False),
         errors="coerce"
     )
-    ch["평균중량"] = _weight / _qty
+    ch["평균중량"] = (_weight / _qty).round(2)
 
     ch["브랜드"] = (
         ch["기타정보"]
@@ -291,7 +291,7 @@ def plz_eda(data):
         plz["재고수량"].astype(str).str.replace(",", "", regex=False),
         errors="coerce"
     )
-    plz["평균중량"] = _weight / _qty
+    plz["평균중량"] = (_weight / _qty).round(2)
 
     # 이름 EDA
     plz = name_eda_plz(plz)

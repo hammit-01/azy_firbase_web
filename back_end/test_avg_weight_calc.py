@@ -24,19 +24,19 @@ def _base_row(**overrides):
 def test_ch_avg_weight():
     df = pd.DataFrame([_base_row()])
     result = ch_eda(df)
-    assert round(result["평균중량"].iloc[0], 3) == round(123.46 / 10, 3)
+    assert result["평균중량"].iloc[0] == round(123.46 / 10, 2)
 
 
 def test_plz_avg_weight():
     df = pd.DataFrame([_base_row(규격단위중량="SWIFT123KG")])
     result = plz_eda(df)
-    assert round(result["평균중량"].iloc[0], 3) == round(123.46 / 10, 3)
+    assert result["평균중량"].iloc[0] == round(123.46 / 10, 2)
 
 
 def test_hl_avg_weight():
     df = pd.DataFrame([_base_row()])
     result = hl_eda(df)
-    assert round(result["평균중량"].iloc[0], 3) == round(123.46 / 10, 3)
+    assert result["평균중량"].iloc[0] == round(123.46 / 10, 2)
 
 
 if __name__ == "__main__":
