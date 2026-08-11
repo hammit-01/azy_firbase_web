@@ -296,18 +296,18 @@ def hl_eda(data1):
     hl = data1.copy()
 
     # =================================================
-    # 평균중량
+    # 평균중량 = 원본 중량열(소수점 2자리) ÷ 재고수량 (2026-08-11, 규격단위중량
+    # 파싱 방식 대신 실측 중량 기준으로 변경)
     # =================================================
-    hl["평균중량"] = (
-        hl["규격단위중량"]
-        .astype(str)
-        .str.extract(r"(\d+\.?\d*)")[0]
-    )
-
-    hl["평균중량"] = pd.to_numeric(
-        hl["평균중량"],
+    _weight = pd.to_numeric(
+        hl["중량"].astype(str).str.replace(",", "", regex=False),
+        errors="coerce"
+    ).round(2)
+    _qty = pd.to_numeric(
+        hl["재고수량"].astype(str).str.replace(",", "", regex=False),
         errors="coerce"
     )
+    hl["평균중량"] = _weight / _qty
 
     # =================================================
     # 기타정보

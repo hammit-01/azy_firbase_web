@@ -229,13 +229,17 @@ def ch_eda(data):
 
     ch["창고"] = "CH"
 
-    # 평균중량: 한글 포함 행(메모 텍스트)은 None, 나머지는 숫자 추출
-    _spec = ch["규격단위중량"].astype(str)
-    ch["평균중량"] = pd.to_numeric(
-        _spec.str.extract(r"([\d.]+)")[0],
+    # 평균중량 = 원본 중량열(소수점 2자리) ÷ 재고수량 (2026-08-11, 규격단위중량
+    # 파싱 방식 대신 실측 중량 기준으로 변경)
+    _weight = pd.to_numeric(
+        ch["중량"].astype(str).str.replace(",", "", regex=False),
+        errors="coerce"
+    ).round(2)
+    _qty = pd.to_numeric(
+        ch["재고수량"].astype(str).str.replace(",", "", regex=False),
         errors="coerce"
     )
-    ch.loc[_spec.str.contains("[가-힣]", regex=True, na=False), "평균중량"] = None
+    ch["평균중량"] = _weight / _qty
 
     ch["브랜드"] = (
         ch["기타정보"]
@@ -277,11 +281,17 @@ def plz_eda(data):
     # 브랜드: 알파벳 시작 부분 추출 (SWIFT, EXCEL 등)
     plz["브랜드"] = _spec.str.extract(r"^([A-Za-z]+)")[0]
 
-    # 평균중량: KG 포함 경우만 (단순 숫자=규격코드는 제외)
-    plz["평균중량"] = pd.to_numeric(
-        _spec.str.extract(r"(\d+(?:\.\d+)?)\s*[Kk][Gg]")[0],
+    # 평균중량 = 원본 중량열(소수점 2자리) ÷ 재고수량 (2026-08-11, 규격단위중량
+    # 파싱 방식 대신 실측 중량 기준으로 변경)
+    _weight = pd.to_numeric(
+        plz["중량"].astype(str).str.replace(",", "", regex=False),
+        errors="coerce"
+    ).round(2)
+    _qty = pd.to_numeric(
+        plz["재고수량"].astype(str).str.replace(",", "", regex=False),
         errors="coerce"
     )
+    plz["평균중량"] = _weight / _qty
 
     # 이름 EDA
     plz = name_eda_plz(plz)
