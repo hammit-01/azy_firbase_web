@@ -831,6 +831,7 @@ th.sort-active {
     flex-shrink: 0;
     border-radius: 10px;
     padding: 4px;
+    text-decoration: none;
     transition: opacity 0.18s, transform 0.18s;
 }
 .logo-link:active {
