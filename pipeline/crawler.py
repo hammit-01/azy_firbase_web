@@ -187,7 +187,7 @@ class CrawlerPool:
         if raw_qty_azy:
             log.info(f"  [정규화 전-azy] 원본: {len(final_df)}행 / {raw_qty_azy}박스")
 
-        _, normalized, azy_normalized = list_eda(final_df, jns_df)
+        _, normalized, azy_normalized, handmade_ok = list_eda(final_df, jns_df)
 
         eda_qty = _qty_sum(normalized)
         if not normalized.empty:
@@ -203,4 +203,4 @@ class CrawlerPool:
             if raw_qty_azy and raw_qty_azy != eda_qty_azy:
                 log.warning(f"  [azy 정규화 경고] 박스 수 변동: {raw_qty_azy} → {eda_qty_azy} ({eda_qty_azy - raw_qty_azy:+d}박스)")
 
-        return normalized, azy_normalized
+        return normalized, azy_normalized, handmade_ok

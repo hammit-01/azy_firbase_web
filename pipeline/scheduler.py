@@ -307,7 +307,7 @@ def run_pipeline():
                 log.warning(f"실패 창고: {', '.join(failed)}")
 
             # 2. 정규화 (타창고 → azy_inventory. JNS는 어차피 crawl_all에서 빠졌으니 빈 값)
-            _normalized, azy_normalized = crawler.normalize(results)
+            _normalized, azy_normalized, handmade_ok = crawler.normalize(results)
             if azy_normalized.empty:
                 log.warning("정규화 후 데이터 없음 - 이번 라운드 스킵")
                 return
@@ -319,7 +319,13 @@ def run_pipeline():
             # 에이스용인 사고와 같은 패턴). 크롤 자체가 성공한(df가 None이 아닌) 창고는
             # 결과가 0건이어도 범위에 포함 — 크롤이 실패(None)한 창고만 제외해서
             # 일시적 장애로 기존 정상 데이터가 잘못 지워지는 건 막는다.
+            # handmade_ok(고려/유상/견우오아시스/미빙냉장 — crawling_handmade.py 경유라
+            # results 딕셔너리에 아예 안 잡히는 창고들)는 이번 사이클에 성공한 것만
+            # 별도로 더한다(2026-08-11 — 이 4개 창고가 stale 삭제 scope에 영영 못 들어가
+            # 유령 재고가 안 지워지고, 사용자가 고친 값도 매 사이클 크롤값으로
+            # 덮어써지던 문제를 고침).
             crawled_scope = [SITE_TO_WAREHOUSE_NAME.get(w, w) for w, df in results.items() if df is not None]
+            crawled_scope += handmade_ok
             _upload_azy(azy_normalized, warehouse_scope=crawled_scope)
 
             # 3-1. 이고(창고이동) 취합 시트 → moving_inventory 동기화 + 재고 반영.

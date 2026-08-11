@@ -103,7 +103,7 @@ def list_eda(final_df, jns):
     cs = safe_eda(cs_eda, cs, "CS")
     irn = safe_df(irn, "아이린냉장")
     irn = safe_eda(irn_eda, irn, "IRN")
-    hand_df = crawling_handmade()
+    hand_df, handmade_ok = crawling_handmade()
 
     # ── azy_inventory용: JNS 제외 전 창고 ──────────────────
     azy_data = pd.concat([added_df, six_df, ch, plz, cs, irn, hand_df], ignore_index=True)
@@ -137,7 +137,7 @@ def list_eda(final_df, jns):
     # ── inventory용: JNS만 (독립 스케줄에서도 재사용 가능하도록 분리) ──
     total_data = jns_only_eda(jns)
 
-    return final_df, total_data, azy_data
+    return final_df, total_data, azy_data, handmade_ok
 
 
 def jns_only_eda(jns_raw):

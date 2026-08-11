@@ -148,7 +148,13 @@ def _ecms_fetch_cached(key, base_url, instock_url, user, pw):
     """캐시된 드라이버로 조회 시도 → 없거나 세션 만료/오류면 재로그인 후 1회 재시도.
     로그인(_ecms_login) 자체가 타임아웃/예외를 던져도 여기서 삼킨다 — 안 그러면
     crawling_handmade()가 통째로 죽어서, 같은 사이클에서 이미 정상 크롤된 다른
-    타창고(효성냉장 등) 데이터까지 MySQL 반영 전에 날아간다."""
+    타창고(효성냉장 등) 데이터까지 MySQL 반영 전에 날아간다.
+
+    반환값: 크롤 시도 자체가 실패하면 None, 성공했지만 진짜 0건이면 []
+    (호출부가 "실패"와 "진짜 빈 재고"를 구분해서 stale 삭제 scope 포함 여부를
+    결정할 수 있어야 함 — 2026-08-11, 이 둘을 구분 안 해서 고려/유상/미빙냉장이
+    stale 삭제 scope에 영영 못 들어가 수정한 값도 매 사이클 크롤값으로
+    덮어써지던 문제를 고치며 추가)."""
     try:
         driver = _get_cached_driver(key)
         if driver is None:
@@ -177,7 +183,7 @@ def _ecms_fetch_cached(key, base_url, instock_url, user, pw):
         _discard_driver(key)
         records = None
 
-    return records or []
+    return records
 
 
 # 미빙냉장 (eCSMS, 로그인 az0810/0101 확인 완료)
@@ -189,6 +195,9 @@ def mibing_eda():
         "az0810", "0101",
     )
 
+    if records is None:
+        print("[미빙냉장] 크롤 실패")
+        return None
     if not records:
         print("[미빙냉장] 데이터 없음 (또는 그리드 구조 미확인 — 파서 점검 필요)")
         return pd.DataFrame()
@@ -216,13 +225,16 @@ def korea_eda():
         from bs4 import BeautifulSoup  # noqa: imported in helpers
     except ImportError:
         print("[고려냉장] bs4 미설치 → 건너뜀")
-        return pd.DataFrame()
+        return None
 
     records = _ecms_fetch_cached(
         "고려", "http://krcs.itfarm.co.kr/", "http://krcs.itfarm.co.kr/instockpageprime",
         "az0810", "0101",
     )
 
+    if records is None:
+        print("[고려냉장] 크롤 실패")
+        return None
     if not records:
         print("[고려냉장] 데이터 없음")
         return pd.DataFrame()
@@ -393,6 +405,9 @@ def yousang_eda():
         "az0810", "0101",
     )
 
+    if records is None:
+        print("[유상] 크롤 실패")
+        return None
     if not records:
         print("[유상] 데이터 없음")
         return pd.DataFrame()
@@ -466,7 +481,7 @@ def kyunu_eda():
         from bs4 import BeautifulSoup  # noqa
     except ImportError:
         print("[견우오아시스] selenium/bs4 미설치 → 건너뜀")
-        return pd.DataFrame()
+        return None
 
     try:
         driver = _get_cached_driver(_KYUNU_KEY)
@@ -488,14 +503,17 @@ def kyunu_eda():
             except Exception as e:
                 print(f"[견우오아시스] 재시도 실패: {e}")
                 _discard_driver(_KYUNU_KEY)
-                records = []
+                records = None
     except Exception as e:
         # 로그인(_kyunu_login) 자체가 타임아웃/예외를 던져도 여기서 삼킨다 — _ecms_fetch_cached와
         # 동일한 이유(크롤링_handmade 전체가 죽어서 이미 크롤된 다른 타창고 데이터까지 날아감)
         print(f"[견우오아시스] 로그인 실패: {e}")
         _discard_driver(_KYUNU_KEY)
-        records = []
+        records = None
 
+    if records is None:
+        print("[견우오아시스] 크롤 실패")
+        return None
     if not records:
         print("[견우오아시스] 데이터 없음")
         return pd.DataFrame()
@@ -597,9 +615,32 @@ def _finalize_handmade(result):
 def crawling_handmade():
     """수동 크롤링 창고 — 에이스냉장(기흥/처인/용인) 제외.
     에이스는 동시접속 1명 제한(2명째부터 404)이 있어 pipeline/scheduler.py의
-    별도 정각 1시간 간격 잡(run_ace_pipeline)에서 처리한다."""
-    result = pd.concat([korea_eda(), yousang_eda(), kyunu_eda(), mibing_eda()], ignore_index=True)
-    return _finalize_handmade(result)
+    별도 정각 1시간 간격 잡(run_ace_pipeline)에서 처리한다.
+
+    반환: (합쳐진 DataFrame, 이번 사이클에 성공적으로 크롤된 창고명 집합).
+    실패(로그인/파싱 오류로 None 반환)한 창고는 집합에서 빠지고, 호출부
+    (scheduler.py::run_pipeline)가 이 집합을 stale 삭제 scope에 반영해 그
+    창고 기존 행은 이번 사이클 삭제/덮어쓰기 대상에서 제외한다 — 실패를
+    "재고 전부 사라짐"으로 오판해 진짜 재고를 지우는 사고를 막기 위함
+    (2026-08-11, 이 4개 창고가 stale scope에 아예 안 잡혀서 사용자가 수정한
+    값도 매 사이클 크롤값으로 덮어써지던 문제를 고치며 추가)."""
+    warehouse_fns = {
+        "고려": korea_eda,
+        "유상": yousang_eda,
+        "견우오아시스": kyunu_eda,
+        "미빙냉장": mibing_eda,
+    }
+    succeeded = set()
+    frames = []
+    for name, fn in warehouse_fns.items():
+        df = fn()
+        if df is None:
+            continue
+        succeeded.add(name)
+        if not df.empty:
+            frames.append(df)
+    combined = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    return _finalize_handmade(combined), succeeded
 
 
 def crawling_ace():
