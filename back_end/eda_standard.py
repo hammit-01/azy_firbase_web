@@ -157,8 +157,13 @@ def eda_standard(df):
     mask = df["수탁품"] == "우척BBQ빽립A"
     df.loc[mask, "등급"] = "A"
 
-    # 소갈비/SWIFT/ESTNO=3D는 원본 WMS에 등급 정보가 아예 없어 사용자 확인으로 고정값 지정
-    mask = (df["브랜드"] == "SWIFT") & (df["수탁품"] == "소갈비") & (df["ESTNO"] == "3D")
+    # 소갈비/SWIFT/ESTNO=3D는 원본 WMS에 등급 정보가 아예 없어 사용자 확인으로 고정값
+    # 지정 — 등급이 이미 있으면 원본값을 존중하고, 비어있을 때만 채운다(2026-08-11,
+    # 무조건 덮어쓰던 걸 조건부로 변경)
+    mask = (
+        (df["브랜드"] == "SWIFT") & (df["수탁품"] == "소갈비") & (df["ESTNO"] == "3D") &
+        (df["등급"].astype(str).str.strip() == "")
+    )
     df.loc[mask, "등급"] = "UN"
 
     df.loc[df["수탁품"].astype(str).str.contains("PERDI", case=False, na=False), "브랜드"] = "PERDIGAO"
