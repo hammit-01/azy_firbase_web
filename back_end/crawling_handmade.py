@@ -369,7 +369,12 @@ def _ace_records_to_df(records, wh_name):
         return pd.DataFrame()
     df = pd.DataFrame()
     df["수탁품"] = [r[0] for r in records]
-    df["평균중량"] = ""
+    # 평균중량 = 원본 표 11번째 칸(0-indexed) — 사이트가 이미 총중량÷재고수량으로
+    # 계산해서 내려줌(실측 확인: 384.00÷32=12.00, 1358.28÷49=27.72 등 일치).
+    # 기존엔 항상 빈 값으로 고정해뒀던 것 발견 후 수정(2026-08-11).
+    df["평균중량"] = [
+        str(r[11]).replace(",", "") if len(r) > 11 else "" for r in records
+    ]
     df["재고수량"] = [r[9] if len(r) > 9 else 0 for r in records]
     df["BL번호"] = [r[5] if len(r) > 5 else "" for r in records]
     df["유통기한"] = [r[12] if len(r) > 12 else "" for r in records]
