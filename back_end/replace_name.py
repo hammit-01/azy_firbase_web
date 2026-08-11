@@ -108,6 +108,8 @@ PRODUCT_NAME_MAP = {
     "우척BBQ빽립": "BBQ탕갈비",
     "우척갈비": "척갈비",
     "안심옆추리": "안심추리",
+    "둔홍두깨": "홍두깨",
+    "우헤드미트": "헤드미트",
 }
 
 # 브랜드 표기 정규화 — 약어/오탈자/한글 표기를 표준 브랜드명으로 통일
@@ -132,6 +134,7 @@ BRAND_MAP = {
     "AGRO SUPER": "AGROSUPER",
     "TONNIES FLEISCH": "TONNIES",
     "AGRO SUPPER": "AGROSUPER",
+    "슈퍼포크": "AGROSUPER",
     "5 STAR 267": "5 STAR",
     "5 STAR 562": "5 STAR",
     "5 STAR 562M": "5 STAR",
@@ -229,6 +232,9 @@ FIELD_OVERRIDE_RULES = [
      "set": {"브랜드": "AFG", "ESTNO": "410"}},
     {"match": {"창고": "효성냉장", "상품명": "BBQ탕갈비", "ESTNO": "93", "브랜드": "EXCEL"},
      "set": {"등급": "A"}},
+    # 원본 상품명 "앞다리"는 PRODUCT_NAME_MAP에서 이미 "일반전각"으로 정규화된 뒤라
+    # 여기서 매치 조건도 "일반전각" 기준 — 브랜드가 KILCOY인 경우만 "전각"으로 구분
+    {"match": {"상품명": "일반전각", "브랜드": "KILCOY"}, "set": {"상품명": "전각"}},
 ]
 
 
