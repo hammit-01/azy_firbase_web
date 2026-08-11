@@ -1,4 +1,5 @@
 import atexit
+import concurrent.futures
 import subprocess
 import pandas as pd
 import re
@@ -623,7 +624,16 @@ def crawling_handmade():
     창고 기존 행은 이번 사이클 삭제/덮어쓰기 대상에서 제외한다 — 실패를
     "재고 전부 사라짐"으로 오판해 진짜 재고를 지우는 사고를 막기 위함
     (2026-08-11, 이 4개 창고가 stale scope에 아예 안 잡혀서 사용자가 수정한
-    값도 매 사이클 크롤값으로 덮어써지던 문제를 고치며 추가)."""
+    값도 매 사이클 크롤값으로 덮어써지던 문제를 고치며 추가).
+
+    사이트별 60초 타임아웃: set_page_load_timeout(20초)이 있어도 사이트가
+    로그인 폼 자체를 안 띄우는 등 WebDriverWait 밖의 경로에서 막히면 여전히
+    무한정 매달릴 수 있다(2026-08-11, 실제로 재현 — run_pipeline 전체가 몇 분씩
+    멈춰 다른 20여 개 정상 창고까지 안 갱신됨). 스레드로 병렬 실행하고 60초
+    안에 안 끝나면 그 창고만 포기(succeeded에서 빠짐 → stale 삭제 scope에서도
+    빠짐 → 안전) — 매달린 스레드/크롬 세션은 백그라운드에 버려두고 다음
+    사이클로 진행한다(강제 종료는 불가능하지만, 프로세스 전체가 멈추는 것보다
+    훨씬 낫다)."""
     warehouse_fns = {
         "고려": korea_eda,
         "유상": yousang_eda,
@@ -632,13 +642,27 @@ def crawling_handmade():
     }
     succeeded = set()
     frames = []
-    for name, fn in warehouse_fns.items():
-        df = fn()
-        if df is None:
-            continue
-        succeeded.add(name)
-        if not df.empty:
-            frames.append(df)
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=len(warehouse_fns))
+    future_to_name = {executor.submit(fn): name for name, fn in warehouse_fns.items()}
+    try:
+        for future in concurrent.futures.as_completed(future_to_name, timeout=60):
+            name = future_to_name[future]
+            try:
+                df = future.result()
+            except Exception as e:
+                print(f"[{name}] 예외: {e}")
+                continue
+            if df is None:
+                continue
+            succeeded.add(name)
+            if not df.empty:
+                frames.append(df)
+    except concurrent.futures.TimeoutError:
+        stuck = {future_to_name[f] for f in future_to_name if not f.done()}
+        print(f"[crawling_handmade] 60초 넘게 응답 없는 창고(이번 사이클 스킵): {stuck}")
+    finally:
+        executor.shutdown(wait=False)
+
     combined = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
     return _finalize_handmade(combined), succeeded
 
