@@ -450,8 +450,10 @@ def swc(data):
     # =========================
     # 브랜드
     # =========================
+    _SWC_KNOWN_BRANDS = r"EXCEL|SWIFT|SADIA|IBP|TEYS|AMH|KILCOY|SHOWCASE|ACC|TONNIES|SEARA"
+
     df["브랜드"] = s.str.extract(
-        r"(EXCEL|SWIFT|SADIA|IBP|TEYS|AMH|KILCOY|SHOWCASE|ACC|TONNIES)"
+        rf"({_SWC_KNOWN_BRANDS})"
     )[0]
 
     # 화이트리스트에 없는 새 브랜드 대응 — 등급/브랜드가 구분자 없이 붙어 있어
@@ -466,10 +468,14 @@ def swc(data):
     # =========================
     # 등급
     # =========================
-    # 단어 경계 앵커 필요: "SE"가 "SEARA"(브랜드) 안의 부분 문자열로 오탐되던
-    # 버그(닭장각정육/SEARA에 없는 등급 SE가 잡힘, 2026-08-12) — 앞뒤에 영문자가
-    # 없을 때만 매칭
-    df["등급"] = s.str.extract(
+    # 원본 공백이 상위 단계(eda_common)에서 전부 제거돼 브랜드와 등급이 "EXCELSEL"
+    # 처럼 구분자 없이 붙는다. 그래서 (1) 아는 브랜드를 앞에서 먼저 잘라낸 뒤
+    # (2) 나머지에서 단어 경계로 등급을 찾는다 — 이렇게 해야 "EXCEL SEL"의 SEL은
+    # 살리면서 "SEARA"(브랜드) 안의 "SE"는 오탐하지 않는다 (2026-08-12,
+    # 닭장각정육/SEARA에 없는 등급 SE가 잡히던 버그 + 단순 단어경계 앵커만 걸었을
+    # 때 EXCEL/SEL, KILCOY/GF 등 정상 등급까지 같이 사라지던 회귀 모두 확인).
+    s_no_brand = s.str.replace(rf"^(?:{_SWC_KNOWN_BRANDS})", "", regex=True)
+    df["등급"] = s_no_brand.str.extract(
         r"(?<![A-Za-z])(ANGUS_CH|SEL|PRI|PRE|CH|GF|SE|UN)(?![A-Za-z])"
     )[0]
 

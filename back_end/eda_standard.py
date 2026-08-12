@@ -8,9 +8,15 @@ def eda_standard(df):
     # 붙어서 오는 경우가 많음(소갈비(T), 벌집목살(0055), 깐양(20KG) 등 다수 확인) —
     # 상품명과 등급을 분리한다. 괄호 안이 순수 영숫자일 때만 매칭하므로 "사태(앞)"처럼
     # 한글이 든 정상 상품명 변형은 안 건드림.
+    # 괄호 안이 등급이 아니라 상품명 일부인 경우도 있음(예: 삼겹양지(PCS),
+    # 조각탕갈비(MEATY)) — 이런 건 괄호를 지우면 안 되므로 화이트리스트로 제외
+    # (2026-08-12, 두 상품 모두 매 사이클 괄호가 잘려나가던 것 발견).
+    _NON_GRADE_PAREN_SUFFIXES = {"PCS", "MEATY"}
+    paren_content = df["수탁품"].astype(str).str.extract(r"\(([A-Za-z0-9]+)\)$")[0]
     jns_paren_mask = (
         df["창고"].astype(str).str.startswith("곤") &
-        df["수탁품"].astype(str).str.match(r"^.+\([A-Za-z0-9]+\)$")
+        df["수탁품"].astype(str).str.match(r"^.+\([A-Za-z0-9]+\)$") &
+        ~paren_content.isin(_NON_GRADE_PAREN_SUFFIXES)
     )
     if jns_paren_mask.any():
         extracted = df.loc[jns_paren_mask, "수탁품"].astype(str).str.extract(r"^(.+)\(([A-Za-z0-9]+)\)$")
