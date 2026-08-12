@@ -65,6 +65,14 @@ def eda_standard(df):
     )
     df.loc[smithfield_18079_mask, "ESTNO"] = "18079"
 
+    # 척갈비/KILCOY: ESTNO가 전부 숫자면 앞 3자리만 사용(뒤는 로트 구분 등으로
+    # 붙는 부가 숫자라 실제 ESTNO는 3자리) — 예: 6402→640, 6401→640
+    chuck_kilcoy_mask = (
+        (df["브랜드"] == "KILCOY") & (df["수탁품"] == "척갈비") &
+        df["ESTNO"].astype(str).str.match(r"^\d+$", na=False)
+    )
+    df.loc[chuck_kilcoy_mask, "ESTNO"] = df.loc[chuck_kilcoy_mask, "ESTNO"].astype(str).str[:3]
+
     df["등급"] = df["등급"].astype(str).str.replace("#", "", regex=False)
 
     # 수산물 브랜드: 수탁품의 "31-40/9KG" 형식에서 "31/40"을 브랜드로 추출
