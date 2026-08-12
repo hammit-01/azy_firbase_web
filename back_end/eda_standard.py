@@ -162,7 +162,7 @@ def eda_standard(df):
     # 무조건 덮어쓰던 걸 조건부로 변경)
     mask = (
         (df["브랜드"] == "SWIFT") & (df["수탁품"] == "소갈비") & (df["ESTNO"] == "3D") &
-        (df["등급"].astype(str).str.strip() == "")
+        (df["등급"].isna() | (df["등급"].astype(str).str.strip() == ""))
     )
     df.loc[mask, "등급"] = "UN"
 

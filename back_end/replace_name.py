@@ -271,7 +271,14 @@ def replace_name(df):
             mask = pd.Series(True, index=df.index)
             for col, val in rule["match"].items():
                 check_col = name_col if col == "상품명" else col
-                mask &= (df[check_col] == val)
+                if val == "":
+                    # NaN/None을 .astype(str)로 바꾸면 "nan" 문자열이 아니라 여전히
+                    # 결측으로 남는 pandas 버전이 있어(2026-08-12 발견 — 등급이 NaN인
+                    # 소갈비/SWIFT/3D 행에 등급="" 매치 규칙이 하나도 안 걸리던 원인),
+                    # 빈값 매치는 isna()까지 같이 봐야 결측/빈문자열 둘 다 잡힌다.
+                    mask &= (df[check_col].isna() | (df[check_col].astype(str).str.strip() == ""))
+                else:
+                    mask &= (df[check_col] == val)
             for col, val in rule["set"].items():
                 set_col = name_col if col == "상품명" else col
                 df.loc[mask, set_col] = val

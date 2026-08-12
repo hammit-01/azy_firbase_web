@@ -29,6 +29,13 @@ def test_eda_standard_fills_only_when_empty():
     assert preserved["등급"].iloc[0] == "CH"
 
 
+def test_eda_standard_fills_when_nan():
+    # 2026-08-12 실제 재현: 등급이 문자열 ""이 아니라 진짜 NaN인 경우(삼진2
+    # MAEU266114518) — .astype(str)로는 안 잡혀서 규칙이 하나도 안 걸리던 버그.
+    filled = eda_standard(_row(등급=pd.NA))
+    assert filled["등급"].iloc[0] == "UN"
+
+
 def test_replace_name_hanla_rule_fills_only_when_empty():
     filled = replace_name(_row(등급=""))
     assert filled["수탁품"].iloc[0] == "탕갈비(MEATY)"
@@ -39,7 +46,15 @@ def test_replace_name_hanla_rule_fills_only_when_empty():
     assert preserved["등급"].iloc[0] == "CH"
 
 
+def test_replace_name_hanla_rule_fills_when_nan():
+    filled = replace_name(_row(등급=pd.NA))
+    assert filled["수탁품"].iloc[0] == "탕갈비(MEATY)"
+    assert filled["등급"].iloc[0] == "UN"
+
+
 if __name__ == "__main__":
     test_eda_standard_fills_only_when_empty()
+    test_eda_standard_fills_when_nan()
     test_replace_name_hanla_rule_fills_only_when_empty()
+    test_replace_name_hanla_rule_fills_when_nan()
     print("OK")
