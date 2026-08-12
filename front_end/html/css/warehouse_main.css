@@ -811,7 +811,7 @@ th.sort-active {
     margin-top: 10px;
 }
 
-.use-reservation-btn, .cancel-reservation-btn {
+.edit-reservation-qty-btn, .use-reservation-btn, .cancel-reservation-btn {
     height: 28px;
     padding: 0 10px;
     border: none;
@@ -821,6 +821,8 @@ th.sort-active {
     cursor: pointer;
     margin: 0 2px;
 }
+.edit-reservation-qty-btn { background: #dbeafe; color: #1d4ed8; }
+.edit-reservation-qty-btn:hover { background: #bfdbfe; }
 .use-reservation-btn { background: #dcfce7; color: #15803d; }
 .use-reservation-btn:hover { background: #bbf7d0; }
 .cancel-reservation-btn { background: #fee2e2; color: #b91c1c; }

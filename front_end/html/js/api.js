@@ -144,3 +144,10 @@ export async function apiUseReservation(id, qty) {
         body: JSON.stringify({ 수량: qty }),
     });
 }
+
+export async function apiUpdateReservationQty(id, qty) {
+    return apiFetch(`/api/reservations/${encodeURIComponent(id)}/update_qty`, {
+        method: "POST",
+        body: JSON.stringify({ 수량: qty }),
+    });
+}

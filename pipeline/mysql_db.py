@@ -548,6 +548,42 @@ def use_reservation(conn, rec_id: str, use_qty: int) -> bool:
     return False
 
 
+def update_reservation_qty(conn, rec_id: str, new_qty: int) -> bool:
+    """예약 수량 변경(늘리기/줄이기 모두). 늘릴 땐 이 예약을 뺀 다른 ACTIVE 예약
+    합계 기준 가용재고를 넘을 수 없다 — create_reservation과 같은 락 순서
+    (재고 행 → 예약 합계)로 동시 변경/동시 신규예약과 경합해도 안전하다.
+    줄이는 건 가용재고를 늘리는 방향이라 제한이 필요 없다.
+    0 이하로는 못 바꿈 — 그 경우 예약 취소(cancel)를 쓰게 한다."""
+    if new_qty <= 0:
+        raise ValueError("수량은 1 이상이어야 합니다 (0으로 만들려면 예약 취소를 사용하세요)")
+    for table, hr_table in (("inventory", "holding_records"), ("azy_inventory", "azy_holding_records")):
+        with conn.cursor() as cur:
+            cur.execute(
+                f"SELECT pk FROM {hr_table} WHERE id=%s AND status='ACTIVE' FOR UPDATE",
+                (rec_id,),
+            )
+            rec = cur.fetchone()
+            if not rec:
+                continue
+            pk = rec["pk"]
+            cur.execute(f"SELECT 재고 FROM {table} WHERE id=%s OR pk=%s FOR UPDATE", (pk, pk))
+            src = cur.fetchone()
+            if not src:
+                raise ValueError("원본 재고를 찾을 수 없습니다")
+            cur.execute(
+                f"SELECT COALESCE(SUM(수량),0) AS total FROM {hr_table} "
+                "WHERE pk=%s AND status='ACTIVE' AND id!=%s FOR UPDATE",
+                (pk, rec_id),
+            )
+            other_sum = int(cur.fetchone()["total"] or 0)
+            available = (src["재고"] or 0) - other_sum
+            if new_qty > available:
+                raise ValueError(f"가용재고 부족(가용 {available}, 요청 {new_qty})")
+            cur.execute(f"UPDATE {hr_table} SET 수량=%s WHERE id=%s", (new_qty, rec_id))
+            return True
+    return False
+
+
 def _set_reservation_status(conn, rec_id: str, status: str) -> bool:
     from datetime import datetime
     from zoneinfo import ZoneInfo

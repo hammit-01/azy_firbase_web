@@ -836,6 +836,7 @@ function reservationCardHtml(r) {
                 ${safeValue(r.BL) ? `<div class="mc-row mc-full"><span class="mc-label">BL</span>${safeValue(r.BL)}</div>` : ""}
             </div>
             <div class="reservation-card-actions">
+                <button class="edit-reservation-qty-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">수량변경</button>
                 <button class="use-reservation-btn" data-id="${r.id}">사용완료</button>
                 <button class="cancel-reservation-btn" data-id="${r.id}">홀딩취소</button>
             </div>
@@ -857,6 +858,7 @@ function reservationRowHtml(r) {
             <td>${safeValue(r.거래처)}</td>
             <td>${safeValue(r.홀딩일자)}</td>
             <td>
+                <button class="edit-reservation-qty-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">수량변경</button>
                 <button class="use-reservation-btn" data-id="${r.id}">사용완료</button>
                 <button class="cancel-reservation-btn" data-id="${r.id}">홀딩취소</button>
             </td>

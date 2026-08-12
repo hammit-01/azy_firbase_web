@@ -3,7 +3,7 @@ import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, 
 import { renderSelectData, renderInsert, createInsertRow } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
-import { getReservationsByPk, cancelReservation, useReservation } from "./firestoreService.js";
+import { getReservationsByPk, cancelReservation, useReservation, updateReservationQty } from "./firestoreService.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
@@ -372,6 +372,26 @@ async function handleClick(e) {
         document.querySelector(".changes-tab-btn")?.classList.remove("active");
         e.target.classList.toggle("active", opening);
         if (opening) renderReservationsTab();
+        return;
+    }
+
+    // 예약 현황 탭 — 수량변경(가용재고 안에서 늘리거나, 제한 없이 줄임)
+    if (e.target.classList.contains("edit-reservation-qty-btn")) {
+        const id = e.target.dataset.id;
+        const curQty = Number(e.target.dataset.qty || 0);
+        const input = prompt(`변경할 예약 수량을 입력하세요 (현재: ${curQty})`, String(curQty));
+        if (input === null) return;
+        const qty = Number(input);
+        if (!Number.isInteger(qty) || qty <= 0) { showError("올바른 수량을 입력하세요."); return; }
+        if (qty === curQty) return;
+        try {
+            await updateReservationQty(id, qty);
+            showToast("✓ 예약 수량 변경됨");
+            renderReservationsTab();
+            fetchAllData();
+        } catch (err) {
+            showError(err.message || "수량 변경에 실패했습니다.");
+        }
         return;
     }
 
