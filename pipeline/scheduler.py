@@ -95,6 +95,17 @@ updater  = MySQLUpdater()
 crawler  = CrawlerPool(max_workers=20)
 
 
+def _azy_uid(bl, estno, grade, name, wh, auto_state="", auto_memo=""):
+    """azy_inventory 행 식별자. 특이품(파손/상이품/반품/검품)이면 사유를 접미사로
+    붙여 같은 BL의 정상 로트와 별도 행으로 갈라지게 한다 — qualifier가 없으면
+    (절대다수) 기존 id 형식 그대로 유지해야 기존 행이 안 깨진다."""
+    if not bl:
+        return None
+    uid_base = f"{bl}_{estno}_{grade}_{name}_{wh}"
+    qualifier = auto_memo if auto_state == "특이품" else ""
+    return f"{uid_base}_{qualifier}" if qualifier else uid_base
+
+
 def _upload_azy(azy_df, warehouse_scope=None):
     """azy_inventory 테이블 diff 갱신 — 기존 행의 홀딩/상태/메모는 보존.
 
@@ -140,7 +151,11 @@ def _upload_azy(azy_df, warehouse_scope=None):
         # 등급·상품명도 식별자에 포함 — 같은 BL+ESTNO라도 등급(CH/UN 등)이 다르면 별도 재고이고,
         # 같은 BL+ESTNO+등급이라도 상품명이 다르면(한 BL에 서로 다른 상품이 같이 실려온 경우) 별도 상품이므로
         # 로트/저장위치 중복 합산 대상이 아님
-        uid   = f"{bl}_{estno}_{grade}_{name}_{wh}" if bl else uuid.uuid4().hex
+        # 특이품(파손/상이품/반품/검품) 사유도 식별자에 포함 — 원본 WMS가 같은 BL을
+        # "정상 N박스" + "파손 1박스"처럼 별도 줄로 쪼개 주는 경우가 있는데(2026-08-12,
+        # ONEYRICFPX299900: 정상 2178 + 파손 1 = 2179), 이걸 빼면 두 줄이 같은 uid로
+        # 합쳐지면서 정상 재고까지 통째로 "특이품"으로 잘못 태깅된다.
+        uid = _azy_uid(bl, estno, grade, name, wh, _s(r.get("_auto_상태")), _s(r.get("_auto_메모"))) or uuid.uuid4().hex
         try:
             raw_qty = int(str(r.get("재고수량", 0)).replace(",", ""))
         except Exception:
