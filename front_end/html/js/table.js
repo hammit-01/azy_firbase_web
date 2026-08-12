@@ -173,11 +173,11 @@ function createUpdateRow(item) {
             <td data-label="브랜드"><input type="text" class="update-brand cell-input" data-id="${id}" value="${safeValue(item.브랜드)}"></td>
             <td data-label="등급"><input type="text" class="update-grade cell-input" data-id="${id}" value="${safeValue(item.등급)}"></td>
             <td data-label="ESTNO"><input type="text" class="update-estNo cell-input" data-id="${id}" value="${safeValue(item.ESTNO)}"></td>
+            <td data-label="BL"><input type="text" class="update-bl cell-input" data-id="${id}" value="${safeValue(item.BL)}"></td>
+            <td data-label="창고"><input type="text" class="update-warehouse cell-input" data-id="${id}" value="${safeValue(item.창고)}"></td>
             <td data-label="재고"><input type="number" class="update-qty cell-input" data-id="${id}" value="${safeValue(item.재고)}"></td>
             <td class="holding-inherited" data-label="예약">${Number(item.예약수량) > 0 ? safeValue(item.예약수량) : ""}</td>
             <td class="holding-inherited" data-label="가용">${availableCell(item.가용재고)}</td>
-            <td data-label="BL"><input type="text" class="update-bl cell-input" data-id="${id}" value="${safeValue(item.BL)}"></td>
-            <td data-label="창고"><input type="text" class="update-warehouse cell-input" data-id="${id}" value="${safeValue(item.창고)}"></td>
             <td data-label="유통기한"><input type="date" class="update-dueDate cell-input" data-id="${id}" value="${toDateInputValue(item.유통기한)}"></td>
             <td data-label="평중"><input type="number" step="0.01" class="update-weight cell-input" data-id="${id}" value="${safeValue(item.평중)}"></td>
             <td data-label="비고">
@@ -210,9 +210,6 @@ function createHoldingInsertRow(item) {
             <td class="holding-inherited" data-label="브랜드">${safeValue(item.브랜드)}</td>
             <td class="holding-inherited" data-label="등급">${safeValue(item.등급)}</td>
             <td class="holding-inherited" data-label="ESTNO">${safeValue(item.ESTNO)}</td>
-            <td data-label="수량"><input type="number" class="hold-qty cell-input" data-id="${id}" placeholder="수량"></td>
-            <td class="holding-inherited" data-label="예약">${Number(item.예약수량) > 0 ? safeValue(item.예약수량) : ""}</td>
-            <td class="holding-inherited" data-label="가용">${availableCell(item.가용재고)}</td>
             <td class="holding-inherited" data-label="BL">${safeValue(item.BL)}</td>
             <td data-label="담당자 · 출고일자">
                 <div class="hold-stack">
@@ -220,6 +217,9 @@ function createHoldingInsertRow(item) {
                     <input type="date" class="hold-releaseDate cell-input" data-id="${id}" title="출고일자">
                 </div>
             </td>
+            <td data-label="수량"><input type="number" class="hold-qty cell-input" data-id="${id}" placeholder="수량"></td>
+            <td class="holding-inherited" data-label="예약">${Number(item.예약수량) > 0 ? safeValue(item.예약수량) : ""}</td>
+            <td class="holding-inherited" data-label="가용">${availableCell(item.가용재고)}</td>
             <td class="holding-inherited" data-label="유통기한">${safeValue(item.유통기한)}</td>
             <td data-label="평중"><input type="number" step="0.01" class="hold-weight cell-input" data-id="${id}" value="${safeValue(item.평중)}"></td>
             <td data-label="비고">
@@ -652,13 +652,13 @@ export function renderTable() {
                 <td>${safeValue(item.브랜드)}</td>
                 <td>${safeValue(item.등급)}</td>
                 <td>${safeValue(item.ESTNO)}</td>
+                <td>${safeValue(item.BL)}</td>
+                <td>${whTag(item.창고)}</td>
                 <td>${safeValue(item.재고)}</td>
                 <td>${Number(item.예약수량) > 0
                     ? `<button class="view-reservations-btn" data-pk="${item._rawId ?? id}">${safeValue(item.예약수량)}</button>`
                     : ""}</td>
                 <td>${availableCell(item.가용재고)}</td>
-                <td>${safeValue(item.BL)}</td>
-                <td>${whTag(item.창고)}</td>
                 <td>${dueDateTag(item.유통기한, limitDate)}</td>
                 <td>${safeValue(item.평중)}</td>
                 <td>${safeValue(item.메모)}</td>

@@ -117,8 +117,10 @@ td {
     font-variant-numeric: tabular-nums;
 }
 
-/* BL번호 열 한 줄 표시 */
-td:nth-child(7) {
+/* BL번호 열 한 줄 표시 — 열 순서: 선택,상품명,브랜드,등급,ESTNO,BL,창고,재고,예약,가용,유통기한,평균,비고
+   (2026-08-13, 재고/예약/가용을 창고~유통기한 사이로 옮기며 BL 위치가 9→6번째로 바뀜.
+   이전엔 7번째를 가리켰는데 실제로는 그 자리가 예약 열이었던 오래된 불일치도 같이 바로잡음) */
+td:nth-child(6) {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
