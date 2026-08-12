@@ -191,8 +191,12 @@ def _ecms_fetch_cached(key, base_url, instock_url, user, pw):
 # TODO: DevExpress Blazor 그리드(dxbl-grid)라 고려/유상의 <table> 파싱이 안 먹힘.
 #       현재 실 재고 0건이라 그리드 DOM 구조 미확인 — 실제 재고 들어오면 구조 보고 파서 교체할 것.
 def mibing_eda():
+    # 재고현황(1)("instockpageprime")은 기준일자가 "당일"이 아니라 "8/1~오늘"
+    # 같은 기간 조회라 실제 현재고와 안 맞음 — 재고현황(2)("instockpage2prime")가
+    # 진짜 현재 시점 스냅샷이라 이걸로 교체(2026-08-12, 고려/유상 라이브 데이터로
+    # 컬럼 위치까지 교차검증 완료. 컬럼 배치가 (1)과 달라 인덱스도 같이 바뀜).
     records = _ecms_fetch_cached(
-        "미빙냉장", "http://112.170.18.24/", "http://112.170.18.24/instockpageprime",
+        "미빙냉장", "http://112.170.18.24/", "http://112.170.18.24/instockpage2prime",
         "az0810", "0101",
     )
 
@@ -206,10 +210,10 @@ def mibing_eda():
     mibing = pd.DataFrame()
     mibing["수탁품"] = [r[1] if len(r) > 1 else "" for r in records]
     mibing["평균중량"] = [r[2] if len(r) > 2 else "" for r in records]
-    mibing["재고수량"] = [r[7] if len(r) > 7 else 0 for r in records]
-    mibing["BL번호"] = [r[14] if len(r) > 14 else "" for r in records]
-    mibing["유통기한"] = [r[21] if len(r) > 21 else "" for r in records]
-    mibing["브랜드"] = [r[17] if len(r) > 17 else "" for r in records]
+    mibing["재고수량"] = [r[4] if len(r) > 4 else 0 for r in records]
+    mibing["BL번호"] = [r[8] if len(r) > 8 else "" for r in records]
+    mibing["유통기한"] = [r[16] if len(r) > 16 else "" for r in records]
+    mibing["브랜드"] = [r[12] if len(r) > 12 else "" for r in records]
     mibing["창고"] = "미빙냉장"
 
     mibing = mibing.dropna(subset=["수탁품"])
@@ -228,8 +232,12 @@ def korea_eda():
         print("[고려냉장] bs4 미설치 → 건너뜀")
         return None
 
+    # 재고현황(1)("instockpageprime")은 기준일자가 "당일"이 아니라 "8/1~오늘"
+    # 같은 기간 조회라 실제 현재고와 안 맞음 — 재고현황(2)("instockpage2prime")가
+    # 진짜 현재 시점 스냅샷이라 이걸로 교체(2026-08-12, 라이브 데이터 BL 교차검증으로
+    # 컬럼 위치 확인. 컬럼 배치가 (1)과 달라 인덱스도 같이 바뀜).
     records = _ecms_fetch_cached(
-        "고려", "http://krcs.itfarm.co.kr/", "http://krcs.itfarm.co.kr/instockpageprime",
+        "고려", "http://krcs.itfarm.co.kr/", "http://krcs.itfarm.co.kr/instockpage2prime",
         "az0810", "0101",
     )
 
@@ -240,18 +248,18 @@ def korea_eda():
         print("[고려냉장] 데이터 없음")
         return pd.DataFrame()
 
-    # 컬럼: 1=수탁품목, 2=규격, 7=재고수량, 14=B/L No, 17=브랜드, 19=가공공장, 21=유효일자
+    # 컬럼(재고현황(2) 기준): 1=수탁품목, 2=규격, 4=재고수량, 8=B/L No, 12=브랜드, 14=가공공장, 16=유효일자
     korea = pd.DataFrame()
     korea["수탁품"] = [r[1] if len(r) > 1 else "" for r in records]
     korea["평균중량"] = [r[2] if len(r) > 2 else "" for r in records]
-    korea["재고수량"] = [r[7] if len(r) > 7 else 0 for r in records]
-    korea["BL번호"] = [r[14] if len(r) > 14 else "" for r in records]
-    korea["유통기한"] = [r[21] if len(r) > 21 else "" for r in records]
+    korea["재고수량"] = [r[4] if len(r) > 4 else 0 for r in records]
+    korea["BL번호"] = [r[8] if len(r) > 8 else "" for r in records]
+    korea["유통기한"] = [r[16] if len(r) > 16 else "" for r in records]
     korea["창고"] = "고려"
 
-    korea["브랜드"] = [r[17] if len(r) > 17 else "" for r in records]
+    korea["브랜드"] = [r[12] if len(r) > 12 else "" for r in records]
     # ESTNO: 원본 사이트의 "가공공장" 열 값을 그대로 사용 (수탁품 텍스트엔 ESTNO 정보가 없음)
-    korea["ESTNO"] = [r[19] if len(r) > 19 else "" for r in records]
+    korea["ESTNO"] = [r[14] if len(r) > 14 else "" for r in records]
     korea = korea.dropna(subset=["수탁품"])
     if korea.empty:
         return pd.DataFrame()
@@ -406,8 +414,12 @@ def aceYOGIN_eda():
 
 # 유상
 def yousang_eda():
+    # 재고현황(1)("instockpageprime")은 기준일자가 "당일"이 아니라 "8/1~오늘"
+    # 같은 기간 조회라 실제 현재고와 안 맞음 — 재고현황(2)("instockpage2prime")가
+    # 진짜 현재 시점 스냅샷이라 이걸로 교체(2026-08-12, 라이브 데이터 BL 교차검증으로
+    # 컬럼 위치 확인. 컬럼 배치가 (1)과 달라 인덱스도 같이 바뀜).
     records = _ecms_fetch_cached(
-        "유상", "http://www.xn--hg4bn0j.kr/", "http://www.xn--hg4bn0j.kr/instockpageprime",
+        "유상", "http://www.xn--hg4bn0j.kr/", "http://www.xn--hg4bn0j.kr/instockpage2prime",
         "az0810", "0101",
     )
 
@@ -418,14 +430,14 @@ def yousang_eda():
         print("[유상] 데이터 없음")
         return pd.DataFrame()
 
-    # 컬럼: 1=수탁품목, 2=규격, 7=재고수량, 14=B/L No, 17=브랜드, 21=유효일자
+    # 컬럼(재고현황(2) 기준): 1=수탁품목, 2=규격, 4=재고수량, 8=B/L No, 12=브랜드, 16=유효일자
     yousang = pd.DataFrame()
     yousang["수탁품"] = [r[1] if len(r) > 1 else "" for r in records]
     yousang["평균중량"] = [r[2] if len(r) > 2 else "" for r in records]
-    yousang["재고수량"] = [r[7] if len(r) > 7 else 0 for r in records]
-    yousang["BL번호"] = [r[14] if len(r) > 14 else "" for r in records]
-    yousang["유통기한"] = [r[21] if len(r) > 21 else "" for r in records]
-    yousang["브랜드"] = [r[17] if len(r) > 17 else "" for r in records]
+    yousang["재고수량"] = [r[4] if len(r) > 4 else 0 for r in records]
+    yousang["BL번호"] = [r[8] if len(r) > 8 else "" for r in records]
+    yousang["유통기한"] = [r[16] if len(r) > 16 else "" for r in records]
+    yousang["브랜드"] = [r[12] if len(r) > 12 else "" for r in records]
     yousang["창고"] = "유상"
 
     yousang = yousang.dropna(subset=["수탁품"])
