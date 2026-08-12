@@ -1,5 +1,5 @@
-"""척갈비/KILCOY ESTNO가 전부 숫자면 앞 3자리만 남기는지 확인
-(2026-08-12, 6402->640, 6401->640 요청).
+"""척갈비·차돌박이/KILCOY ESTNO가 전부 숫자면 앞 3자리만 남기는지 확인
+(2026-08-12, 6402->640, 6401->640 요청. 차돌박이는 같은 날 추가 요청으로 확장).
 """
 import sys
 from pathlib import Path
@@ -21,6 +21,7 @@ def test_truncates_numeric_estno_to_3_digits():
     assert eda_standard(_row("6402"))["ESTNO"].iloc[0] == "640"
     assert eda_standard(_row("6401"))["ESTNO"].iloc[0] == "640"
     assert eda_standard(_row("640"))["ESTNO"].iloc[0] == "640"
+    assert eda_standard(_row("6402", 수탁품="차돌박이"))["ESTNO"].iloc[0] == "640"
 
 
 def test_leaves_non_numeric_estno_alone():
