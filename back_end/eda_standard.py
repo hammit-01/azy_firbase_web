@@ -79,6 +79,13 @@ def eda_standard(df):
     )
     df.loc[kilcoy_mask, "ESTNO"] = df.loc[kilcoy_mask, "ESTNO"].astype(str).str[:3]
 
+    # 닭장각정육: ESTNO가 8자 이상이면 앞 7자리만 사용(뒤는 로트 구분 등 부가 숫자)
+    dakjang_mask = (
+        (df["수탁품"] == "닭장각정육") &
+        (df["ESTNO"].astype(str).str.len() >= 8)
+    )
+    df.loc[dakjang_mask, "ESTNO"] = df.loc[dakjang_mask, "ESTNO"].astype(str).str[:7]
+
     df["등급"] = df["등급"].astype(str).str.replace("#", "", regex=False)
 
     # 수산물 브랜드: 수탁품의 "31-40/9KG" 형식에서 "31/40"을 브랜드로 추출
