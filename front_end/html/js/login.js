@@ -123,9 +123,6 @@ export function initLogin() {
 
     document.querySelector(".logout-btn")?.addEventListener("click", () => {
         localStorage.removeItem(STORAGE_KEY);
-        renderLoggedOut();
-        applyRoleVisibility(undefined);
-        cancelActiveForm();
-        closePopover();
+        location.reload();
     });
 }

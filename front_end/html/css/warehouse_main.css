@@ -729,7 +729,10 @@ th.sort-active {
 .reservations-container {
     flex: 1;
     overflow-y: auto;
-    overflow-x: hidden;
+    /* 액션 버튼이 3개(수량변경/사용완료/홀딩취소)로 늘어나면서 표가 컨테이너보다
+       넓어질 수 있음 — hidden이면 오른쪽 버튼이 그냥 잘려서 안 보이므로 auto로
+       바꿔 가로 스크롤 가능하게 함(2026-08-12) */
+    overflow-x: auto;
     min-height: 0;
     background: #fff;
     border-radius: 12px;
@@ -813,13 +816,14 @@ th.sort-active {
 
 .edit-reservation-qty-btn, .use-reservation-btn, .cancel-reservation-btn {
     height: 28px;
-    padding: 0 10px;
+    padding: 0 8px;
     border: none;
     border-radius: 6px;
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
-    margin: 0 2px;
+    margin: 0 1px;
+    white-space: nowrap;
 }
 .edit-reservation-qty-btn { background: #dbeafe; color: #1d4ed8; }
 .edit-reservation-qty-btn:hover { background: #bfdbfe; }
@@ -1858,7 +1862,8 @@ tr.insert-card .remove-insert-btn:hover {
     .reservation-card-actions button {
         flex: 1;
         height: 40px;
-        font-size: 14px;
+        font-size: 13px;
+        padding: 0 4px;
     }
 
     /* ── 업데이트 탭: 표가 화면보다 넓으면 잘라내지 말고 가로 스크롤로 ── */
