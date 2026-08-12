@@ -19,6 +19,8 @@
 11. [API 서버](#11-api-서버)
 12. [트러블슈팅](#12-트러블슈팅)
 13. [알려진 이슈](#13-알려진-이슈)
+14. [창고별 크롤링 방식 및 처리 흐름](#14-창고별-크롤링-방식-및-처리-흐름)
+15. [상품명/브랜드/등급/ESTNO 정규화 (replace_name.py)](#15-상품명브랜드등급estno-정규화-replace_namepy)
 
 ---
 
@@ -613,27 +615,27 @@ DB 값과 안 겹침.
 **수정:** `pipeline/scheduler.py`의 `SITE_TO_WAREHOUSE_NAME` 매핑으로 scope 계산 시 정규화
 (커밋 `9820ace`). 회귀 테스트: `pipeline/test_azy_scope_mapping.py`.
 
-### 13-2. [미해결] 수동 크롤링 창고가 scope에 아예 안 잡힘 (고려, 유상, 견우오아시스, 미빙냉장)
+### 13-2. [해결됨] 수동 크롤링 창고가 scope에 아예 안 잡힘 (고려, 유상, 견우오아시스, 미빙냉장)
 
-**증상:** 이 4개 창고는 상품이 빠져나가도 절대 자동으로 안 지워짐 (수동 삭제로 임시 대응 중).
+**증상:** 이 4개 창고는 상품이 빠져나가도 절대 자동으로 안 지워짐(유령 데이터 누적).
 
 **원인:** 이 4개 창고는 표준 크롤러(`crawling_list.py` PROCESS_MAP)가 아니라
 `crawling_handmade.py::crawling_handmade()`를 통해 `back_eda_main.py::list_eda()` 내부에서
 별도로 크롤링됨 — `pipeline/crawler.py::crawl_all()`의 `results` 딕셔너리에 아예 안 나타나므로
 `run_pipeline()`의 `crawled_scope`에 절대 포함되지 않음.
 
-**수정 보류 이유:** `crawling_handmade.py`의 `_ecms_fetch_cached()`가 로그인 실패·타임아웃·파싱
-실패·진짜 0건을 전부 빈 리스트(`[]`)로 뭉개서 반환 — "크롤 시도 자체가 실패"와 "크롤은 됐는데
-진짜 0건"을 구분 못 함. 이 상태로 4개 창고를 scope에 넣으면, 파싱 실패(고려/유상은 DevExpress
-Blazor 그리드라 `<table>` 파싱이 원래 안 먹힌다는 TODO가 코드에 남아있음 — `crawling_handmade.py`
-184번째 줄)를 "재고 전부 빠짐"으로 오판해서 **진짜 재고를 삭제**할 위험이 있음. 유령 데이터
-누적(현재 상태)보다 실재고 오삭제가 더 심각한 사고라 신중히 접근 중.
+**수정:** `_ecms_fetch_cached()`가 "크롤 시도 자체 실패"(`None`)와 "크롤은 됐는데 진짜 0건"(`[]`)을
+구분해서 반환하도록 수정 → `crawling_handmade()`가 창고별 성공 여부 집합(`handmade_ok`)을 같이
+반환 → `list_eda()`/`crawler.normalize()` → `run_pipeline()`의 `crawled_scope`까지 전달
+(2026-08-11, 커밋 참고: `crawling_handmade.py`, `back_eda_main.py`, `crawler.py`,
+`scheduler.py` 4개 파일). 회귀 테스트: `back_end/test_crawling_handmade_scope.py`.
 
-**다음 단계:** `_ecms_fetch_cached()`가 실패 시 `None`, 진짜 빈 결과 시 `[]`을 구분해서 반환하도록
-수정 → `korea_eda()`/`yousang_eda()`/`mibing_eda()`/`kyunu_eda()` → `crawling_handmade()`(창고별
-성공 여부 집합 같이 반환) → `list_eda()`/`crawler.normalize()` → `run_pipeline()`의
-`crawled_scope`까지 성공 여부를 그대로 전달. 4개 파일에 걸친 반환값 시그니처 변경이라 실제
-사이트 대고 검증 없이 배포하기보다, 우선 성공/실패만 로그로 며칠 관찰한 뒤 진행 권장.
+4개를 `ThreadPoolExecutor` + 60초 타임아웃으로 병렬 실행하도록 같이 바꿔서, 한 사이트가
+멈춰도 나머지 크롤과 MySQL 반영이 막히지 않게 함(같은 커밋).
+
+**미빙냉장 별도 이슈:** DevExpress Blazor 그리드(`dxbl-grid`)라 `<table>` 기반 파서가 안 먹혀
+항상 빈 결과 — scope 문제와는 별개로 여전히 미해결. 실제 재고 들어오면 그리드 구조 파악 후
+파서 교체 필요.
 
 ### 13-3. [미해결] 에이스 3개 사업소 중 하나만 실패해도 전체가 오삭제 대상이 됨
 
@@ -661,3 +663,151 @@ aceCHIN_eda(), aceYOGIN_eda()])`로 3개를 하나로 합치는데, `_ace_fetch_
   효성냉장·이스트밸리·SWC·대청·대재·한라동탄·한라곤지암·강동1·강동2·경인·삼진1·삼진2·CS·
   아이린냉장) — `CrawlerPool`이 창고별 성공/실패(`df is None`)를 개별 추적하고, 사이트키와 DB
   `창고`값도 모두 일치함(13-1과 달리 EDA 단계에서 재지정 안 됨). 안전.
+
+---
+
+## 14. 창고별 크롤링 방식 및 처리 흐름
+
+크롤링/EDA는 4가지 경로로 나뉘고, 각각 다른 파이프라인 잡에서 돈다.
+
+| 경로 | 잡(스케줄) | 원본 수집 모듈 | 대상 창고 |
+|---|---|---|---|
+| A. 표준 크롤러 | `run_pipeline()` (평일 08~17시, 매분) | `crawling_list.py` (공용 HTTP 로그인+조회) | 아래 A표 17개 |
+| B. 수동 크롤러 | `run_pipeline()` 안에서 `crawling_handmade()` 별도 호출 | `crawling_handmade.py` (Selenium, eCSMS 사이트) | 고려·유상·견우오아시스·미빙냉장 |
+| C. JNS(제니스/곤지암) | `run_jns_pipeline()` (독립 스케줄, 매분) | `crawling_list.py`(단일 사이트) → `jns_eda.py`가 6개로 자동 분리 | 곤지암·곤SWC·곤CS·곤대재·곤삼진2·곤대청 |
+| D. 에이스 | `run_ace_pipeline()` (독립 스케줄, 매시) | `crawling_handmade.py` (Selenium, 사업소별 개별 로그인) | 에이스기흥·에이스처인·에이스용인 |
+
+JNS와 에이스는 각각 크롤링 시간이 길어서(JNS는 데이터량, 에이스는 Selenium) 전체 사이클의
+하한선을 정해버리는 걸 막으려고 `run_pipeline()`에서 완전히 분리해 독립 스케줄로 뺐다
+(`pipeline/scheduler.py`).
+
+### A. 표준 크롤러 (`crawling_list.py`)
+
+사이트마다 로그인 폼→조회 버튼→결과 표 파싱까지 공통 패턴이라 `crawling_list.py` 하나가
+`PROCESS_MAP` 딕셔너리로 사이트키를 EDA 함수에 매핑해서 처리한다.
+
+| 창고(사이트키) | EDA 함수 | 비고 |
+|---|---|---|
+| 베이지박스투 | `eda_added.beige()` | |
+| 삼일물류 | `eda_added.samil()` | |
+| 신우냉장 | `eda_added.sinu()` | |
+| 희창냉장 | `eda_added.huichang()` | |
+| 오로라CS | `eda_added.aurora()` | |
+| 효성냉장 | `eda_added.hyosung()` | 원본 텍스트 파싱 예외(브랜드/등급/ESTNO 붙어 나오는 경우)가 많아 `replace_name.py`의 `FIELD_OVERRIDE_RULES`에 창고 지정 보정 다수 |
+| 이스트밸리 | `eda_added.eastbelly()` | |
+| SWC | `eda_added.swc()` | 원본 텍스트가 공백 없이 "브랜드+등급+ESTNO"로 붙어 옴 — 등급 추출 시 아는 브랜드를 먼저 떼고 나머지에서 단어경계로 찾음(2026-08-12, `SEARA`의 `SE`를 등급으로 오탐하던 버그 수정) |
+| 대재 | `eda_added.daejae()` | |
+| 시에이치물류 | `eda_ch_plz_cs.ch_eda()` | DB 저장 시 창고명이 `"CH"`로 재지정(사이트키와 다름 — 13-1 참고) |
+| 프라자로지스 | `eda_ch_plz_cs.plz_eda()` | DB 저장 시 창고명이 `"프라자"`로 재지정(13-1 참고) |
+| CS | `eda_ch_plz_cs.cs_eda()` | |
+| 아이린냉장 | `eda_ch_plz_cs.irn_eda()` | |
+| 강동1 + 강동2 | `eda_else_df.kd_eda()` | 두 계정을 하나로 합쳐서 처리. **강동2는 냉장 표시를 상품명이 아니라 규격(규격단위중량)에 "냉장EXCEL"처럼 브랜드 앞에 붙여서 줌** — 안 떼면 브랜드/평균중량 정규식이 통째로 실패(2026-08-12 수정, `test_kd_gangdong2_naengjang_spec.py`) |
+| 경인 | `eda_else_df.ki_eda()` | |
+| 삼진1 + 삼진2 | `eda_else_df.sjn_eda()` | 두 계정을 하나로 합쳐서 처리 |
+| 대청 | `eda_else_df.dch_eda()` | 곤대청(JNS) 계정과 같은 재고를 그대로 보여줘서 BL이 겹치면 중복 적재됨 — `_upload_azy()`가 곤대청에 이미 있는 BL은 azy 쪽에 안 쌓도록 방지 |
+| 한라동탄 / 한라곤지암 | `eda_else_df.hl_eda()` | 같은 함수를 창고별로 각각 호출 |
+
+### B. 수동 크롤러 (`crawling_handmade.py`, eCSMS Selenium)
+
+고려/유상/견우오아시스/미빙냉장은 표준 로그인 방식이 아니라 Blazor 기반 eCSMS 사이트라
+Selenium으로 직접 로그인 폼을 채우고 클릭한다. 4개를 `ThreadPoolExecutor`로 병렬 실행하고
+60초 타임아웃을 걸어, 한 사이트가 멈춰도 나머지 크롤과 이후 MySQL 반영이 막히지 않게 한다
+(2026-08-11).
+
+| 창고 | EDA 함수 | 비고 |
+|---|---|---|
+| 고려 | `korea_eda()` | 재고현황(1)이 아니라 (2)("instockpage2prime")를 씀 — (1)은 기준일자가 "당일"이 아니라 "8/1~오늘" 기간 조회라 실제 현재고와 안 맞음(2026-08-12 확인 후 소스 교체) |
+| 유상 | `yousang_eda()` | 위와 동일하게 재고현황(2) 사용 |
+| 견우오아시스 | `kyunu_eda()` | |
+| 미빙냉장 | `mibing_eda()` | DevExpress Blazor 그리드(`dxbl-grid`)라 `<table>` 기반 파서가 안 먹혀 항상 빈 결과 — 실제 재고 들어오면 그리드 구조 파악 후 파서 교체 필요(미해결) |
+
+`_ecms_fetch_cached()`가 "크롤 시도 자체 실패"(`None`)와 "크롤은 됐는데 진짜 0건"(`[]`)을
+구분해서 반환 — 구분 안 하면 stale 삭제 로직이 파싱 실패를 "재고 전부 빠짐"으로 오판해서
+실재고를 지울 위험이 있음(2026-08-11 수정, 13-2 참고).
+
+### C. JNS(제니스/곤지암)
+
+`run_jns_pipeline()`이 `crawler.crawl_one("제니스(곤지암)")`로 사이트 하나만 크롤하면,
+`jns_eda.py`가 원본 "창고" 컬럼값 기준으로 곤지암·곤SWC·곤CS·곤대재·곤삼진2·곤대청 6개로
+자동 분리한다(같은 계정 안에 여러 창고 데이터가 섞여서 옴). 실패/빈 결과 시 이번 라운드
+전체를 스킵하는 all-or-nothing이라 부분 실패로 인한 오삭제 위험이 없다(13-4).
+
+`eda_standard.py`의 JNS 전용 로직: 수탁품이 "삼겹(4P)"처럼 상품명 뒤에 괄호로 등급이
+붙어 오는 경우가 많아 상품명/등급을 분리한다. 단, "(PCS)", "(MEATY)"처럼 괄호 안이 등급이
+아니라 상품명 자체의 일부인 경우도 있어 화이트리스트로 제외한다(2026-08-12,
+`test_jns_paren_name_preserve.py`).
+
+### D. 에이스 (에이스기흥/처인/용인)
+
+Selenium으로 사업소별 개별 로그인 후 `aceGH_eda()`/`aceCHIN_eda()`/`aceYOGIN_eda()`가 각각
+크롤한 뒤 하나로 합쳐(`crawling_ace()`) `_upload_azy(ace_df, warehouse_scope=list(ACE_WAREHOUSES))`로
+업로드한다. 평균중량은 원본 표의 12번째 칸(index 11, 사이트가 이미 계산해둔 값)을 그대로 씀
+(2026-08-11 수정, 이전엔 항상 빈 값). **3개 사업소 중 하나만 실패해도 `warehouse_scope`가
+고정값이라 실패한 사업소가 "재고 전부 빠짐"으로 오판될 위험이 있음 — 미해결, 13-3 참고.**
+
+---
+
+## 15. 상품명/브랜드/등급/ESTNO 정규화 (`replace_name.py`)
+
+창고 사이트마다 원본 데이터의 상품명/브랜드/등급/ESTNO 표기가 제각각이라
+(`"돈삼겹살"`/`"삼겹살"`/`"삼겹(T)"`가 전부 같은 상품이거나, `"S/F"`/`"SF"`가 같은 브랜드거나)
+표준 명칭으로 통일하는 사전 기반 치환 계층. 파이프라인에서 **`eda_standard()` 전후로 두 번**
+호출된다(`back_eda_main.py`):
+
+```
+replace_name()  # 1차: 원본 표기 → 표준 명칭 (조건부 규칙이 뒤 단계 결과에 의존하지 않게 먼저)
+eda_standard()  # 등급/평균중량/특이품 감지 등 값 계산
+replace_name()  # 2차: 1차에서 못 잡거나 eda_standard 계산 결과에 의존하는 규칙 처리
+```
+
+### 4개의 치환 테이블
+
+| 테이블 | 대상 | 방식 |
+|---|---|---|
+| `PRODUCT_NAME_MAP` | 상품명(수탁품) | `{원본표기: 표준명}` 무조건 1:1 치환 |
+| `BRAND_MAP` | 브랜드 | `{원본표기: 표준명}` 무조건 1:1 치환 |
+| `GRADE_MAP` | 등급 | `{원본표기: 표준명}` 무조건 1:1 치환 |
+| `ESTNO_MAP` | ESTNO | `{원본표기: 표준명}` 무조건 1:1 치환 |
+
+앞 3개(상품명/브랜드/등급) + ESTNO는 단순 dict 치환(`.replace()`)이라 브랜드가 뭐든 상관없이
+항상 적용된다 — 창고/브랜드 조건 없이 걸어도 안전한, 진짜 "표기만 다른 동의어"에만 써야 한다.
+
+### `FIELD_OVERRIDE_RULES` — 조건부 다중 필드 보정
+
+단순 동의어 치환으로 안 되는 경우(브랜드가 특정 조합일 때만 등급을 다르게 잡아야 하거나,
+원본 파싱이 애초에 잘못 쪼개져서 여러 필드를 한꺼번에 고쳐야 하는 경우)를 위한 규칙 엔진.
+
+```python
+FIELD_OVERRIDE_RULES = [
+    {"match": {"상품명": "소갈비", "등급": "CH", "ESTNO": "278"}, "set": {"브랜드": "IBP"}},
+    {"match": {"창고": "한라곤지암", "상품명": "소갈비", "브랜드": "SWIFT", "ESTNO": "3D", "등급": ""},
+     "set": {"상품명": "탕갈비(MEATY)", "등급": "UN"}},
+]
+```
+
+- `match`에 없는 필드는 검사 안 함(와일드카드) — `match`의 모든 조건이 다 맞아야 `set`을 적용.
+- `match` 값이 빈 문자열(`""`)이면 "비어있을 때만"으로 해석 — `NaN`도 같이 잡는다
+  (`.isna() | (str().strip() == "")`). `.astype(str)`만으로는 pandas 버전에 따라 진짜 `NaN`이
+  안 잡히는 경우가 있어(2026-08-12 발견 — 등급이 실제 `NaN`인 소갈비/SWIFT/3D 행에 규칙이 하나도
+  안 걸리던 버그) 명시적으로 같이 검사한다.
+- 규칙 순서대로 각각 독립 적용(첫 매치에서 멈추지 않음) — 뒤 규칙이 앞 규칙 결과를 다시 덮어쓸
+  수 있으니 겹치는 조건을 쓸 땐 순서에 주의.
+- `match`/`set`의 `"상품명"` 키는 실제로는 `수탁품`/`상품명` 중 그 창고 데이터에 있는 컬럼에
+  적용된다(`name_col` 자동 판별).
+
+**실제 쓰이는 패턴 3가지:**
+
+1. **원본이 아예 안 주는 값 채우기** — `{"match": {"상품명": "양정육", "브랜드": "CLASSIC"}, "set": {"브랜드": "THOMAS"}}`
+2. **원본 파싱이 필드를 잘못 쪼갠 경우 통째로 재지정** — 효성냉장 "곱창"/"꽃갈비대"/"닭장각" 등,
+   `eda_added.hyosung()`의 정규식이 원본 텍스트 형태를 못 따라가서 브랜드/등급/ESTNO가 비거나
+   엉뚱하게 쪼개지는 창고는 BL/조합 단위로 직접 최종값을 못박아 둠.
+3. **같은 조합이지만 실제로는 다른 상품 구분** — 삼진2/대재의 "탕갈비#2"처럼, 상품명/브랜드/
+   등급/ESTNO가 똑같은 두 로트를 등급 유무 등 미세한 차이로 구분해서 다른 이름을 붙임.
+
+### 관련 회귀 테스트
+
+- `back_end/test_grade_hardcode_conditional.py` — 등급 조건부 채움(빈 값/NaN 모두)
+- `back_end/test_dakjang_estno.py`, `back_end/test_chuck_kilcoy_estno.py` — ESTNO 관련
+- `pipeline/test_yangji_off_kilcoy_rename.py` — 창고/브랜드 조건부 상품명 강제 변경
+  (단, 이 규칙은 `replace_name.py`가 아니라 `pipeline/mysql_db.py::_NAME_RENAME_RULES`에 있음 —
+  DB 저장 직전 단계에서 걸리는 별도의 더 늦은 보정 계층이라 성격이 다름)
