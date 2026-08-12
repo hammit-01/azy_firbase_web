@@ -109,7 +109,9 @@ def is_excluded(row: dict) -> bool:
 
 # (조건, 새 상품명) — 조건 만족 시 상품명을 강제로 바꿔치기
 _NAME_RENAME_RULES = [
-    (lambda row: row.get("상품명") == "양지OFF" and str(row.get("창고") or "").startswith("곤"), "양지ON"),
+    # KILCOY만 사내 표기가 원본과 다름(2026-08-12 확인) — 브랜드 조건 없이 걸려있어서
+    # AMH의 양지OFF까지 같이 양지ON으로 잘못 바뀌던 걸 KILCOY로 좁힘.
+    (lambda row: row.get("상품명") == "양지OFF" and row.get("브랜드") == "KILCOY" and str(row.get("창고") or "").startswith("곤"), "양지ON"),
 ]
 
 def sync_name_rename(row: dict) -> dict:
