@@ -40,6 +40,24 @@ export function bindEvents() {
         });
     }
 
+    // 상단 고정 영역(툴바+패널) 숨기기/보이기 토글 — 화면이 좁을 때 표 영역을
+    // 더 넓게 쓰고 싶을 때용. 선택 상태는 새로고침해도 유지되게 저장.
+    const STICKY_HEADER_HIDDEN_KEY = "sticky_header_hidden";
+    const toggleStickyHeaderBtn = document.getElementById("toggle-sticky-header-btn");
+    if (stickyHeader && toggleStickyHeaderBtn) {
+        const applyHidden = (hidden) => {
+            stickyHeader.classList.toggle("is-hidden", hidden);
+            toggleStickyHeaderBtn.classList.toggle("is-collapsed", hidden);
+            toggleStickyHeaderBtn.title = hidden ? "상단 고정 영역 보이기" : "상단 고정 영역 숨기기";
+        };
+        applyHidden(localStorage.getItem(STICKY_HEADER_HIDDEN_KEY) === "1");
+        toggleStickyHeaderBtn.addEventListener("click", () => {
+            const hidden = !stickyHeader.classList.contains("is-hidden");
+            applyHidden(hidden);
+            localStorage.setItem(STICKY_HEADER_HIDDEN_KEY, hidden ? "1" : "0");
+        });
+    }
+
     // 출고일·홀딩 hover 카드
     const hoverCard = document.createElement("div");
     hoverCard.id = "hover-info-card";
