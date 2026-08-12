@@ -36,6 +36,19 @@ def kd_eda(data):
         "등급"
     ] = None
 
+    # 강동2: 냉장 표시가 상품명이 아니라 규격(규격단위중량)에 "냉장EXCEL"처럼
+    # 브랜드 앞에 붙어서 옴 — 안 떼면 아래 브랜드/평균중량 정규식이 ^로 시작을
+    # 강제해서 통째로 매칭 실패한다(2026-08-12, 브랜드=NaN, 평균중량=NaN으로
+    # 깨지던 것 라이브 데이터로 확인). 다른 창고처럼 상품명 앞으로 옮기고 규격
+    # 값에서는 뗀다.
+    냉장_spec_mask = df["규격단위중량"].astype(str).str.startswith("냉장")
+    df.loc[냉장_spec_mask, "수탁품"] = "냉장" + df.loc[냉장_spec_mask, "수탁품"].astype(str)
+    df.loc[냉장_spec_mask, "규격단위중량"] = (
+        df.loc[냉장_spec_mask, "규격단위중량"]
+        .astype(str)
+        .str.replace(r"^냉장", "", regex=True)
+    )
+
     # -------------------------------------------------
     # 브랜드
     # WINGHAM15.57KG -> WINGHAM
