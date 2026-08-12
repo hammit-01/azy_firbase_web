@@ -857,10 +857,12 @@ function reservationRowHtml(r) {
             <td>${whTag(r.창고)}</td>
             <td>${safeValue(r.거래처)}</td>
             <td>${safeValue(r.홀딩일자)}</td>
-            <td>
-                <button class="edit-reservation-qty-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">수량변경</button>
-                <button class="use-reservation-btn" data-id="${r.id}">사용완료</button>
-                <button class="cancel-reservation-btn" data-id="${r.id}">홀딩취소</button>
+            <td class="reservation-row-actions-cell">
+                <div class="reservation-row-actions">
+                    <button class="edit-reservation-qty-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">수량변경</button>
+                    <button class="use-reservation-btn" data-id="${r.id}">사용완료</button>
+                    <button class="cancel-reservation-btn" data-id="${r.id}">홀딩취소</button>
+                </div>
             </td>
         </tr>
     `;

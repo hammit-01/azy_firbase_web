@@ -798,6 +798,19 @@ th.sort-active {
     border-bottom: 1px solid #f1f5f9;
     white-space: nowrap;
 }
+/* 액션 칸은 버튼 3개(수량변경/사용완료/홀딩취소)가 좁은 화면에서 옆으로
+   잘리지 않게 nowrap을 풀고, 버튼 묶음이 필요하면 2줄로 감싸도록 함
+   (2026-08-12, 데스크톱에서 홀딩취소 버튼이 잘려서 안 보이던 문제) */
+.reservations-table td.reservation-row-actions-cell {
+    white-space: normal;
+    min-width: 220px;
+}
+.reservation-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+}
 
 .reservations-empty {
     text-align: center;
@@ -822,7 +835,6 @@ th.sort-active {
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
-    margin: 0 1px;
     white-space: nowrap;
 }
 .edit-reservation-qty-btn { background: #dbeafe; color: #1d4ed8; }
