@@ -112,19 +112,23 @@
             <div id="mobile-list" class="mobile-list"></div>
             <div class="table-wrap">
                 <table>
+                    <!-- 각 열 너비는 실제 값 길이 기준으로 배분(2026-08-13, 90% 배율 기준 확인).
+                         BL이 "ONEYRICFPX299900"처럼 13~20자로 가장 길어서 가장 넓게 잡음 —
+                         이전엔 11%라 nth-child(6) 말줄임(ellipsis) 규칙에 자주 걸려 잘려 보였음.
+                         전체 합 100%(이전엔 102%로 안 맞았음). -->
                     <colgroup>
                         <col style="width:5%">  <!--선택-->
                         <col style="width:12%"> <!--상품명-->
-                        <col style="width:11%"> <!--브랜드-->
+                        <col style="width:9%">  <!--브랜드-->
                         <col style="width:5%">  <!--등급-->
-                        <col style="width:8%">  <!--ESTNO-->
-                        <col style="width:11%"> <!--BL번호-->
-                        <col style="width:9%">  <!--창고-->
+                        <col style="width:7%">  <!--ESTNO-->
+                        <col style="width:17%"> <!--BL번호-->
+                        <col style="width:8%">  <!--창고-->
                         <col style="width:4%">  <!--재고(실재고)-->
-                        <col style="width:5%">  <!--예약-->
-                        <col style="width:5%">  <!--가용-->
-                        <col style="width:10%"> <!--유통기한-->
-                        <col style="width:5%">  <!--평균-->
+                        <col style="width:4%">  <!--예약-->
+                        <col style="width:4%">  <!--가용-->
+                        <col style="width:9%">  <!--유통기한-->
+                        <col style="width:4%">  <!--평균-->
                         <col style="width:12%"> <!--비고-->
                     </colgroup>
                     <thead>
