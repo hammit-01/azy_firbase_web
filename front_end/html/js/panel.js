@@ -3,7 +3,6 @@ import { dom } from "./dom.js";
 
 export function employeeSelect(cls, dataId = "", currentVal = "") {
     const opts = state.employees
-        .filter(e => e["권한"] === "관리자")
         .map(e => `<option value="${e["이름"]}" ${e["이름"] === currentVal ? "selected" : ""}>${e["이름"]}</option>`)
         .join("");
     const id = dataId ? `data-id="${dataId}"` : "";
