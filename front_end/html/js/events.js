@@ -58,6 +58,29 @@ export function bindEvents() {
         });
     }
 
+    // 모바일에서 "PC" 버튼으로 데스크톱 화면 강제 보기 — 뷰포트 메타를 넓게 바꿔서
+    // 모바일 미디어쿼리 자체가 안 걸리게 만드는 방식(실제 "데스크톱 사이트 요청"과 동일 원리).
+    // 선택 상태는 새로고침해도 유지되게 저장.
+    const FORCE_DESKTOP_KEY = "force_desktop_view";
+    const DESKTOP_VIEWPORT = "width=1280";
+    const MOBILE_VIEWPORT = "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no";
+    const toggleDesktopViewBtn = document.getElementById("toggle-desktop-view-btn");
+    const viewportMeta = document.querySelector('meta[name="viewport"]');
+    if (toggleDesktopViewBtn && viewportMeta) {
+        const applyForceDesktop = (forced) => {
+            document.body.classList.toggle("force-desktop-view", forced);
+            viewportMeta.setAttribute("content", forced ? DESKTOP_VIEWPORT : MOBILE_VIEWPORT);
+            toggleDesktopViewBtn.textContent = forced ? "모바일" : "PC";
+            toggleDesktopViewBtn.title = forced ? "모바일 화면으로 보기" : "PC 화면으로 보기";
+        };
+        applyForceDesktop(localStorage.getItem(FORCE_DESKTOP_KEY) === "1");
+        toggleDesktopViewBtn.addEventListener("click", () => {
+            const forced = !document.body.classList.contains("force-desktop-view");
+            applyForceDesktop(forced);
+            localStorage.setItem(FORCE_DESKTOP_KEY, forced ? "1" : "0");
+        });
+    }
+
     // 출고일·홀딩 hover 카드
     const hoverCard = document.createElement("div");
     hoverCard.id = "hover-info-card";
