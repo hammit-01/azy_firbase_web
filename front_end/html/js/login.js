@@ -14,6 +14,11 @@ export function getStoredUser() {
     }
 }
 
+// 관리자는 편집자와 동일하게 모든 기능에 접근 가능(2026-08-13)
+export function hasEditorAccess(role) {
+    return role === "편집자" || role === "관리자";
+}
+
 function closePopover() {
     document.querySelector(".login-btn")?.classList.remove("active");
     document.querySelector(".login-popover")?.classList.remove("open");
@@ -26,7 +31,7 @@ const EDITOR_ONLY_SELECTORS = [".insert-btn", ".update-btn", ".all-delete-btn", 
 const LOGIN_ONLY_SELECTORS = [".holding-btn", ".rollback-btn", ".reservations-tab-btn"];
 
 function applyRoleVisibility(role) {
-    const hideEditorOnly = role !== "편집자";
+    const hideEditorOnly = !hasEditorAccess(role);
     EDITOR_ONLY_SELECTORS.forEach(sel => {
         const el = document.querySelector(sel);
         if (el) el.style.display = hideEditorOnly ? "none" : "";
@@ -42,7 +47,7 @@ function applyRoleVisibility(role) {
     // 버튼 이름도 그에 맞게(2026-08-06)
     const reservationsBtn = document.querySelector(".reservations-tab-btn");
     if (reservationsBtn) {
-        reservationsBtn.textContent = role === "편집자" ? "예약 현황" : "나의 예약";
+        reservationsBtn.textContent = hasEditorAccess(role) ? "예약 현황" : "나의 예약";
     }
 }
 

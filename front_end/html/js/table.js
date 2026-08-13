@@ -1,7 +1,7 @@
 import { state } from "./state.js";
 import { dom } from "./dom.js";
 import { employeeSelect, stateSelect } from "./panel.js";
-import { getStoredUser } from "./login.js";
+import { getStoredUser, hasEditorAccess } from "./login.js";
 import { getAllReservations } from "./firestoreService.js";
 
 const WH_CLASS = {
@@ -883,7 +883,7 @@ export async function renderReservationsTab() {
     if (!container || !listEl || container.style.display === "none") return;
 
     const user = getStoredUser();
-    const isEditor = user?.권한 === "편집자";
+    const isEditor = hasEditorAccess(user?.권한);
 
     let rows = [];
     try {
