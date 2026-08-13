@@ -826,6 +826,7 @@ th.sort-active {
     color: #475569;
 }
 .reservations-filter-select {
+    width: 170px;
     height: 38px;
     padding: 0 10px;
     border: 1px solid #e5e7eb;
@@ -834,10 +835,23 @@ th.sort-active {
     background: #f9fafb;
     cursor: pointer;
     outline: none;
+    box-sizing: border-box;
     transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 .reservations-filter-select:hover { border-color: #94a3b8; }
 .reservations-filter-select:focus { border-color: #0d9488; background: #fff; box-shadow: 0 0 0 3px rgba(13,148,136,0.15); }
+
+.reservations-date-filter-clear {
+    height: 24px;
+    width: 24px;
+    border: none;
+    border-radius: 6px;
+    background: #e2e8f0;
+    color: #64748b;
+    font-size: 12px;
+    cursor: pointer;
+}
+.reservations-date-filter-clear:hover { background: #cbd5e1; }
 
 .reservations-group { margin-bottom: 24px; }
 .reservations-group h3 {

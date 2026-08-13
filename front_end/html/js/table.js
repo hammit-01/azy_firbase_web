@@ -831,13 +831,16 @@ function reservationCardHtml(r) {
             </div>
             <div class="mc-info">
                 <div class="mc-row"><span class="mc-label">담당자</span>${safeValue(r.담당자) || "(미지정)"}</div>
+                <div class="mc-row"><span class="mc-label">실재고</span>${safeValue(r.재고)}</div>
+                <div class="mc-row"><span class="mc-label">가용재고</span>${availableCell(r.가용재고)}</div>
                 <div class="mc-row"><span class="mc-label">예약일</span>${safeValue(r.홀딩일자)}</div>
+                ${safeValue(r.출고일) ? `<div class="mc-row"><span class="mc-label">출고일</span>${safeValue(r.출고일)}</div>` : ""}
                 ${safeValue(r.거래처) ? `<div class="mc-row"><span class="mc-label">거래처</span>${safeValue(r.거래처)}</div>` : ""}
                 ${safeValue(r.BL) ? `<div class="mc-row mc-full"><span class="mc-label">BL</span>${safeValue(r.BL)}</div>` : ""}
             </div>
             <div class="reservation-card-actions">
                 <button class="edit-reservation-qty-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">수량변경</button>
-                <button class="use-reservation-btn" data-id="${r.id}">사용완료</button>
+                <button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">사용완료</button>
                 <button class="cancel-reservation-btn" data-id="${r.id}">홀딩취소</button>
             </div>
         </div>
@@ -852,15 +855,18 @@ function reservationRowHtml(r) {
             <td>${safeValue(r.브랜드)}</td>
             <td>${safeValue(r.등급)}</td>
             <td>${safeValue(r.ESTNO)}</td>
-            <td>${safeValue(r.수량)}</td>
             <td>${safeValue(r.BL)}</td>
             <td>${whTag(r.창고)}</td>
+            <td>${safeValue(r.수량)}</td>
+            <td>${safeValue(r.재고)}</td>
+            <td>${availableCell(r.가용재고)}</td>
             <td>${safeValue(r.거래처)}</td>
             <td>${safeValue(r.홀딩일자)}</td>
+            <td>${safeValue(r.출고일)}</td>
             <td class="reservation-row-actions-cell">
                 <div class="reservation-row-actions">
                     <button class="edit-reservation-qty-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">수량변경</button>
-                    <button class="use-reservation-btn" data-id="${r.id}">사용완료</button>
+                    <button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">사용완료</button>
                     <button class="cancel-reservation-btn" data-id="${r.id}">홀딩취소</button>
                 </div>
             </td>
@@ -868,11 +874,32 @@ function reservationRowHtml(r) {
     `;
 }
 
+// 열 너비는 실제 값 길이 기준(2026-08-13) — BL이 13~20자로 가장 길고, 등급/수량/
+// 실재고/가용재고는 짧은 숫자·코드라 좁게 잡음. table-layout은 auto로 둬서(강제
+// fixed 아님) 값이 넘치면 브라우저가 알아서 더 넓혀줌 — 그래도 넘치면
+// .reservations-container의 가로 스크롤로 커버.
 const RESERVATIONS_HEAD = `
+    <colgroup>
+        <col style="width:6%">  <!--담당자-->
+        <col style="width:9%">  <!--상품명-->
+        <col style="width:7%">  <!--브랜드-->
+        <col style="width:4%">  <!--등급-->
+        <col style="width:6%">  <!--ESTNO-->
+        <col style="width:13%"> <!--BL-->
+        <col style="width:6%">  <!--창고-->
+        <col style="width:4%">  <!--수량-->
+        <col style="width:4%">  <!--실재고-->
+        <col style="width:5%">  <!--가용재고-->
+        <col style="width:10%"> <!--거래처-->
+        <col style="width:7%">  <!--예약일-->
+        <col style="width:7%">  <!--출고일-->
+        <col style="width:12%"> <!--액션-->
+    </colgroup>
     <thead>
         <tr>
             <th>담당자</th><th>상품명</th><th>브랜드</th><th>등급</th><th>ESTNO</th>
-            <th>수량</th><th>BL</th><th>창고</th><th>거래처</th><th>예약일</th><th>액션</th>
+            <th>BL</th><th>창고</th><th>수량</th><th>실재고</th><th>가용재고</th>
+            <th>거래처</th><th>예약일</th><th>출고일</th><th>액션</th>
         </tr>
     </thead>
 `;
@@ -897,6 +924,17 @@ export async function renderReservationsTab() {
         rows = rows.filter(r => r.담당자 === user?.이름);
     }
 
+    // 출고일 필터 — 편집자/사원 공통(2026-08-13). rows 자체를 걸러서 아래 담당자
+    // 그룹핑/건수 표시에도 필터 결과가 그대로 반영되게 한다.
+    if (state.reservationsDateFilter) {
+        rows = rows.filter(r => safeValue(r.출고일) === state.reservationsDateFilter);
+    }
+    const dateFilterHtml = `
+        <label for="reservations-date-filter">출고일</label>
+        <input type="date" id="reservations-date-filter" class="reservations-filter-select" value="${state.reservationsDateFilter}">
+        ${state.reservationsDateFilter ? `<button type="button" class="reservations-date-filter-clear" title="출고일 필터 해제">✕</button>` : ""}
+    `;
+
     if (isEditor) {
         const groups = {};
         rows.forEach(r => {
@@ -916,6 +954,7 @@ export async function renderReservationsTab() {
                     <option value="">전체 (${rows.length}건)</option>
                     ${allNames.map(name => `<option value="${name}" ${name === state.reservationsFilter ? "selected" : ""}>${name} (${groups[name].length}건)</option>`).join("")}
                 </select>
+                ${dateFilterHtml}
             </div>
         `;
 
@@ -929,18 +968,19 @@ export async function renderReservationsTab() {
                 </table>
                 <div class="reservations-mobile-list">${groups[name].map(reservationCardHtml).join("")}</div>
             </div>
-        `).join("") : `<p class="reservations-empty">현재 활성 예약이 없습니다.</p>`;
+        `).join("") : `<p class="reservations-empty">조건에 맞는 예약이 없습니다.</p>`;
 
         listEl.innerHTML = filterHtml + body;
     } else {
-        const empty = `<p class="reservations-empty">내가 예약한 항목이 없습니다.</p>`;
-        listEl.innerHTML = rows.length ? `
+        const filterHtml = `<div class="reservations-filter-bar">${dateFilterHtml}</div>`;
+        const empty = `<p class="reservations-empty">조건에 맞는 예약이 없습니다.</p>`;
+        listEl.innerHTML = filterHtml + (rows.length ? `
             <table class="reservations-table">
                 ${RESERVATIONS_HEAD}
                 <tbody>${rows.map(reservationRowHtml).join("")}</tbody>
             </table>
             <div class="reservations-mobile-list">${rows.map(reservationCardHtml).join("")}</div>
-        ` : empty;
+        ` : empty);
     }
 }
 

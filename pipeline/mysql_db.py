@@ -634,15 +634,23 @@ def get_active_reservations_by_pk(conn, pk: str) -> list[dict]:
 
 def get_all_active_reservations(conn) -> list[dict]:
     """전체 ACTIVE 예약 + 상품 정보(상품명/브랜드/창고 등) 조인 — "예약 현황" 탭에서
-    담당자별로 묶어 보여주거나(편집자), 내 예약만 필터링(사원)할 때 씀."""
+    담당자별로 묶어 보여주거나(편집자), 내 예약만 필터링(사원)할 때 씀.
+
+    출고일/실재고/가용재고도 같이 내려줘서, 예약 이후 실재고가 줄어 예약이
+    초과된 상황(2026-08-13, MAEU270161050 오버부킹 발견)을 예약 현황 화면
+    에서 바로 볼 수 있게 한다. 가용재고는 이 pk의 ACTIVE 예약 전체 합계
+    기준(자기 자신 포함) — /api/inventory의 계산과 동일 원칙."""
     result = []
     pairs = [("holding_records", "inventory"), ("azy_holding_records", "azy_inventory")]
     with conn.cursor() as cur:
         for hr_table, inv_table in pairs:
             cur.execute(
-                f"SELECT r.id, r.pk, r.수량, r.홀딩 AS 담당자, r.메모 AS 거래처, r.홀딩일자, "
-                f"i.상품명, i.브랜드, i.등급, i.ESTNO, i.BL, i.창고 "
+                f"SELECT r.id, r.pk, r.수량, r.홀딩 AS 담당자, r.메모 AS 거래처, r.홀딩일자, r.출고일, "
+                f"i.상품명, i.브랜드, i.등급, i.ESTNO, i.BL, i.창고, i.재고, "
+                f"i.재고 - COALESCE(agg.총예약, 0) AS 가용재고 "
                 f"FROM {hr_table} r LEFT JOIN {inv_table} i ON r.pk = i.id "
+                f"LEFT JOIN (SELECT pk, CAST(SUM(수량) AS SIGNED) AS 총예약 FROM {hr_table} "
+                f"           WHERE status='ACTIVE' GROUP BY pk) agg ON r.pk = agg.pk "
                 f"WHERE r.status='ACTIVE' ORDER BY r.홀딩일자 DESC"
             )
             result.extend(cur.fetchall())

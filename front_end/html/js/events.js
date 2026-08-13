@@ -29,6 +29,15 @@ function downloadCsv(filenamePrefix, headers, rows) {
 
 export function bindEvents() {
 
+    // 날짜 입력창(<input type="date">)은 기본적으로 달력 아이콘을 눌러야만 날짜
+    // 선택기가 열려서 불편함 — 박스 어디를 클릭해도 열리게 함(2026-08-13).
+    // showPicker() 미지원 브라우저에서는 그냥 원래대로 아이콘 클릭만 동작(자동 무시).
+    document.addEventListener("click", (e) => {
+        if (e.target.matches('input[type="date"]') && typeof e.target.showPicker === "function") {
+            e.target.showPicker();
+        }
+    });
+
     // 화면 맨 위(고정 헤더) 빈 공간 클릭 시 테이블 스크롤 맨 위로 — 버튼/입력 등
     // 실제 컨트롤을 클릭한 경우는 그쪽 핸들러가 처리하니 헤더 배경 자체를 클릭했을 때만 동작
     const stickyHeader = document.querySelector(".sticky-header");
@@ -196,6 +205,10 @@ export function bindEvents() {
         if (e.target.classList.contains("row-check")) handleChange(e);
         if (e.target.id === "reservations-filter") {
             state.reservationsFilter = e.target.value;
+            renderReservationsTab();
+        }
+        if (e.target.id === "reservations-date-filter") {
+            state.reservationsDateFilter = e.target.value;
             renderReservationsTab();
         }
     });
@@ -416,6 +429,13 @@ async function handleClick(e) {
         return;
     }
 
+    // 예약 현황 탭 — 출고일 필터 해제
+    if (e.target.classList.contains("reservations-date-filter-clear")) {
+        state.reservationsDateFilter = "";
+        renderReservationsTab();
+        return;
+    }
+
     // 예약 현황 탭 — 수량변경(가용재고 안에서 늘리거나, 제한 없이 줄임)
     if (e.target.classList.contains("edit-reservation-qty-btn")) {
         const id = e.target.dataset.id;
@@ -439,8 +459,7 @@ async function handleClick(e) {
     // 예약 현황 탭 — 사용완료(입력한 수량만큼 예약 수량 차감, 전량이면 종료 처리)
     if (e.target.classList.contains("use-reservation-btn")) {
         const id = e.target.dataset.id;
-        const row = e.target.closest("tr");
-        const maxQty = Number(row?.children[5]?.textContent || 0);
+        const maxQty = Number(e.target.dataset.qty || 0);
         const input = prompt(`사용 완료 수량을 입력하세요 (예약 수량: ${maxQty})`, String(maxQty));
         if (input === null) return;
         const qty = Number(input);

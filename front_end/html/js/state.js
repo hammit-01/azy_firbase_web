@@ -11,4 +11,5 @@ export const state = {
     useDefaultOrder: true,
     sortColumns: [],    // [{key, dir}] dir: 1=오름차, 2=내림차
     reservationsFilter: "", // 예약 현황 탭 — 담당자 필터(편집자 전용, ""=전체)
+    reservationsDateFilter: "", // 예약 현황 탭 — 출고일 필터(YYYY-MM-DD, ""=전체)
 };
