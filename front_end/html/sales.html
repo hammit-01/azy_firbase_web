@@ -22,8 +22,8 @@
         <div class="toolbar">
             <div class="toolbar-section">
                 <div class="toolbar-left">
-                    <a href="/main.html" class="logo-link" title="메인으로">
-                        <h1>재고장</h1>
+                    <a href="/warehouse_main.html" class="logo-link" title="메인으로">
+                        <h1>타창고매출현황</h1>
                     </a>
                     <div class="table_size"></div>
                 </div>
@@ -124,7 +124,7 @@
                          이전엔 11%라 nth-child(6) 말줄임(ellipsis) 규칙에 자주 걸려 잘려 보였음.
                          전체 합 100%(이전엔 102%로 안 맞았음). -->
                     <colgroup>
-                        <col style="width:5%">  <!--선택-->
+                        <col style="width:2%">  <!--선택-->
                         <col style="width:12%"> <!--상품명-->
                         <col style="width:9%">  <!--브랜드-->
                         <col style="width:5%">  <!--등급-->
@@ -137,22 +137,34 @@
                         <col style="width:9%">  <!--유통기한-->
                         <col style="width:4%">  <!--평균-->
                         <col style="width:12%"> <!--비고-->
+                        <col style="width:4%">  <!--예약-->
+                        <col style="width:4%">  <!--가용-->
+                        <col style="width:9%">  <!--유통기한-->
+                        <col style="width:4%">  <!--평균-->
+                        <col style="width:12%"> <!--비고-->
                     </colgroup>
                     <thead>
                         <tr>
+                            <th data-key="비고" class="sortable">비고</th>
                             <th class="select-all">선택</th>
+                            <th data-key="NO" class="sortable">NO</th>
+                            <th data-key="거래처" class="sortable">거래처</th>
                             <th data-key="상품명" class="sortable">상품명</th>
                             <th data-key="브랜드" class="sortable">브랜드</th>
                             <th data-key="등급" class="sortable">등급</th>
                             <th data-key="ESTNO" class="sortable">ESTNO</th>
+                            <th data-key="재고" class="sortable">재고</th>
                             <th data-key="BL" class="sortable">BL</th>
                             <th data-key="창고" class="sortable">창고</th>
-                            <th data-key="재고" class="sortable">재고</th>
-                            <th data-key="예약수량" class="sortable">예약</th>
-                            <th data-key="가용재고" class="sortable">가용</th>
-                            <th data-key="유통기한" class="sortable">유통기한</th>
-                            <th data-key="평중" class="sortable">평균</th>
-                            <th data-key="메모" class="sortable">비고</th>
+
+                            <th data-key="중량" class="sortable">중량</th>
+                            <th data-key="단가" class="sortable">단가</th>
+                            <th data-key="담당자" class="sortable">담당자</th>
+                            
+                            <th class="complete">완료</th>
+                            <th class="cancel">취소</th>
+                            <th data-key="총금액" class="sortable">총금액</th>
+                            <th data-key="메모" class="sortable">메모</th> <!--18-->
                         </tr>
                     </thead>
                     <tbody id="insert-rows"></tbody>
