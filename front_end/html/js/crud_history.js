@@ -1,4 +1,9 @@
-import { updateItem, insertItem, moveHoldingToHistory, deleteItem as _deleteItem, cancelReservation } from "./firestoreService.js";
+import {
+    updateItem, insertItem, moveHoldingToHistory, deleteItem as _deleteItem, cancelReservation,
+    createReservation, updateReservation, reactivateReservation,
+    createOutbound, updateOutbound, cancelOutbound,
+    toggleOutboundComplete, toggleOutboundRegister,
+} from "./firestoreService.js";
 import { showToast, showError } from "./ui.js";
 import { getStoredUser } from "./login.js";
 
@@ -77,6 +82,53 @@ function _buildFn(desc) {
 
         case "bulk-delete":
             return async () => { for (const d of desc.items) await insertItem(d.data, d.azy); };
+
+        // 예약/출고 현황 탭(2026-08-18) — 각 동작의 자연스러운 역동작으로 되돌린다.
+        case "reservation-fields":
+            return async () => updateReservation(desc.id, desc.prev);
+
+        case "outbound-fields":
+            return async () => updateOutbound(desc.id, desc.prev);
+
+        case "reservation-note":
+            return async () => updateReservation(desc.id, { 전달사항: desc.prevNote });
+
+        case "outbound-note":
+            return async () => updateOutbound(desc.id, { 전달사항: desc.prevNote });
+
+        // 출고등록(예약→outbound로 일부/전체 이동)의 역동작 = 그 출고건 취소(예약으로 복귀)
+        case "outbound-registered":
+            return async () => cancelOutbound(desc.outboundId);
+
+        // 예약취소/출고취소의 역동작 = 취소 직전 스냅샷으로 다시 생성(같은 id는
+        // 아니지만 같은 내용의 ACTIVE 행이 다시 생김 — "delete" 되돌리기와 동일 패턴)
+        case "reservation-cancelled":
+            return async () => createReservation(desc.product);
+
+        case "outbound-cancelled":
+            return async () => createOutbound(desc.product);
+
+        // 출고완료/등록완료는 대칭 토글이라 한 번 더 누르면 그대로 원상복구
+        case "outbound-toggle-complete":
+            return async () => toggleOutboundComplete(desc.id);
+
+        case "outbound-toggle-register":
+            return async () => toggleOutboundRegister(desc.id);
+
+        // sales.html "추가"로 새로 만든 출고건 — 되돌리기 = 완전 삭제(원래 없던 행이라
+        // 예약으로 되돌릴 대상 자체가 없음)
+        case "outbound-created":
+            return async () => cancelOutbound(desc.id, true);
+
+        // 예약 현황 탭(비sales) "사용완료" 되돌리기(2026-08-18) — use_reservation은
+        // 전량 사용 시 수량은 안 건드리고 status만 COMPLETED로 바꾸므로(수량 필드는
+        // 그대로 남아있음) 그 경우 status만 ACTIVE로 되돌리면 되고, 부분 사용이면
+        // 차감된 만큼 수량을 다시 더해주면 된다.
+        case "reservation-used":
+            return async () => {
+                if (desc.wasFullUse) await reactivateReservation(desc.id);
+                else await updateReservation(desc.id, { 수량: desc.prevQty });
+            };
 
         default:
             return null;

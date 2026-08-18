@@ -71,6 +71,18 @@ export async function apiLogChange(uid, target_table, target_id, action) {
     } catch {}
 }
 
+// activity_log(2026-08-18) — user_id 없으면 서버가 400으로 거절하므로, 로그인 안 된
+// 상태(user_id 없음)에서는 애초에 호출 안 함(호출부 _logActivity가 가드).
+export async function apiLogActivity(entry) {
+    try {
+        await fetch(`${API_BASE}/api/activity_log`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(entry),
+        });
+    } catch {}
+}
+
 // ── inventory CRUD ─────────────────────────────────────────
 
 export async function apiInsertItem(data, azy) {
@@ -145,9 +157,59 @@ export async function apiUseReservation(id, qty) {
     });
 }
 
-export async function apiUpdateReservationQty(id, qty) {
-    return apiFetch(`/api/reservations/${encodeURIComponent(id)}/update_qty`, {
+export async function apiReactivateReservation(id) {
+    return apiFetch(`/api/reservations/${encodeURIComponent(id)}/reactivate`, { method: "POST" });
+}
+
+export async function apiUpdateReservation(id, fields) {
+    return apiFetch(`/api/reservations/${encodeURIComponent(id)}/update`, {
+        method: "POST",
+        body: JSON.stringify(fields),
+    });
+}
+
+export async function apiRegisterOutboundFromReservation(id, { 수량, 출고일, 거래처 }) {
+    return apiFetch(`/api/reservations/${encodeURIComponent(id)}/register_outbound`, {
+        method: "POST",
+        body: JSON.stringify({ 수량, 출고일, 거래처 }),
+    });
+}
+
+// ── outbound(타창고매출현황) — 예약과 분리된 별도 저장소(2026-08-14) ──
+export async function apiGetAllOutbound() {
+    const r = await apiFetch("/api/outbound", {});
+    return r.data;
+}
+
+export async function apiCreateOutbound(product) {
+    return apiFetch("/api/outbound", {
+        method: "POST",
+        body: JSON.stringify(product),
+    });
+}
+
+export async function apiUpdateOutbound(id, fields) {
+    return apiFetch(`/api/outbound/${encodeURIComponent(id)}/update`, {
+        method: "POST",
+        body: JSON.stringify(fields),
+    });
+}
+
+export async function apiCancelOutbound(id, deleteIt = false) {
+    return apiFetch(`/api/outbound/${encodeURIComponent(id)}/cancel?delete=${deleteIt}`, { method: "POST" });
+}
+
+export async function apiUseOutbound(id, qty) {
+    return apiFetch(`/api/outbound/${encodeURIComponent(id)}/use`, {
         method: "POST",
         body: JSON.stringify({ 수량: qty }),
     });
+}
+
+export async function apiToggleOutboundComplete(id) {
+    return apiFetch(`/api/outbound/${encodeURIComponent(id)}/toggle_complete`, { method: "POST" });
+}
+
+export async function apiToggleOutboundRegister(id) {
+    return apiFetch(`/api/outbound/${encodeURIComponent(id)}/toggle_register`, { method: "POST" });
 }

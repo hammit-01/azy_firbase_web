@@ -3,10 +3,22 @@ import { fetchAllData } from "./firebase.js";
 import { pushUndo } from "./crud_history.js";
 import { showError } from "./ui.js";
 import { getStoredUser } from "./login.js";
-import { apiLogChange } from "./api.js";
+import { apiLogChange, apiLogActivity } from "./api.js";
 
 function _logChange(azy, targetId, action) {
     apiLogChange(getStoredUser()?.id, azy ? "azy_inventory" : "inventory", targetId, action);
+}
+
+// activity_log(2026-08-18, 재고장 CRUD부터 우선 연결) — user_id 없으면(로그인 전)
+// 서버가 어차피 거절하니 호출 자체를 스킵.
+function _logActivity(azy, targetId, action, before, after, summary = "") {
+    const user = getStoredUser();
+    if (!user?.id) return;
+    apiLogActivity({
+        user_id: user.id, user_name: user.이름 || "",
+        action, table_name: azy ? "azy_inventory" : "inventory", record_id: String(targetId),
+        before: before ?? null, after: after ?? null, summary,
+    });
 }
 
 // item은 정규화된 형태(.raw._source/._rawId) 또는 raw 형태(._source/._rawId) 둘 다 올 수 있다.
@@ -31,7 +43,7 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "", w
     const rawId = _rawId(item);
 
     try {
-        const rec = await createReservation({
+        const reservationFields = {
             상품명: item.name,
             브랜드: item.brand || "",
             등급:   item.grade || "",
@@ -42,11 +54,13 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "", w
             거래처: memo || item.memo || "",
             담당자: note?.trim() || "",
             출고일: releaseDate || "",
-        });
+        };
+        const rec = await createReservation(reservationFields);
 
         if (!noUndo) pushUndo({ type: "reservation", id: rec.id });
 
         _logChange(azy, rawId, "예약");
+        _logActivity(azy, rawId, "예약", null, { ...reservationFields, reservationId: rec.id }, `${item.name} ${holdQty}개 예약`);
 
         await fetchAllData();
         return { reservationId: rec.id, azy };
@@ -71,7 +85,7 @@ export async function insertData(
 
     try {
 
-        const docRef = await insertItem({
+        const newFields = {
             상품명: name,
             브랜드: brand,
             등급: grade || "",
@@ -85,11 +99,13 @@ export async function insertData(
             홀딩: holding?.trim() || "",
             상태: dataState?.trim() || "",
             메모: memo || ""
-        });
+        };
+        const docRef = await insertItem(newFields);
 
         if (!noUndo) pushUndo({ type: "insert", newId: docRef.id });
 
         _logChange(window.__AZY_API_MODE, docRef.id, "삽입");
+        _logActivity(window.__AZY_API_MODE, docRef.id, "삽입", null, newFields, `${name} 신규 추가`);
 
         await fetchAllData();
         return docRef.id;
@@ -176,6 +192,8 @@ export async function updateData(item, id, name, brand, grade, estNo, qty, bl, w
         if (!noUndo) pushUndo({ type: "update", id: rawId, prevData, azy });
 
         _logChange(azy, rawId, "수정");
+        const changedKeys = Object.keys(data).filter(k => String(data[k]) !== String(prevData[k] ?? ""));
+        _logActivity(azy, rawId, "수정", prevData, data, `${name || prevData.상품명} — ${changedKeys.join(", ")} 변경`);
 
         await fetchAllData();
         return {
@@ -194,13 +212,12 @@ export async function updateData(item, id, name, brand, grade, estNo, qty, bl, w
 export async function deleteItem(item, noUndo = false, noFetch = false) {
     const azy = _isAzy(item);
     const rawId = _rawId(item);
+    const { id: _id, _source: _s, _rawId: _r, ...restoreData } = { ...item };
     try {
-        if (!noUndo) {
-            const { id: _id, _source: _s, _rawId: _r, ...restoreData } = { ...item };
-            pushUndo({ type: "delete", restoreData, azy });
-        }
+        if (!noUndo) pushUndo({ type: "delete", restoreData, azy });
         await _deleteItem(rawId, azy);
         _logChange(azy, rawId, "삭제");
+        _logActivity(azy, rawId, "삭제", restoreData, null, `${restoreData.name || restoreData.상품명 || ""} 삭제`);
         if (!noFetch) await fetchAllData();
     } catch (error) {
         console.error("삭제 실패:", error);

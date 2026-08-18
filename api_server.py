@@ -10,14 +10,18 @@ from typing import Any
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
 from pipeline.mysql_db import (
-    get_conn, sync_freeze, sync_estno_prefix, log_change,
+    get_conn, sync_freeze, sync_estno_prefix, log_change, log_activity,
     upsert_inventory, delete_inventory,
     upsert_holding_record, delete_holding_record,
     upsert_azy_inventory, delete_azy_inventory,
     upsert_azy_holding_record, delete_azy_holding_record,
     create_reservation, cancel_reservation, complete_reservation, use_reservation,
-    update_reservation_qty,
+    reactivate_reservation, update_reservation,
     get_active_reservations_by_pk, get_all_active_reservations,
+    migrate_due_reservations_to_outbound, get_all_outbound, create_outbound,
+    update_outbound, cancel_outbound, use_outbound, toggle_outbound_complete,
+    toggle_outbound_register,
+    register_outbound_from_reservation, _today_iso,
 )
 
 app = FastAPI()
@@ -33,18 +37,26 @@ app.add_middleware(
 
 @app.get("/api/inventory")
 def get_inventory():
-    """가용재고는 저장해두지 않고 조회 시점에 "실재고 − ACTIVE 예약 합계"로 계산한다
-    (2026-08-05 재설계) — 예약을 아무리 잘못 만들어도 실재고(원본) 자체는 항상
-    정확하고, 화면에 보여줄 값만 매번 다시 계산되므로 어긋난 채로 굳어질 수 없다."""
+    """가용재고는 저장해두지 않고 조회 시점에 "실재고 − ACTIVE 예약 합계 −
+    ACTIVE outbound 합계"로 계산한다(2026-08-05 재설계, 2026-08-14 outbound
+    반영) — 예약을 아무리 잘못 만들어도 실재고(원본) 자체는 항상 정확하고,
+    화면에 보여줄 값만 매번 다시 계산되므로 어긋난 채로 굳어질 수 없다.
+    화면의 "예약" 열(예약수량)은 예약재고 + 당일출고재고(2026-08-14)."""
+    today = _today_iso()
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT i.*, COALESCE(r.예약수량, 0) AS 예약수량, "
-                "i.재고 - COALESCE(r.예약수량, 0) AS 가용재고 "
+                "SELECT i.*, COALESCE(r.예약재고, 0) + COALESCE(ob_today.당일출고재고, 0) AS 예약수량, "
+                "i.재고 - COALESCE(r.예약재고, 0) - COALESCE(ob.출고수량, 0) AS 가용재고 "
                 "FROM inventory i "
-                "LEFT JOIN (SELECT pk, CAST(SUM(수량) AS SIGNED) AS 예약수량 FROM holding_records "
+                "LEFT JOIN (SELECT pk, CAST(SUM(수량) AS SIGNED) AS 예약재고 FROM holding_records "
                 "           WHERE status='ACTIVE' GROUP BY pk) r ON i.id = r.pk "
-                "ORDER BY i.상품명, i.브랜드, i.등급"
+                "LEFT JOIN (SELECT pk, CAST(SUM(수량) AS SIGNED) AS 출고수량 FROM outbound "
+                "           WHERE status='ACTIVE' GROUP BY pk) ob ON i.id = ob.pk "
+                "LEFT JOIN (SELECT pk, CAST(SUM(수량) AS SIGNED) AS 당일출고재고 FROM outbound "
+                "           WHERE status='ACTIVE' AND 출고일=%s GROUP BY pk) ob_today ON i.id = ob_today.pk "
+                "ORDER BY i.상품명, i.브랜드, i.등급",
+                (today,),
             )
             rows = cur.fetchall()
     return {"data": rows}
@@ -102,6 +114,31 @@ class ChangeLogBody(BaseModel):
 def log_change_endpoint(body: ChangeLogBody):
     with get_conn() as conn:
         log_change(conn, body.uid, body.target_table, body.target_id, body.action)
+    return {"ok": True}
+
+
+# ── 활동 로그(activity_log, 2026-08-18) — changes_log와 별개, 사이트 전체 CRUD를
+# user_id 필수로 남기는 감사 로그. 재고장(inventory/azy_inventory/holding_records)
+# 부터 우선 연결 — 예약/출고 탭은 추후.
+class ActivityLogBody(BaseModel):
+    user_id: str  # 필수 — 비어 있으면 Pydantic이 422로 거부
+    user_name: str = ""
+    action: str
+    table_name: str
+    record_id: str
+    before: dict[str, Any] | None = None
+    after: dict[str, Any] | None = None
+    summary: str = ""
+
+@app.post("/api/activity_log")
+def log_activity_endpoint(body: ActivityLogBody):
+    if not body.user_id.strip():
+        raise HTTPException(400, "user_id는 필수입니다")
+    with get_conn() as conn:
+        log_activity(
+            conn, body.user_id, body.action, body.table_name, body.record_id,
+            before=body.before, after=body.after, summary=body.summary, user_name=body.user_name,
+        )
     return {"ok": True}
 
 
@@ -213,16 +250,23 @@ def count_holding_by_pk(pk: str):
 
 @app.get("/api/azy_inventory")
 def get_azy_inventory():
-    """가용재고는 조회 시점 계산(get_inventory와 동일 원칙 — 2026-08-05 재설계)."""
+    """가용재고는 조회 시점 계산(get_inventory와 동일 원칙 — 2026-08-05 재설계,
+    2026-08-14 outbound 반영). "예약" 열은 예약재고 + 당일출고재고."""
+    today = _today_iso()
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT i.*, COALESCE(r.예약수량, 0) AS 예약수량, "
-                "i.재고 - COALESCE(r.예약수량, 0) AS 가용재고 "
+                "SELECT i.*, COALESCE(r.예약재고, 0) + COALESCE(ob_today.당일출고재고, 0) AS 예약수량, "
+                "i.재고 - COALESCE(r.예약재고, 0) - COALESCE(ob.출고수량, 0) AS 가용재고 "
                 "FROM azy_inventory i "
-                "LEFT JOIN (SELECT pk, CAST(SUM(수량) AS SIGNED) AS 예약수량 FROM azy_holding_records "
+                "LEFT JOIN (SELECT pk, CAST(SUM(수량) AS SIGNED) AS 예약재고 FROM azy_holding_records "
                 "           WHERE status='ACTIVE' GROUP BY pk) r ON i.id = r.pk "
-                "ORDER BY i.상품명, i.브랜드, i.등급"
+                "LEFT JOIN (SELECT pk, CAST(SUM(수량) AS SIGNED) AS 출고수량 FROM outbound "
+                "           WHERE status='ACTIVE' GROUP BY pk) ob ON i.id = ob.pk "
+                "LEFT JOIN (SELECT pk, CAST(SUM(수량) AS SIGNED) AS 당일출고재고 FROM outbound "
+                "           WHERE status='ACTIVE' AND 출고일=%s GROUP BY pk) ob_today ON i.id = ob_today.pk "
+                "ORDER BY i.상품명, i.브랜드, i.등급",
+                (today,),
             )
             rows = cur.fetchall()
     return {"data": rows}
@@ -387,6 +431,15 @@ def complete_reservation_endpoint(rec_id: str):
     return {"ok": True}
 
 
+@app.post("/api/reservations/{rec_id}/reactivate")
+def reactivate_reservation_endpoint(rec_id: str):
+    with get_conn() as conn:
+        ok = reactivate_reservation(conn, rec_id)
+    if not ok:
+        raise HTTPException(404, "완료 처리된 예약을 찾을 수 없습니다")
+    return {"ok": True}
+
+
 class UseReservationBody(BaseModel):
     수량: int
 
@@ -402,18 +455,126 @@ def use_reservation_endpoint(rec_id: str, body: UseReservationBody):
     return {"ok": True}
 
 
-class UpdateReservationQtyBody(BaseModel):
-    수량: int
+class UpdateReservationBody(BaseModel):
+    수량: int | None = None
+    출고일: str | None = None
+    거래처: str | None = None
+    전달사항: str | None = None
 
-@app.post("/api/reservations/{rec_id}/update_qty")
-def update_reservation_qty_endpoint(rec_id: str, body: UpdateReservationQtyBody):
+@app.post("/api/reservations/{rec_id}/update")
+def update_reservation_endpoint(rec_id: str, body: UpdateReservationBody):
+    updates = body.dict(exclude_unset=True)
     with get_conn() as conn:
         try:
-            ok = update_reservation_qty(conn, rec_id, body.수량)
+            ok = update_reservation(conn, rec_id, updates)
         except ValueError as e:
             raise HTTPException(400, str(e))
     if not ok:
         raise HTTPException(404, "예약을 찾을 수 없거나 이미 종료됨")
+    return {"ok": True}
+
+
+class RegisterOutboundBody(BaseModel):
+    수량: int
+    출고일: str | None = None
+    거래처: str | None = None
+
+@app.post("/api/reservations/{rec_id}/register_outbound")
+def register_outbound_endpoint(rec_id: str, body: RegisterOutboundBody):
+    with get_conn() as conn:
+        try:
+            result = register_outbound_from_reservation(
+                conn, rec_id, body.수량, body.출고일 or "", body.거래처 or ""
+            )
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    return result
+
+
+# ── outbound(타창고매출현황) — 예약과 완전히 분리된 별도 저장소(2026-08-14) ──
+# 예약 중 출고일=오늘인 것은 outbound로 이동되고, sales.html은 이 API만 쓴다.
+
+@app.get("/api/outbound")
+def list_outbound():
+    with get_conn() as conn:
+        migrate_due_reservations_to_outbound(conn)
+        rows = get_all_outbound(conn)
+    return {"data": rows}
+
+
+@app.post("/api/outbound")
+def create_outbound_endpoint(body: ReservationBody):
+    with get_conn() as conn:
+        try:
+            rec = create_outbound(conn, body.dict())
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    return rec
+
+
+class UpdateOutboundBody(BaseModel):
+    수량: int | None = None
+    출고일: str | None = None
+    거래처: str | None = None
+    전달사항: str | None = None
+
+@app.post("/api/outbound/{rec_id}/update")
+def update_outbound_endpoint(rec_id: str, body: UpdateOutboundBody):
+    updates = body.dict(exclude_unset=True)
+    with get_conn() as conn:
+        try:
+            ok = update_outbound(conn, rec_id, updates)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    if not ok:
+        raise HTTPException(404, "항목을 찾을 수 없거나 이미 종료됨")
+    return {"ok": True}
+
+
+@app.post("/api/outbound/{rec_id}/cancel")
+def cancel_outbound_endpoint(rec_id: str, delete: bool = False):
+    with get_conn() as conn:
+        try:
+            ok = cancel_outbound(conn, rec_id, delete)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    if not ok:
+        raise HTTPException(404, "항목을 찾을 수 없거나 이미 종료됨")
+    return {"ok": True}
+
+
+@app.post("/api/outbound/{rec_id}/toggle_complete")
+def toggle_outbound_complete_endpoint(rec_id: str):
+    with get_conn() as conn:
+        try:
+            new_status = toggle_outbound_complete(conn, rec_id)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    return {"status": new_status}
+
+
+@app.post("/api/outbound/{rec_id}/toggle_register")
+def toggle_outbound_register_endpoint(rec_id: str):
+    with get_conn() as conn:
+        try:
+            registered = toggle_outbound_register(conn, rec_id)
+        except ValueError as e:
+            raise HTTPException(404, str(e))
+    return {"등록": registered}
+
+
+class UseOutboundBody(BaseModel):
+    수량: int
+
+@app.post("/api/outbound/{rec_id}/use")
+def use_outbound_endpoint(rec_id: str, body: UseOutboundBody):
+    with get_conn() as conn:
+        try:
+            ok = use_outbound(conn, rec_id, body.수량)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    if not ok:
+        raise HTTPException(404, "항목을 찾을 수 없거나 이미 종료됨")
     return {"ok": True}
 
 

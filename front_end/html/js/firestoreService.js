@@ -3,8 +3,11 @@ import {
     apiInsertItem, apiUpdateItem, apiDeleteItem,
     apiUpdateHoldingRecord, apiDeleteHoldingRecord, apiFetch,
     apiCreateReservation, apiCancelReservation, apiCompleteReservation, apiUseReservation,
-    apiUpdateReservationQty,
+    apiReactivateReservation,
+    apiUpdateReservation, apiRegisterOutboundFromReservation,
     apiGetReservationsByPk, apiGetAllReservations,
+    apiGetAllOutbound, apiCreateOutbound, apiUpdateOutbound, apiCancelOutbound, apiUseOutbound,
+    apiToggleOutboundComplete, apiToggleOutboundRegister,
 } from "./api.js";
 
 // 예약 생성/취소/완료 — 실재고와 완전히 분리된 새 모델(2026-08-05).
@@ -21,14 +24,43 @@ export async function completeReservation(id) {
 export async function useReservation(id, qty) {
     return apiUseReservation(id, qty);
 }
-export async function updateReservationQty(id, qty) {
-    return apiUpdateReservationQty(id, qty);
+export async function reactivateReservation(id) {
+    return apiReactivateReservation(id);
+}
+export async function updateReservation(id, fields) {
+    return apiUpdateReservation(id, fields);
+}
+export async function registerOutboundFromReservation(id, fields) {
+    return apiRegisterOutboundFromReservation(id, fields);
 }
 export async function getReservationsByPk(pk) {
     return apiGetReservationsByPk(pk);
 }
 export async function getAllReservations() {
     return apiGetAllReservations();
+}
+
+// outbound(타창고매출현황) — 예약과 분리된 별도 저장소(2026-08-14)
+export async function getAllOutbound() {
+    return apiGetAllOutbound();
+}
+export async function createOutbound(product) {
+    return apiCreateOutbound(product);
+}
+export async function updateOutbound(id, fields) {
+    return apiUpdateOutbound(id, fields);
+}
+export async function cancelOutbound(id, deleteIt = false) {
+    return apiCancelOutbound(id, deleteIt);
+}
+export async function useOutbound(id, qty) {
+    return apiUseOutbound(id, qty);
+}
+export async function toggleOutboundComplete(id) {
+    return apiToggleOutboundComplete(id);
+}
+export async function toggleOutboundRegister(id) {
+    return apiToggleOutboundRegister(id);
 }
 
 // 추가
