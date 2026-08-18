@@ -1014,6 +1014,19 @@ tr.outbound-insert-row input[type="date"].cell-input::-webkit-calendar-picker-in
     color: #9ca3af;
 }
 
+/* sticky 페이지네이션 바가 스크롤 중 마지막 몇 행 위에 그대로 얹혀서 데이터를
+   가리는 문제(2026-08-18) — 바가 있을 때만 그 앞의 실제 콘텐츠에 바 높이만큼
+   빈 공간을 미리 깔아둬서, 끝까지 스크롤해도 마지막 행이 바 밑에 깔리지 않게 함. */
+.left-panel:has(#main-pagination:not(:empty)) .table-wrap {
+    padding-bottom: 64px;
+}
+#reservations-list:has(.pagination-bar) .reservations-table,
+#reservations-list:has(.pagination-bar) .reservations-mobile-list,
+#sales-list:has(.pagination-bar) .reservations-table,
+#sales-list:has(.pagination-bar) .reservations-mobile-list {
+    margin-bottom: 64px;
+}
+
 /* 페이지네이션(2026-08-18) — 재고장/예약현황/타창고매출현황 공용. 표를 스크롤해도
    화면 아래에 계속 떠 있게 스크롤 컨테이너(.table-container 등) 바닥에 sticky로
    붙인다 — 맨 아래까지 내려야만 다음 페이지 버튼이 보이던 문제 개선. */
