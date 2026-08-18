@@ -1043,21 +1043,6 @@ async function handleClick(e) {
         return;
     }
 
-    // 페이지네이션(2026-08-18) — 재고장/예약현황/타창고매출현황 공용. 각 render
-    // 함수가 state의 페이지 값을 읽어 슬라이스하므로, 여기서는 페이지 값만 바꾸고
-    // 해당 탭을 다시 그리면 된다.
-    if (e.target.classList.contains("page-prev") || e.target.classList.contains("page-next")) {
-        if (e.target.disabled) return;
-        const target = e.target.dataset.target;
-        const delta = e.target.classList.contains("page-prev") ? -1 : 1;
-        const key = target === "main" ? "mainPage" : target === "reservations" ? "reservationsPage" : "salesPage";
-        state[key] += delta;
-        if (target === "main") renderTable();
-        else if (target === "reservations") renderReservationsTab();
-        else if (target === "sales") renderSalesTab();
-        return;
-    }
-
     // 되돌리기 — 예약/출고 현황 탭 관련 작업(2026-08-18)도 되돌릴 수 있게 되면서,
     // 메인 테이블뿐 아니라 예약/출고 탭도 같이 새로고침해야 결과가 바로 보인다.
     if (e.target.classList.contains("rollback-btn")) {

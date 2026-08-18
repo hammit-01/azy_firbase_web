@@ -476,36 +476,6 @@ export function createReservationListRow(pk, reservations) {
 }
 
 // =========================
-// 페이지네이션(2026-08-18) — 재고장/예약현황/타창고매출현황 표 공용.
-// state의 mainPage/reservationsPage/salesPage 중 target에 해당하는 값을 읽고,
-// 범위를 벗어나면(필터링으로 결과가 줄어든 경우 등) 자동으로 안쪽으로 당겨준다.
-// =========================
-const PAGE_SIZE = 50;
-
-function clampPage(target, totalItems) {
-    const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
-    const key = target === "main" ? "mainPage" : target === "reservations" ? "reservationsPage" : "salesPage";
-    if (state[key] > totalPages) state[key] = totalPages;
-    if (state[key] < 1) state[key] = 1;
-    return { page: state[key], totalPages };
-}
-
-function paginate(target, rows) {
-    const { page, totalPages } = clampPage(target, rows.length);
-    return { pageRows: rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), page, totalPages };
-}
-
-function paginationHtml(target, page, totalPages, totalItems) {
-    if (totalPages <= 1) return "";
-    return `
-    <div class="pagination-bar" data-target="${target}">
-        <button class="page-btn page-prev" data-target="${target}" ${page <= 1 ? "disabled" : ""}>이전</button>
-        <span class="page-info">${page} / ${totalPages} 페이지 (총 ${totalItems}건)</span>
-        <button class="page-btn page-next" data-target="${target}" ${page >= totalPages ? "disabled" : ""}>다음</button>
-    </div>`;
-}
-
-// =========================
 // 테이블 렌더
 // =========================
 export function renderTable() {
@@ -677,14 +647,10 @@ export function renderTable() {
     // 헤더 인디케이터 동기화
     updateSortHeaders();
 
-    // 현재 표시 중인 행 저장 (전체 선택/다운로드는 페이지 구분 없이 필터링된 전체 기준)
+    // 현재 표시 중인 행 저장 (전체 선택에 사용)
     state.filteredData = data;
 
-    // 화면에 실제로 그릴 건 현재 페이지 분량만(2026-08-18) — 선택/다운로드는 위
-    // state.filteredData(전체)를 계속 쓰므로 영향 없음.
-    const { pageRows, page, totalPages } = paginate("main", data);
-
-    renderMobileView(pageRows);
+    renderMobileView(data);
 
     // =========================
     // html 생성
@@ -701,7 +667,7 @@ export function renderTable() {
         existingHoldingRows[tr.dataset.id] = tr.outerHTML;
     });
 
-    for (const item of pageRows) {
+    for (const item of data) {
 
         const id = item.id;
 
@@ -775,7 +741,7 @@ export function renderTable() {
     // =========================
     // render
     // =========================
-    if (pageRows.length === 0) {
+    if (data.length === 0) {
         html = `
             <tr>
                 <td colspan="13" style="text-align:center; padding:40px; color:#9ca3af; font-size:15px;">
@@ -786,9 +752,6 @@ export function renderTable() {
     }
 
     dom.listDiv.innerHTML = html;
-
-    const paginationEl = document.getElementById("main-pagination");
-    if (paginationEl) paginationEl.innerHTML = paginationHtml("main", page, totalPages, data.length);
 
     // =========================
     // 총합 (빈 상품명 포함 전체 기준)
@@ -1264,51 +1227,28 @@ export async function renderReservationsTab() {
 
         const names = state.reservationsFilter ? [state.reservationsFilter] : allNames;
         state.filteredReservations = names.flatMap(name => groups[name] || []);
+        const body = names.length ? names.map(name => `
+            <div class="reservations-group">
+                <h3>${name} <span class="reservations-group-count">${groups[name].length}건</span></h3>
+                <table class="reservations-table">
+                    ${reservationsHead()}
+                    <tbody>${groups[name].map(r => reservationRowHtml(r)).join("")}</tbody>
+                </table>
+                <div class="reservations-mobile-list">${groups[name].map(r => reservationCardHtml(r)).join("")}</div>
+            </div>
+        `).join("") : `<p class="reservations-empty">조건에 맞는 예약이 없습니다.</p>`;
 
-        // 담당자를 특정해서 한 명만 볼 땐(플랫 리스트) 페이지네이션 적용 — "전체"로
-        // 여러 담당자를 한꺼번에 묶어 볼 땐 그룹이 페이지 경계에서 끊기면 오히려
-        // 헷갈려서 페이지네이션을 안 건다(담당자 수가 적어 원래도 길지 않음).
-        let body, paginationBar = "";
-        if (names.length === 1) {
-            const { pageRows, page, totalPages } = paginate("reservations", groups[names[0]] || []);
-            const name = names[0];
-            body = pageRows.length ? `
-                <div class="reservations-group">
-                    <h3>${name} <span class="reservations-group-count">${groups[name].length}건</span></h3>
-                    <table class="reservations-table">
-                        ${reservationsHead()}
-                        <tbody>${pageRows.map(r => reservationRowHtml(r)).join("")}</tbody>
-                    </table>
-                    <div class="reservations-mobile-list">${pageRows.map(r => reservationCardHtml(r)).join("")}</div>
-                </div>
-            ` : `<p class="reservations-empty">조건에 맞는 예약이 없습니다.</p>`;
-            paginationBar = paginationHtml("reservations", page, totalPages, groups[name].length);
-        } else {
-            body = names.length ? names.map(name => `
-                <div class="reservations-group">
-                    <h3>${name} <span class="reservations-group-count">${groups[name].length}건</span></h3>
-                    <table class="reservations-table">
-                        ${reservationsHead()}
-                        <tbody>${groups[name].map(r => reservationRowHtml(r)).join("")}</tbody>
-                    </table>
-                    <div class="reservations-mobile-list">${groups[name].map(r => reservationCardHtml(r)).join("")}</div>
-                </div>
-            `).join("") : `<p class="reservations-empty">조건에 맞는 예약이 없습니다.</p>`;
-        }
-
-        listEl.innerHTML = filterHtml + body + paginationBar;
+        listEl.innerHTML = filterHtml + body;
     } else {
         state.filteredReservations = rows;
-        const { pageRows, page, totalPages } = paginate("reservations", rows);
         const filterHtml = `<div class="reservations-filter-bar">${dateFilterHtml}</div>`;
         const empty = `<p class="reservations-empty">조건에 맞는 예약이 없습니다.</p>`;
-        listEl.innerHTML = filterHtml + (pageRows.length ? `
+        listEl.innerHTML = filterHtml + (rows.length ? `
             <table class="reservations-table">
                 ${reservationsHead()}
-                <tbody>${pageRows.map(r => reservationRowHtml(r)).join("")}</tbody>
+                <tbody>${rows.map(r => reservationRowHtml(r)).join("")}</tbody>
             </table>
-            <div class="reservations-mobile-list">${pageRows.map(r => reservationCardHtml(r)).join("")}</div>
-            ${paginationHtml("reservations", page, totalPages, rows.length)}
+            <div class="reservations-mobile-list">${rows.map(r => reservationCardHtml(r)).join("")}</div>
         ` : empty);
     }
 }
@@ -1346,7 +1286,6 @@ export async function renderSalesTab() {
         Number(a.status === "COMPLETED") - Number(b.status === "COMPLETED")
     );
     state.filteredReservations = rows;
-    const { pageRows, page, totalPages } = paginate("sales", rows);
     // "추가" 버튼으로 표 맨 위에 입력행을 띄우므로(2026-08-14), 데이터가 0건이어도
     // 표 자체(헤더 + 빈 입력행 tbody)는 항상 그려둔다.
     const emptyMsg = rows.length ? "" : `<p class="reservations-empty">오늘 출고 항목이 없습니다.</p>`;
@@ -1354,11 +1293,10 @@ export async function renderSalesTab() {
         <table class="reservations-table">
             ${reservationsHead(true)}
             <tbody id="outbound-insert-rows"></tbody>
-            <tbody>${pageRows.map(r => reservationRowHtml(r, true)).join("")}</tbody>
+            <tbody>${rows.map(r => reservationRowHtml(r, true)).join("")}</tbody>
         </table>
         ${emptyMsg}
-        <div class="reservations-mobile-list">${pageRows.map(r => reservationCardHtml(r, true)).join("")}</div>
-        ${paginationHtml("sales", page, totalPages, rows.length)}
+        <div class="reservations-mobile-list">${rows.map(r => reservationCardHtml(r, true)).join("")}</div>
     `;
 }
 
