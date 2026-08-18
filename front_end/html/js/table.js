@@ -885,9 +885,21 @@ function attrEscape(v) {
 
 // 예약/출고 행의 "전달사항" 느낌표 버튼(2026-08-14) — 메시지 있으면 강조,
 // 없으면 흐리게. 클릭하면 팝업(showNoteModal)에서 보기/수정.
-function noteBtn(r, isSalesPage) {
+function noteBtn(r, isSalesPage, canOthers = true) {
+    if (isSalesPage && !canOthers) return "";
     const note = safeValue(r.전달사항);
     return `<button class="reservation-note-btn${note ? " has-note" : ""}" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}" data-note="${attrEscape(r.전달사항)}" title="${note ? "전달사항 보기/수정" : "전달사항 추가"}">!</button>`;
+}
+
+// 타창고매출현황 액션 권한(2026-08-18) — 편집자/관리자는 전부 가능, 그 외 사원은
+// 자신이 담당자인 행의 "출고변경"만 가능(canEdit)하고 나머지 액션(출고완료/출고취소/
+// 등록완료/전달사항)은 못 함(canOthers). 예약현황 탭은 애초에 본인 예약만 보여줘서
+// (renderReservationsTab) 이 제한이 필요 없다 — isSalesPage일 때만 적용.
+function salesAccess(r) {
+    const user = getStoredUser();
+    const isEditor = hasEditorAccess(user?.권한);
+    const isOwner = !!user?.이름 && r.담당자 === user.이름;
+    return { canEdit: isEditor || isOwner, canOthers: isEditor };
 }
 
 // sales.html "등록완료" 체크박스(2026-08-18) — 창고가 신우냉장/CS인 행만 노출,
@@ -898,8 +910,8 @@ function noteBtn(r, isSalesPage) {
 function needsRegister(r) {
     return REGISTER_REQUIRED_WAREHOUSES.has(String(r.창고 ?? "").trim());
 }
-function registerCheckboxHtml(r) {
-    return needsRegister(r)
+function registerCheckboxHtml(r, canOthers = true) {
+    return needsRegister(r) && canOthers
         ? `<input type="checkbox" class="outbound-register-check" data-id="${r.id}" ${r.등록 ? "checked" : ""}>`
         : "";
 }
@@ -957,11 +969,12 @@ function reservationCardHtml(r, isSalesPage = false) {
         : "";
     const clientDisplay = isSalesPage ? clientPrefix(r.거래처) : safeValue(r.거래처);
     const completed = isSalesPage && r.status === "COMPLETED";
+    const access = isSalesPage ? salesAccess(r) : { canEdit: true, canOthers: true };
     return `
         <div class="mobile-card reservation-card${completed ? " sales-completed-row" : ""}" data-reservation-id="${r.id}">
             <div class="mc-header">
-                ${noteBtn(r, isSalesPage)}
-                ${isSalesPage && needsRegister(r) ? `<label class="mc-register-label">${registerCheckboxHtml(r)} 등록완료</label>` : ""}
+                ${noteBtn(r, isSalesPage, access.canOthers)}
+                ${isSalesPage && needsRegister(r) && access.canOthers ? `<label class="mc-register-label">${registerCheckboxHtml(r, access.canOthers)} 등록완료</label>` : ""}
                 <span class="mc-name">${safeValue(r.상품명)}</span>
                 ${whTag(r.창고)}
             </div>
@@ -985,10 +998,10 @@ function reservationCardHtml(r, isSalesPage = false) {
                 ${safeValue(r.BL) ? `<div class="mc-row mc-full"><span class="mc-label">BL</span>${safeValue(r.BL)}</div>` : ""}
             </div>
             <div class="reservation-card-actions">
-                ${completed ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고변경" : "예약변경"}</button>`}
-                <button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "출고완료" : "사용완료"}</button>
-                ${completed ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고취소" : "예약취소"}</button>`}
-                ${isSalesPage ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고등록</button>`}
+                ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고변경" : "예약변경"}</button>`}
+                ${access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "출고완료" : "사용완료"}</button>` : ""}
+                ${completed || !access.canOthers ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고취소" : "예약취소"}</button>`}
+                ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고등록</button>`}
             </div>
         </div>
     `;
@@ -1006,10 +1019,11 @@ function reservationRowHtml(r, isSalesPage = false) {
         : "";
     const clientDisplay = isSalesPage ? clientPrefix(r.거래처) : safeValue(r.거래처);
     const completed = isSalesPage && r.status === "COMPLETED";
+    const access = isSalesPage ? salesAccess(r) : { canEdit: true, canOthers: true };
     return `
         <tr data-reservation-id="${r.id}"${completed ? ' class="sales-completed-row"' : ""}>
-            <td class="reservation-note-cell">${noteBtn(r, isSalesPage)}</td>
-            ${isSalesPage ? `<td class="reservation-register-cell">${registerCheckboxHtml(r)}</td>` : ""}
+            <td class="reservation-note-cell">${noteBtn(r, isSalesPage, access.canOthers)}</td>
+            ${isSalesPage ? `<td class="reservation-register-cell">${registerCheckboxHtml(r, access.canOthers)}</td>` : ""}
             <td>${safeValue(r.담당자) || "(미지정)"}</td>
             <td>${safeValue(r.상품명)}</td>
             <td>${safeValue(r.브랜드)}</td>
@@ -1027,10 +1041,10 @@ function reservationRowHtml(r, isSalesPage = false) {
             <td>${safeValue(r.출고일)}</td>
             <td class="reservation-row-actions-cell">
                 <div class="reservation-row-actions">
-                    ${completed ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고변경" : "예약변경"}</button>`}
-                    <button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "출고완료" : "사용완료"}</button>
-                    ${completed ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고취소" : "예약취소"}</button>`}
-                    ${isSalesPage ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고등록</button>`}
+                    ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고변경" : "예약변경"}</button>`}
+                    ${access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "출고완료" : "사용완료"}</button>` : ""}
+                    ${completed || !access.canOthers ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고취소" : "예약취소"}</button>`}
+                    ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고등록</button>`}
                 </div>
             </td>
         </tr>
