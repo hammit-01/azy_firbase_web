@@ -12,6 +12,17 @@ import { showToast, showError, showConfirm, showEditReservationModal, showRegist
 import { getStoredUser } from "./login.js";
 import { apiLogActivity } from "./api.js";
 
+// 예약현황/타창고매출현황 액션(취소/완료/변경/토글 등) 이후 공용 새로고침(2026-08-19) —
+// renderSalesTab()이 renderReservationsTab()에서 분리되며(2026-08-18) 각 액션
+// 핸들러가 여전히 renderReservationsTab()만 불러서, 타창고매출현황 탭에서 액션을
+// 눌러도 그 탭(.sales-container)은 안 보이던 renderReservationsTab()이 자기 컨테이너
+// 안 보인다고 조용히 스킵해 화면이 그대로였던 버그 수정. 두 render 함수 다 자기
+// 탭 컨테이너가 안 보이면 알아서 스킵하니 항상 같이 불러도 안전하다.
+async function refreshReservationViews() {
+    await renderReservationsTab();
+    await renderSalesTab();
+}
+
 // activity_log(2026-08-18, 예약현황/타창고매출현황 연결) — crud.js의 _logActivity와
 // 같은 목적, 재고장 쪽 테이블(inventory/azy_inventory) 구분과 달리 여기는 근원 창고가
 // main/azy 어느 쪽이든 예약/출고 자체는 한 테이블(holding_records류/outbound)이라
@@ -261,8 +272,7 @@ export function bindEvents() {
     // 함수가 자기 탭 컨테이너가 안 보이면 알아서 스킵).
     const refreshFilteredViews = () => {
         renderTable();
-        renderReservationsTab();
-        renderSalesTab();
+        refreshReservationViews();
     };
 
     let searchTimer = null;
@@ -295,7 +305,7 @@ export function bindEvents() {
                 .then(() => {
                     pushUndo({ type: "outbound-toggle-register", id });
                     _logActivity("outbound", id, "등록완료토글", null, null, "등록완료 체크 토글");
-                    renderReservationsTab();
+                    refreshReservationViews();
                 })
                 .catch((err) => {
                     checkbox.checked = !checkbox.checked;
@@ -311,6 +321,10 @@ export function bindEvents() {
             state.reservationsDateFilter = e.target.value;
             renderReservationsTab();
         }
+        if (e.target.id === "sales-date-filter") {
+            state.salesDateFilter = e.target.value;
+            renderSalesTab();
+        }
     });
 
     document.addEventListener("input", (e) => {
@@ -325,6 +339,43 @@ export function bindEvents() {
     // 더블클릭으로 행 선택
     document.addEventListener("dblclick", (e) => {
         if (e.target.classList.contains("row-check")) return;
+
+        // 타창고매출현황 — 비고 칸 더블클릭하면 그 자리에서 바로 수정(2026-08-19,
+        // 매번 "출고변경" 모달을 열지 않아도 되게). 이미 입력창으로 바뀐 상태면
+        // 다시 더블클릭해도 무시(inline input 안에서의 더블클릭은 텍스트 선택용).
+        const remarkCell = e.target.closest(".sales-remark-cell");
+        if (remarkCell) {
+            if (remarkCell.querySelector("input")) return;
+            const id = remarkCell.dataset.id;
+            const original = remarkCell.dataset.remark || "";
+            remarkCell.innerHTML = `<input type="text" class="sales-remark-input" value="${original.replace(/"/g, "&quot;")}">`;
+            const input = remarkCell.querySelector("input");
+            input.focus();
+            input.select();
+
+            let done = false;
+            const finish = async (save) => {
+                if (done) return;
+                done = true;
+                const newValue = input.value.trim();
+                if (save && newValue !== original) {
+                    try {
+                        await updateOutbound(id, { 비고: newValue });
+                        _logActivity("outbound", id, "수정", { 비고: original }, { 비고: newValue }, "비고 변경");
+                        showToast("✓ 비고 저장됨");
+                    } catch (err) {
+                        showError(err.message || "저장에 실패했습니다.");
+                    }
+                }
+                renderSalesTab();
+            };
+            input.addEventListener("blur", () => finish(true));
+            input.addEventListener("keydown", (ke) => {
+                if (ke.key === "Enter") { ke.preventDefault(); input.blur(); }
+                if (ke.key === "Escape") { ke.preventDefault(); finish(false); }
+            });
+            return;
+        }
 
         const target = e.target.closest("tr") || e.target.closest(".mobile-card");
         if (!target) return;
@@ -482,12 +533,13 @@ async function handleClick(e) {
                 브랜드: val(".ob-in-brand"), 등급: val(".ob-in-grade"), ESTNO: val(".ob-in-estno"),
                 담당자: val(".ob-in-manager"), 출고일: val(".ob-in-date"),
                 거래처: buildClientWithDetails(val(".ob-in-client"), val(".ob-in-price"), val(".ob-in-weight")),
+                비고: val(".ob-in-remark"),
             };
             const res = await createOutbound(newFields);
             if (res?.id) pushUndo({ type: "outbound-created", id: res.id });
             if (res?.id) _logActivity("outbound", res.id, "삽입", null, newFields, `${상품명} ${수량}개 출고 추가`);
             showToast("✓ 추가됨");
-            renderReservationsTab();
+            renderSalesTab();
         } catch (err) {
             showError(err.message || "추가에 실패했습니다.");
         }
@@ -554,6 +606,13 @@ async function handleClick(e) {
         return;
     }
 
+    // 타창고매출현황 탭 — 출고일 필터 해제(오늘로 복귀)
+    if (e.target.classList.contains("sales-date-filter-clear")) {
+        state.salesDateFilter = "";
+        renderSalesTab();
+        return;
+    }
+
     // 예약 현황 탭 — 예약변경(수량/출고일/거래처를 한 모달에서 같이 수정, 2026-08-14).
     // sales.html(data-sales="1")에서는 거래처 대신 거래처명+단가+중량으로 나눠 받고,
     // 저장 시 "거래처명 단가원 중량kg" 형태로 다시 합쳐서 거래처 필드에 저장한다.
@@ -569,6 +628,7 @@ async function handleClick(e) {
             거래처명: clientPrefix(rawClient),
             단가: parseUnitPrice(rawClient) ?? "",
             중량: parseWeight(rawClient) ?? "",
+            비고: e.target.dataset.remark || "",
         };
         const result = await showEditReservationModal(current, { showPrice });
         if (!result) return;
@@ -581,6 +641,7 @@ async function handleClick(e) {
         if (result.수량 !== current.수량) { fields.수량 = result.수량; prev.수량 = current.수량; }
         if (result.출고일 !== current.출고일) { fields.출고일 = result.출고일; prev.출고일 = current.출고일; }
         if (newClient !== rawClient) { fields.거래처 = newClient; prev.거래처 = rawClient; }
+        if (showPrice && result.비고 !== current.비고) { fields.비고 = result.비고; prev.비고 = current.비고; }
         if (Object.keys(fields).length === 0) return;
 
         // showPrice(=sales.html)면 outbound 항목 — 출고일을 오늘이 아닌 날짜로
@@ -590,7 +651,7 @@ async function handleClick(e) {
             pushUndo({ type: showPrice ? "outbound-fields" : "reservation-fields", id, prev });
             _logActivity(showPrice ? "outbound" : "reservation", id, "수정", prev, fields, `${Object.keys(fields).join(", ")} 변경`);
             showToast("✓ 변경됨");
-            renderReservationsTab();
+            refreshReservationViews();
             fetchAllData();
         } catch (err) {
             const msg = err.message || "변경에 실패했습니다.";
@@ -617,7 +678,7 @@ async function handleClick(e) {
                 await toggleOutboundComplete(id);
                 pushUndo({ type: "outbound-toggle-complete", id });
                 _logActivity("outbound", id, "출고완료토글", null, null, "출고완료 상태 토글");
-                renderReservationsTab();
+                renderSalesTab();
             } catch (err) {
                 showError(err.message || "처리에 실패했습니다.");
             }
@@ -672,7 +733,7 @@ async function handleClick(e) {
                 isOutbound ? (deleteIt ? "삭제로 취소" : "예약으로 되돌림") : "예약 취소",
             );
             showToast("✓ 취소됨");
-            renderReservationsTab();
+            refreshReservationViews();
             fetchAllData();
         } catch (err) {
             showError(err.message || "취소에 실패했습니다.");
@@ -711,7 +772,7 @@ async function handleClick(e) {
             pushUndo({ type: isOutbound ? "outbound-note" : "reservation-note", id, prevNote: current });
             _logActivity(isOutbound ? "outbound" : "reservation", id, "전달사항수정", { 전달사항: current }, { 전달사항: result });
             showToast("✓ 전달사항 저장됨");
-            renderReservationsTab();
+            refreshReservationViews();
         } catch (err) {
             showError(err.message || "저장에 실패했습니다.");
         }
@@ -740,14 +801,14 @@ async function handleClick(e) {
 
         if (reservationsOpen || salesOpen) {
             if (salesOpen) {
-                const headers = ["담당자", "상품명", "브랜드", "등급", "ESTNO", "BL", "창고", "수량", "실재고", "가용재고", "거래처", "단가", "중량", "총금액", "출고일", "상태"];
+                const headers = ["담당자", "상품명", "브랜드", "등급", "ESTNO", "BL", "창고", "수량", "실재고", "가용재고", "거래처", "비고", "단가", "중량", "총금액", "출고일", "상태"];
                 const rows = state.filteredReservations.map(r => {
                     const unitPrice = parseUnitPrice(r.거래처);
                     const weight = parseWeight(r.거래처);
                     const total = (unitPrice !== null && weight !== null) ? unitPrice * weight : "";
                     return [
                         r.담당자 || "", r.상품명, r.브랜드, r.등급, r.ESTNO, r.BL, r.창고, r.수량,
-                        r.재고, r.가용재고 ?? "", clientPrefix(r.거래처), unitPrice ?? "", weight ?? "",
+                        r.재고, r.가용재고 ?? "", clientPrefix(r.거래처), r.비고 || "", unitPrice ?? "", weight ?? "",
                         total, r.출고일, r.status === "COMPLETED" ? "출고완료" : "",
                     ];
                 });
@@ -1050,7 +1111,7 @@ async function handleClick(e) {
         state.selectedItems.clear();
         state.crudData = null;
         await fetchAllData();
-        await renderReservationsTab();
+        await refreshReservationViews();
         return;
     }
 

@@ -388,6 +388,7 @@ class ReservationBody(BaseModel):
     거래처: str = ""
     담당자: str = ""
     출고일: str = ""
+    비고:   str = ""  # outbound 전용 컬럼(2026-08-19) — /api/reservations 쪽은 create_reservation이 무시
 
 @app.get("/api/reservations")
 def list_all_reservations():
@@ -517,6 +518,7 @@ class UpdateOutboundBody(BaseModel):
     출고일: str | None = None
     거래처: str | None = None
     전달사항: str | None = None
+    비고: str | None = None
 
 @app.post("/api/outbound/{rec_id}/update")
 def update_outbound_endpoint(rec_id: str, body: UpdateOutboundBody):

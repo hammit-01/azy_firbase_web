@@ -20,15 +20,16 @@ export function showError(msg) {
 // current: {수량, 출고일, 거래처}. showPrice=true(sales.html)면 거래처 대신
 // 거래처명(prefix)+단가+중량 입력칸 세 개로 나눠서 받는다 — 단가/중량은 자체
 // 컬럼이 없어서 거래처 문자열에 "이름 숫자원 숫자kg"로 합쳐 저장하기 때문
-// (table.js의 buildClientWithDetails와 짝). 저장 누르면 {수량, 출고일, 거래처}
-// (showPrice면 {수량, 출고일, 거래처명, 단가, 중량}) 객체로 resolve, 취소/
-// 바깥클릭이면 null.
+// (table.js의 buildClientWithDetails와 짝). showPrice면 비고(outbound 전용 컬럼)도
+// 같이 받는다(2026-08-19). 저장 누르면 {수량, 출고일, 거래처}(showPrice면
+// {수량, 출고일, 거래처명, 단가, 중량, 비고}) 객체로 resolve, 취소/바깥클릭이면 null.
 export function showEditReservationModal(current, { showPrice = false } = {}) {
     return new Promise(resolve => {
         const clientFieldHtml = showPrice
             ? `<label>거래처명<input type="text" class="edit-res-client" value="${(current.거래처명 ?? "").replace(/"/g, "&quot;")}"></label>` +
               `<label>단가<input type="number" class="edit-res-price" min="0" value="${current.단가 ?? ""}"></label>` +
-              `<label>중량(kg)<input type="number" step="0.01" min="0" class="edit-res-weight" value="${current.중량 ?? ""}"></label>`
+              `<label>중량(kg)<input type="number" step="0.01" min="0" class="edit-res-weight" value="${current.중량 ?? ""}"></label>` +
+              `<label>비고<input type="text" class="edit-res-remark" value="${(current.비고 ?? "").replace(/"/g, "&quot;")}"></label>`
             : `<label>거래처<input type="text" class="edit-res-client" value="${(current.거래처 ?? "").replace(/"/g, "&quot;")}"></label>`;
 
         const overlay = document.createElement("div");
@@ -58,6 +59,7 @@ export function showEditReservationModal(current, { showPrice = false } = {}) {
                 result.거래처명 = overlay.querySelector(".edit-res-client").value.trim();
                 result.단가 = overlay.querySelector(".edit-res-price").value;
                 result.중량 = overlay.querySelector(".edit-res-weight").value;
+                result.비고 = overlay.querySelector(".edit-res-remark").value.trim();
             } else {
                 result.거래처 = overlay.querySelector(".edit-res-client").value.trim();
             }
@@ -75,7 +77,11 @@ export function showEditReservationModal(current, { showPrice = false } = {}) {
 export function showRegisterOutboundModal(current) {
     return new Promise(resolve => {
         const maxQty = Number(current.수량) || 0;
-        const today = new Date().toISOString().slice(0, 10);
+        // new Date().toISOString()은 UTC 기준이라 자정~오전 9시(KST) 사이엔 하루 전
+        // 날짜가 나옴(2026-08-19 수정) — 로컬 날짜로 직접 계산.
+        const now = new Date();
+        const pad = n => String(n).padStart(2, "0");
+        const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
         const overlay = document.createElement("div");
         overlay.className = "confirm-overlay";
         overlay.innerHTML =
@@ -83,7 +89,7 @@ export function showRegisterOutboundModal(current) {
             `<p class="confirm-msg">출고등록</p>` +
             `<div class="edit-reservation-form">` +
             `<label>사용재고<input type="number" class="reg-ob-qty" min="1" max="${maxQty}" value="${maxQty}"></label>` +
-            `<label>출고일<input type="date" class="reg-ob-date" value="${today}"></label>` +
+            `<label>출고일<input type="date" class="reg-ob-date" value="${today}" min="${today}"></label>` +
             `<label>거래처<input type="text" class="reg-ob-client" value=""></label>` +
             `</div>` +
             `<div class="confirm-btns">` +
@@ -99,9 +105,14 @@ export function showRegisterOutboundModal(current) {
                 showError(`사용재고는 1~${maxQty} 사이여야 합니다`);
                 return;
             }
+            const releaseDate = overlay.querySelector(".reg-ob-date").value;
+            if (releaseDate && releaseDate < today) {
+                showError("출고일은 오늘 이전으로 선택할 수 없습니다");
+                return;
+            }
             close({
                 수량: qty,
-                출고일: overlay.querySelector(".reg-ob-date").value,
+                출고일: releaseDate,
                 거래처: overlay.querySelector(".reg-ob-client").value.trim(),
             });
         });

@@ -888,7 +888,9 @@ function attrEscape(v) {
 function noteBtn(r, isSalesPage, canOthers = true) {
     if (isSalesPage && !canOthers) return "";
     const note = safeValue(r.전달사항);
-    return `<button class="reservation-note-btn${note ? " has-note" : ""}" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}" data-note="${attrEscape(r.전달사항)}" title="${note ? "전달사항 보기/수정" : "전달사항 추가"}">!</button>`;
+    // 마우스 올리면 내용이 바로 보이게(2026-08-19) — 없으면 기존처럼 안내 문구
+    const tooltip = note ? attrEscape(note) : "전달사항 추가";
+    return `<button class="reservation-note-btn${note ? " has-note" : ""}" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}" data-note="${attrEscape(r.전달사항)}" title="${tooltip}">!</button>`;
 }
 
 // 타창고매출현황 액션 권한(2026-08-18) — 편집자/관리자는 전부 가능, 그 외 사원은
@@ -995,10 +997,11 @@ function reservationCardHtml(r, isSalesPage = false) {
                 ${totalRow}
                 ${safeValue(r.출고일) ? `<div class="mc-row"><span class="mc-label">출고일</span>${safeValue(r.출고일)}</div>` : ""}
                 ${clientDisplay ? `<div class="mc-row"><span class="mc-label">거래처</span>${clientDisplay}</div>` : ""}
+                ${isSalesPage && safeValue(r.비고) ? `<div class="mc-row mc-full"><span class="mc-label">비고</span>${safeValue(r.비고)}</div>` : ""}
                 ${safeValue(r.BL) ? `<div class="mc-row mc-full"><span class="mc-label">BL</span>${safeValue(r.BL)}</div>` : ""}
             </div>
             <div class="reservation-card-actions">
-                ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고변경" : "예약변경"}</button>`}
+                ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고변경" : "예약변경"}</button>`}
                 ${access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "출고완료" : "사용완료"}</button>` : ""}
                 ${completed || !access.canOthers ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고취소" : "예약취소"}</button>`}
                 ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고등록</button>`}
@@ -1023,6 +1026,7 @@ function reservationRowHtml(r, isSalesPage = false) {
     return `
         <tr data-reservation-id="${r.id}"${completed ? ' class="sales-completed-row"' : ""}>
             <td class="reservation-note-cell">${noteBtn(r, isSalesPage, access.canOthers)}</td>
+            ${isSalesPage ? `<td class="${access.canEdit ? "sales-remark-cell" : ""}" data-id="${r.id}" data-remark="${attrEscape(r.비고)}" title="${access.canEdit ? "더블클릭해서 수정" : ""}">${safeValue(r.비고)}</td>` : ""}
             ${isSalesPage ? `<td class="reservation-register-cell">${registerCheckboxHtml(r, access.canOthers)}</td>` : ""}
             <td>${safeValue(r.담당자) || "(미지정)"}</td>
             <td>${safeValue(r.상품명)}</td>
@@ -1041,7 +1045,7 @@ function reservationRowHtml(r, isSalesPage = false) {
             <td>${safeValue(r.출고일)}</td>
             <td class="reservation-row-actions-cell">
                 <div class="reservation-row-actions">
-                    ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고변경" : "예약변경"}</button>`}
+                    ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고변경" : "예약변경"}</button>`}
                     ${access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "출고완료" : "사용완료"}</button>` : ""}
                     ${completed || !access.canOthers ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고취소" : "예약취소"}</button>`}
                     ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고등록</button>`}
@@ -1052,14 +1056,16 @@ function reservationRowHtml(r, isSalesPage = false) {
 }
 
 // sales.html "추가" 버튼 — 팝업 대신 엑셀처럼 표 맨 위에 입력행을 띄운다(2026-08-14).
-// 열 순서는 reservationsHead(true)와 동일해야 함: 등록완료,담당자,상품명,브랜드,등급,
-// ESTNO,BL,창고,수량,실재고,가용재고,거래처,단가,중량,총금액,출고일,액션(17칸). 실재고/
-// 가용재고/총금액은 아직 어떤 재고인지 확정 전이라 입력칸 없이 빈칸으로 두고, 등록완료도
-// 신규 입력행 단계에선 아직 창고가 정해지지 않아 빈칸.
+// 열 순서는 reservationsHead(true)와 동일해야 함: 비고,등록완료,담당자,상품명,브랜드,
+// 등급,ESTNO,BL,창고,수량,실재고,가용재고,거래처,단가,중량,총금액,출고일,액션(18칸,
+// 2026-08-19 비고를 "!" 옆으로 이동). 실재고/가용재고/총금액은 아직 어떤 재고인지
+// 확정 전이라 입력칸 없이 빈칸으로 두고, 등록완료도 신규 입력행 단계에선 아직
+// 창고가 정해지지 않아 빈칸.
 export function outboundInsertRowHtml() {
     return `
         <tr class="outbound-insert-row">
             <td></td>
+            <td><input type="text" class="ob-in-remark cell-input" placeholder="비고"></td>
             <td></td>
             <td>${employeeSelect("ob-in-manager")}</td>
             <td><input type="text" class="ob-in-name cell-input" placeholder="상품명"></td>
@@ -1097,40 +1103,67 @@ export function outboundInsertRowHtml() {
 // 자동계산) 세 칸을 보여준다(단가/중량은 예약 데이터에 아직 없는 값이라 빈칸일
 // 수 있고 그러면 총금액도 빈칸).
 function reservationsHead(isSalesPage = false) {
-    return `
+    // 타창고매출현황(2026-08-19) — 비고를 "!" 바로 옆으로 옮기고, 상품명/BL은
+    // 줄어든 만큼(안 잘리는 선에서 최소한만) 재고 관련 열(수량/실재고/가용재고)과
+    // 출고일/액션에 더 배분. table-layout이 auto라 % 미만이어도 내용이 넘치면
+    // 브라우저가 알아서 넓혀서 실제로 잘리진 않는다(가로 스크롤로 커버).
+    if (isSalesPage) {
+        return `
     <colgroup>
         <col style="width:4%">  <!--전달사항-->
-        ${isSalesPage ? `<col style="width:4%">  <!--등록완료-->` : ""}
-        <col style="width:6%">  <!--담당자-->
-        <col style="width:10%"> <!--상품명-->
-        <col style="width:6%">  <!--브랜드-->
+        <col style="width:3%">  <!--비고-->
+        <col style="width:4%">  <!--등록완료-->
+        <col style="width:5%">  <!--담당자-->
+        <col style="width:8%">  <!--상품명-->
+        <col style="width:5%">  <!--브랜드-->
         <col style="width:3%">  <!--등급-->
         <col style="width:4%">  <!--ESTNO-->
-        <col style="width:15%"> <!--BL-->
+        <col style="width:11%"> <!--BL-->
         <col style="width:5%">  <!--창고-->
-        <col style="width:2%">  <!--수량-->
-        <col style="width:2%">  <!--실재고-->
-        <col style="width:3%">  <!--가용재고-->
-        <col style="width:9%">  <!--거래처-->
-        ${isSalesPage ? `
+        <col style="width:4%">  <!--수량-->
+        <col style="width:4%">  <!--실재고-->
+        <col style="width:5%">  <!--가용재고-->
+        <col style="width:6%">  <!--거래처-->
         <col style="width:4%">  <!--단가-->
         <col style="width:4%">  <!--중량-->
         <col style="width:5%">  <!--총금액-->
-        <col style="width:4%">  <!--출고일-->
-        <col style="width:10%"> <!--액션-->
-        ` : `
-        <col style="width:6%">  <!--예약일-->
+        <col style="width:7%">  <!--출고일-->
+        <col style="width:9%">  <!--액션-->
+    </colgroup>
+    <thead>
+        <tr>
+            <th></th><th>비고</th><th>등록완료</th>
+            <th>담당자</th><th>상품명</th><th>브랜드</th><th>등급</th><th>ESTNO</th>
+            <th>BL</th><th>창고</th><th>수량</th><th>실재고</th><th>가용재고</th>
+            <th>거래처</th><th>단가</th><th>중량</th><th>총금액</th><th>출고일</th><th>액션</th>
+        </tr>
+    </thead>
+`;
+    }
+    return `
+    <colgroup>
+        <col style="width:4%">  <!--전달사항-->
+        <col style="width:7%">  <!--담당자-->
+        <col style="width:9%">  <!--상품명-->
+        <col style="width:6%">  <!--브랜드-->
+        <col style="width:3%">  <!--등급-->
+        <col style="width:4%">  <!--ESTNO-->
+        <col style="width:12%"> <!--BL-->
+        <col style="width:6%">  <!--창고-->
+        <col style="width:4%">  <!--수량-->
+        <col style="width:4%">  <!--실재고-->
+        <col style="width:5%">  <!--가용재고-->
+        <col style="width:10%"> <!--거래처-->
+        <col style="width:7%">  <!--예약일-->
         <col style="width:6%">  <!--출고일-->
-        <col style="width:19%"> <!--액션-->
-        `}
+        <col style="width:13%"> <!--액션-->
     </colgroup>
     <thead>
         <tr>
             <th></th>
-            ${isSalesPage ? `<th>등록완료</th>` : ""}
             <th>담당자</th><th>상품명</th><th>브랜드</th><th>등급</th><th>ESTNO</th>
             <th>BL</th><th>창고</th><th>수량</th><th>실재고</th><th>가용재고</th>
-            <th>거래처</th><th>${isSalesPage ? "단가" : "예약일"}</th>${isSalesPage ? "<th>중량</th><th>총금액</th>" : ""}<th>출고일</th><th>액션</th>
+            <th>거래처</th><th>예약일</th><th>출고일</th><th>액션</th>
         </tr>
     </thead>
 `;
@@ -1151,7 +1184,7 @@ function todayISOStr() {
 // 드롭다운)를 그대로 재사용해서 필터링한다(2026-08-18). "상태" 드롭다운(예약/
 // 동결/이고 등)은 재고장 행의 상태값이지 예약/출고 행에는 없는 값이라 여기선
 // 적용하지 않는다 — 적용하면 뭘 골라도 결과가 항상 0건이 되는 함정이라 뺌.
-const RESERVATION_SEARCHABLE_KEYS = ["담당자", "상품명", "브랜드", "등급", "ESTNO", "BL", "창고", "거래처", "홀딩일자", "출고일"];
+const RESERVATION_SEARCHABLE_KEYS = ["담당자", "상품명", "브랜드", "등급", "ESTNO", "BL", "창고", "거래처", "비고", "홀딩일자", "출고일"];
 
 function matchesReservationKeyword(r, kw) {
     return RESERVATION_SEARCHABLE_KEYS.some(key => {
@@ -1290,8 +1323,10 @@ export async function renderSalesTab() {
         return;
     }
 
-    const today = todayISOStr();
-    rows = rows.filter(r => safeValue(r.출고일) === today);
+    // 출고일 필터(2026-08-19) — 안 고르면 오늘(기존 고정 동작 그대로), 고르면 그 날짜.
+    // outbound 잔여물(하루 지나도록 완료/취소 안 된 것)도 이걸로 확인 가능해짐.
+    const salesDate = state.salesDateFilter || todayISOStr();
+    rows = rows.filter(r => safeValue(r.출고일) === salesDate);
     rows = filterReservationRows(rows);
 
     // 출고완료(status=COMPLETED) 행은 맨 뒤로 보내고 회색 배경 — 그 안에서는
@@ -1300,10 +1335,18 @@ export async function renderSalesTab() {
         Number(a.status === "COMPLETED") - Number(b.status === "COMPLETED")
     );
     state.filteredReservations = rows;
+    const dateFilterHtml = `
+        <div class="reservations-filter-bar">
+            <label for="sales-date-filter">출고일</label>
+            <input type="date" id="sales-date-filter" class="reservations-filter-select" value="${salesDate}">
+            ${state.salesDateFilter ? `<button type="button" class="sales-date-filter-clear" title="오늘로 초기화">✕</button>` : ""}
+        </div>
+    `;
     // "추가" 버튼으로 표 맨 위에 입력행을 띄우므로(2026-08-14), 데이터가 0건이어도
     // 표 자체(헤더 + 빈 입력행 tbody)는 항상 그려둔다.
-    const emptyMsg = rows.length ? "" : `<p class="reservations-empty">오늘 출고 항목이 없습니다.</p>`;
+    const emptyMsg = rows.length ? "" : `<p class="reservations-empty">${salesDate} 출고 항목이 없습니다.</p>`;
     listEl.innerHTML = `
+        ${dateFilterHtml}
         <table class="reservations-table">
             ${reservationsHead(true)}
             <tbody id="outbound-insert-rows"></tbody>

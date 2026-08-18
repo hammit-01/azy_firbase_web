@@ -764,12 +764,22 @@ def create_outbound(conn, product: dict) -> dict:
     오늘로 기본값 지정. create_reservation()으로 예약 테이블에 우선 생성(가용
     재고 잠금 등 검증된 로직 그대로 재사용)한 뒤, migrate_due_reservations_
     to_outbound()로 출고일에 맞게 정리한다 — 출고일이 오늘이면 방금 만든 게
-    바로 outbound로 넘어가고, 미래 날짜면 예약 테이블에 그대로 남는다."""
+    바로 outbound로 넘어가고, 미래 날짜면 예약 테이블에 그대로 남는다.
+
+    비고는 outbound 전용 컬럼(holding_records엔 없음, 2026-08-19)이라
+    _RESERVATION_COLS를 거치는 create_reservation/migrate로는 못 옮기고, 여기서
+    migrate 뒤에 outbound 행을 따로 한 번 더 UPDATE한다 — 출고일이 미래라 아직
+    outbound로 안 넘어갔으면 이 UPDATE는 0행 적용되고 조용히 넘어간다(예약
+    단계엔 비고를 붙일 자리가 없으므로 출고등록/추가 시점에 다시 넣어야 함)."""
     product = dict(product)
     if not product.get("출고일"):
         product["출고일"] = _today_iso()
+    비고 = product.get("비고")
     rec = create_reservation(conn, product)
     migrate_due_reservations_to_outbound(conn)
+    if 비고:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE outbound SET 비고=%s WHERE id=%s", (비고, rec["id"]))
     return rec
 
 
@@ -827,7 +837,7 @@ def get_all_outbound(conn) -> list[dict]:
     같이 내려준다 — CANCEL과 달리 화면에서 안 사라지고 회색으로 표시된다."""
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT id, pk, 수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, status, 전달사항, 등록 "
+            "SELECT id, pk, 수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, status, 전달사항, 등록, 비고 "
             "FROM outbound WHERE status IN ('ACTIVE','COMPLETED') ORDER BY 홀딩일자 DESC"
         )
         rows = cur.fetchall()
@@ -967,6 +977,8 @@ def update_outbound(conn, rec_id: str, updates: dict) -> bool:
             set_cols.append("메모=%s"); params.append(updates["거래처"])
         if "전달사항" in updates:
             set_cols.append("전달사항=%s"); params.append(updates["전달사항"])
+        if "비고" in updates:
+            set_cols.append("비고=%s"); params.append(updates["비고"])
         if not set_cols:
             return False
         cur.execute(f"UPDATE outbound SET {', '.join(set_cols)} WHERE id=%s", (*params, rec_id))
