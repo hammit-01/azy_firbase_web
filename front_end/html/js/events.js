@@ -44,6 +44,18 @@ function _logActivity(tableName, recordId, action, before, after, summary = "") 
 const TAB_CONTAINERS = [".changes-container", ".reservations-container", ".sales-container", ".price-container"];
 const TAB_BUTTONS = [".changes-tab-btn", ".reservations-tab-btn", ".sales-tab-btn", ".price-tab-btn"];
 
+// 탭 전환 시 재고장 검색/필터 초기화(2026-08-19) — 재고장에서 검색하다 예약현황/
+// 타창고매출현황으로 넘어가도 그 값이 그대로 남아 다른 탭 목록까지 걸러버리던
+// 문제. 검색1·검색2 입력창과 4개 드롭다운을 전부 비운다.
+function clearSearchAndFilters() {
+    if (dom.searchInput) dom.searchInput.value = "";
+    if (dom.searchInput2) dom.searchInput2.value = "";
+    [".show-warehouse", ".show-product-name", ".show-brand", ".show-state"].forEach(sel => {
+        const el = document.querySelector(sel);
+        if (el) el.value = "";
+    });
+}
+
 function switchTab(btnClass, containerSelector, render) {
     const tableContainer = document.querySelector(".table-container");
     const targetContainer = document.querySelector(containerSelector);
@@ -53,6 +65,9 @@ function switchTab(btnClass, containerSelector, render) {
     TAB_CONTAINERS.forEach(sel => { const el = document.querySelector(sel); if (el) el.style.display = "none"; });
     TAB_BUTTONS.forEach(sel => document.querySelector(sel)?.classList.remove("active"));
     tableContainer.style.display = opening ? "none" : "";
+
+    clearSearchAndFilters();
+    renderTable();
 
     if (opening) {
         targetContainer.style.display = "";
