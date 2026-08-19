@@ -124,21 +124,23 @@
                          이전엔 11%라 nth-child(6) 말줄임(ellipsis) 규칙에 자주 걸려 잘려 보였음.
                          재고/예약/가용은 헤더 폰트가 21px라 4%에서 "재고"/"예약"/"가용" 글자가
                          말줄임(...)으로 잘려서 5%로 늘림(2026-08-18, 브랜드/비고에서 3% 덜어옴).
-                         전체 합 100% 유지. -->
+                         BL은 21px 폰트 기준 20자가 딱 맞는 최소치라(2026-08-19, 이보다 더
+                         줄이면 좁은 화면에서 다시 잘릴 위험) 17%→15%로만 소폭 줄이고 그
+                         2%를 비고로 돌림. 전체 합 100% 유지. -->
                     <colgroup>
                         <col style="width:5%">  <!--선택-->
                         <col style="width:12%"> <!--상품명-->
                         <col style="width:8%">  <!--브랜드-->
                         <col style="width:5%">  <!--등급-->
                         <col style="width:7%">  <!--ESTNO-->
-                        <col style="width:17%"> <!--BL번호-->
+                        <col style="width:15%"> <!--BL번호-->
                         <col style="width:8%">  <!--창고-->
                         <col style="width:5%">  <!--재고(실재고)-->
                         <col style="width:5%">  <!--예약-->
                         <col style="width:5%">  <!--가용-->
                         <col style="width:9%">  <!--유통기한-->
                         <col style="width:4%">  <!--평균-->
-                        <col style="width:10%"> <!--비고-->
+                        <col style="width:12%"> <!--비고-->
                     </colgroup>
                     <thead>
                         <tr>
