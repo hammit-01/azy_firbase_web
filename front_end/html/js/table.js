@@ -1425,23 +1425,32 @@ function priceRowHtml(row) {
 // 768px 이하에서 표 대신 카드로. 데스크톱은 더블클릭 인라인 수정이지만 카드는
 // 손가락 탭이 더블클릭 인식이 안 좋아서 수정/삭제 버튼을 따로 둔다(showEditPriceModal).
 function priceCardHtml(row) {
+    // 전략가가 있으면 그게 실제 판매가라 히어로로(재고장 카드의 "재고 수량"과 같은
+    // 자리), 없으면 도매가를 대신 히어로로 — 이럴 땐 아래 정보 칸에 도매가를
+    // 중복으로 또 안 보여준다(2026-08-19).
+    const hasStrategy = row.전략가 !== null && row.전략가 !== undefined && row.전략가 !== "";
+    const heroLabel = hasStrategy ? "전략가" : "도매가";
+    const heroVal = hasStrategy ? row.전략가 : row.도매가;
     return `
         <div class="mobile-card price-card" data-price-id="${row.id}">
             <div class="mc-header">
                 <span class="mc-name">${safeValue(row.품목)}</span>
-                ${row.분류 ? `<span class="s-tag">${safeValue(row.분류)}</span>` : ""}
+                ${row.분류 ? `<span class="mc-status-badge badge-price">${safeValue(row.분류)}</span>` : ""}
             </div>
             <div class="mc-tags">
                 ${safeValue(row.브랜드) ? `<span class="s-tag">${safeValue(row.브랜드)}</span>` : ""}
                 ${safeValue(row["등급/포장"]) ? `<span class="s-tag">${safeValue(row["등급/포장"])}</span>` : ""}
                 ${safeValue(row.EST) ? `<span class="s-tag">${safeValue(row.EST)}</span>` : ""}
             </div>
+            <div class="mc-hero price-hero">
+                <div class="mc-qty price-qty">${formatWon(heroVal)}<span class="mc-qty-unit">원</span></div>
+                <span class="price-hero-label">${heroLabel}</span>
+            </div>
             <div class="mc-info">
                 <div class="mc-row"><span class="mc-label">창고/비고</span>${safeValue(row["창고/비고"])}</div>
-                <div class="mc-row"><span class="mc-label">평중</span><span class="price-highlight">${safeValue(row.평중)}</span></div>
-                <div class="mc-row"><span class="mc-label">도매가</span><span class="price-highlight">${formatWon(row.도매가)}</span></div>
-                <div class="mc-row"><span class="mc-label">전략가</span>${formatWon(row.전략가)}</div>
-                <div class="mc-row"><span class="mc-label">업데이트일자</span>${safeValue(row.업데이트일자)}</div>
+                <div class="mc-row"><span class="mc-label">평중</span>${safeValue(row.평중)}</div>
+                ${hasStrategy ? `<div class="mc-row"><span class="mc-label">도매가</span>${formatWon(row.도매가)}</div>` : ""}
+                <div class="mc-row"><span class="mc-label">업데이트</span>${safeValue(row.업데이트일자)}</div>
             </div>
             <div class="reservation-card-actions">
                 <button class="price-card-edit-btn" data-id="${row.id}">수정</button>

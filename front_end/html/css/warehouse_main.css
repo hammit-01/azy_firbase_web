@@ -1763,6 +1763,20 @@ tr.insert-card .remove-insert-btn:hover {
 .badge-freeze  { background: #ede9fe; color: #6d28d9; }
 .badge-stopped { background: #fef3c7; color: #92400e; }
 .badge-moving  { background: #ffedd5; color: #c2410c; }
+.badge-price   { background: #fef3c7; color: #92400e; }
+
+/* 전략단가 카드(2026-08-19) — 탭 테마색(#b45309, 호박색)에 맞춰 좌측 컬러바 +
+   히어로 숫자. 전략가가 있으면 그게 실제 판매가라 히어로, 없으면 도매가 대신 */
+.price-card { border-left-color: #b45309; }
+.price-hero-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #92400e;
+    background: #fef3c7;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
 
 .mc-header {
     display: flex;
@@ -1813,6 +1827,8 @@ tr.insert-card .remove-insert-btn:hover {
     color: #64748b;
     margin-left: 3px;
 }
+
+.price-qty { color: #b45309; }
 
 .mc-info {
     display: grid;
