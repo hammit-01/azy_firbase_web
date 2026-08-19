@@ -3,12 +3,12 @@ import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, 
 import { renderSelectData, renderInsert, createInsertRow } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
-import { getReservationsByPk, cancelReservation, useReservation, updateReservation, updateOutbound, cancelOutbound, createOutbound, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, createPrice, updatePrice } from "./firestoreService.js";
+import { getReservationsByPk, cancelReservation, useReservation, updateReservation, updateOutbound, cancelOutbound, createOutbound, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, createPrice, updatePrice, deletePrice } from "./firestoreService.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
 import { fetchAllData } from "./firebase.js";
-import { showToast, showError, showConfirm, showEditReservationModal, showRegisterOutboundModal, showNoteModal, showCancelOutboundModal, showAlertModal, showPriceExportModal } from "./ui.js";
+import { showToast, showError, showConfirm, showEditReservationModal, showRegisterOutboundModal, showNoteModal, showCancelOutboundModal, showAlertModal, showPriceExportModal, showEditPriceModal } from "./ui.js";
 import { getStoredUser, applyRoleVisibility } from "./login.js";
 import { apiLogActivity } from "./api.js";
 
@@ -66,16 +66,19 @@ function switchTab(btnClass, containerSelector, render) {
     TAB_BUTTONS.forEach(sel => document.querySelector(sel)?.classList.remove("active"));
     tableContainer.style.display = opening ? "none" : "";
 
-    clearSearchAndFilters();
-    renderTable();
-    // 수정/예약/추가 버튼 표시 여부도 탭에 따라 달라짐(2026-08-19, login.js의
-    // applyRoleVisibility가 권한 + 현재 탭을 같이 봐서 처리 — DOM의 컨테이너
-    // 표시 상태를 이미 위에서 갱신했으니 여기서 불러도 바로 반영됨).
-    applyRoleVisibility(getStoredUser()?.권한);
-
+    // 컨테이너 표시부터 먼저 뒤집어야 applyRoleVisibility의 _currentTabName()이
+    // 새 탭을 제대로 감지한다(2026-08-19 버그: 이 순서가 뒤바뀌어 있어서 탭 전환
+    // 직후엔 항상 "main"으로 오판되던 문제 — 전략단가 탭 검색/필터가 안 숨던 원인).
     if (opening) {
         targetContainer.style.display = "";
         document.querySelector(`.${btnClass}`)?.classList.add("active");
+    }
+
+    clearSearchAndFilters();
+    renderTable();
+    applyRoleVisibility(getStoredUser()?.권한);
+
+    if (opening) {
         render?.();
     }
 }
@@ -440,6 +443,28 @@ export function bindEvents() {
             firstInput?.select();
 
             let done = false;
+
+            // 수정 모드에서만 삭제 버튼 노출(2026-08-19) — 평소엔 액션 칸이 비어있음
+            const actionsCell = cells[PRICE_FIELDS.length];
+            if (actionsCell) {
+                actionsCell.innerHTML = `<button type="button" class="price-delete-btn">삭제</button>`;
+                actionsCell.querySelector(".price-delete-btn").addEventListener("click", async () => {
+                    if (done) return;
+                    done = true;
+                    if (!await showConfirm(`"${original.품목 || "이 항목"}"을(를) 삭제합니다.\n계속하시겠습니까?`)) {
+                        done = false;
+                        return;
+                    }
+                    try {
+                        await deletePrice(id);
+                        _logActivity("price", id, "삭제", original, null, "전략단가 삭제");
+                        showToast("✓ 삭제됨");
+                    } catch (err) {
+                        showError(err.message || "삭제에 실패했습니다.");
+                    }
+                    renderPriceTab();
+                });
+            }
             const finish = async (save) => {
                 if (done) return;
                 done = true;
@@ -792,6 +817,41 @@ async function handleClick(e) {
             // 팝업으로(2026-08-18, "예약보다 많이 출고 늘리면 알려달라"는 요청).
             if (showPrice && msg.includes("예약 수량")) await showAlertModal(msg); else showError(msg);
         }
+        return;
+    }
+
+    // 전략단가 모바일 카드 — 수정/삭제(2026-08-19). 데스크톱은 더블클릭으로 행을
+    // 통째로 입력창으로 바꾸지만 카드는 탭이 더블클릭 인식이 안 좋아 모달로 대신.
+    if (e.target.classList.contains("price-card-edit-btn")) {
+        const id = e.target.dataset.id;
+        const original = state.filteredPrices.find(r => String(r.id) === id);
+        if (!original) return;
+        const result = await showEditPriceModal(original);
+        if (!result) return;
+        const changed = Object.keys(result).some(k => String(result[k] ?? "") !== String(original[k] ?? ""));
+        if (!changed) return;
+        try {
+            await updatePrice(id, result);
+            _logActivity("price", id, "수정", original, result, "전략단가 수정");
+            showToast("✓ 저장됨");
+        } catch (err) {
+            showError(err.message || "저장에 실패했습니다.");
+        }
+        renderPriceTab();
+        return;
+    }
+    if (e.target.classList.contains("price-card-delete-btn")) {
+        const id = e.target.dataset.id;
+        const original = state.filteredPrices.find(r => String(r.id) === id);
+        if (!await showConfirm(`"${original?.품목 || "이 항목"}"을(를) 삭제합니다.\n계속하시겠습니까?`)) return;
+        try {
+            await deletePrice(id);
+            _logActivity("price", id, "삭제", original, null, "전략단가 삭제");
+            showToast("✓ 삭제됨");
+        } catch (err) {
+            showError(err.message || "삭제에 실패했습니다.");
+        }
+        renderPriceTab();
         return;
     }
 

@@ -1409,7 +1409,8 @@ function formatWon(n) {
 
 function priceRowHtml(row) {
     const cells = PRICE_FIELDS.map(f => {
-        if (f.key === "도매가" || f.key === "전략가") return `<td>${formatWon(row[f.key])}</td>`;
+        if (f.key === "평중" || f.key === "도매가") return `<td class="price-highlight">${f.key === "도매가" ? formatWon(row[f.key]) : safeValue(row[f.key])}</td>`;
+        if (f.key === "전략가") return `<td>${formatWon(row[f.key])}</td>`;
         return `<td>${safeValue(row[f.key])}</td>`;
     }).join("");
     return `
@@ -1417,6 +1418,36 @@ function priceRowHtml(row) {
             ${cells}
             <td class="price-row-actions-cell reservation-row-actions-cell"></td>
         </tr>
+    `;
+}
+
+// 전략단가 모바일 카드(2026-08-19) — 재고장/예약현황/타창고매출현황과 동일하게
+// 768px 이하에서 표 대신 카드로. 데스크톱은 더블클릭 인라인 수정이지만 카드는
+// 손가락 탭이 더블클릭 인식이 안 좋아서 수정/삭제 버튼을 따로 둔다(showEditPriceModal).
+function priceCardHtml(row) {
+    return `
+        <div class="mobile-card price-card" data-price-id="${row.id}">
+            <div class="mc-header">
+                <span class="mc-name">${safeValue(row.품목)}</span>
+                ${row.분류 ? `<span class="s-tag">${safeValue(row.분류)}</span>` : ""}
+            </div>
+            <div class="mc-tags">
+                ${safeValue(row.브랜드) ? `<span class="s-tag">${safeValue(row.브랜드)}</span>` : ""}
+                ${safeValue(row["등급/포장"]) ? `<span class="s-tag">${safeValue(row["등급/포장"])}</span>` : ""}
+                ${safeValue(row.EST) ? `<span class="s-tag">${safeValue(row.EST)}</span>` : ""}
+            </div>
+            <div class="mc-info">
+                <div class="mc-row"><span class="mc-label">창고/비고</span>${safeValue(row["창고/비고"])}</div>
+                <div class="mc-row"><span class="mc-label">평중</span><span class="price-highlight">${safeValue(row.평중)}</span></div>
+                <div class="mc-row"><span class="mc-label">도매가</span><span class="price-highlight">${formatWon(row.도매가)}</span></div>
+                <div class="mc-row"><span class="mc-label">전략가</span>${formatWon(row.전략가)}</div>
+                <div class="mc-row"><span class="mc-label">업데이트일자</span>${safeValue(row.업데이트일자)}</div>
+            </div>
+            <div class="reservation-card-actions">
+                <button class="price-card-edit-btn" data-id="${row.id}">수정</button>
+                <button class="price-card-delete-btn" data-id="${row.id}">삭제</button>
+            </div>
+        </div>
     `;
 }
 
@@ -1498,6 +1529,7 @@ export async function renderPriceTab() {
             <tbody>${filtered.map(r => priceRowHtml(r)).join("")}</tbody>
         </table>
         ${empty}
+        <div class="reservations-mobile-list">${filtered.map(r => priceCardHtml(r)).join("")}</div>
     `;
     if (searchHadFocus) {
         const input = document.getElementById("price-search");

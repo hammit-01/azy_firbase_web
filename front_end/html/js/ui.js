@@ -1,3 +1,5 @@
+import { PRICE_FIELDS } from "./table.js";
+
 export function showToast(msg, type = "success") {
     let t = document.getElementById("toast-msg");
     if (!t) {
@@ -243,6 +245,45 @@ export function showPriceExportModal() {
                 도매가: overlay.querySelector(".export-wholesale").checked,
                 전략가: overlay.querySelector(".export-strategy").checked,
             });
+        });
+        overlay.querySelector(".confirm-no").addEventListener("click", () => close(null));
+        overlay.addEventListener("click", e => { if (e.target === overlay) close(null); });
+    });
+}
+
+// 전략단가 모바일 카드용 수정 모달(2026-08-19) — 데스크톱은 더블클릭 인라인
+// 수정이지만 모바일 카드는 탭으로 이 모달을 띄운다. PRICE_FIELDS 순서 그대로
+// 입력칸을 생성. 저장 누르면 필드별 값 객체로 resolve, 취소/바깥클릭이면 null.
+export function showEditPriceModal(row) {
+    return new Promise(resolve => {
+        const fieldsHtml = PRICE_FIELDS.map(f => {
+            const cls = `edit-price-${f.key.replace(/\//g, "-")}`;
+            const type = f.type === "date" ? "date" : (f.type === "number" ? "number" : "text");
+            const val = String(row[f.key] ?? "").replace(/"/g, "&quot;");
+            return `<label>${f.key}<input type="${type}" ${type === "number" ? 'step="any"' : ""} class="${cls}" value="${val}"></label>`;
+        }).join("");
+
+        const overlay = document.createElement("div");
+        overlay.className = "confirm-overlay";
+        overlay.innerHTML =
+            `<div class="confirm-modal edit-reservation-modal edit-price-modal">` +
+            `<p class="confirm-msg">전략단가 수정</p>` +
+            `<div class="edit-reservation-form">${fieldsHtml}</div>` +
+            `<div class="confirm-btns">` +
+            `<button class="confirm-yes">저장</button>` +
+            `<button class="confirm-no">취소</button>` +
+            `</div></div>`;
+        document.body.appendChild(overlay);
+
+        const close = (result) => { overlay.remove(); resolve(result); };
+        overlay.querySelector(".confirm-yes").addEventListener("click", () => {
+            const result = {};
+            PRICE_FIELDS.forEach(f => {
+                const cls = `edit-price-${f.key.replace(/\//g, "-")}`;
+                const v = overlay.querySelector(`.${cls}`).value.trim();
+                result[f.key] = v === "" ? null : (f.type === "number" ? Number(v) : v);
+            });
+            close(result);
         });
         overlay.querySelector(".confirm-no").addEventListener("click", () => close(null));
         overlay.addEventListener("click", e => { if (e.target === overlay) close(null); });

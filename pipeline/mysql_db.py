@@ -1234,3 +1234,9 @@ def update_price(conn, price_id: str, updates: dict) -> bool:
     with conn.cursor() as cur:
         cur.execute(f"UPDATE price SET {set_clause} WHERE id=%s", (*fields.values(), price_id))
         return cur.rowcount > 0
+
+
+def delete_price(conn, price_id: str) -> bool:
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM price WHERE id=%s", (price_id,))
+        return cur.rowcount > 0

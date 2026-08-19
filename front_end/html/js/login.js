@@ -66,6 +66,11 @@ export function applyRoleVisibility(role) {
     if (updateBtn) updateBtn.style.display = (mainOnly && isEditor) ? "" : "none";
     if (holdingBtn) holdingBtn.style.display = (mainOnly && !!role) ? "" : "none";
 
+    // 재고장 검색/필터(상품명·브랜드·창고·상태 + 검색1·검색2) — 전략단가 탭은
+    // 자체 검색/필터를 따로 쓰므로 이 재고장용 툴바는 숨긴다(2026-08-19).
+    const toolbarRight = document.querySelector(".toolbar-right");
+    if (toolbarRight) toolbarRight.style.display = tab === "price" ? "none" : "";
+
     // 예약 현황 탭 라벨 — 편집자는 전체를 담당자별로 보고, 사원은 본인 예약만 보므로
     // 버튼 이름도 그에 맞게(2026-08-06)
     const reservationsBtn = document.querySelector(".reservations-tab-btn");

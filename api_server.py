@@ -22,7 +22,7 @@ from pipeline.mysql_db import (
     update_outbound, cancel_outbound, use_outbound, toggle_outbound_complete,
     toggle_outbound_register,
     register_outbound_from_reservation, _today_iso,
-    get_all_prices, create_price, update_price,
+    get_all_prices, create_price, update_price, delete_price,
 )
 
 app = FastAPI()
@@ -616,6 +616,15 @@ def create_price_endpoint(body: PriceBody):
 def update_price_endpoint(price_id: str, body: dict[str, Any]):
     with get_conn() as conn:
         ok = update_price(conn, price_id, body)
+    if not ok:
+        raise HTTPException(404, "항목을 찾을 수 없음")
+    return {"ok": True}
+
+
+@app.delete("/api/price/{price_id}")
+def delete_price_endpoint(price_id: str):
+    with get_conn() as conn:
+        ok = delete_price(conn, price_id)
     if not ok:
         raise HTTPException(404, "항목을 찾을 수 없음")
     return {"ok": True}

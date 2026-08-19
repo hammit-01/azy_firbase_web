@@ -1054,6 +1054,7 @@ input[type="date"].price-edit-input {
     color-scheme: light;
 }
 .price-row { cursor: pointer; }
+.price-highlight { font-weight: 700; color: #b91c1c; }
 
 /* 액션 칸 — 버튼이 최대 4개(예약변경/사용완료/예약취소/출고등록)까지 붙는데
    2줄로 감싸면 보기 안 좋다는 피드백으로 한 줄 고정으로 바꿈(2026-08-19).
@@ -1086,7 +1087,7 @@ input[type="date"].price-edit-input {
     margin-top: 10px;
 }
 
-.edit-reservation-btn, .use-reservation-btn, .cancel-reservation-btn, .register-outbound-btn {
+.edit-reservation-btn, .use-reservation-btn, .cancel-reservation-btn, .register-outbound-btn, .price-delete-btn {
     height: 28px;
     padding: 0 8px;
     border: none;
@@ -1104,6 +1105,8 @@ input[type="date"].price-edit-input {
 .cancel-reservation-btn:hover { background: #fca5a5; }
 .register-outbound-btn { background: #ede9fe; color: #6d28d9; }
 .register-outbound-btn:hover { background: #ddd6fe; }
+.price-delete-btn { background: #fee2e2; color: #b91c1c; }
+.price-delete-btn:hover { background: #fca5a5; }
 
 /* 전달사항 "!" 버튼(2026-08-14, 맨 왼쪽 배치 + 빨간색으로 가시성 강화) —
    메시지 없으면 옅은 빨강, 있으면 진한 빨강으로 눈에 띄게 */

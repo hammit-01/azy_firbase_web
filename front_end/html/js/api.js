@@ -227,3 +227,7 @@ export async function apiCreatePrice(row) {
 export async function apiUpdatePrice(id, fields) {
     return apiFetch(`/api/price/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(fields) });
 }
+
+export async function apiDeletePrice(id) {
+    return apiFetch(`/api/price/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
