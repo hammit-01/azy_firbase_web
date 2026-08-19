@@ -1198,3 +1198,39 @@ def log_activity(conn, user_id: str, action: str, table_name: str, record_id: st
                 summary,
             ),
         )
+
+
+# ── 전략단가(price, 2026-08-19) ────────────────────────────────
+# id는 이 테이블에 원래 없었는데(기존 행 0건이라 안전하게) 수정/추가 기능을
+# 지원하려고 VARCHAR PRIMARY KEY로 추가함 — 나머지 테이블(inventory/outbound
+# 등)과 동일한 UUID hex 컨벤션.
+_PRICE_COLS = ("분류", "브랜드", "품목", "등급/포장", "EST", "창고/비고", "평중", "도매가", "전략가", "업데이트일자")
+
+def get_all_prices(conn) -> list[dict]:
+    cols = ", ".join(f"`{c}`" for c in _PRICE_COLS)
+    with conn.cursor() as cur:
+        cur.execute(f"SELECT id, {cols} FROM price ORDER BY 분류, 브랜드, 품목")
+        return cur.fetchall()
+
+
+def create_price(conn, row: dict) -> str:
+    import uuid
+    new_id = uuid.uuid4().hex
+    cols = ", ".join(f"`{c}`" for c in _PRICE_COLS)
+    placeholders = ", ".join(["%s"] * len(_PRICE_COLS))
+    with conn.cursor() as cur:
+        cur.execute(
+            f"INSERT INTO price (id, {cols}) VALUES (%s, {placeholders})",
+            [new_id, *[row.get(c) for c in _PRICE_COLS]],
+        )
+    return new_id
+
+
+def update_price(conn, price_id: str, updates: dict) -> bool:
+    fields = {k: v for k, v in updates.items() if k in _PRICE_COLS}
+    if not fields:
+        return False
+    set_clause = ", ".join(f"`{k}`=%s" for k in fields)
+    with conn.cursor() as cur:
+        cur.execute(f"UPDATE price SET {set_clause} WHERE id=%s", (*fields.values(), price_id))
+        return cur.rowcount > 0

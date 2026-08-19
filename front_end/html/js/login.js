@@ -24,13 +24,25 @@ function closePopover() {
     document.querySelector(".login-popover")?.classList.remove("open");
 }
 
-// 편집자만 추가/수정/전체삭제/업데이트(어제 대비 변경) 가능 — 사원 및 비로그인은 숨김
-// (화면 표시만, 서버단 권한 검사는 없음)
-const EDITOR_ONLY_SELECTORS = [".insert-btn", ".update-btn", ".all-delete-btn", ".changes-tab-btn"];
+// 편집자만 전체삭제/업데이트(어제 대비 변경) 가능 — 사원 및 비로그인은 숨김
+// (화면 표시만, 서버단 권한 검사는 없음). 추가/수정/예약은 탭에 따라서도
+// 달라져서(2026-08-19, events.js의 applyTabButtonVisibility와 동일 규칙)
+// 아래에서 따로 처리 — 로그인/로그아웃 시에도 그 규칙이 깨지지 않게.
+const EDITOR_ONLY_SELECTORS = [".all-delete-btn", ".changes-tab-btn"];
 // 로그인만 하면 사원도 사용 가능 — 비로그인일 때만 숨김
-const LOGIN_ONLY_SELECTORS = [".holding-btn", ".rollback-btn", ".reservations-tab-btn"];
+const LOGIN_ONLY_SELECTORS = [".rollback-btn", ".reservations-tab-btn"];
 
-function applyRoleVisibility(role) {
+// 현재 열려 있는 탭 이름 — events.js를 import하지 않고 DOM만으로 판단
+// (순환 참조 방지). .table-container가 안 보이면 그 컨테이너가 곧 현재 탭.
+function _currentTabName() {
+    if (document.querySelector(".reservations-container")?.style.display === "") return "reservations";
+    if (document.querySelector(".sales-container")?.style.display === "") return "sales";
+    if (document.querySelector(".price-container")?.style.display === "") return "price";
+    if (document.querySelector(".changes-container")?.style.display === "") return "changes";
+    return "main";
+}
+
+export function applyRoleVisibility(role) {
     const hideEditorOnly = !hasEditorAccess(role);
     EDITOR_ONLY_SELECTORS.forEach(sel => {
         const el = document.querySelector(sel);
@@ -42,6 +54,17 @@ function applyRoleVisibility(role) {
         const el = document.querySelector(sel);
         if (el) el.style.display = hideLoginOnly ? "none" : "";
     });
+
+    // 추가/수정/예약 — 탭 제한 + 권한 제한을 같이 적용(2026-08-19)
+    const tab = _currentTabName();
+    const isEditor = hasEditorAccess(role);
+    const mainOnly = tab === "main";
+    const insertBtn = document.querySelector(".insert-btn");
+    const updateBtn = document.querySelector(".update-btn");
+    const holdingBtn = document.querySelector(".holding-btn");
+    if (insertBtn) insertBtn.style.display = (tab !== "reservations" && isEditor) ? "" : "none";
+    if (updateBtn) updateBtn.style.display = (mainOnly && isEditor) ? "" : "none";
+    if (holdingBtn) holdingBtn.style.display = (mainOnly && !!role) ? "" : "none";
 
     // 예약 현황 탭 라벨 — 편집자는 전체를 담당자별로 보고, 사원은 본인 예약만 보므로
     // 버튼 이름도 그에 맞게(2026-08-06)

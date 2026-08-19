@@ -1,15 +1,15 @@
 import { state } from "./state.js";
-import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows, createReservationListRow, renderReservationsTab, renderSalesTab, clientPrefix, parseUnitPrice, parseWeight, buildClientWithDetails, outboundInsertRowHtml } from "./table.js";
+import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows, createReservationListRow, renderReservationsTab, renderSalesTab, renderPriceTab, priceInsertRowHtml, PRICE_FIELDS, priceFieldClass, clientPrefix, parseUnitPrice, parseWeight, buildClientWithDetails, outboundInsertRowHtml } from "./table.js";
 import { renderSelectData, renderInsert, createInsertRow } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
-import { getReservationsByPk, cancelReservation, useReservation, updateReservation, updateOutbound, cancelOutbound, createOutbound, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister } from "./firestoreService.js";
+import { getReservationsByPk, cancelReservation, useReservation, updateReservation, updateOutbound, cancelOutbound, createOutbound, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, createPrice, updatePrice } from "./firestoreService.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
 import { fetchAllData } from "./firebase.js";
-import { showToast, showError, showConfirm, showEditReservationModal, showRegisterOutboundModal, showNoteModal, showCancelOutboundModal, showAlertModal } from "./ui.js";
-import { getStoredUser } from "./login.js";
+import { showToast, showError, showConfirm, showEditReservationModal, showRegisterOutboundModal, showNoteModal, showCancelOutboundModal, showAlertModal, showPriceExportModal } from "./ui.js";
+import { getStoredUser, applyRoleVisibility } from "./login.js";
 import { apiLogActivity } from "./api.js";
 
 // 예약현황/타창고매출현황 액션(취소/완료/변경/토글 등) 이후 공용 새로고침(2026-08-19) —
@@ -68,6 +68,10 @@ function switchTab(btnClass, containerSelector, render) {
 
     clearSearchAndFilters();
     renderTable();
+    // 수정/예약/추가 버튼 표시 여부도 탭에 따라 달라짐(2026-08-19, login.js의
+    // applyRoleVisibility가 권한 + 현재 탭을 같이 봐서 처리 — DOM의 컨테이너
+    // 표시 상태를 이미 위에서 갱신했으니 여기서 불러도 바로 반영됨).
+    applyRoleVisibility(getStoredUser()?.권한);
 
     if (opening) {
         targetContainer.style.display = "";
@@ -340,6 +344,25 @@ export function bindEvents() {
             state.salesDateFilter = e.target.value;
             renderSalesTab();
         }
+        if (e.target.id === "price-category-filter") {
+            state.priceCategoryFilter = e.target.value;
+            renderPriceTab();
+        }
+        if (e.target.id === "price-brand-filter") {
+            state.priceBrandFilter = e.target.value;
+            renderPriceTab();
+        }
+    });
+
+    let priceSearchTimer = null;
+    document.addEventListener("input", (e) => {
+        if (e.target.id === "price-search") {
+            clearTimeout(priceSearchTimer);
+            priceSearchTimer = setTimeout(() => {
+                state.priceSearch = e.target.value;
+                renderPriceTab();
+            }, 200);
+        }
     });
 
     document.addEventListener("input", (e) => {
@@ -392,6 +415,65 @@ export function bindEvents() {
             return;
         }
 
+        // 전략단가 — 행 더블클릭하면 그 행 전체가 입력창으로 바뀜(2026-08-19).
+        // 여러 칸을 한꺼번에 고치는 거라 비고 칸처럼 blur 하나로는 안 되고,
+        // 포커스가 행 밖으로 완전히 나갔을 때만 저장한다(칸 사이 Tab 이동은 무시).
+        const priceRow = e.target.closest("tr.price-row");
+        if (priceRow) {
+            if (priceRow.querySelector("input")) return;
+            const id = priceRow.dataset.id;
+            const original = state.filteredPrices.find(r => String(r.id) === id);
+            if (!original) return;
+            const cells = priceRow.querySelectorAll("td");
+            PRICE_FIELDS.forEach((f, i) => {
+                const td = cells[i];
+                const input = document.createElement("input");
+                input.className = "price-edit-input";
+                input.type = f.type;
+                if (f.type === "number") input.step = "any";
+                input.value = original[f.key] ?? "";
+                td.innerHTML = "";
+                td.appendChild(input);
+            });
+            const firstInput = priceRow.querySelector("input");
+            firstInput?.focus();
+            firstInput?.select();
+
+            let done = false;
+            const finish = async (save) => {
+                if (done) return;
+                done = true;
+                if (save) {
+                    const fields = {};
+                    PRICE_FIELDS.forEach((f, i) => {
+                        const raw = cells[i].querySelector("input")?.value ?? "";
+                        fields[f.key] = f.type === "number" ? (raw === "" ? null : Number(raw)) : (raw || null);
+                    });
+                    const changed = Object.keys(fields).some(k => String(fields[k] ?? "") !== String(original[k] ?? ""));
+                    if (changed) {
+                        try {
+                            await updatePrice(id, fields);
+                            _logActivity("price", id, "수정", original, fields, "전략단가 수정");
+                            showToast("✓ 저장됨");
+                        } catch (err) {
+                            showError(err.message || "저장에 실패했습니다.");
+                        }
+                    }
+                }
+                renderPriceTab();
+            };
+            priceRow.querySelectorAll("input").forEach(input => {
+                input.addEventListener("keydown", (ke) => {
+                    if (ke.key === "Enter") { ke.preventDefault(); finish(true); }
+                    if (ke.key === "Escape") { ke.preventDefault(); finish(false); }
+                });
+                input.addEventListener("blur", () => {
+                    setTimeout(() => { if (!priceRow.contains(document.activeElement)) finish(true); }, 0);
+                });
+            });
+            return;
+        }
+
         const target = e.target.closest("tr") || e.target.closest(".mobile-card");
         if (!target) return;
 
@@ -437,6 +519,7 @@ export function bindEvents() {
 
         window.getSelection()?.removeAllRanges();
     });
+
 }
 
 function renderAll() {
@@ -524,12 +607,47 @@ async function handleClick(e) {
         return;
     }
 
+    // 추가 버튼 — 전략단가 탭에서는 표 맨 위에 입력행을 띄운다(2026-08-19).
+    if (e.target.classList.contains("insert-btn") && document.querySelector(".price-container")?.style.display === "") {
+        const body = document.getElementById("price-insert-rows");
+        if (!body) return;
+        body.innerHTML = body.children.length > 0 ? "" : priceInsertRowHtml();
+        return;
+    }
+
     // 추가 버튼 — 타창고매출현황 탭에서는 팝업 대신 엑셀처럼 표 맨 위에 입력행을
     // 띄운다(2026-08-14). 이미 떠 있으면 토글로 닫는다.
     if (e.target.classList.contains("insert-btn") && document.querySelector(".sales-container")?.style.display === "") {
         const body = document.getElementById("outbound-insert-rows");
         if (!body) return;
         body.innerHTML = body.children.length > 0 ? "" : outboundInsertRowHtml();
+        return;
+    }
+
+    // 전략단가 입력행 — 저장
+    if (e.target.classList.contains("save-price-insert-btn")) {
+        const row = e.target.closest("tr");
+        const fields = {};
+        PRICE_FIELDS.forEach(f => {
+            const el = row.querySelector(`.${priceFieldClass(f.key)}`);
+            const raw = el?.value ?? "";
+            fields[f.key] = f.type === "number" ? (raw === "" ? null : Number(raw)) : (raw || null);
+        });
+        if (!fields.품목) { showError("품목은 필수입니다."); return; }
+        try {
+            const res = await createPrice(fields);
+            showToast("✓ 추가됨");
+            if (res?.id) _logActivity("price", res.id, "삽입", null, fields, `${fields.품목} 전략단가 추가`);
+            renderPriceTab();
+        } catch (err) {
+            showError(err.message || "추가에 실패했습니다.");
+        }
+        return;
+    }
+
+    // 전략단가 입력행 — 취소
+    if (e.target.classList.contains("cancel-price-insert-btn")) {
+        document.getElementById("price-insert-rows").innerHTML = "";
         return;
     }
 
@@ -612,7 +730,7 @@ async function handleClick(e) {
     if (e.target.classList.contains("changes-tab-btn")) { switchTab("changes-tab-btn", ".changes-container", renderChangesTab); return; }
     if (e.target.classList.contains("reservations-tab-btn")) { switchTab("reservations-tab-btn", ".reservations-container", renderReservationsTab); return; }
     if (e.target.classList.contains("sales-tab-btn")) { switchTab("sales-tab-btn", ".sales-container", renderSalesTab); return; }
-    if (e.target.classList.contains("price-tab-btn")) { switchTab("price-tab-btn", ".price-container", null); return; }
+    if (e.target.classList.contains("price-tab-btn")) { switchTab("price-tab-btn", ".price-container", renderPriceTab); return; }
 
     // 예약 현황 탭 — 출고일 필터 해제
     if (e.target.classList.contains("reservations-date-filter-clear")) {
@@ -813,6 +931,25 @@ async function handleClick(e) {
     if (e.target.classList.contains("main-download-btn")) {
         const reservationsOpen = document.querySelector(".reservations-container")?.style.display === "";
         const salesOpen = document.querySelector(".sales-container")?.style.display === "";
+        const priceOpen = document.querySelector(".price-container")?.style.display === "";
+
+        if (priceOpen) {
+            const choice = await showPriceExportModal();
+            if (!choice) return;
+            const headers = ["분류", "브랜드", "품목", "등급/포장", "EST", "창고/비고", "평중"];
+            if (choice.도매가) headers.push("도매가");
+            if (choice.전략가) headers.push("전략가");
+            headers.push("업데이트일자");
+            const rows = state.filteredPrices.map(r => {
+                const row = [r.분류, r.브랜드, r.품목, r["등급/포장"], r.EST, r["창고/비고"], r.평중 ?? ""];
+                if (choice.도매가) row.push(r.도매가 ?? "");
+                if (choice.전략가) row.push(r.전략가 ?? "");
+                row.push(r.업데이트일자 ?? "");
+                return row;
+            });
+            downloadCsv("전략단가", headers, rows);
+            return;
+        }
 
         if (reservationsOpen || salesOpen) {
             if (salesOpen) {

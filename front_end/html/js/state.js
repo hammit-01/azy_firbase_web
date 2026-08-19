@@ -14,4 +14,8 @@ export const state = {
     reservationsDateFilter: "", // 예약 현황 탭 — 출고일 필터(YYYY-MM-DD, ""=전체)
     salesDateFilter: "", // 타창고매출현황 탭 — 출고일 필터(YYYY-MM-DD, ""=오늘)
     filteredReservations: [], // 예약/출고 현황 탭 — 툴바 검색·필터 적용된 현재 표시 행(엑셀 다운로드용)
+    priceSearch: "", // 전략단가 탭 — 통합 검색어
+    priceCategoryFilter: "", // 전략단가 탭 — 분류 필터
+    priceBrandFilter: "", // 전략단가 탭 — 브랜드 필터
+    filteredPrices: [], // 전략단가 탭 — 검색·필터 적용된 현재 표시 행(엑셀 다운로드용)
 };

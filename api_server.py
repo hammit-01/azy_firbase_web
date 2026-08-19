@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Any
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
@@ -22,6 +22,7 @@ from pipeline.mysql_db import (
     update_outbound, cancel_outbound, use_outbound, toggle_outbound_complete,
     toggle_outbound_register,
     register_outbound_from_reservation, _today_iso,
+    get_all_prices, create_price, update_price,
 )
 
 app = FastAPI()
@@ -577,6 +578,46 @@ def use_outbound_endpoint(rec_id: str, body: UseOutboundBody):
             raise HTTPException(400, str(e))
     if not ok:
         raise HTTPException(404, "항목을 찾을 수 없거나 이미 종료됨")
+    return {"ok": True}
+
+
+# ── 전략단가(price, 2026-08-19) ───────────────────────────────
+class PriceBody(BaseModel):
+    분류: str = ""
+    브랜드: str = ""
+    품목: str = ""
+    등급_포장: str = Field("", alias="등급/포장")
+    EST: str = ""
+    창고_비고: str = Field("", alias="창고/비고")
+    평중: float | None = None
+    도매가: int | None = None
+    전략가: int | None = None
+    업데이트일자: str | None = None
+
+    class Config:
+        populate_by_name = True
+
+@app.get("/api/price")
+def list_prices():
+    with get_conn() as conn:
+        rows = get_all_prices(conn)
+    return {"data": rows}
+
+
+@app.post("/api/price")
+def create_price_endpoint(body: PriceBody):
+    row = body.dict(by_alias=True)
+    with get_conn() as conn:
+        new_id = create_price(conn, row)
+    return {"id": new_id}
+
+
+@app.put("/api/price/{price_id}")
+def update_price_endpoint(price_id: str, body: dict[str, Any]):
+    with get_conn() as conn:
+        ok = update_price(conn, price_id, body)
+    if not ok:
+        raise HTTPException(404, "항목을 찾을 수 없음")
     return {"ok": True}
 
 

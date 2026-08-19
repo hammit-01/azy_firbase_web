@@ -8,6 +8,7 @@ import {
     apiGetReservationsByPk, apiGetAllReservations,
     apiGetAllOutbound, apiCreateOutbound, apiUpdateOutbound, apiCancelOutbound, apiUseOutbound,
     apiToggleOutboundComplete, apiToggleOutboundRegister,
+    apiGetAllPrices, apiCreatePrice, apiUpdatePrice,
 } from "./api.js";
 
 // 예약 생성/취소/완료 — 실재고와 완전히 분리된 새 모델(2026-08-05).
@@ -96,4 +97,15 @@ export async function updateItem(id, data, azy) {
 // 삭제
 export async function deleteItem(id, azy) {
     await apiDeleteItem(id, azy);
+}
+
+// 전략단가(price, 2026-08-19)
+export async function getAllPrices() {
+    return apiGetAllPrices();
+}
+export async function createPrice(row) {
+    return apiCreatePrice(row);
+}
+export async function updatePrice(id, fields) {
+    return apiUpdatePrice(id, fields);
 }

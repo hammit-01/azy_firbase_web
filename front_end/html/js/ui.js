@@ -217,6 +217,38 @@ export function showAlertModal(msg) {
     });
 }
 
+// 전략단가 엑셀 다운로드 전에 도매가/전략가 열 포함 여부를 물어보는 팝업
+// (2026-08-19) — 가격 정보라 공유 상대에 따라 빼고 싶을 때가 있어서 선택 가능하게.
+// 저장 누르면 {도매가: bool, 전략가: bool} 객체로 resolve, 취소/바깥클릭이면 null.
+export function showPriceExportModal() {
+    return new Promise(resolve => {
+        const overlay = document.createElement("div");
+        overlay.className = "confirm-overlay";
+        overlay.innerHTML =
+            `<div class="confirm-modal edit-reservation-modal">` +
+            `<p class="confirm-msg">엑셀에 포함할 가격 열을 선택하세요</p>` +
+            `<div class="edit-reservation-form" style="justify-content:center;">` +
+            `<label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="export-wholesale" checked> 도매가</label>` +
+            `<label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="export-strategy" checked> 전략가</label>` +
+            `</div>` +
+            `<div class="confirm-btns">` +
+            `<button class="confirm-yes">다운로드</button>` +
+            `<button class="confirm-no">취소</button>` +
+            `</div></div>`;
+        document.body.appendChild(overlay);
+
+        const close = (result) => { overlay.remove(); resolve(result); };
+        overlay.querySelector(".confirm-yes").addEventListener("click", () => {
+            close({
+                도매가: overlay.querySelector(".export-wholesale").checked,
+                전략가: overlay.querySelector(".export-strategy").checked,
+            });
+        });
+        overlay.querySelector(".confirm-no").addEventListener("click", () => close(null));
+        overlay.addEventListener("click", e => { if (e.target === overlay) close(null); });
+    });
+}
+
 export function showConfirm(msg) {
     return new Promise(resolve => {
         const overlay = document.createElement("div");

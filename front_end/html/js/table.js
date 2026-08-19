@@ -2,7 +2,7 @@ import { state } from "./state.js";
 import { dom } from "./dom.js";
 import { employeeSelect, stateSelect } from "./panel.js";
 import { getStoredUser, hasEditorAccess } from "./login.js";
-import { getAllReservations, getAllOutbound } from "./firestoreService.js";
+import { getAllReservations, getAllOutbound, getAllPrices } from "./firestoreService.js";
 
 // 영문 브랜드를 한글 표기로 쳐도 검색되게 하는 별칭 테이블(2026-08-14).
 // key: 한글 표기, value: 실제 데이터의 영문 브랜드값 — 데이터에 실제로 존재하는
@@ -1355,6 +1355,157 @@ export async function renderSalesTab() {
         ${emptyMsg}
         <div class="reservations-mobile-list">${rows.map(r => reservationCardHtml(r, true)).join("")}</div>
     `;
+}
+
+// =========================
+// 전략단가 탭(2026-08-19) — mysql price 테이블 조회 전용 표 + 추가/더블클릭 수정.
+// 예약/출고 현황과 달리 담당자 개념이 없어 그 탭들의 툴바를 재사용하지 않고
+// 이 탭 자체 검색·필터(분류/브랜드 드롭다운 + 통합검색)를 따로 둔다.
+// =========================
+export const PRICE_FIELDS = [
+    { key: "분류", type: "text" },
+    { key: "브랜드", type: "text" },
+    { key: "품목", type: "text" },
+    { key: "등급/포장", type: "text" },
+    { key: "EST", type: "text" },
+    { key: "창고/비고", type: "text" },
+    { key: "평중", type: "number" },
+    { key: "도매가", type: "number" },
+    { key: "전략가", type: "number" },
+    { key: "업데이트일자", type: "date" },
+];
+
+export function priceFieldClass(key) {
+    return `price-in-${key.replace(/\//g, "-")}`;
+}
+
+function priceHead() {
+    return `
+    <colgroup>
+        <col style="width:8%">  <!--분류-->
+        <col style="width:10%"> <!--브랜드-->
+        <col style="width:14%"> <!--품목-->
+        <col style="width:10%"> <!--등급/포장-->
+        <col style="width:8%">  <!--EST-->
+        <col style="width:10%"> <!--창고/비고-->
+        <col style="width:6%">  <!--평중-->
+        <col style="width:9%">  <!--도매가-->
+        <col style="width:9%">  <!--전략가-->
+        <col style="width:8%">  <!--업데이트일자-->
+        <col style="width:8%">  <!--액션-->
+    </colgroup>
+    <thead>
+        <tr>
+            <th>분류</th><th>브랜드</th><th>품목</th><th>등급/포장</th><th>EST</th>
+            <th>창고/비고</th><th>평중</th><th>도매가</th><th>전략가</th><th>업데이트일자</th><th>액션</th>
+        </tr>
+    </thead>
+`;
+}
+
+function formatWon(n) {
+    return (n === null || n === undefined || n === "") ? "" : Number(n).toLocaleString("ko-KR");
+}
+
+function priceRowHtml(row) {
+    const cells = PRICE_FIELDS.map(f => {
+        if (f.key === "도매가" || f.key === "전략가") return `<td>${formatWon(row[f.key])}</td>`;
+        return `<td>${safeValue(row[f.key])}</td>`;
+    }).join("");
+    return `
+        <tr data-id="${row.id}" class="price-row" title="더블클릭해서 수정">
+            ${cells}
+            <td class="price-row-actions-cell reservation-row-actions-cell"></td>
+        </tr>
+    `;
+}
+
+// 전략단가 "추가" 입력행 — 열 순서는 priceHead()와 동일해야 함(PRICE_FIELDS 순 + 액션).
+export function priceInsertRowHtml() {
+    const inputs = PRICE_FIELDS.map(f => {
+        const cls = priceFieldClass(f.key);
+        if (f.type === "number") return `<td><input type="number" step="any" class="${cls} cell-input" placeholder="${f.key}"></td>`;
+        if (f.type === "date") return `<td><input type="date" class="${cls} cell-input"></td>`;
+        return `<td><input type="text" class="${cls} cell-input" placeholder="${f.key}"></td>`;
+    }).join("");
+    return `
+        <tr class="price-insert-row">
+            ${inputs}
+            <td class="price-row-actions-cell reservation-row-actions-cell">
+                <div class="reservation-row-actions">
+                    <button class="save-price-insert-btn">저장</button>
+                    <button class="cancel-price-insert-btn">취소</button>
+                </div>
+            </td>
+        </tr>
+    `;
+}
+
+const PRICE_SEARCHABLE_KEYS = ["분류", "브랜드", "품목", "등급/포장", "EST", "창고/비고"];
+
+function filterPriceRows(rows) {
+    const kw = cleanText(state.priceSearch || "").toLowerCase();
+    let data = rows;
+    if (kw) {
+        data = data.filter(r => PRICE_SEARCHABLE_KEYS.some(k => cleanText(r[k]).toLowerCase().includes(kw)));
+    }
+    if (state.priceCategoryFilter) data = data.filter(r => r.분류 === state.priceCategoryFilter);
+    if (state.priceBrandFilter) data = data.filter(r => r.브랜드 === state.priceBrandFilter);
+    return data;
+}
+
+export async function renderPriceTab() {
+    const container = document.querySelector(".price-container");
+    const listEl = document.getElementById("price-list");
+    if (!container || !listEl || container.style.display === "none") return;
+
+    let rows = [];
+    try {
+        rows = await getAllPrices();
+    } catch (e) {
+        listEl.innerHTML = `<p class="reservations-empty">전략단가를 불러오지 못했습니다.</p>`;
+        return;
+    }
+
+    const filtered = filterPriceRows(rows);
+    state.filteredPrices = filtered;
+
+    const categories = [...new Set(rows.map(r => r.분류).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"));
+    const brands = [...new Set(rows.map(r => r.브랜드).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"));
+
+    const filterHtml = `
+        <div class="reservations-filter-bar">
+            <select id="price-category-filter" class="reservations-filter-select">
+                <option value="">분류 전체</option>
+                ${categories.map(c => `<option value="${c}" ${c === state.priceCategoryFilter ? "selected" : ""}>${c}</option>`).join("")}
+            </select>
+            <select id="price-brand-filter" class="reservations-filter-select">
+                <option value="">브랜드 전체</option>
+                ${brands.map(b => `<option value="${b}" ${b === state.priceBrandFilter ? "selected" : ""}>${b}</option>`).join("")}
+            </select>
+            <input type="text" id="price-search" class="search-input" placeholder="검색(분류/브랜드/품목/등급포장/EST/창고비고)" value="${attrEscape(state.priceSearch || "")}">
+        </div>
+    `;
+
+    const empty = filtered.length ? "" : `<p class="reservations-empty">조건에 맞는 전략단가가 없습니다.</p>`;
+    // 검색창이 매 렌더마다 통째로 교체돼서 포커스가 날아가는 문제(2026-08-19) —
+    // 렌더 전에 포커스 상태였으면 렌더 후 다시 포커스 + 커서를 끝으로.
+    const searchHadFocus = document.activeElement?.id === "price-search";
+    listEl.innerHTML = filterHtml + `
+        <table class="reservations-table">
+            ${priceHead()}
+            <tbody id="price-insert-rows"></tbody>
+            <tbody>${filtered.map(r => priceRowHtml(r)).join("")}</tbody>
+        </table>
+        ${empty}
+    `;
+    if (searchHadFocus) {
+        const input = document.getElementById("price-search");
+        if (input) {
+            input.focus();
+            input.setSelectionRange(input.value.length, input.value.length);
+        }
+    }
 }
 
 
