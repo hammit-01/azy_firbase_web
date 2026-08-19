@@ -1968,6 +1968,29 @@ tr.insert-card .remove-insert-btn:hover {
         display: contents;
     }
 
+    /* 탭 전환 버튼 줄(예약현황/타창고매출현황/전략단가) — display:contents로
+       flatten 안 된 채 grid의 1열에 그대로 끼어들어서, 안 줄어드는(flex-shrink:0,
+       white-space:nowrap) 버튼 3개의 원래 폭(313px)이 그 열 너비를 그대로
+       강제해 grid 전체가 화면 밖으로 넘쳤다 — 이게 "버튼/필터/입력란이 짤린다"던
+       진짜 원인(2026-08-19). toolbar-row-actions와 똑같이 전체 폭을 주고 줄바꿈. */
+    .toolbar-center {
+        grid-column: 1 / -1;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    /* .reservations-tab-btn은 아래(.toolbar-row-actions용 규칙)에서 이미
+       flex:1 1 calc(33.333% - 6px); height:44px;로 잡히므로 나머지 둘만 맞춤 —
+       셋 다 여기서 다시 잡으면 cascade 순서상 뒤에 있는 그 규칙이 이겨서
+       reservations-tab-btn만 높이가 달라진다. */
+    .sales-tab-btn, .price-tab-btn {
+        flex: 1 1 calc(33.333% - 6px);
+        height: 44px;
+        font-size: 13px;
+        padding: 0 4px;
+        white-space: normal;
+    }
+
     .show-product-name { order: 1; }
     .show-brand     { order: 2; }
     #searchInput    { order: 3; }

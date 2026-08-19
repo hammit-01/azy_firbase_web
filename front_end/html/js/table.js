@@ -63,7 +63,9 @@ const BRAND_ALIASES = {
 
 // 타창고매출현황(sales.html) "등록완료" 체크박스 — mysql outbound.등록 열이 이
 // 창고들만 의미가 있어서(2026-08-18) 그 외 창고는 체크박스 없이 빈칸.
-const REGISTER_REQUIRED_WAREHOUSES = new Set(["신우냉장", "CS"]);
+// 신우냉장은 정확히 일치, 그 외엔 창고명에 "CS"가 들어가면 다 해당(2026-08-19,
+// 오로라CS처럼 CS가 포함된 창고명이 늘어나서 정확히 "CS"인 것만으론 부족했음).
+const REGISTER_REQUIRED_EXACT = new Set(["신우냉장"]);
 
 const WH_CLASS = {
     "곤지암": "wh-곤지암",
@@ -910,7 +912,8 @@ function salesAccess(r) {
 // 팝업으로 안내한다(버튼을 disabled로 막으면 클릭해도 아무 반응이 없어
 // 헷갈린다는 피드백으로 2026-08-18 변경).
 function needsRegister(r) {
-    return REGISTER_REQUIRED_WAREHOUSES.has(String(r.창고 ?? "").trim());
+    const wh = String(r.창고 ?? "").trim();
+    return REGISTER_REQUIRED_EXACT.has(wh) || /cs/i.test(wh);
 }
 function registerCheckboxHtml(r, canOthers = true) {
     return needsRegister(r) && canOthers

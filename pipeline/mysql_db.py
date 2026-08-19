@@ -1072,7 +1072,14 @@ def cancel_outbound(conn, rec_id: str, delete: bool = False) -> bool:
 
 # 등록완료 체크가 출고완료의 전제조건인 창고(2026-08-18) — 신우냉장/CS는 outbound에
 # "등록" 열이 따로 생겨서, 그게 체크되기 전엔 출고완료로 못 넘어가게 막는다.
-_REGISTER_REQUIRED_WAREHOUSES = {"신우냉장", "CS"}
+# 신우냉장은 정확히 일치, 그 외엔 창고명에 "CS"가 들어가면 다 해당(2026-08-19,
+# 오로라CS처럼 CS가 포함된 창고명이 늘어나서 정확히 "CS"인 것만으론 부족했음).
+_REGISTER_REQUIRED_EXACT = {"신우냉장"}
+
+
+def _needs_register(warehouse: str | None) -> bool:
+    warehouse = warehouse or ""
+    return warehouse in _REGISTER_REQUIRED_EXACT or "cs" in warehouse.lower()
 
 
 def _pk_warehouse(cur, pk: str) -> str | None:
@@ -1088,7 +1095,7 @@ def toggle_outbound_complete(conn, rec_id: str) -> str:
     """타창고매출현황 "출고완료" 버튼 토글(2026-08-14) — status를 ACTIVE↔COMPLETED로
     뒤집는다. CANCEL(출고취소)과 달리 COMPLETED여도 get_all_outbound에는 계속
     나온다(화면에서 회색 배경 + 출고변경/출고취소 버튼 숨김으로만 구분).
-    ACTIVE→COMPLETED로 넘어갈 때, 창고가 _REGISTER_REQUIRED_WAREHOUSES에 속하면
+    ACTIVE→COMPLETED로 넘어갈 때, 창고가 _needs_register()에 해당하면
     등록 체크가 먼저 되어 있어야 한다(2026-08-18) — COMPLETED→ACTIVE로 되돌릴 땐
     막지 않는다. 반환값은 바뀐 뒤의 status."""
     with conn.cursor() as cur:
@@ -1098,7 +1105,7 @@ def toggle_outbound_complete(conn, rec_id: str) -> str:
             raise ValueError("항목을 찾을 수 없거나 이미 취소됨")
         new_status = "COMPLETED" if row["status"] == "ACTIVE" else "ACTIVE"
         if new_status == "COMPLETED" and not row["등록"]:
-            if _pk_warehouse(cur, row["pk"]) in _REGISTER_REQUIRED_WAREHOUSES:
+            if _needs_register(_pk_warehouse(cur, row["pk"])):
                 raise ValueError("등록완료 체크 후 출고완료할 수 있습니다")
         cur.execute("UPDATE outbound SET status=%s WHERE id=%s", (new_status, rec_id))
         return new_status
