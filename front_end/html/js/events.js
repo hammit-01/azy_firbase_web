@@ -9,7 +9,7 @@ import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
 import { fetchAllData } from "./firebase.js";
 import { showToast, showError, showConfirm, showEditReservationModal, showRegisterOutboundModal, showNoteModal, showCancelOutboundModal, showAlertModal, showPriceExportModal, showEditPriceModal } from "./ui.js";
-import { getStoredUser, applyRoleVisibility } from "./login.js";
+import { getStoredUser, applyRoleVisibility, hasPriceEditAccess } from "./login.js";
 import { apiLogActivity } from "./api.js";
 
 // 예약현황/타창고매출현황 액션(취소/완료/변경/토글 등) 이후 공용 새로고침(2026-08-19) —
@@ -355,15 +355,63 @@ export function bindEvents() {
             state.priceBrandFilter = e.target.value;
             renderPriceTab();
         }
+        if (e.target.id === "reservations-warehouse-filter") {
+            state.reservationsWarehouseFilter = e.target.value;
+            renderReservationsTab();
+        }
+        if (e.target.id === "reservations-brand-filter") {
+            state.reservationsBrandFilter = e.target.value;
+            renderReservationsTab();
+        }
+        if (e.target.id === "sales-warehouse-filter") {
+            state.salesWarehouseFilter = e.target.value;
+            renderSalesTab();
+        }
+        if (e.target.id === "sales-brand-filter") {
+            state.salesBrandFilter = e.target.value;
+            renderSalesTab();
+        }
+        if (e.target.id === "changes-warehouse-filter") {
+            state.changesWarehouseFilter = e.target.value;
+            renderChangesTab();
+        }
+        if (e.target.id === "changes-brand-filter") {
+            state.changesBrandFilter = e.target.value;
+            renderChangesTab();
+        }
     });
 
     let priceSearchTimer = null;
+    let reservationsSearchTimer = null;
+    let salesSearchTimer = null;
+    let changesSearchTimer = null;
     document.addEventListener("input", (e) => {
         if (e.target.id === "price-search") {
             clearTimeout(priceSearchTimer);
             priceSearchTimer = setTimeout(() => {
                 state.priceSearch = e.target.value;
                 renderPriceTab();
+            }, 200);
+        }
+        if (e.target.id === "reservations-search") {
+            clearTimeout(reservationsSearchTimer);
+            reservationsSearchTimer = setTimeout(() => {
+                state.reservationsSearch = e.target.value;
+                renderReservationsTab();
+            }, 200);
+        }
+        if (e.target.id === "sales-search") {
+            clearTimeout(salesSearchTimer);
+            salesSearchTimer = setTimeout(() => {
+                state.salesSearch = e.target.value;
+                renderSalesTab();
+            }, 200);
+        }
+        if (e.target.id === "changes-search") {
+            clearTimeout(changesSearchTimer);
+            changesSearchTimer = setTimeout(() => {
+                state.changesSearch = e.target.value;
+                renderChangesTab();
             }, 200);
         }
     });
@@ -423,6 +471,7 @@ export function bindEvents() {
         // 포커스가 행 밖으로 완전히 나갔을 때만 저장한다(칸 사이 Tab 이동은 무시).
         const priceRow = e.target.closest("tr.price-row");
         if (priceRow) {
+            if (!hasPriceEditAccess(getStoredUser()?.권한)) return;
             if (priceRow.querySelector("input")) return;
             const id = priceRow.dataset.id;
             const original = state.filteredPrices.find(r => String(r.id) === id);
@@ -777,6 +826,7 @@ async function handleClick(e) {
     if (e.target.classList.contains("edit-reservation-btn")) {
         const id = e.target.dataset.id;
         const showPrice = e.target.dataset.sales === "1";
+        const canRemark = e.target.dataset.canRemark === "1";
         const rawClient = e.target.dataset.client || "";
 
         const current = {
@@ -788,7 +838,7 @@ async function handleClick(e) {
             중량: parseWeight(rawClient) ?? "",
             비고: e.target.dataset.remark || "",
         };
-        const result = await showEditReservationModal(current, { showPrice });
+        const result = await showEditReservationModal(current, { showPrice, canRemark });
         if (!result) return;
         if (!Number.isInteger(result.수량) || result.수량 <= 0) { showError("올바른 수량을 입력하세요."); return; }
 
@@ -799,7 +849,7 @@ async function handleClick(e) {
         if (result.수량 !== current.수량) { fields.수량 = result.수량; prev.수량 = current.수량; }
         if (result.출고일 !== current.출고일) { fields.출고일 = result.출고일; prev.출고일 = current.출고일; }
         if (newClient !== rawClient) { fields.거래처 = newClient; prev.거래처 = rawClient; }
-        if (showPrice && result.비고 !== current.비고) { fields.비고 = result.비고; prev.비고 = current.비고; }
+        if (showPrice && canRemark && result.비고 !== current.비고) { fields.비고 = result.비고; prev.비고 = current.비고; }
         if (Object.keys(fields).length === 0) return;
 
         // showPrice(=sales.html)면 outbound 항목 — 출고일을 오늘이 아닌 날짜로
@@ -823,6 +873,7 @@ async function handleClick(e) {
     // 전략단가 모바일 카드 — 수정/삭제(2026-08-19). 데스크톱은 더블클릭으로 행을
     // 통째로 입력창으로 바꾸지만 카드는 탭이 더블클릭 인식이 안 좋아 모달로 대신.
     if (e.target.classList.contains("price-card-edit-btn")) {
+        if (!hasPriceEditAccess(getStoredUser()?.권한)) return;
         const id = e.target.dataset.id;
         const original = state.filteredPrices.find(r => String(r.id) === id);
         if (!original) return;
@@ -841,6 +892,7 @@ async function handleClick(e) {
         return;
     }
     if (e.target.classList.contains("price-card-delete-btn")) {
+        if (!hasPriceEditAccess(getStoredUser()?.권한)) return;
         const id = e.target.dataset.id;
         const original = state.filteredPrices.find(r => String(r.id) === id);
         if (!await showConfirm(`"${original?.품목 || "이 항목"}"을(를) 삭제합니다.\n계속하시겠습니까?`)) return;
@@ -958,7 +1010,8 @@ async function handleClick(e) {
         const id = e.target.dataset.id;
         const isOutbound = e.target.dataset.sales === "1";
         const current = e.target.dataset.note || "";
-        const result = await showNoteModal(current);
+        const canEditNote = e.target.dataset.canEditNote === "1";
+        const result = await showNoteModal(current, canEditNote);
         if (result === null || result === current) return;
         try {
             if (isOutbound) await updateOutbound(id, { 전달사항: result }); else await updateReservation(id, { 전달사항: result });
@@ -972,26 +1025,27 @@ async function handleClick(e) {
         return;
     }
 
-    // 업데이트 탭 다운로드 — 지금 화면에 뜬 행을 CSV(엑셀 호환)로 내려받기
-    if (e.target.classList.contains("changes-download-btn")) {
-        const headers = ["구분", "상품명", "브랜드", "등급", "ESTNO", "어제재고", "오늘재고", "BL", "창고"];
-        const rows = getChangesTabRows().map(item => [
-            item.changed_fields === "__NEW__" ? "신규" : "변경",
-            item.상품명, item.브랜드, item.등급, item.ESTNO,
-            item._prevQty, item.재고, item.BL, item.창고,
-        ]);
-        downloadCsv("업데이트", headers, rows);
-        return;
-    }
-
-    // 다운로드 — 예약현황/타창고매출현황 탭이 열려 있으면 그 탭의(검색/필터
-    // 적용된) state.filteredReservations를 내려받고, 아니면 기존대로 재고장 표
-    // (state.filteredData)를 내려받는다(2026-08-18, 두 탭 다 warehouse_main.html
-    // 안으로 이관되며 페이지 구분 대신 컨테이너 표시 여부로 판단).
+    // 다운로드 — 예약현황/타창고매출현황/전략단가/업데이트 탭이 열려 있으면 그
+    // 탭의(검색/필터 적용된) 데이터를 내려받고, 아니면 기존대로 재고장 표
+    // (state.filteredData)를 내려받는다(2026-08-18, 페이지 구분 대신 컨테이너
+    // 표시 여부로 판단 — 업데이트 탭은 2026-08-20에 자체 다운로드 버튼을 없애고
+    // 이 헤더 버튼 하나로 통합).
     if (e.target.classList.contains("main-download-btn")) {
         const reservationsOpen = document.querySelector(".reservations-container")?.style.display === "";
         const salesOpen = document.querySelector(".sales-container")?.style.display === "";
         const priceOpen = document.querySelector(".price-container")?.style.display === "";
+        const changesOpen = document.querySelector(".changes-container")?.style.display === "";
+
+        if (changesOpen) {
+            const headers = ["구분", "상품명", "브랜드", "등급", "ESTNO", "어제재고", "오늘재고", "BL", "창고"];
+            const rows = getChangesTabRows().map(item => [
+                item.changed_fields === "__NEW__" ? "신규" : "변경",
+                item.상품명, item.브랜드, item.등급, item.ESTNO,
+                item._prevQty, item.재고, item.BL, item.창고,
+            ]);
+            downloadCsv("업데이트", headers, rows);
+            return;
+        }
 
         if (priceOpen) {
             const choice = await showPriceExportModal();

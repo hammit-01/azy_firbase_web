@@ -1,7 +1,7 @@
 import { state } from "./state.js";
 import { dom } from "./dom.js";
 import { employeeSelect, stateSelect } from "./panel.js";
-import { getStoredUser, hasEditorAccess } from "./login.js";
+import { getStoredUser, hasEditorAccess, hasPriceEditAccess } from "./login.js";
 import { getAllReservations, getAllOutbound, getAllPrices } from "./firestoreService.js";
 
 // 영문 브랜드를 한글 표기로 쳐도 검색되게 하는 별칭 테이블(2026-08-14).
@@ -820,8 +820,21 @@ export function renderChangesTab() {
     // 신규 먼저, 그다음 상품명 가나다순
     results.sort((a, b) => (b.isNew - a.isNew) || String(a.item.상품명 ?? "").localeCompare(String(b.item.상품명 ?? ""), "ko"));
 
-    // 다운로드 버튼에서 그대로 쓸 수 있게 지금 화면에 뜬 행을 저장해둠
-    _lastChangesRows = results.map(({ item, prev, isNew }) => ({
+    // 검색/창고/브랜드 필터 — 전략단가 탭과 동일 방식(2026-08-20).
+    const filterControlsHtml = reservationFilterControlsHtml({
+        idPrefix: "changes", rows: results.map(r => r.item),
+        search: state.changesSearch, warehouse: state.changesWarehouseFilter, brand: state.changesBrandFilter,
+    });
+    const kw = cleanText(state.changesSearch || "").toLowerCase();
+    const CHANGES_SEARCHABLE_KEYS = ["상품명", "브랜드", "등급", "ESTNO", "BL", "창고"];
+    let filtered = results;
+    if (kw) filtered = filtered.filter(({ item }) => CHANGES_SEARCHABLE_KEYS.some(k => cleanText(item[k]).toLowerCase().includes(kw)));
+    if (state.changesWarehouseFilter) filtered = filtered.filter(({ item }) => item.창고 === state.changesWarehouseFilter);
+    if (state.changesBrandFilter) filtered = filtered.filter(({ item }) => item.브랜드 === state.changesBrandFilter);
+    const searchHadFocus = document.activeElement?.id === "changes-search";
+
+    // 다운로드 버튼에서 그대로 쓸 수 있게 지금 화면에 뜬(필터 적용된) 행을 저장해둠
+    _lastChangesRows = filtered.map(({ item, prev, isNew }) => ({
         ...item,
         changed_fields: isNew ? "__NEW__" : "변경",
         _prevQty: prev ? prev.재고 : "",
@@ -838,10 +851,8 @@ export function renderChangesTab() {
     };
 
     let html = `
-        <div class="changes-count">
-            어제 대비 신규/변경 ${results.length}건
-            <button class="changes-download-btn">엑셀 다운로드</button>
-        </div>
+        <div class="reservations-filter-bar">${filterControlsHtml}</div>
+        <div class="changes-count">어제 대비 신규/변경 ${filtered.length}건</div>
     `;
     html += `
         <table class="changes-table">
@@ -852,7 +863,7 @@ export function renderChangesTab() {
                 </tr>
             </thead>
             <tbody>
-                ${results.map(r => {
+                ${filtered.map(r => {
                     const { item, isNew, changedSet } = r;
                     const rowCls = isNew ? "changes-row-new" : "changes-row-updated";
                     return `
@@ -868,13 +879,17 @@ export function renderChangesTab() {
                         </tr>
                     `;
                 }).join("") || `
-                    <tr><td colspan="8" style="text-align:center; padding:40px; color:#9ca3af;">어제 대비 변경 없음</td></tr>
+                    <tr><td colspan="8" style="text-align:center; padding:40px; color:#9ca3af;">조건에 맞는 변경 내역이 없습니다.</td></tr>
                 `}
             </tbody>
         </table>
     `;
 
     listEl.innerHTML = html;
+    if (searchHadFocus) {
+        const input = document.getElementById("changes-search");
+        if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+    }
 }
 
 // =========================
@@ -887,12 +902,14 @@ function attrEscape(v) {
 
 // 예약/출고 행의 "전달사항" 느낌표 버튼(2026-08-14) — 메시지 있으면 강조,
 // 없으면 흐리게. 클릭하면 팝업(showNoteModal)에서 보기/수정.
-function noteBtn(r, isSalesPage, canOthers = true) {
-    if (isSalesPage && !canOthers) return "";
+// 전달사항은 누구나 볼 수 있고(2026-08-20, 예전엔 canOthers=false면 버튼 자체를
+// 숨겨서 사원이 아예 못 봤음), 수정은 담당자 본인이거나 편집자만 — canEditNote로
+// showNoteModal에 전달해 그 안의 "수정" 버튼 노출 여부를 가른다.
+function noteBtn(r, isSalesPage, canEditNote = true) {
     const note = safeValue(r.전달사항);
     // 마우스 올리면 내용이 바로 보이게(2026-08-19) — 없으면 기존처럼 안내 문구
-    const tooltip = note ? attrEscape(note) : "전달사항 추가";
-    return `<button class="reservation-note-btn${note ? " has-note" : ""}" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}" data-note="${attrEscape(r.전달사항)}" title="${tooltip}">!</button>`;
+    const tooltip = note ? attrEscape(note) : (canEditNote ? "전달사항 추가" : "전달사항 없음");
+    return `<button class="reservation-note-btn${note ? " has-note" : ""}" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}" data-note="${attrEscape(r.전달사항)}" data-can-edit-note="${canEditNote ? "1" : ""}" title="${tooltip}">!</button>`;
 }
 
 // 타창고매출현황 액션 권한(2026-08-18) — 편집자/관리자는 전부 가능, 그 외 사원은
@@ -903,7 +920,13 @@ function salesAccess(r) {
     const user = getStoredUser();
     const isEditor = hasEditorAccess(user?.권한);
     const isOwner = !!user?.이름 && r.담당자 === user.이름;
-    return { canEdit: isEditor || isOwner, canOthers: isEditor };
+    return {
+        canEdit: isEditor || isOwner,       // 출고변경
+        canCancel: isEditor || isOwner,     // 출고취소(2026-08-20: 담당자 본인도 가능)
+        canEditNote: isEditor || isOwner,   // 전달사항 수정(2026-08-20: 담당자 본인도 가능, 조회는 누구나)
+        canEditRemark: isEditor,            // 비고 칸(2026-08-20: 담당자 본인이어도 사원은 불가)
+        canOthers: isEditor,                // 출고완료/등록완료 등 나머지는 편집자 전용 그대로
+    };
 }
 
 // sales.html "등록완료" 체크박스(2026-08-18) — 창고가 신우냉장/CS인 행만 노출,
@@ -974,11 +997,11 @@ function reservationCardHtml(r, isSalesPage = false) {
         : "";
     const clientDisplay = isSalesPage ? clientPrefix(r.거래처) : safeValue(r.거래처);
     const completed = isSalesPage && r.status === "COMPLETED";
-    const access = isSalesPage ? salesAccess(r) : { canEdit: true, canOthers: true };
+    const access = isSalesPage ? salesAccess(r) : { canEdit: true, canOthers: true, canCancel: true, canEditNote: true };
     return `
         <div class="mobile-card reservation-card${completed ? " sales-completed-row" : ""}" data-reservation-id="${r.id}">
             <div class="mc-header">
-                ${noteBtn(r, isSalesPage, access.canOthers)}
+                ${noteBtn(r, isSalesPage, access.canEditNote)}
                 ${isSalesPage && needsRegister(r) && access.canOthers ? `<label class="mc-register-label">${registerCheckboxHtml(r, access.canOthers)} 등록완료</label>` : ""}
                 <span class="mc-name">${safeValue(r.상품명)}</span>
                 ${whTag(r.창고)}
@@ -1004,9 +1027,9 @@ function reservationCardHtml(r, isSalesPage = false) {
                 ${safeValue(r.BL) ? `<div class="mc-row mc-full"><span class="mc-label">BL</span>${safeValue(r.BL)}</div>` : ""}
             </div>
             <div class="reservation-card-actions">
-                ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고변경" : "예약변경"}</button>`}
+                ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고변경" : "예약변경"}</button>`}
                 ${access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "출고완료" : "사용완료"}</button>` : ""}
-                ${completed || !access.canOthers ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고취소" : "예약취소"}</button>`}
+                ${completed || !access.canCancel ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고취소" : "예약취소"}</button>`}
                 ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고등록</button>`}
             </div>
         </div>
@@ -1025,11 +1048,11 @@ function reservationRowHtml(r, isSalesPage = false) {
         : "";
     const clientDisplay = isSalesPage ? clientPrefix(r.거래처) : safeValue(r.거래처);
     const completed = isSalesPage && r.status === "COMPLETED";
-    const access = isSalesPage ? salesAccess(r) : { canEdit: true, canOthers: true };
+    const access = isSalesPage ? salesAccess(r) : { canEdit: true, canOthers: true, canCancel: true, canEditNote: true };
     return `
         <tr data-reservation-id="${r.id}"${completed ? ' class="sales-completed-row"' : ""}>
-            <td class="reservation-note-cell">${noteBtn(r, isSalesPage, access.canOthers)}</td>
-            ${isSalesPage ? `<td class="${access.canEdit ? "sales-remark-cell" : ""}" data-id="${r.id}" data-remark="${attrEscape(r.비고)}" title="${access.canEdit ? "더블클릭해서 수정" : ""}">${safeValue(r.비고)}</td>` : ""}
+            <td class="reservation-note-cell">${noteBtn(r, isSalesPage, access.canEditNote)}</td>
+            ${isSalesPage ? `<td class="${access.canEditRemark ? "sales-remark-cell" : ""}" data-id="${r.id}" data-remark="${attrEscape(r.비고)}" title="${access.canEditRemark ? "더블클릭해서 수정" : ""}">${safeValue(r.비고)}</td>` : ""}
             ${isSalesPage ? `<td class="reservation-register-cell">${registerCheckboxHtml(r, access.canOthers)}</td>` : ""}
             <td>${safeValue(r.담당자) || "(미지정)"}</td>
             <td>${safeValue(r.상품명)}</td>
@@ -1048,9 +1071,9 @@ function reservationRowHtml(r, isSalesPage = false) {
             <td>${safeValue(r.출고일)}</td>
             <td class="reservation-row-actions-cell">
                 <div class="reservation-row-actions">
-                    ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고변경" : "예약변경"}</button>`}
+                    ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고변경" : "예약변경"}</button>`}
                     ${access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "출고완료" : "사용완료"}</button>` : ""}
-                    ${completed || !access.canOthers ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고취소" : "예약취소"}</button>`}
+                    ${completed || !access.canCancel ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고취소" : "예약취소"}</button>`}
                     ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고등록</button>`}
                 </div>
             </td>
@@ -1201,20 +1224,33 @@ function matchesReservationKeyword(r, kw) {
     });
 }
 
-function filterReservationRows(rows) {
-    const keyword = cleanText(dom.searchInput?.value || "").toLowerCase();
-    const keyword2 = cleanText(dom.searchInput2?.value || "").toLowerCase();
-    const warehouse = document.querySelector(".show-warehouse")?.value || "";
-    const productName = document.querySelector(".show-product-name")?.value || "";
-    const brand = document.querySelector(".show-brand")?.value || "";
-
+// 예약현황/타창고매출현황 검색·필터(2026-08-20) — 재고장 전용 툴바를 공유하던 걸
+// 전략단가 탭과 같은 방식(자체 통합검색 + 창고/브랜드 드롭다운, state 기반)으로 교체.
+function filterReservationRowsByState(rows, search, warehouse, brand) {
+    const kw = cleanText(search || "").toLowerCase();
     let data = rows;
-    if (keyword) data = data.filter(r => matchesReservationKeyword(r, keyword));
-    if (keyword2) data = data.filter(r => matchesReservationKeyword(r, keyword2));
-    if (warehouse && warehouse !== "non") data = data.filter(r => r.창고 === warehouse);
-    if (productName && productName !== "non") data = data.filter(r => r.상품명 === productName);
-    if (brand && brand !== "non") data = data.filter(r => r.브랜드 === brand);
+    if (kw) data = data.filter(r => matchesReservationKeyword(r, kw));
+    if (warehouse) data = data.filter(r => r.창고 === warehouse);
+    if (brand) data = data.filter(r => r.브랜드 === brand);
     return data;
+}
+
+// 담당자/출고일 등 탭별 컨트롤과 한 줄에 같이 넣어야 해서 바깥 <div> 없이
+// 창고/브랜드/검색 컨트롤만 반환 — 호출부에서 직접 감싼다.
+function reservationFilterControlsHtml({ idPrefix, rows, search, warehouse, brand }) {
+    const warehouses = [...new Set(rows.map(r => r.창고).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"));
+    const brands = [...new Set(rows.map(r => r.브랜드).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"));
+    return `
+        <select id="${idPrefix}-warehouse-filter" class="reservations-filter-select">
+            <option value="">창고 전체</option>
+            ${warehouses.map(w => `<option value="${w}" ${w === warehouse ? "selected" : ""}>${w}</option>`).join("")}
+        </select>
+        <select id="${idPrefix}-brand-filter" class="reservations-filter-select">
+            <option value="">브랜드 전체</option>
+            ${brands.map(b => `<option value="${b}" ${b === brand ? "selected" : ""}>${b}</option>`).join("")}
+        </select>
+        <input type="text" id="${idPrefix}-search" class="search-input" placeholder="검색(담당자/상품명/브랜드/등급/ESTNO/BL/창고/거래처/비고)" value="${attrEscape(search || "")}">
+    `;
 }
 
 export async function renderReservationsTab() {
@@ -1248,9 +1284,14 @@ export async function renderReservationsTab() {
         ${state.reservationsDateFilter ? `<button type="button" class="reservations-date-filter-clear" title="출고일 필터 해제">✕</button>` : ""}
     `;
 
-    // 툴바 검색1·검색2 + 상품명/브랜드/창고 드롭다운 적용(2026-08-18) — 재고장
-    // 표에서 쓰던 그 툴바를 예약 현황 탭에서도 그대로 재사용.
-    rows = filterReservationRows(rows);
+    // 검색/창고/브랜드 필터 — 전략단가 탭과 동일 방식(2026-08-20, 재고장 전용
+    // 툴바 재사용을 그만두고 이 탭 자체 상태로 관리).
+    const filterControlsHtml = reservationFilterControlsHtml({
+        idPrefix: "reservations", rows,
+        search: state.reservationsSearch, warehouse: state.reservationsWarehouseFilter, brand: state.reservationsBrandFilter,
+    });
+    rows = filterReservationRowsByState(rows, state.reservationsSearch, state.reservationsWarehouseFilter, state.reservationsBrandFilter);
+    const searchHadFocus = document.activeElement?.id === "reservations-search";
 
     if (isEditor) {
         const groups = {};
@@ -1271,6 +1312,7 @@ export async function renderReservationsTab() {
                     <option value="">전체 (${rows.length}건)</option>
                     ${allNames.map(name => `<option value="${name}" ${name === state.reservationsFilter ? "selected" : ""}>${name} (${groups[name].length}건)</option>`).join("")}
                 </select>
+                ${filterControlsHtml}
                 ${dateFilterHtml}
             </div>
         `;
@@ -1291,7 +1333,7 @@ export async function renderReservationsTab() {
         listEl.innerHTML = filterHtml + body;
     } else {
         state.filteredReservations = rows;
-        const filterHtml = `<div class="reservations-filter-bar">${dateFilterHtml}</div>`;
+        const filterHtml = `<div class="reservations-filter-bar">${filterControlsHtml}${dateFilterHtml}</div>`;
         const empty = `<p class="reservations-empty">조건에 맞는 예약이 없습니다.</p>`;
         listEl.innerHTML = filterHtml + (rows.length ? `
             <table class="reservations-table">
@@ -1300,6 +1342,10 @@ export async function renderReservationsTab() {
             </table>
             <div class="reservations-mobile-list">${rows.map(r => reservationCardHtml(r)).join("")}</div>
         ` : empty);
+    }
+    if (searchHadFocus) {
+        const input = document.getElementById("reservations-search");
+        if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
     }
 }
 
@@ -1330,7 +1376,15 @@ export async function renderSalesTab() {
     // outbound 잔여물(하루 지나도록 완료/취소 안 된 것)도 이걸로 확인 가능해짐.
     const salesDate = state.salesDateFilter || todayISOStr();
     rows = rows.filter(r => safeValue(r.출고일) === salesDate);
-    rows = filterReservationRows(rows);
+
+    // 검색/창고/브랜드 필터 — 전략단가 탭과 동일 방식(2026-08-20, 재고장 전용
+    // 툴바 재사용을 그만두고 이 탭 자체 상태로 관리).
+    const filterControlsHtml = reservationFilterControlsHtml({
+        idPrefix: "sales", rows,
+        search: state.salesSearch, warehouse: state.salesWarehouseFilter, brand: state.salesBrandFilter,
+    });
+    rows = filterReservationRowsByState(rows, state.salesSearch, state.salesWarehouseFilter, state.salesBrandFilter);
+    const searchHadFocus = document.activeElement?.id === "sales-search";
 
     // 출고완료(status=COMPLETED) 행은 맨 뒤로 보내고 회색 배경 — 그 안에서는
     // 원래 순서 그대로 유지(2026-08-14, DB status 토글로 새로고침해도 유지됨).
@@ -1340,6 +1394,7 @@ export async function renderSalesTab() {
     state.filteredReservations = rows;
     const dateFilterHtml = `
         <div class="reservations-filter-bar">
+            ${filterControlsHtml}
             <label for="sales-date-filter">출고일</label>
             <input type="date" id="sales-date-filter" class="reservations-filter-select" value="${salesDate}">
             ${state.salesDateFilter ? `<button type="button" class="sales-date-filter-clear" title="오늘로 초기화">✕</button>` : ""}
@@ -1358,6 +1413,10 @@ export async function renderSalesTab() {
         ${emptyMsg}
         <div class="reservations-mobile-list">${rows.map(r => reservationCardHtml(r, true)).join("")}</div>
     `;
+    if (searchHadFocus) {
+        const input = document.getElementById("sales-search");
+        if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+    }
 }
 
 // =========================
@@ -1411,13 +1470,14 @@ function formatWon(n) {
 }
 
 function priceRowHtml(row) {
+    const canEdit = hasPriceEditAccess(getStoredUser()?.권한);
     const cells = PRICE_FIELDS.map(f => {
         if (f.key === "평중" || f.key === "도매가") return `<td class="price-highlight">${f.key === "도매가" ? formatWon(row[f.key]) : safeValue(row[f.key])}</td>`;
         if (f.key === "전략가") return `<td>${formatWon(row[f.key])}</td>`;
         return `<td>${safeValue(row[f.key])}</td>`;
     }).join("");
     return `
-        <tr data-id="${row.id}" class="price-row" title="더블클릭해서 수정">
+        <tr data-id="${row.id}" class="price-row"${canEdit ? ' title="더블클릭해서 수정"' : ""}>
             ${cells}
             <td class="price-row-actions-cell reservation-row-actions-cell"></td>
         </tr>
@@ -1455,10 +1515,11 @@ function priceCardHtml(row) {
                 ${hasStrategy ? `<div class="mc-row"><span class="mc-label">도매가</span>${formatWon(row.도매가)}</div>` : ""}
                 <div class="mc-row"><span class="mc-label">업데이트</span>${safeValue(row.업데이트일자)}</div>
             </div>
+            ${hasPriceEditAccess(getStoredUser()?.권한) ? `
             <div class="reservation-card-actions">
                 <button class="price-card-edit-btn" data-id="${row.id}">수정</button>
                 <button class="price-card-delete-btn" data-id="${row.id}">삭제</button>
-            </div>
+            </div>` : ""}
         </div>
     `;
 }

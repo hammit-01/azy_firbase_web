@@ -19,18 +19,25 @@ export function hasEditorAccess(role) {
     return role === "편집자" || role === "관리자";
 }
 
+// 전략단가 탭 추가/수정/삭제는 편집자도 아니고 관리자만(2026-08-20, 우선 관리자만
+// 열어두고 필요하면 나중에 편집자로 넓히기로 함).
+export function hasPriceEditAccess(role) {
+    return role === "관리자";
+}
+
 function closePopover() {
     document.querySelector(".login-btn")?.classList.remove("active");
     document.querySelector(".login-popover")?.classList.remove("open");
 }
 
-// 편집자만 전체삭제/업데이트(어제 대비 변경) 가능 — 사원 및 비로그인은 숨김
-// (화면 표시만, 서버단 권한 검사는 없음). 추가/수정/예약은 탭에 따라서도
-// 달라져서(2026-08-19, events.js의 applyTabButtonVisibility와 동일 규칙)
-// 아래에서 따로 처리 — 로그인/로그아웃 시에도 그 규칙이 깨지지 않게.
-const EDITOR_ONLY_SELECTORS = [".all-delete-btn", ".changes-tab-btn"];
-// 로그인만 하면 사원도 사용 가능 — 비로그인일 때만 숨김
-const LOGIN_ONLY_SELECTORS = [".rollback-btn", ".reservations-tab-btn"];
+// 편집자만 업데이트(어제 대비 변경) 가능 — 사원 및 비로그인은 숨김
+// (화면 표시만, 서버단 권한 검사는 없음). 추가/수정/예약/전체취소/전체삭제는
+// 탭에 따라서도 달라져서(2026-08-19, events.js의 applyTabButtonVisibility와
+// 동일 규칙) 아래에서 따로 처리 — 로그인/로그아웃 시에도 그 규칙이 깨지지 않게.
+const EDITOR_ONLY_SELECTORS = [".changes-tab-btn"];
+// 로그인만 하면 사원도 사용 가능 — 비로그인일 때만 숨김. 되돌리기는 탭 제한도
+// 같이 받아서(업데이트 탭에서 숨김, 2026-08-20) 아래에서 따로 처리.
+const LOGIN_ONLY_SELECTORS = [".reservations-tab-btn"];
 
 // 현재 열려 있는 탭 이름 — events.js를 import하지 않고 DOM만으로 판단
 // (순환 참조 방지). .table-container가 안 보이면 그 컨테이너가 곧 현재 탭.
@@ -62,14 +69,26 @@ export function applyRoleVisibility(role) {
     const insertBtn = document.querySelector(".insert-btn");
     const updateBtn = document.querySelector(".update-btn");
     const holdingBtn = document.querySelector(".holding-btn");
-    if (insertBtn) insertBtn.style.display = (tab !== "reservations" && isEditor) ? "" : "none";
+    const clearBtn = document.querySelector(".clear-btn");
+    const allDeleteBtn = document.querySelector(".all-delete-btn");
+    const rollbackBtn = document.querySelector(".rollback-btn");
+    // 전략단가 탭의 "추가"는 관리자만(2026-08-20) — 다른 탭은 기존처럼 편집자도 가능.
+    const canAddOnTab = tab === "price" ? hasPriceEditAccess(role) : isEditor;
+    if (insertBtn) insertBtn.style.display = (tab !== "reservations" && tab !== "changes" && canAddOnTab) ? "" : "none";
     if (updateBtn) updateBtn.style.display = (mainOnly && isEditor) ? "" : "none";
     if (holdingBtn) holdingBtn.style.display = (mainOnly && !!role) ? "" : "none";
+    // 전체취소/전체삭제 — 타창고매출현황/전략단가/예약현황(나의예약)/업데이트에서는
+    // 숨김, 재고장 탭에서만 노출(2026-08-20). 전체삭제는 기존처럼 편집자만.
+    if (clearBtn) clearBtn.style.display = mainOnly ? "" : "none";
+    if (allDeleteBtn) allDeleteBtn.style.display = (mainOnly && isEditor) ? "" : "none";
+    // 되돌리기 — 업데이트 탭에서는 숨김(2026-08-20, 되돌릴 CRUD 자체가 없는 탭).
+    if (rollbackBtn) rollbackBtn.style.display = (!!role && tab !== "changes") ? "" : "none";
 
-    // 재고장 검색/필터(상품명·브랜드·창고·상태 + 검색1·검색2) — 전략단가 탭은
-    // 자체 검색/필터를 따로 쓰므로 이 재고장용 툴바는 숨긴다(2026-08-19).
+    // 재고장 검색/필터(상품명·브랜드·창고·상태 + 검색1·검색2) — 전략단가/예약현황/
+    // 타창고매출현황 탭은 각자 자체 검색/필터를 따로 쓰므로 이 재고장용 툴바는
+    // 숨긴다(2026-08-19 전략단가, 2026-08-20 예약현황·타창고매출현황으로 확장).
     const toolbarRight = document.querySelector(".toolbar-right");
-    if (toolbarRight) toolbarRight.style.display = tab === "price" ? "none" : "";
+    if (toolbarRight) toolbarRight.style.display = mainOnly ? "" : "none";
 
     // 예약 현황 탭 라벨 — 편집자는 전체를 담당자별로 보고, 사원은 본인 예약만 보므로
     // 버튼 이름도 그에 맞게(2026-08-06)

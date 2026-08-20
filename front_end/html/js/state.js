@@ -12,10 +12,19 @@ export const state = {
     sortColumns: [],    // [{key, dir}] dir: 1=오름차, 2=내림차
     reservationsFilter: "", // 예약 현황 탭 — 담당자 필터(편집자 전용, ""=전체)
     reservationsDateFilter: "", // 예약 현황 탭 — 출고일 필터(YYYY-MM-DD, ""=전체)
+    reservationsSearch: "", // 예약 현황 탭 — 통합 검색어(전략단가와 동일 방식, 2026-08-20)
+    reservationsWarehouseFilter: "", // 예약 현황 탭 — 창고 필터
+    reservationsBrandFilter: "", // 예약 현황 탭 — 브랜드 필터
     salesDateFilter: "", // 타창고매출현황 탭 — 출고일 필터(YYYY-MM-DD, ""=오늘)
+    salesSearch: "", // 타창고매출현황 탭 — 통합 검색어(전략단가와 동일 방식, 2026-08-20)
+    salesWarehouseFilter: "", // 타창고매출현황 탭 — 창고 필터
+    salesBrandFilter: "", // 타창고매출현황 탭 — 브랜드 필터
     filteredReservations: [], // 예약/출고 현황 탭 — 툴바 검색·필터 적용된 현재 표시 행(엑셀 다운로드용)
     priceSearch: "", // 전략단가 탭 — 통합 검색어
     priceCategoryFilter: "", // 전략단가 탭 — 분류 필터
     priceBrandFilter: "", // 전략단가 탭 — 브랜드 필터
     filteredPrices: [], // 전략단가 탭 — 검색·필터 적용된 현재 표시 행(엑셀 다운로드용)
+    changesSearch: "", // 업데이트 탭 — 통합 검색어(전략단가와 동일 방식, 2026-08-20)
+    changesWarehouseFilter: "", // 업데이트 탭 — 창고 필터
+    changesBrandFilter: "", // 업데이트 탭 — 브랜드 필터
 };

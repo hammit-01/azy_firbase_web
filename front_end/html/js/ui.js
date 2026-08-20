@@ -23,15 +23,17 @@ export function showError(msg) {
 // 거래처명(prefix)+단가+중량 입력칸 세 개로 나눠서 받는다 — 단가/중량은 자체
 // 컬럼이 없어서 거래처 문자열에 "이름 숫자원 숫자kg"로 합쳐 저장하기 때문
 // (table.js의 buildClientWithDetails와 짝). showPrice면 비고(outbound 전용 컬럼)도
-// 같이 받는다(2026-08-19). 저장 누르면 {수량, 출고일, 거래처}(showPrice면
-// {수량, 출고일, 거래처명, 단가, 중량, 비고}) 객체로 resolve, 취소/바깥클릭이면 null.
-export function showEditReservationModal(current, { showPrice = false } = {}) {
+// 같이 받는다(2026-08-19). canRemark=false면 비고는 사원이 본인 담당 건이어도
+// 못 고치게 입력칸 자체를 안 보여준다(2026-08-20) — 편집자/관리자만 true.
+// 저장 누르면 {수량, 출고일, 거래처}(showPrice면 {수량, 출고일, 거래처명, 단가,
+// 중량, [canRemark면 비고]}) 객체로 resolve, 취소/바깥클릭이면 null.
+export function showEditReservationModal(current, { showPrice = false, canRemark = false } = {}) {
     return new Promise(resolve => {
         const clientFieldHtml = showPrice
             ? `<label>거래처명<input type="text" class="edit-res-client" value="${(current.거래처명 ?? "").replace(/"/g, "&quot;")}"></label>` +
               `<label>단가<input type="number" class="edit-res-price" min="0" value="${current.단가 ?? ""}"></label>` +
               `<label>중량(kg)<input type="number" step="0.01" min="0" class="edit-res-weight" value="${current.중량 ?? ""}"></label>` +
-              `<label>비고<input type="text" class="edit-res-remark" value="${(current.비고 ?? "").replace(/"/g, "&quot;")}"></label>`
+              (canRemark ? `<label>비고<input type="text" class="edit-res-remark" value="${(current.비고 ?? "").replace(/"/g, "&quot;")}"></label>` : "")
             : `<label>거래처<input type="text" class="edit-res-client" value="${(current.거래처 ?? "").replace(/"/g, "&quot;")}"></label>`;
 
         const overlay = document.createElement("div");
@@ -61,7 +63,7 @@ export function showEditReservationModal(current, { showPrice = false } = {}) {
                 result.거래처명 = overlay.querySelector(".edit-res-client").value.trim();
                 result.단가 = overlay.querySelector(".edit-res-price").value;
                 result.중량 = overlay.querySelector(".edit-res-weight").value;
-                result.비고 = overlay.querySelector(".edit-res-remark").value.trim();
+                if (canRemark) result.비고 = overlay.querySelector(".edit-res-remark").value.trim();
             } else {
                 result.거래처 = overlay.querySelector(".edit-res-client").value.trim();
             }
@@ -128,7 +130,9 @@ export function showRegisterOutboundModal(current) {
 // 전달사항 팝업(2026-08-18 재설계) — 처음엔 보기 전용으로 뜨고(확인/수정),
 // "수정"을 눌러야 텍스트박스 + 저장/취소가 나오는 2단계 흐름. 그냥 "!"만
 // 눌러도 바로 편집 모드로 들어가던 전엔 실수로 고치기 쉬웠다는 피드백 반영.
-export function showNoteModal(note) {
+// canEdit=false면 "수정" 버튼을 빼서 보기 전용으로(2026-08-20) — 담당자 본인이거나
+// 편집자만 고칠 수 있고, 나머지는 조회만 가능.
+export function showNoteModal(note, canEdit = true) {
     return new Promise(resolve => {
         const overlay = document.createElement("div");
         overlay.className = "confirm-overlay";
@@ -144,10 +148,10 @@ export function showNoteModal(note) {
                 `<p class="confirm-msg">전달사항</p>` +
                 `<div class="note-modal-view">${hasNote ? escapeHtml(note) : `<span class="note-modal-empty">전달사항이 없습니다.</span>`}</div>` +
                 `<div class="confirm-btns">` +
-                `<button class="confirm-edit">수정</button>` +
+                (canEdit ? `<button class="confirm-edit">수정</button>` : "") +
                 `<button class="confirm-yes">확인</button>` +
                 `</div></div>`;
-            overlay.querySelector(".confirm-edit").addEventListener("click", renderEdit);
+            overlay.querySelector(".confirm-edit")?.addEventListener("click", renderEdit);
             overlay.querySelector(".confirm-yes").addEventListener("click", () => close(null));
         };
 
