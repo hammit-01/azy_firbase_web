@@ -1448,7 +1448,6 @@ export const PRICE_FIELDS = [
     { key: "평중", type: "number" },
     { key: "도매가", type: "number" },
     { key: "전략가", type: "number" },
-    { key: "업데이트일자", type: "date" },
 ];
 
 export function priceFieldClass(key) {
@@ -1460,20 +1459,19 @@ function priceHead() {
     <colgroup>
         <col style="width:8%">  <!--분류-->
         <col style="width:10%"> <!--브랜드-->
-        <col style="width:14%"> <!--품목-->
+        <col style="width:22%"> <!--품목-->
         <col style="width:10%"> <!--등급/포장-->
         <col style="width:8%">  <!--EST-->
         <col style="width:10%"> <!--창고/비고-->
         <col style="width:6%">  <!--평중-->
         <col style="width:9%">  <!--도매가-->
         <col style="width:9%">  <!--전략가-->
-        <col style="width:8%">  <!--업데이트일자-->
         <col style="width:8%">  <!--액션-->
     </colgroup>
     <thead>
         <tr>
             <th>분류</th><th>브랜드</th><th>품목</th><th>등급/포장</th><th>EST</th>
-            <th>창고/비고</th><th>평중</th><th>도매가</th><th>전략가</th><th>업데이트일자</th><th>액션</th>
+            <th>창고/비고</th><th>평중</th><th>도매가</th><th>전략가</th><th>액션</th>
         </tr>
     </thead>
 `;
@@ -1527,7 +1525,6 @@ function priceCardHtml(row) {
                 <div class="mc-row"><span class="mc-label">창고/비고</span>${safeValue(row["창고/비고"])}</div>
                 <div class="mc-row"><span class="mc-label">평중</span>${safeValue(row.평중)}</div>
                 ${hasStrategy ? `<div class="mc-row"><span class="mc-label">도매가</span>${formatWon(row.도매가)}</div>` : ""}
-                <div class="mc-row"><span class="mc-label">업데이트</span>${safeValue(row.업데이트일자)}</div>
             </div>
             ${hasPriceEditAccess(getStoredUser()?.권한) ? `
             <div class="reservation-card-actions">

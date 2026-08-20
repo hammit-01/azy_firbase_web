@@ -100,25 +100,77 @@ function downloadCsv(filenamePrefix, headers, rows) {
     URL.revokeObjectURL(url);
 }
 
-// 모바일 다운로드 버튼 — 엑셀(CSV)은 스프레드시트 앱 없이는 열어보기 불편해서
-// 대신 지금 보이는 카드 목록을 그대로 이미지로 캡처해 내려받는다(2026-08-20,
-// html2canvas CDN, warehouse_main.html에서 로드).
-async function downloadElementAsImage(el, filenamePrefix) {
-    if (!el || typeof html2canvas !== "function") {
+// 모바일 다운로드 — 엑셀(CSV)은 스프레드시트 앱 없이는 열어보기 불편해서 이미지로
+// 대신 내려받는다(2026-08-20). 카드를 그대로 캡처하면 항목 수만큼 세로로 한없이
+// 길어져서(재고장 전체면 4~5만px) 대신 CSV랑 똑같은 표 형태(헤더+행)를 화면 밖에
+// 그려서 그걸 캡처 — 데이터 형식은 엑셀과 동일하게, 파일 형식만 이미지로.
+function dataTableHtml(headers, rows) {
+    const esc = v => String(v ?? "");
+    // color 명시 필수 — 페이지 전역 CSS의 "thead { color: #fff }"(재고장 표 헤더용)가
+    // 상속돼서 배경(#f1f5f9)과 겹쳐 글자가 안 보였음(2026-08-20 버그 리포트).
+    const th = headers.map(h => `<th style="border:1px solid #cbd5e1;padding:5px 10px;background:#f1f5f9;color:#1e293b;white-space:nowrap;">${esc(h)}</th>`).join("");
+    const trs = rows.map(r => `<tr>${r.map(c => `<td style="border:1px solid #cbd5e1;padding:5px 10px;white-space:nowrap;">${esc(c)}</td>`).join("")}</tr>`).join("");
+    // width:max-content — 안 그러면 nowrap 셀 합이 화면 폭보다 넓을 때 table이
+    // 뷰포트 폭으로 눌려 잘린 채로 캡처된다(2026-08-20 실측: offsetWidth가
+    // scrollWidth보다 작게 나옴). max-content로 내용에 맞는 실제 폭을 갖게 함.
+    return `<table style="border-collapse:collapse;font-family:sans-serif;font-size:13px;background:#fff;color:#1e293b;width:max-content;"><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table>`;
+}
+
+async function downloadTableAsImage(filenamePrefix, headers, rows) {
+    if (typeof html2canvas !== "function") {
         showError("이미지 다운로드를 사용할 수 없습니다.");
         return;
     }
-    // 목록이 길면(특히 필터 안 건 재고장 전체) 캡처에 몇 초 걸려서 아무 반응
+    // 행이 많으면(특히 필터 안 건 재고장 전체) 캡처에 몇 초 걸려서 아무 반응
     // 없어 보일 수 있어 안내(2026-08-20).
     showToast("이미지 생성 중...", "info");
-    const canvas = await html2canvas(el, { backgroundColor: "#f4f6f8", scale: 2 });
-    const a = document.createElement("a");
-    const today = new Date();
-    const pad = n => String(n).padStart(2, "0");
-    a.href = canvas.toDataURL("image/png");
-    a.download = `${filenamePrefix}_${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}.png`;
-    a.click();
-    showToast("✓ 이미지 다운로드 완료");
+    const wrap = document.createElement("div");
+    // 화면 밖(예: left:-99999px)에 두면 html2canvas가 캡처 영역 크기를 잘못
+    // 계산해 세로 몇백px짜리가 가로 10만px로 찍히는 버그가 있어서(2026-08-20
+    // 실측), 대신 맨 위에 실제로 잠깐 덮어씌워서 캡처 — 클릭이라는 명시적
+    // 동작 직후라 아주 잠깐 화면이 하얗게 덮이는 건 자연스럽다.
+    wrap.style.cssText = "position:fixed; inset:0; z-index:99999; background:#fff; overflow:auto;";
+    wrap.innerHTML = dataTableHtml(headers, rows);
+    document.body.appendChild(wrap);
+    try {
+        const canvas = await html2canvas(wrap.firstElementChild, { backgroundColor: "#ffffff", scale: 2 });
+        const today = new Date();
+        const pad = n => String(n).padStart(2, "0");
+        const filename = `${filenamePrefix}_${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}.png`;
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+        const file = new File([blob], filename, { type: "image/png" });
+
+        // 아이폰 사파리는 <a download>가 사진첩 저장으로 안 이어지고 그냥 새 탭에서
+        // 열리기만 해서(2026-08-20 버그 리포트) 파일 공유가 되면 네이티브 공유
+        // 시트(사진에 저장 포함)를 띄우고, 안 되는 환경(대부분 데스크톱)에서만
+        // 기존 다운로드 링크로 폴백한다.
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+                await navigator.share({ files: [file], title: filenamePrefix });
+                showToast("✓ 이미지 공유됨");
+                return;
+            } catch (err) {
+                if (err.name === "AbortError") return; // 사용자가 공유 시트에서 취소
+                // 그 외 실패면 아래 다운로드 링크로 폴백
+            }
+        }
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast("✓ 이미지 다운로드 완료");
+    } finally {
+        wrap.remove();
+    }
+}
+
+// CSV/이미지 중 화면 폭에 맞게 골라 내려받기 — downloadCsv를 부르던 자리를 전부 이걸로 교체.
+async function exportTable(filenamePrefix, headers, rows) {
+    if (window.innerWidth <= 768) await downloadTableAsImage(filenamePrefix, headers, rows);
+    else downloadCsv(filenamePrefix, headers, rows);
 }
 
 export function bindEvents() {
@@ -999,25 +1051,13 @@ async function handleClick(e) {
     // 탭의(검색/필터 적용된) 데이터를 내려받고, 아니면 기존대로 재고장 표
     // (state.filteredData)를 내려받는다(2026-08-18, 페이지 구분 대신 컨테이너
     // 표시 여부로 판단 — 업데이트 탭은 2026-08-20에 자체 다운로드 버튼을 없애고
-    // 이 헤더 버튼 하나로 통합).
+    // 이 헤더 버튼 하나로 통합). 모바일에서는 exportTable이 같은 헤더/행 데이터를
+    // CSV 대신 표 이미지로 내려받는다(양식은 엑셀과 동일, 파일 형식만 이미지).
     if (e.target.classList.contains("main-download-btn")) {
         const reservationsOpen = document.querySelector(".reservations-container")?.style.display === "";
         const salesOpen = document.querySelector(".sales-container")?.style.display === "";
         const priceOpen = document.querySelector(".price-container")?.style.display === "";
         const changesOpen = document.querySelector(".changes-container")?.style.display === "";
-
-        // 모바일에서는 CSV 대신 지금 보이는 카드 목록을 이미지로(2026-08-20).
-        if (window.innerWidth <= 768) {
-            const listEl = changesOpen ? document.getElementById("changes-list")
-                : priceOpen ? document.getElementById("price-list")
-                : salesOpen ? document.getElementById("sales-list")
-                : reservationsOpen ? document.getElementById("reservations-list")
-                : document.getElementById("mobile-list");
-            const prefix = changesOpen ? "업데이트" : priceOpen ? "전략단가"
-                : salesOpen ? "타창고매출현황" : reservationsOpen ? "예약현황" : "재고장";
-            await downloadElementAsImage(listEl, prefix);
-            return;
-        }
 
         if (changesOpen) {
             const headers = ["구분", "상품명", "브랜드", "등급", "ESTNO", "어제재고", "오늘재고", "BL", "창고"];
@@ -1026,7 +1066,7 @@ async function handleClick(e) {
                 item.상품명, item.브랜드, item.등급, item.ESTNO,
                 item._prevQty, item.재고, item.BL, item.창고,
             ]);
-            downloadCsv("업데이트", headers, rows);
+            await exportTable("업데이트", headers, rows);
             return;
         }
 
@@ -1036,15 +1076,13 @@ async function handleClick(e) {
             const headers = ["분류", "브랜드", "품목", "등급/포장", "EST", "창고/비고", "평중"];
             if (choice.도매가) headers.push("도매가");
             if (choice.전략가) headers.push("전략가");
-            headers.push("업데이트일자");
             const rows = state.filteredPrices.map(r => {
                 const row = [r.분류, r.브랜드, r.품목, r["등급/포장"], r.EST, r["창고/비고"], r.평중 ?? ""];
                 if (choice.도매가) row.push(r.도매가 ?? "");
                 if (choice.전략가) row.push(r.전략가 ?? "");
-                row.push(r.업데이트일자 ?? "");
                 return row;
             });
-            downloadCsv("전략단가", headers, rows);
+            await exportTable("전략단가", headers, rows);
             return;
         }
 
@@ -1061,14 +1099,14 @@ async function handleClick(e) {
                         total, r.출고일, r.status === "COMPLETED" ? "출고완료" : "",
                     ];
                 });
-                downloadCsv("타창고매출현황", headers, rows);
+                await exportTable("타창고매출현황", headers, rows);
             } else {
                 const headers = ["담당자", "상품명", "브랜드", "등급", "ESTNO", "BL", "창고", "수량", "실재고", "가용재고", "거래처", "예약일", "출고일"];
                 const rows = state.filteredReservations.map(r => [
                     r.담당자 || "", r.상품명, r.브랜드, r.등급, r.ESTNO, r.BL, r.창고, r.수량,
                     r.재고, r.가용재고 ?? "", r.거래처, r.홀딩일자, r.출고일,
                 ]);
-                downloadCsv("예약현황", headers, rows);
+                await exportTable("예약현황", headers, rows);
             }
             return;
         }
@@ -1079,7 +1117,7 @@ async function handleClick(e) {
             item.예약수량 || "", item.가용재고 ?? "", item.BL, item.창고,
             item.유통기한, item.평중, item.메모,
         ]);
-        downloadCsv("재고", headers, rows);
+        await exportTable("재고", headers, rows);
         return;
     }
 
