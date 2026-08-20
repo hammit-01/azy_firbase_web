@@ -1017,7 +1017,7 @@ async function handleClick(e) {
                 const rows = state.filteredReservations.map(r => {
                     const unitPrice = parseUnitPrice(r.거래처);
                     const weight = parseWeight(r.거래처);
-                    const total = (unitPrice !== null && weight !== null) ? unitPrice * weight : "";
+                    const total = (unitPrice !== null && weight !== null) ? Math.round(unitPrice * weight) : "";
                     return [
                         r.담당자 || "", r.상품명, r.브랜드, r.등급, r.ESTNO, r.BL, r.창고, r.수량,
                         r.재고, r.가용재고 ?? "", clientPrefix(r.거래처), r.비고 || "", unitPrice ?? "", weight ?? "",

@@ -834,6 +834,7 @@ th.sort-active {
     align-items: center;
     gap: 10px;
     margin-bottom: 16px;
+
 }
 .reservations-filter-bar label {
     font-size: 14px;
@@ -2283,6 +2284,13 @@ tr.insert-card .remove-insert-btn:hover {
         overflow-x: auto;
     }
 
+    .reservations-filter-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+    }
 }
 
 /* ── 토스트 알림 ── */

@@ -970,7 +970,7 @@ function reservationCardHtml(r, isSalesPage = false) {
         ? `<div class="mc-row"><span class="mc-label">중량</span>${formatWeight(weight)}</div>`
         : "";
     const totalRow = isSalesPage && unitPrice !== null && weight !== null
-        ? `<div class="mc-row"><span class="mc-label">총금액</span>${formatUnitPrice(unitPrice * weight)}</div>`
+        ? `<div class="mc-row"><span class="mc-label">총금액</span>${formatUnitPrice(Math.round(unitPrice * weight))}</div>`
         : "";
     const clientDisplay = isSalesPage ? clientPrefix(r.거래처) : safeValue(r.거래처);
     const completed = isSalesPage && r.status === "COMPLETED";
@@ -1021,7 +1021,7 @@ function reservationRowHtml(r, isSalesPage = false) {
         : `<td>${safeValue(r.홀딩일자)}</td>`;
     const weightCell = isSalesPage ? `<td>${formatWeight(weight)}</td>` : "";
     const totalCell = isSalesPage
-        ? `<td>${(unitPrice !== null && weight !== null) ? formatUnitPrice(unitPrice * weight) : ""}</td>`
+        ? `<td>${(unitPrice !== null && weight !== null) ? formatUnitPrice(Math.round(unitPrice * weight)) : ""}</td>`
         : "";
     const clientDisplay = isSalesPage ? clientPrefix(r.거래처) : safeValue(r.거래처);
     const completed = isSalesPage && r.status === "COMPLETED";
