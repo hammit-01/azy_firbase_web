@@ -1,4 +1,4 @@
-import { PRICE_FIELDS } from "./table.js";
+import { PRICE_FIELDS, reservationListItemsHtml } from "./table.js";
 
 export function showToast(msg, type = "success") {
     let t = document.getElementById("toast-msg");
@@ -199,6 +199,29 @@ export function showCancelOutboundModal() {
         overlay.querySelector(".confirm-delete").addEventListener("click", () => close("delete"));
         overlay.querySelector(".confirm-no").addEventListener("click", () => close(null));
         overlay.addEventListener("click", e => { if (e.target === overlay) close(null); });
+    });
+}
+
+// 재고장 표 "예약" 열 배지 클릭 시 뜨는 상세 팝업(2026-08-20, 아코디언에서
+// 모달로 변경) — 그 상품에 걸린 예약/출고 건을 누가/얼마에/언제/어디로/몇개
+// 걸었는지 조회 전용으로 보여준다. 취소 버튼 없음(여러 군데서 취소 가능하면
+// 혼란스러움, 2026-08-06 결정 유지).
+export function showReservationDetailModal(reservations) {
+    return new Promise(resolve => {
+        const overlay = document.createElement("div");
+        overlay.className = "confirm-overlay";
+        overlay.innerHTML =
+            `<div class="confirm-modal edit-reservation-modal reservation-detail-modal">` +
+            `<p class="confirm-msg">예약/출고 상세</p>` +
+            `<div class="reservation-detail-list">${reservationListItemsHtml(reservations)}</div>` +
+            `<div class="confirm-btns">` +
+            `<button class="confirm-yes">확인</button>` +
+            `</div></div>`;
+        document.body.appendChild(overlay);
+
+        const close = () => { overlay.remove(); resolve(); };
+        overlay.querySelector(".confirm-yes").addEventListener("click", close);
+        overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
     });
 }
 

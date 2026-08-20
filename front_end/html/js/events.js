@@ -1,5 +1,5 @@
 import { state } from "./state.js";
-import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows, createReservationListRow, renderReservationsTab, renderSalesTab, renderPriceTab, priceInsertRowHtml, PRICE_FIELDS, priceFieldClass, clientPrefix, parseUnitPrice, parseWeight, buildClientWithDetails, outboundInsertRowHtml } from "./table.js";
+import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows, renderReservationsTab, renderSalesTab, renderPriceTab, priceInsertRowHtml, PRICE_FIELDS, priceFieldClass, clientPrefix, parseUnitPrice, parseWeight, buildClientWithDetails, outboundInsertRowHtml } from "./table.js";
 import { renderSelectData, renderInsert, createInsertRow } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
@@ -8,7 +8,7 @@ import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
 import { fetchAllData } from "./firebase.js";
-import { showToast, showError, showConfirm, showEditReservationModal, showRegisterOutboundModal, showNoteModal, showCancelOutboundModal, showAlertModal, showPriceExportModal, showEditPriceModal } from "./ui.js";
+import { showToast, showError, showConfirm, showEditReservationModal, showRegisterOutboundModal, showNoteModal, showCancelOutboundModal, showAlertModal, showPriceExportModal, showEditPriceModal, showReservationDetailModal } from "./ui.js";
 import { getStoredUser, applyRoleVisibility, hasPriceEditAccess } from "./login.js";
 import { apiLogActivity } from "./api.js";
 
@@ -98,6 +98,27 @@ function downloadCsv(filenamePrefix, headers, rows) {
     a.download = `${filenamePrefix}_${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+}
+
+// 모바일 다운로드 버튼 — 엑셀(CSV)은 스프레드시트 앱 없이는 열어보기 불편해서
+// 대신 지금 보이는 카드 목록을 그대로 이미지로 캡처해 내려받는다(2026-08-20,
+// html2canvas CDN, warehouse_main.html에서 로드).
+async function downloadElementAsImage(el, filenamePrefix) {
+    if (!el || typeof html2canvas !== "function") {
+        showError("이미지 다운로드를 사용할 수 없습니다.");
+        return;
+    }
+    // 목록이 길면(특히 필터 안 건 재고장 전체) 캡처에 몇 초 걸려서 아무 반응
+    // 없어 보일 수 있어 안내(2026-08-20).
+    showToast("이미지 생성 중...", "info");
+    const canvas = await html2canvas(el, { backgroundColor: "#f4f6f8", scale: 2 });
+    const a = document.createElement("a");
+    const today = new Date();
+    const pad = n => String(n).padStart(2, "0");
+    a.href = canvas.toDataURL("image/png");
+    a.download = `${filenamePrefix}_${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}.png`;
+    a.click();
+    showToast("✓ 이미지 다운로드 완료");
 }
 
 export function bindEvents() {
@@ -198,66 +219,10 @@ export function bindEvents() {
         });
     }
 
-    // 출고일·홀딩 hover 카드
-    const hoverCard = document.createElement("div");
-    hoverCard.id = "hover-info-card";
-    document.body.appendChild(hoverCard);
-
-    let _hoveredTr = null;
+    // 마우스오버 예약/출고 미리보기 카드는 제거(2026-08-20) — 예약 열 배지를
+    // 눌러서 보는 팝업(showReservationDetailModal)으로 대체.
     const tableEl = document.querySelector(".table-wrap table");
     if (tableEl) {
-        tableEl.addEventListener("mouseover", async (e) => {
-            const tr = e.target.closest("tbody tr");
-            if (tr === _hoveredTr) return;
-            _hoveredTr = tr;
-            if (!tr) { hoverCard.style.display = "none"; return; }
-
-            const 출고일 = tr.dataset.출고일 || "";
-            const 홀딩   = tr.dataset.홀딩   || "";
-            const pk     = tr.dataset.pk || "";
-            const hasReservation = Number(tr.dataset.예약수량 || 0) > 0;
-
-            if (!출고일 && !홀딩 && !hasReservation) { hoverCard.style.display = "none"; return; }
-
-            // 예약이 있으면 실제 예약 레코드(담당자/출고일자/비고)를 가져와서 보여준다 —
-            // 행 자체의 홀딩/출고일 필드는 예약과 분리된 이후로는 안 채워지는 옛 필드라
-            // 여기서 실제 예약 정보를 따로 조회해야 함(2026-08-06).
-            let reservationsHtml = "";
-            if (hasReservation && pk) {
-                try {
-                    const reservations = await getReservationsByPk(pk);
-                    if (tr !== _hoveredTr) return; // 그 사이 다른 행으로 넘어갔으면 무시(오래된 응답)
-                    reservationsHtml = reservations.map(r => `
-                        <div class="hc-reservation">
-                            <div><span class="hc-label">담당자</span>${r.홀딩 || "(미지정)"}</div>
-                            <div><span class="hc-label">출고일자</span>${r.출고일 || "-"}</div>
-                            <div><span class="hc-label">비고</span>${r.메모 || "-"}</div>
-                        </div>
-                    `).join("");
-                } catch {
-                    reservationsHtml = "";
-                }
-            }
-            if (tr !== _hoveredTr) return;
-
-            hoverCard.innerHTML =
-                (출고일 ? `<div><span class="hc-label">출고일</span>${출고일}</div>` : "") +
-                (홀딩   ? `<div><span class="hc-label">예약자</span>${홀딩}</div>`   : "") +
-                reservationsHtml;
-
-            if (!hoverCard.innerHTML) { hoverCard.style.display = "none"; return; }
-
-            const rect = tr.getBoundingClientRect();
-            hoverCard.style.top   = (rect.bottom + 4) + "px";
-            hoverCard.style.left  = "auto";
-            hoverCard.style.right = (window.innerWidth - rect.right) + "px";
-            hoverCard.style.display = "block";
-        });
-        tableEl.addEventListener("mouseleave", () => {
-            _hoveredTr = null;
-            hoverCard.style.display = "none";
-        });
-
         // 추가/수정/홀딩 입력행이 뜨거나 사라질 때마다 우하단 전체 처리 바 갱신
         new MutationObserver(renderBulkActionBar).observe(tableEl, { childList: true, subtree: true });
     }
@@ -641,19 +606,13 @@ function handleChange(e) {
 }
 
 async function handleClick(e) {
-    // 예약 수량 클릭 — 아코디언으로 펼쳐서 거래처별 예약 목록 표시 (조회 전용, 취소 버튼 없음 —
-    // 취소가 여러 군데서 가능하면 혼란스러워질 수 있어 2026-08-06 제거)
+    // 예약 수량 클릭 — 팝업으로 거래처별 예약/출고 목록 표시(조회 전용, 취소
+    // 버튼 없음 — 여러 군데서 가능하면 혼란스러워질 수 있어 2026-08-06 결정,
+    // 2026-08-20 아코디언에서 모달로 변경).
     if (e.target.classList.contains("view-reservations-btn")) {
         const pk = e.target.dataset.pk;
-        const tr = e.target.closest("tr");
-        const existing = tr?.nextElementSibling;
-        if (existing?.classList.contains("reservation-list-row")) {
-            existing.remove();
-            return;
-        }
-        document.querySelectorAll("tr.reservation-list-row").forEach(r => r.remove());
         const reservations = await getReservationsByPk(pk);
-        tr?.insertAdjacentHTML("afterend", createReservationListRow(pk, reservations));
+        await showReservationDetailModal(reservations);
         return;
     }
 
@@ -1035,6 +994,19 @@ async function handleClick(e) {
         const salesOpen = document.querySelector(".sales-container")?.style.display === "";
         const priceOpen = document.querySelector(".price-container")?.style.display === "";
         const changesOpen = document.querySelector(".changes-container")?.style.display === "";
+
+        // 모바일에서는 CSV 대신 지금 보이는 카드 목록을 이미지로(2026-08-20).
+        if (window.innerWidth <= 768) {
+            const listEl = changesOpen ? document.getElementById("changes-list")
+                : priceOpen ? document.getElementById("price-list")
+                : salesOpen ? document.getElementById("sales-list")
+                : reservationsOpen ? document.getElementById("reservations-list")
+                : document.getElementById("mobile-list");
+            const prefix = changesOpen ? "업데이트" : priceOpen ? "전략단가"
+                : salesOpen ? "타창고매출현황" : reservationsOpen ? "예약현황" : "재고장";
+            await downloadElementAsImage(listEl, prefix);
+            return;
+        }
 
         if (changesOpen) {
             const headers = ["구분", "상품명", "브랜드", "등급", "ESTNO", "어제재고", "오늘재고", "BL", "창고"];

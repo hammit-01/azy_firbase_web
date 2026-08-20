@@ -673,16 +673,31 @@ def try_auto_complete_by_shipment(conn, bl: str, estno: str, grade: str, shipped
 
 
 def get_active_reservations_by_pk(conn, pk: str) -> list[dict]:
-    """화면에서 "이 상품 예약 N건"을 눌렀을 때(또는 마우스오버 카드에) 상세 목록을
-    보여주기 위한 조회. 어느 테이블 소속인지 몰라도 되도록 양쪽 다 찾는다."""
+    """화면에서 "이 상품 예약 N건"을 눌렀을 때 상세 목록을 보여주기 위한 조회
+    (2026-08-20, 재고장 표의 "예약" 열 배지 클릭). 그 열 숫자 자체가 예약재고+
+    당일출고재고(api_server.py list_inventory 참고)라 여기서도 holding_records/
+    azy_holding_records(예약)뿐 아니라 outbound(출고)까지 같이 내려줘야 숫자와
+    상세 목록이 맞는다. 담당자/거래처로 통일해서 프론트에서 종류 구분 없이
+    바로 쓸 수 있게 alias."""
     result = []
     with conn.cursor() as cur:
         for hr_table in ("holding_records", "azy_holding_records"):
             cur.execute(
-                f"SELECT id, 수량, 홀딩, 메모, 출고일, 홀딩일자 FROM {hr_table} WHERE pk=%s AND status='ACTIVE'",
+                f"SELECT id, 수량, 홀딩 AS 담당자, 메모 AS 거래처, 출고일, 홀딩일자, "
+                f"'예약' AS 구분 FROM {hr_table} WHERE pk=%s AND status='ACTIVE'",
                 (pk,),
             )
             result.extend(cur.fetchall())
+        # 예약 열 배지 숫자(예약재고+당일출고재고, api_server.py) 자체가 출고완료는
+        # 안 세므로(당일출고재고 계산이 status='ACTIVE'만 더함) 상세 목록도 맞춰서
+        # 출고완료는 빼고 출고중만(2026-08-20, "출고완료된 건 안 띄워도 된다" 피드백).
+        cur.execute(
+            "SELECT id, 수량, 홀딩 AS 담당자, 메모 AS 거래처, 출고일, 홀딩일자, "
+            "'출고중' AS 구분 "
+            "FROM outbound WHERE pk=%s AND status='ACTIVE'",
+            (pk,),
+        )
+        result.extend(cur.fetchall())
     return result
 
 

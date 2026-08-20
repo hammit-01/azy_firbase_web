@@ -204,7 +204,7 @@ function renderMobileView(data) {
                 ${dueDateTag(item.유통기한, limitDate)}
             </div>
             <div class="mc-info">
-                ${Number(item.예약수량) > 0 ? `<div class="mc-row"><span class="mc-label">예약</span>${safeValue(item.예약수량)}</div>` : ""}
+                ${Number(item.예약수량) > 0 ? `<div class="mc-row"><span class="mc-label">예약</span><button class="view-reservations-btn" data-pk="${item._rawId ?? id}">${safeValue(item.예약수량)}</button></div>` : ""}
                 ${Number(item.예약수량) > 0 ? `<div class="mc-row"><span class="mc-label">가용</span>${availableCell(item.가용재고)}</div>` : ""}
                 ${safeValue(item.평중)   ? `<div class="mc-row"><span class="mc-label">평중</span>${safeValue(item.평중)}</div>` : ""}
                 ${safeValue(item.BL)     ? `<div class="mc-row mc-full"><span class="mc-label">BL</span>${safeValue(item.BL)}</div>` : ""}
@@ -463,18 +463,32 @@ export function renderTableSize(count, size, mean) {
 }
 
 // =========================
-// 예약 목록 (예약수량 클릭 시 아코디언으로 펼쳐서 보여줌 — 조회 전용, 취소는 안 됨)
+// 예약/출고 목록 (예약 열 배지 클릭 시 팝업으로 보여줌 — 조회 전용, 취소는 안
+// 됨, 2026-08-20 아코디언에서 모달로 변경). 그 배지 숫자 자체가 예약재고+
+// 당일출고재고라(api_server.py) 여기 목록도 예약(holding)뿐 아니라 출고
+// (outbound)까지 같이 받아서 담당자/수량/단가/출고일/거래처를 한 줄씩 보여준다
+// — 단가는 거래처 문자열에 "이름 가격원 중량kg"로 인코딩돼있는 출고 건에만
+// 있고 순수 예약엔 없을 수 있음. ui.js의 showReservationDetailModal이 사용.
 // =========================
-export function createReservationListRow(pk, reservations) {
-    if (!reservations || reservations.length === 0) {
-        return `<tr class="reservation-list-row"><td colspan="13">예약 내역이 없습니다</td></tr>`;
-    }
-    const items = reservations.map(r => `
-        <span class="reservation-list-item">
-            ${safeValue(r.메모) || "(거래처 미입력)"} · ${safeValue(r.수량)}박스${safeValue(r.홀딩) ? ` · ${safeValue(r.홀딩)}` : ""}
-        </span>
-    `).join("");
-    return `<tr class="reservation-list-row" data-pk="${pk}"><td colspan="13">${items}</td></tr>`;
+export function reservationListItemsHtml(reservations) {
+    if (!reservations || reservations.length === 0) return "예약/출고 내역이 없습니다";
+    const badgeCls = { "예약": "rl-badge-reservation", "출고중": "rl-badge-outbound", "출고완료": "rl-badge-done" };
+    return reservations.map(r => {
+        const unitPrice = parseUnitPrice(r.거래처);
+        const weight = parseWeight(r.거래처);
+        const clientName = clientPrefix(r.거래처);
+        return `
+            <div class="reservation-list-item">
+                <span class="rl-badge ${badgeCls[r.구분] || ""}">${safeValue(r.구분) || "예약"}</span>
+                <span class="rl-field rl-field-strong">${safeValue(r.담당자) || "(미지정)"}</span>
+                <span class="rl-field">${safeValue(r.수량)}박스</span>
+                ${unitPrice !== null ? `<span class="rl-field">${formatUnitPrice(unitPrice)}원</span>` : ""}
+                ${weight !== null ? `<span class="rl-field">${formatWeight(weight)}kg</span>` : ""}
+                <span class="rl-field">${safeValue(r.출고일) || safeValue(r.홀딩일자) || "-"}</span>
+                ${clientName ? `<span class="rl-field">→ ${clientName}</span>` : ""}
+            </div>
+        `;
+    }).join("");
 }
 
 // =========================

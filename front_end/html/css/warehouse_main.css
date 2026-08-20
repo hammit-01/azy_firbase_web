@@ -661,9 +661,11 @@ th.sort-active {
     background: #dbeafe;
 }
 
-.reservation-list-row td {
-    background: #f8fafc;
-    padding: 8px 12px;
+.reservation-detail-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 480px;
 }
 .reservation-list-item {
     display: inline-flex;
@@ -676,6 +678,18 @@ th.sort-active {
     margin: 2px 6px 2px 0;
     font-size: 14px;
 }
+.rl-badge {
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.rl-badge-reservation { background: #dbeafe; color: #1d4ed8; }
+.rl-badge-outbound    { background: #ede9fe; color: #6d28d9; }
+.rl-badge-done         { background: #f1f5f9; color: #64748b; }
+.rl-field { color: #475569; }
+.rl-field-strong { font-weight: 700; color: #1e293b; }
 /* ── 툴바 액션 버튼 ── */
 .rollback-btn, .clear-btn, .all-delete-btn, .changes-tab-btn, .reservations-tab-btn,
 .sales-tab-btn, .price-tab-btn,
@@ -1234,41 +1248,6 @@ tbody tr {
 .flash-row td {
     background: #d3f5c4 !important;
     transition: 0.3s;
-}
-
-/* 출고일·홀딩 hover 카드 */
-#hover-info-card {
-    position: fixed;
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 8px 14px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-    z-index: 200;
-    display: none;
-    font-size: 13px;
-    color: #1e293b;
-    pointer-events: none;
-    line-height: 1.9;
-    white-space: nowrap;
-}
-
-#hover-info-card .hc-label {
-    color: #94a3b8;
-    font-weight: 600;
-    font-size: 11px;
-    margin-right: 6px;
-}
-
-#hover-info-card .hc-reservation {
-    padding-top: 6px;
-    margin-top: 6px;
-    border-top: 1px dashed #e2e8f0;
-}
-#hover-info-card .hc-reservation:first-of-type {
-    border-top: none;
-    margin-top: 0;
-    padding-top: 0;
 }
 
 .text {
