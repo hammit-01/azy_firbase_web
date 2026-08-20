@@ -204,12 +204,23 @@ export function bindEvents() {
     const MOBILE_VIEWPORT = "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no";
     const toggleDesktopViewBtn = document.getElementById("toggle-desktop-view-btn");
     const viewportMeta = document.querySelector('meta[name="viewport"]');
+
+    // 다운로드 버튼 라벨 — 모바일(<=768px)에서는 실제로 이미지를 받으니(아래
+    // main-download-btn 핸들러와 같은 기준) 라벨도 "이미지 다운로드"로(2026-08-20).
+    const updateDownloadBtnLabel = () => {
+        const btn = document.querySelector(".main-download-btn");
+        if (btn) btn.textContent = window.innerWidth <= 768 ? "이미지 다운로드" : "엑셀 다운로드";
+    };
+    updateDownloadBtnLabel();
+    window.addEventListener("resize", updateDownloadBtnLabel);
+
     if (toggleDesktopViewBtn && viewportMeta) {
         const applyForceDesktop = (forced) => {
             document.body.classList.toggle("force-desktop-view", forced);
             viewportMeta.setAttribute("content", forced ? DESKTOP_VIEWPORT : MOBILE_VIEWPORT);
             toggleDesktopViewBtn.textContent = forced ? "모바일" : "PC";
             toggleDesktopViewBtn.title = forced ? "모바일 화면으로 보기" : "PC 화면으로 보기";
+            updateDownloadBtnLabel();
         };
         applyForceDesktop(localStorage.getItem(FORCE_DESKTOP_KEY) === "1");
         toggleDesktopViewBtn.addEventListener("click", () => {
