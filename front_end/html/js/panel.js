@@ -64,11 +64,11 @@ export function createInsertRow() {
             <td data-label="브랜드"><input type="text" class="insert-brand cell-input" placeholder="브랜드"></td>
             <td data-label="등급"><input type="text" class="insert-grade cell-input" placeholder="등급"></td>
             <td data-label="ESTNO"><input type="text" class="insert-estNo cell-input" placeholder="ESTNO"></td>
+            <td data-label="BL"><input type="text" class="insert-bl cell-input" placeholder="BL"></td>
+            <td data-label="창고"><input type="text" class="insert-warehouse cell-input" placeholder="창고"></td>
             <td data-label="재고"><input type="number" class="insert-qty cell-input" placeholder="재고"></td>
             <td data-label="예약"></td>
             <td data-label="가용"></td>
-            <td data-label="BL"><input type="text" class="insert-bl cell-input" placeholder="BL"></td>
-            <td data-label="창고"><input type="text" class="insert-warehouse cell-input" placeholder="창고"></td>
             <td data-label="유통기한"><input type="date" class="insert-dueDate cell-input"></td>
             <td data-label="평중"><input type="number" step="0.01" class="insert-weight cell-input" placeholder="평중"></td>
             <td data-label="비고">
