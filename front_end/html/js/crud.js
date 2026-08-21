@@ -50,6 +50,7 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "", w
             ESTNO:  item.estNo || "",
             BL:     item.bl,
             창고:   item.warehouse,
+            상태:   item.dataState || "",
             수량:   holdQty,
             거래처: memo || item.memo || "",
             담당자: note?.trim() || "",

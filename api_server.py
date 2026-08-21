@@ -385,6 +385,8 @@ class ReservationBody(BaseModel):
     ESTNO:  str = ""
     BL:     str
     창고:   str
+    상태:   str = ""  # 재고 매칭 조건에 포함(2026-08-21) — 선언 안 해두면 pydantic이
+                       # 프론트에서 보낸 상태 필드를 조용히 버려서 매칭이 늘 실패했음
     수량:   int
     거래처: str = ""
     담당자: str = ""

@@ -450,7 +450,10 @@ def create_reservation(conn, product: dict) -> dict:
     이 락에서 순서가 정해지고, 뒤에 도는 쪽은 앞쪽이 커밋한 예약까지 반영된 합계로
     다시 계산되므로 중복 예약이 불가능하다).
 
-    product: {상품명, 브랜드, 등급, ESTNO, BL, 창고, 수량, 거래처, 담당자}
+    재고 매칭 기준은 상품명/브랜드/등급/ESTNO/BL/창고/상태 7개 전부 일치(2026-08-21,
+    상태 추가) — 정확히 1건이어야 예약 가능.
+
+    product: {상품명, 브랜드, 등급, ESTNO, BL, 창고, 상태, 수량, 거래처, 담당자}
     실패 시 ValueError(사유) — 호출부(API)가 400으로 변환해서 응답.
     """
     import uuid
@@ -465,11 +468,16 @@ def create_reservation(conn, product: dict) -> dict:
     hr_table = "holding_records" if table == "inventory" else "azy_holding_records"
 
     with conn.cursor() as cur:
+        # 상태는 DB에 NULL로 들어있는 행이 많아서(대부분의 "정상" 재고) 그냥
+        # 상태=%s로 비교하면 NULL=''가 항상 거짓이라 매칭이 통째로 깨진다
+        # (2026-08-21 실측, "재고 매칭 0건" 오류) — COALESCE로 NULL을 빈 문자열
+        # 취급해서 프론트의 dataState 기본값("")과 맞춘다.
         cur.execute(
             f"SELECT id, pk, 재고, stock_version FROM {table} WHERE 상품명=%s AND 브랜드=%s "
-            f"AND 등급=%s AND ESTNO=%s AND BL=%s AND 창고=%s AND 수집일 != '' FOR UPDATE",
+            f"AND 등급=%s AND ESTNO=%s AND BL=%s AND 창고=%s AND COALESCE(상태, '')=%s "
+            f"AND 수집일 != '' FOR UPDATE",
             (product["상품명"], product.get("브랜드", ""), product.get("등급", ""),
-             product.get("ESTNO", ""), product["BL"], product["창고"]),
+             product.get("ESTNO", ""), product["BL"], product["창고"], product.get("상태", "")),
         )
         matches = cur.fetchall()
         if len(matches) != 1:
