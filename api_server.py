@@ -34,6 +34,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# 정적 파일(html/js/css)에 Cache-Control 헤더가 없으면 브라우저가 자체적으로
+# 유효기간을 추측해서 캐싱한다(특히 모바일 Safari 즐겨찾기/홈화면 추가가 공격적으로
+# 캐싱함) — 코드를 배포해도 기기가 옛 HTML/JS 조합을 계속 쓰면서 "로그인도 안 되고
+# 아무것도 안 뜨는" 증상으로 나타남(2026-08-24). 매번 새로 받게 강제.
+@app.middleware("http")
+async def no_cache_static(request, call_next):
+    response = await call_next(request)
+    if not request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
+
 # ── 데이터 조회 ──────────────────────────────────────────────
 
 @app.get("/api/inventory")
