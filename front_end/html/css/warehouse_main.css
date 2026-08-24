@@ -2340,6 +2340,12 @@ tr.insert-card .remove-insert-btn:hover {
     cursor: pointer;
 }
 .confirm-yes:hover { background: #334155; }
+.bulk-edit-modal { max-width: min(96vw, 1400px); }
+.bulk-edit-scroll { overflow-x: auto; margin-bottom: 16px; }
+.bulk-edit-table { border-collapse: collapse; width: max-content; min-width: 100%; }
+.bulk-edit-table tr.update-row-edit td:first-child,
+.bulk-edit-table tr.holding-insert-row td:first-child { display: none; }
+.bulk-edit-table .insert-row-memo-cell button { display: none; }
 .confirm-no {
     background: #f1f5f9;
     color: #475569;

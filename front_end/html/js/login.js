@@ -25,6 +25,15 @@ export function hasPriceEditAccess(role) {
     return role === "관리자";
 }
 
+// 신규 기능 단계적 롤아웃 게이트(2026-08-24) — 관리자 권한 + 로컬 테스트
+// 서버(8001)에서만 켠다. prod(8000)나 일반 권한에서는 기존 동작 그대로.
+export function hasAdminAccess(role) {
+    return role === "관리자";
+}
+export function isAdminTestFeatureEnabled() {
+    return hasAdminAccess(getStoredUser()?.권한) && window.location.port === "8001";
+}
+
 function closePopover() {
     document.querySelector(".login-btn")?.classList.remove("active");
     document.querySelector(".login-popover")?.classList.remove("open");

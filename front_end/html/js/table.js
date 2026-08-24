@@ -227,7 +227,7 @@ function toDateInputValue(v) {
     return s ? s.replace(/\./g, "-") : "";
 }
 
-function createUpdateRow(item) {
+export function createUpdateRow(item) {
     const id = item.id;
     return `
         <tr class="update-row-edit" data-id="${id}">
@@ -259,7 +259,7 @@ function createUpdateRow(item) {
 }
 
 // 홀딩 대상 행 밑에 붙는 입력행 — 홀딩수량/평균중량/출고일자/담당자/비고만 입력, 나머지는 원본 행에서 그대로 가져감
-function createHoldingInsertRow(item) {
+export function createHoldingInsertRow(item) {
     const id = item.id;
     const user = getStoredUser();
     // 사원은 자기 이름으로 자동 고정, 담당자 선택 UI 자체를 안 보여줌 (편집자는 기존처럼 선택 가능)

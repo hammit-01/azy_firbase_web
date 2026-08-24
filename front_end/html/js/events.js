@@ -1,5 +1,5 @@
 import { state } from "./state.js";
-import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows, renderReservationsTab, renderSalesTab, renderPriceTab, priceInsertRowHtml, PRICE_FIELDS, priceFieldClass, clientPrefix, parseUnitPrice, parseWeight, buildClientWithDetails, outboundInsertRowHtml } from "./table.js";
+import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows, renderReservationsTab, renderSalesTab, renderPriceTab, priceInsertRowHtml, PRICE_FIELDS, priceFieldClass, clientPrefix, parseUnitPrice, parseWeight, buildClientWithDetails, outboundInsertRowHtml, createUpdateRow, createHoldingInsertRow } from "./table.js";
 import { renderSelectData, renderInsert, createInsertRow } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
@@ -8,8 +8,8 @@ import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
 import { fetchAllData } from "./firebase.js";
-import { showToast, showError, showConfirm, showEditReservationModal, showRegisterOutboundModal, showNoteModal, showCancelOutboundModal, showAlertModal, showPriceExportModal, showEditPriceModal, showReservationDetailModal } from "./ui.js";
-import { getStoredUser, applyRoleVisibility, hasPriceEditAccess } from "./login.js";
+import { showToast, showError, showConfirm, showEditReservationModal, showRegisterOutboundModal, showNoteModal, showCancelOutboundModal, showAlertModal, showPriceExportModal, showEditPriceModal, showReservationDetailModal, showBulkEditModal } from "./ui.js";
+import { getStoredUser, applyRoleVisibility, hasPriceEditAccess, isAdminTestFeatureEnabled } from "./login.js";
 import { apiLogActivity } from "./api.js";
 
 // 예약현황/타창고매출현황 액션(취소/완료/변경/토글 등) 이후 공용 새로고침(2026-08-19) —
@@ -893,17 +893,102 @@ async function handleClick(e) {
         return;
     }
 
-    // 수정 버튼 — 선택한 행을 테이블 안에서 바로 편집 가능하게 전환(다시 누르면 해제)
+    // 수정 버튼 — 선택한 행을 테이블 안에서 바로 편집 가능하게 전환(다시 누르면 해제).
+    // 관리자+8001 전용(2026-08-24, 단계적 롤아웃): 팝업 모달로 대체 — 여러 행
+    // 선택해도 모달 하나에 전부 들어간다. 그 외에는 기존 인라인 방식 그대로.
     if (e.target.classList.contains("update-btn")) {
         if (state.selectedItems.size === 0) { showError("수정할 상품을 선택하세요."); return; }
+        if (isAdminTestFeatureEnabled()) {
+            // createUpdateRow/updateData 둘 다 state.allData의 원본(한글 키) 형태를
+            // 기대함 — state.selectedItems는 정규화된(영문 키) 형태라 여기 쓰면 안 됨
+            // (addSelectedItem이 normalizeItem을 거쳐서 저장하기 때문).
+            const ids = [...state.selectedItems.keys()];
+            const items = ids.map(id => state.allData.find(v => v.id === id)).filter(Boolean);
+            const rowsHtml = items.map(createUpdateRow).join("");
+            showBulkEditModal(`선택 상품 수정 (${items.length}건)`, rowsHtml, {
+                onSave: async (overlay) => {
+                    const rows = overlay.querySelectorAll("tr.update-row-edit[data-id]");
+                    const backups = [];
+                    for (const row of rows) {
+                        const id = row.dataset.id;
+                        const item = state.allData.find(v => v.id === id);
+                        const result = await updateData(
+                            item, id,
+                            row.querySelector(".update-name")?.value,
+                            row.querySelector(".update-brand")?.value,
+                            row.querySelector(".update-grade")?.value,
+                            row.querySelector(".update-estNo")?.value,
+                            row.querySelector(".update-qty")?.value,
+                            row.querySelector(".update-bl")?.value,
+                            row.querySelector(".update-warehouse")?.value,
+                            toDotDate(row.querySelector(".update-dueDate")?.value),
+                            row.querySelector(".update-weight")?.value,
+                            row.querySelector(".update-releaseDate")?.value,
+                            row.querySelector(".update-holding")?.value,
+                            row.querySelector(".update-state")?.value,
+                            row.querySelector(".update-memo")?.value || "",
+                            true
+                        );
+                        if (result) backups.push(result);
+                    }
+                    if (backups.length > 0) {
+                        pushUndo({ type: "bulk-update", backups: backups.map(b => ({ id: b.rawId, prevData: b.prevData, azy: b.azy })) });
+                    }
+                    state.selectedItems.clear();
+                    state.crudData = null;
+                    showToast("✓ 수정 완료");
+                    await fetchAllData();
+                },
+            });
+            return;
+        }
         state.crudData = state.crudData === "update" ? null : "update";
         renderTable();
         return;
     }
 
-    // 홀딩 버튼 — 선택한 행 밑에 홀딩 입력행을 추가(다시 누르면 해제)
+    // 홀딩 버튼 — 선택한 행 밑에 홀딩 입력행을 추가(다시 누르면 해제). 관리자+8001
+    // 전용 팝업 모달 분기는 위 update-btn과 동일한 원리.
     if (e.target.classList.contains("holding-btn")) {
         if (state.selectedItems.size === 0) { showError("예약할 상품을 선택하세요."); return; }
+        if (isAdminTestFeatureEnabled()) {
+            // createHoldingInsertRow는 원본(한글 키, state.allData) 형태를 기대하지만
+            // holdingData는 정규화된(영문 키, state.selectedItems — addSelectedItem이
+            // normalizeItem을 거쳐서 저장) 형태를 기대함 — 화면 생성과 저장에 서로
+            // 다른 소스를 써야 함(기존 개별/전체 홀딩 처리 로직과 동일한 이유).
+            const ids = [...state.selectedItems.keys()];
+            const items = ids.map(id => state.allData.find(v => v.id === id)).filter(Boolean);
+            const rowsHtml = items.map(createHoldingInsertRow).join("");
+            showBulkEditModal(`선택 상품 예약 (${items.length}건)`, rowsHtml, {
+                onSave: async (overlay) => {
+                    const rows = overlay.querySelectorAll("tr.holding-insert-row[data-id]");
+                    const backups = [];
+                    for (const row of rows) {
+                        const id = row.dataset.id;
+                        const item = state.selectedItems.get(id);
+                        const holdWeight = row.querySelector(".hold-weight")?.value;
+                        const result = await holdingData(
+                            item,
+                            Number(row.querySelector(".hold-qty")?.value),
+                            row.querySelector(".hold-releaseDate")?.value,
+                            row.querySelector(".hold-note")?.value,
+                            row.querySelector(".hold-memo")?.value || "",
+                            holdWeight !== "" ? holdWeight : null,
+                            true
+                        );
+                        if (result) backups.push(result);
+                    }
+                    if (backups.length > 0) {
+                        pushUndo({ type: "bulk-reservation", ids: backups.map(b => b.reservationId) });
+                    }
+                    state.selectedItems.clear();
+                    state.crudData = null;
+                    showToast("✓ 예약 완료");
+                    await fetchAllData();
+                },
+            });
+            return;
+        }
         state.crudData = state.crudData === "holding" ? null : "holding";
         renderTable();
         return;
