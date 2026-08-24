@@ -920,18 +920,6 @@ th.sort-active {
 .reservations-table tr.sales-completed-row td { background: #fde047; }
 .reservation-card.sales-completed-row { background: #fde047; }
 
-/* 미리보기 행(2026-08-24) — 출고일 예약된 ACTIVE 예약, 아직 outbound로 안
-   넘어간 것. 실제 출고 행과 헷갈리지 않게 옅은 파란색 + "예정" 배지. */
-.reservations-table tr.sales-preview-row td { background: #eff6ff; color: #64748b; }
-.sales-preview-badge {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 999px;
-    background: #dbeafe;
-    color: #1d4ed8;
-    font-size: 12px;
-    font-weight: 700;
-}
 
 /* 타창고매출현황 비고 칸 — 더블클릭하면 그 자리에서 바로 입력창으로 바뀜
    (2026-08-19). 평소엔 살짝 손 모양 커서로만 편집 가능함을 암시. 입력창은

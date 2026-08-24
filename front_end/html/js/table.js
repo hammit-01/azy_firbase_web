@@ -1082,14 +1082,13 @@ function reservationCardHtml(r, isSalesPage = false) {
     const clientDisplay = clientPrefix(r.거래처);
     const completed = isSalesPage && r.status === "COMPLETED";
     const isPreview = isSalesPage && !!r._preview;
-    const isNotYetDue = isSalesPage && !isPreview && !completed && safeValue(r.출고일) > todayISOStr();
-    const showPreviewBadge = isPreview || isNotYetDue;
+    const limitedActions = isSalesPage && !completed && safeValue(r.출고일) !== todayISOStr();
     const access = isSalesPage ? salesAccess(r) : { canEdit: true, canOthers: true, canCancel: true, canEditNote: true };
     return `
-        <div class="mobile-card reservation-card${completed ? " sales-completed-row" : ""}${showPreviewBadge ? " sales-preview-row" : ""}" data-reservation-id="${r.id}">
+        <div class="mobile-card reservation-card${completed ? " sales-completed-row" : ""}" data-reservation-id="${r.id}">
             <div class="mc-header">
                 ${noteBtn(r, isSalesPage && !isPreview, access.canEditNote)}
-                ${!isPreview && isSalesPage && needsRegister(r) && access.canOthers ? `<label class="mc-register-label">${registerCheckboxHtml(r, access.canOthers)} 등록완료</label>` : ""}
+                ${!limitedActions && isSalesPage && needsRegister(r) && access.canOthers ? `<label class="mc-register-label">${registerCheckboxHtml(r, access.canOthers)} 등록완료</label>` : ""}
                 <span class="mc-name">${safeValue(r.상품명)}</span>
                 ${whTag(r.창고)}
             </div>
@@ -1114,13 +1113,11 @@ function reservationCardHtml(r, isSalesPage = false) {
                 ${safeValue(r.BL) ? `<div class="mc-row mc-full"><span class="mc-label">BL</span>${safeValue(r.BL)}</div>` : ""}
             </div>
             <div class="reservation-card-actions">
-                ${isPreview ? `<span class="sales-preview-badge" title="출고일이 되면 자동으로 출고 목록에 반영됩니다. 실제 처리는 예약현황에서 해주세요.">예정</span>` : `
-                ${isNotYetDue ? `<span class="sales-preview-badge" title="출고일이 아직 안 됐습니다">예정</span>` : ""}
-                ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage ? "1" : ""}">변경</button>`}
-                ${!isNotYetDue && isSalesPage && access.canOthers ? `<button class="stock-release-btn${r.수량내림 ? " released" : ""}" data-id="${r.id}" title="이 출고 건 수량을 0으로 내렸다/복구">내림</button>` : ""}
-                ${!isNotYetDue && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
-                ${completed || !access.canCancel ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">취소</button>`}
-                ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}`}
+                ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">변경</button>`}
+                ${!limitedActions && isSalesPage && access.canOthers ? `<button class="stock-release-btn${r.수량내림 ? " released" : ""}" data-id="${r.id}" title="이 출고 건 수량을 0으로 내렸다/복구">내림</button>` : ""}
+                ${!limitedActions && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
+                ${completed || !access.canCancel ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">취소</button>`}
+                ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
             </div>
         </div>
     `;
@@ -1133,17 +1130,14 @@ function reservationRowHtml(r, isSalesPage = false) {
     // 미리보기(2026-08-24, 관리자+8001 전용) — 출고일은 잡혔지만 아직 오늘이 안
     // 돼서 outbound로 안 넘어간 ACTIVE 예약. get_all_outbound()가 이 행들도
     // 같이 내려주는데(_preview:true), 실제 outbound 행이 아니라서 완료/내림/
-    // 등록/메모 등 액션을 걸면 없는 id를 건드리게 된다 — 그래서 읽기 전용 배지만
-    // 보여주고 모든 액션을 막는다. 진짜 처리는 예약현황에서 하면 그대로 반영됨.
+    // 등록/메모 등 outbound 전용 액션을 걸면 없는 id를 건드리게 된다 — 변경/취소는
+    // updateReservation/cancelReservation로 라우팅해서 계속 가능하게 둔다.
     const isPreview = isSalesPage && !!r._preview;
-    // 출고등록까지 된(outbound 테이블에 실제로 있는) 행도 출고일이 아직 안 됐으면
-    // 개념적으로는 예약과 같은 "예정" 상태다(2026-08-24, 사용자 지적 — 예약할 때
-    // 출고일을 바로 정했는지 나중에 출고등록으로 정했는지는 구분할 이유가 없음).
-    // 다만 이 행들은 holding_records가 아니라 outbound에만 존재해서 예약현황으로
-    // 안 넘어가므로, "완료/내림"(=이미 나갔다는 뜻)만 막고 변경/취소는 계속
-    // 가능하게 둔다 — 안 그러면 이 화면 말고는 고칠 방법이 없어진다.
-    const isNotYetDue = isSalesPage && !isPreview && !completed && safeValue(r.출고일) > todayISOStr();
-    const showPreviewBadge = isPreview || isNotYetDue;
+    // 출고일이 오늘이 아닌 행(예정 예약이든, 출고등록으로 이미 outbound에 있는
+    // 미래 날짜 건이든)은 배지 없이 그냥 평범하게 보여주되(2026-08-24, 사용자
+    // 요청 — 예정 표시/구분 자체를 없앰) 완료/내림/등록완료처럼 "이미 실제로
+    // 처리됐다"는 뜻의 액션만 막고 변경/취소만 남긴다.
+    const limitedActions = isSalesPage && !completed && safeValue(r.출고일) !== todayISOStr();
     const access = isSalesPage ? salesAccess(r) : { canEdit: true, canOthers: true, canCancel: true, canEditNote: true };
     const canInlineEdit = isSalesPage && !completed && !isPreview && access.canEdit;
     const rawClient = attrEscape(r.거래처);
@@ -1174,12 +1168,12 @@ function reservationRowHtml(r, isSalesPage = false) {
         ? `<td class="sales-client-cell" data-id="${r.id}" data-raw="${rawClient}" title="더블클릭해서 수정">${clientDisplay}</td>`
         : `<td>${clientDisplay}</td>`;
     const reservationPriceCell = isSalesPage ? "" : `<td>${formatUnitPrice(unitPrice)}</td>`;
-    const rowClass = [completed && "sales-completed-row", showPreviewBadge && "sales-preview-row"].filter(Boolean).join(" ");
+    const rowClass = completed ? "sales-completed-row" : "";
     return `
         <tr data-reservation-id="${r.id}"${rowClass ? ` class="${rowClass}"` : ""}>
             <td class="reservation-note-cell">${noteBtn(r, isSalesPage && !isPreview, access.canEditNote)}</td>
             ${isSalesPage ? `<td class="${!isPreview && access.canEditRemark ? "sales-remark-cell" : ""}" data-id="${r.id}" data-remark="${attrEscape(r.비고)}" title="${!isPreview && access.canEditRemark ? "더블클릭해서 수정" : ""}">${safeValue(r.비고)}</td>` : ""}
-            ${isSalesPage ? `<td class="reservation-register-cell">${isPreview ? "" : registerCheckboxHtml(r, access.canOthers)}</td>` : ""}
+            ${isSalesPage ? `<td class="reservation-register-cell">${limitedActions ? "" : registerCheckboxHtml(r, access.canOthers)}</td>` : ""}
             <td>${safeValue(r.담당자) || "(미지정)"}</td>
             <td>${safeValue(r.상품명)}</td>
             <td>${safeValue(r.브랜드)}</td>
@@ -1196,15 +1190,13 @@ function reservationRowHtml(r, isSalesPage = false) {
             ${totalCell}
             <td>${safeValue(r.출고일)}</td>
             <td class="reservation-row-actions-cell">
-                ${isPreview ? `<span class="sales-preview-badge" title="출고일이 되면 자동으로 출고 목록에 반영됩니다. 실제 처리는 예약현황에서 해주세요.">예정</span>` : `
                 <div class="reservation-row-actions">
-                    ${isNotYetDue ? `<span class="sales-preview-badge" title="출고일이 아직 안 됐습니다">예정</span>` : ""}
-                    ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage ? "1" : ""}">변경</button>`}
-                    ${!isNotYetDue && isSalesPage && access.canOthers ? `<button class="stock-release-btn${r.수량내림 ? " released" : ""}" data-id="${r.id}" title="이 출고 건 수량을 0으로 내렸다/복구">내림</button>` : ""}
-                    ${!isNotYetDue && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
-                    ${completed || !access.canCancel ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">취소</button>`}
+                    ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">변경</button>`}
+                    ${!limitedActions && isSalesPage && access.canOthers ? `<button class="stock-release-btn${r.수량내림 ? " released" : ""}" data-id="${r.id}" title="이 출고 건 수량을 0으로 내렸다/복구">내림</button>` : ""}
+                    ${!limitedActions && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
+                    ${completed || !access.canCancel ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">취소</button>`}
                     ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
-                </div>`}
+                </div>
             </td>
         </tr>
     `;
