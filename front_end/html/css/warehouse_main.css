@@ -194,11 +194,11 @@ td {
    첫 칸까지 건드리지 않게 .table-wrap 범위로 한정) */
 .table-wrap td:first-child { text-align: center; }
 
-/* BL번호 열 한 줄 표시 — 열 순서: 선택,상품명,브랜드,등급,ESTNO,재고,예약,가용,BL,창고,유통기한,평균,비고
-   (2026-08-25, 재고/예약/가용을 ESTNO~BL 사이로 옮기며 BL 위치가 6→9번째로 바뀜.
-   다른 표(예약현황/타창고매출현황 등)의 같은 위치 칸까지 건드리지 않게 위
+/* BL번호 열 한 줄 표시 — 열 순서: 선택,상품명,브랜드,등급,ESTNO,재고,BL,창고,예약,가용,유통기한,평균,비고
+   (2026-08-25, 예약/가용만 창고~유통기한 사이로 다시 옮기며 BL 위치가 9→7번째로
+   바뀜. 다른 표(예약현황/타창고매출현황 등)의 같은 위치 칸까지 건드리지 않게 위
    .table-wrap td:first-child처럼 .table-wrap으로 범위 한정) */
-.table-wrap td:nth-child(9) {
+.table-wrap td:nth-child(7) {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

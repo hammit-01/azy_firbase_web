@@ -803,12 +803,12 @@ export function renderTable() {
                 <td>${safeValue(item.등급)}</td>
                 <td>${safeValue(item.ESTNO)}</td>
                 <td>${safeValue(item.재고)}</td>
+                <td>${safeValue(item.BL)}</td>
+                <td>${whTag(item.창고)}</td>
                 <td>${Number(item.예약수량) > 0
                     ? `<button class="view-reservations-btn" data-pk="${item._rawId ?? id}">${safeValue(item.예약수량)}</button>`
                     : ""}</td>
                 <td>${availableCell(item.가용재고)}</td>
-                <td>${safeValue(item.BL)}</td>
-                <td>${whTag(item.창고)}</td>
                 <td>${dueDateTag(item.유통기한, limitDate)}</td>
                 <td>${safeValue(item.평중)}</td>
                 <td>${safeValue(item.메모)}</td>
