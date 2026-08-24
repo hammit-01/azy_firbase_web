@@ -1088,7 +1088,7 @@ input[type="date"].price-edit-input {
     margin-top: 10px;
 }
 
-.edit-reservation-btn, .use-reservation-btn, .cancel-reservation-btn, .register-outbound-btn, .price-delete-btn, .stock-release-btn {
+.edit-reservation-btn, .use-reservation-btn, .cancel-reservation-btn, .register-outbound-btn, .price-delete-btn, .stock-release-btn, .save-outbound-insert-btn, .cancel-outbound-insert-btn {
     height: 28px;
     padding: 0 8px;
     border: none;
@@ -1108,6 +1108,10 @@ input[type="date"].price-edit-input {
 .use-reservation-btn:hover { background: #bbf7d0; }
 .cancel-reservation-btn { background: #fee2e2; color: #b91c1c; }
 .cancel-reservation-btn:hover { background: #fca5a5; }
+.save-outbound-insert-btn { background: #dcfce7; color: #15803d; }
+.save-outbound-insert-btn:hover { background: #bbf7d0; }
+.cancel-outbound-insert-btn { background: #fee2e2; color: #b91c1c; }
+.cancel-outbound-insert-btn:hover { background: #fca5a5; }
 .register-outbound-btn { background: #ede9fe; color: #6d28d9; }
 .register-outbound-btn:hover { background: #ddd6fe; }
 .price-delete-btn { background: #fee2e2; color: #b91c1c; }
