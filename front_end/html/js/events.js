@@ -973,11 +973,14 @@ async function handleClick(e) {
                         const client = row.querySelector(".hold-client")?.value || "";
                         const price = row.querySelector(".hold-price")?.value;
                         const combinedClient = buildClientWithDetails(client, price !== "" ? price : null, null);
+                        // 담당자 안 고르면 "소매" 처리(2026-08-24) — 미지정으로 남기지 않고
+                        // 담당자 없는 소매 판매라는 뜻으로 명시적인 값을 넣는다.
+                        const note = row.querySelector(".hold-note")?.value?.trim() || "소매";
                         const result = await holdingData(
                             item,
                             Number(row.querySelector(".hold-qty")?.value),
                             row.querySelector(".hold-releaseDate")?.value,
-                            row.querySelector(".hold-note")?.value,
+                            note,
                             combinedClient,
                             holdWeight !== "" ? holdWeight : null,
                             true
