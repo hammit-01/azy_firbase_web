@@ -494,6 +494,95 @@ export function bindEvents() {
             return;
         }
 
+        // 타창고매출현황 — 수량 칸 더블클릭 인라인 수정(2026-08-24, 비고 칸과 동일 패턴).
+        const qtyCell = e.target.closest(".sales-qty-cell");
+        if (qtyCell) {
+            if (qtyCell.querySelector("input")) return;
+            const id = qtyCell.dataset.id;
+            const original = Number(qtyCell.dataset.value || 0);
+            qtyCell.innerHTML = `<input type="number" min="1" class="sales-qty-input" value="${original}">`;
+            const input = qtyCell.querySelector("input");
+            input.focus();
+            input.select();
+
+            let done = false;
+            const finish = async (save) => {
+                if (done) return;
+                done = true;
+                const newValue = Number(input.value);
+                if (save && Number.isInteger(newValue) && newValue > 0 && newValue !== original) {
+                    try {
+                        await updateOutbound(id, { 수량: newValue });
+                        _logActivity("outbound", id, "수정", { 수량: original }, { 수량: newValue }, "수량 변경");
+                        showToast("✓ 수량 저장됨");
+                    } catch (err) {
+                        showError(err.message || "저장에 실패했습니다.");
+                    }
+                }
+                renderSalesTab();
+            };
+            input.addEventListener("blur", () => finish(true));
+            input.addEventListener("keydown", (ke) => {
+                if (ke.key === "Enter") { ke.preventDefault(); input.blur(); }
+                if (ke.key === "Escape") { ke.preventDefault(); finish(false); }
+            });
+            return;
+        }
+
+        // 타창고매출현황 — 거래처/단가/중량 칸 더블클릭 인라인 수정(2026-08-24).
+        // 세 칸 다 outbound.거래처 문자열 하나("이름 가격원 중량kg")에 같이
+        // 인코딩돼 있어서(table.js clientPrefix/parseUnitPrice/parseWeight 참고),
+        // 어느 칸을 고치든 나머지 두 값은 원본에서 그대로 떼와 다시 조합해서 저장.
+        const clientCell = e.target.closest(".sales-client-cell");
+        const priceCell = e.target.closest(".sales-price-cell");
+        const weightCell = e.target.closest(".sales-weight-cell");
+        const clientLikeCell = clientCell || priceCell || weightCell;
+        if (clientLikeCell) {
+            if (clientLikeCell.querySelector("input")) return;
+            const id = clientLikeCell.dataset.id;
+            const rawClient = clientLikeCell.dataset.raw || "";
+            const prefix = clientPrefix(rawClient);
+            const price = parseUnitPrice(rawClient);
+            const weight = parseWeight(rawClient);
+            const field = clientCell ? "prefix" : priceCell ? "price" : "weight";
+            const current = field === "prefix" ? prefix : field === "price" ? (price ?? "") : (weight ?? "");
+            const isNumberField = field !== "prefix";
+            clientLikeCell.innerHTML = `<input type="${isNumberField ? "number" : "text"}" ${isNumberField ? 'step="0.01" min="0"' : ""} class="sales-inline-input" value="${String(current).replace(/"/g, "&quot;")}">`;
+            const input = clientLikeCell.querySelector("input");
+            input.focus();
+            input.select();
+
+            let done = false;
+            const finish = async (save) => {
+                if (done) return;
+                done = true;
+                if (save) {
+                    const raw = input.value.trim();
+                    let newPrefix = prefix, newPrice = price, newWeight = weight;
+                    if (field === "prefix") newPrefix = raw;
+                    else if (field === "price") newPrice = raw === "" ? null : Number(raw);
+                    else newWeight = raw === "" ? null : Number(raw);
+                    const newClient = buildClientWithDetails(newPrefix, newPrice, newWeight);
+                    if (newClient !== rawClient) {
+                        try {
+                            await updateOutbound(id, { 거래처: newClient });
+                            _logActivity("outbound", id, "수정", { 거래처: rawClient }, { 거래처: newClient }, "거래처/단가/중량 변경");
+                            showToast("✓ 저장됨");
+                        } catch (err) {
+                            showError(err.message || "저장에 실패했습니다.");
+                        }
+                    }
+                }
+                renderSalesTab();
+            };
+            input.addEventListener("blur", () => finish(true));
+            input.addEventListener("keydown", (ke) => {
+                if (ke.key === "Enter") { ke.preventDefault(); input.blur(); }
+                if (ke.key === "Escape") { ke.preventDefault(); finish(false); }
+            });
+            return;
+        }
+
         // 전략단가 — 행 더블클릭하면 그 행 전체가 입력창으로 바뀜(2026-08-19).
         // 여러 칸을 한꺼번에 고치는 거라 비고 칸처럼 blur 하나로는 안 되고,
         // 포커스가 행 밖으로 완전히 나갔을 때만 저장한다(칸 사이 Tab 이동은 무시).

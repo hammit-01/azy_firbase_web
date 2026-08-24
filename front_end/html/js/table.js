@@ -1040,11 +1040,11 @@ function reservationCardHtml(r, isSalesPage = false) {
                 ${safeValue(r.BL) ? `<div class="mc-row mc-full"><span class="mc-label">BL</span>${safeValue(r.BL)}</div>` : ""}
             </div>
             <div class="reservation-card-actions">
-                ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "변경" : "예약변경"}</button>`}
+                ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage ? "1" : ""}">변경</button>`}
                 ${isSalesPage && access.canOthers ? `<button class="stock-release-btn${r.수량내림 ? " released" : ""}" data-id="${r.id}" title="이 출고 건 수량을 0으로 내렸다/복구">내림</button>` : ""}
-                ${access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "완료" : "사용완료"}</button>` : ""}
-                ${completed || !access.canCancel ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "취소" : "예약취소"}</button>`}
-                ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고등록</button>`}
+                ${access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
+                ${completed || !access.canCancel ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">취소</button>`}
+                ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
             </div>
         </div>
     `;
@@ -1053,16 +1053,28 @@ function reservationCardHtml(r, isSalesPage = false) {
 function reservationRowHtml(r, isSalesPage = false) {
     const unitPrice = parseUnitPrice(r.거래처);
     const weight = parseWeight(r.거래처);
-    const dateCell = isSalesPage
-        ? `<td>${formatUnitPrice(unitPrice)}</td>`
-        : `<td>${safeValue(r.홀딩일자)}</td>`;
-    const weightCell = isSalesPage ? `<td>${formatWeight(weight)}</td>` : "";
+    const completed = isSalesPage && r.status === "COMPLETED";
+    const access = isSalesPage ? salesAccess(r) : { canEdit: true, canOthers: true, canCancel: true, canEditNote: true };
+    const canInlineEdit = isSalesPage && !completed && access.canEdit;
+    const rawClient = attrEscape(r.거래처);
+    const qtyCell = canInlineEdit
+        ? `<td class="sales-qty-cell" data-id="${r.id}" data-value="${safeValue(r.수량) || 0}" title="더블클릭해서 수정">${safeValue(r.수량)}</td>`
+        : `<td>${safeValue(r.수량)}</td>`;
+    const dateCell = !isSalesPage
+        ? `<td>${safeValue(r.홀딩일자)}</td>`
+        : canInlineEdit
+            ? `<td class="sales-price-cell" data-id="${r.id}" data-raw="${rawClient}" title="더블클릭해서 수정">${formatUnitPrice(unitPrice)}</td>`
+            : `<td>${formatUnitPrice(unitPrice)}</td>`;
+    const weightCell = !isSalesPage ? "" : canInlineEdit
+        ? `<td class="sales-weight-cell" data-id="${r.id}" data-raw="${rawClient}" title="더블클릭해서 수정">${formatWeight(weight)}</td>`
+        : `<td>${formatWeight(weight)}</td>`;
     const totalCell = isSalesPage
         ? `<td>${(unitPrice !== null && weight !== null) ? formatUnitPrice(Math.round(unitPrice * weight)) : ""}</td>`
         : "";
     const clientDisplay = isSalesPage ? clientPrefix(r.거래처) : safeValue(r.거래처);
-    const completed = isSalesPage && r.status === "COMPLETED";
-    const access = isSalesPage ? salesAccess(r) : { canEdit: true, canOthers: true, canCancel: true, canEditNote: true };
+    const clientCell = canInlineEdit
+        ? `<td class="sales-client-cell" data-id="${r.id}" data-raw="${rawClient}" title="더블클릭해서 수정">${clientDisplay}</td>`
+        : `<td>${clientDisplay}</td>`;
     return `
         <tr data-reservation-id="${r.id}"${completed ? ' class="sales-completed-row"' : ""}>
             <td class="reservation-note-cell">${noteBtn(r, isSalesPage, access.canEditNote)}</td>
@@ -1075,20 +1087,20 @@ function reservationRowHtml(r, isSalesPage = false) {
             <td>${safeValue(r.ESTNO)}</td>
             <td>${safeValue(r.BL)}</td>
             <td>${whTag(r.창고)}</td>
-            <td>${safeValue(r.수량)}</td>
+            ${qtyCell}
             ${isSalesPage ? "" : `<td>${safeValue(r.재고)}</td><td>${availableCell(r.가용재고)}</td>`}
-            <td>${clientDisplay}</td>
+            ${clientCell}
             ${dateCell}
             ${weightCell}
             ${totalCell}
             <td>${safeValue(r.출고일)}</td>
             <td class="reservation-row-actions-cell">
                 <div class="reservation-row-actions">
-                    ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "변경" : "예약변경"}</button>`}
+                    ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage ? "1" : ""}">변경</button>`}
                     ${isSalesPage && access.canOthers ? `<button class="stock-release-btn${r.수량내림 ? " released" : ""}" data-id="${r.id}" title="이 출고 건 수량을 0으로 내렸다/복구">내림</button>` : ""}
-                    ${access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "완료" : "사용완료"}</button>` : ""}
-                    ${completed || !access.canCancel ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "취소" : "예약취소"}</button>`}
-                    ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고등록</button>`}
+                    ${access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
+                    ${completed || !access.canCancel ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">취소</button>`}
+                    ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
                 </div>
             </td>
         </tr>
