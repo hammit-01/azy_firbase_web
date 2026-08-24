@@ -882,7 +882,7 @@ def get_all_outbound(conn) -> list[dict]:
     같이 내려준다 — CANCEL과 달리 화면에서 안 사라지고 회색으로 표시된다."""
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT id, pk, 수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, status, 전달사항, 등록, 비고, 수량내림 "
+            "SELECT id, pk, 수량, 원수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, status, 전달사항, 등록, 비고, 수량내림 "
             "FROM outbound WHERE status IN ('ACTIVE','COMPLETED') ORDER BY 홀딩일자 DESC"
         )
         rows = cur.fetchall()

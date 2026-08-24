@@ -1026,7 +1026,7 @@ function reservationCardHtml(r, isSalesPage = false) {
                 ${safeValue(r.ESTNO)  ? `<span class="s-tag">${safeValue(r.ESTNO)}</span>`  : ""}
             </div>
             <div class="mc-hero">
-                <div class="mc-qty">${safeValue(r.수량) || 0}<span class="mc-qty-unit">박스</span></div>
+                <div class="mc-qty">${safeValue(r.수량) || 0}<span class="mc-qty-unit">박스</span>${isSalesPage && r.수량내림 && r.원수량 ? `<span class="qty-dropped-note">(${safeValue(r.원수량)} 내림)</span>` : ""}</div>
             </div>
             <div class="mc-info">
                 <div class="mc-row"><span class="mc-label">담당자</span>${safeValue(r.담당자) || "(미지정)"}</div>
@@ -1057,9 +1057,14 @@ function reservationRowHtml(r, isSalesPage = false) {
     const access = isSalesPage ? salesAccess(r) : { canEdit: true, canOthers: true, canCancel: true, canEditNote: true };
     const canInlineEdit = isSalesPage && !completed && access.canEdit;
     const rawClient = attrEscape(r.거래처);
+    // "내림"(2026-08-24)으로 수량이 0이 된 행은 원래 얼마였는지 안 보이면
+    // 알 방법이 없어져서, 원수량을 옆에 흐리게 같이 보여준다.
+    const qtyDisplay = r.수량내림 && r.원수량
+        ? `${safeValue(r.수량)}<span class="qty-dropped-note">(${safeValue(r.원수량)} 내림)</span>`
+        : safeValue(r.수량);
     const qtyCell = canInlineEdit
-        ? `<td class="sales-qty-cell" data-id="${r.id}" data-value="${safeValue(r.수량) || 0}" title="더블클릭해서 수정">${safeValue(r.수량)}</td>`
-        : `<td>${safeValue(r.수량)}</td>`;
+        ? `<td class="sales-qty-cell" data-id="${r.id}" data-value="${safeValue(r.수량) || 0}" title="더블클릭해서 수정">${qtyDisplay}</td>`
+        : `<td>${qtyDisplay}</td>`;
     const dateCell = !isSalesPage
         ? `<td>${safeValue(r.홀딩일자)}</td>`
         : canInlineEdit
