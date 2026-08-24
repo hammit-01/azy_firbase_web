@@ -336,7 +336,7 @@ export function showConfirm(msg) {
     });
 }
 
-// 재고장 "수정"/"예약" 팝업 모달(2026-08-24, 관리자+8001 전용 신규 기능) — 여러
+// 재고장 "수정"/"예약" 팝업 모달(2026-08-24 전체 공개) — 여러
 // 행을 선택해도 하나의 팝업 안에 전부 들어간다. cardsHtml은 호출부(events.js)가
 // table.js의 createUpdateCard/createHoldingCard로 미리 만들어서 넘긴다 —
 // 여기서는 저장/취소 버튼과 모달 껍데기만 관리하고, 실제 저장 로직(updateData/

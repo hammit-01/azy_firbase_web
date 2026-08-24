@@ -9,7 +9,7 @@ import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
 import { fetchAllData } from "./firebase.js";
 import { showToast, showError, showConfirm, showEditReservationModal, showRegisterOutboundModal, showNoteModal, showCancelOutboundModal, showAlertModal, showPriceExportModal, showEditPriceModal, showReservationDetailModal, showBulkEditModal } from "./ui.js";
-import { getStoredUser, applyRoleVisibility, hasPriceEditAccess, isAdminTestFeatureEnabled } from "./login.js";
+import { getStoredUser, applyRoleVisibility, hasPriceEditAccess } from "./login.js";
 import { apiLogActivity } from "./api.js";
 
 // 예약현황/타창고매출현황 액션(취소/완료/변경/토글 등) 이후 공용 새로고침(2026-08-19) —
@@ -894,19 +894,17 @@ async function handleClick(e) {
         return;
     }
 
-    // 수정 버튼 — 선택한 행을 테이블 안에서 바로 편집 가능하게 전환(다시 누르면 해제).
-    // 관리자+8001 전용(2026-08-24, 단계적 롤아웃): 팝업 모달로 대체 — 여러 행
-    // 선택해도 모달 하나에 전부 들어간다. 그 외에는 기존 인라인 방식 그대로.
+    // 수정 버튼 — 선택한 행을 팝업 모달로 편집(2026-08-24 전체 공개, 여러 행 선택해도
+    // 모달 하나에 전부 들어감). 기존 표 안 인라인 편집 방식은 대체됨.
     if (e.target.classList.contains("update-btn")) {
         if (state.selectedItems.size === 0) { showError("수정할 상품을 선택하세요."); return; }
-        if (isAdminTestFeatureEnabled()) {
-            // createUpdateRow/updateData 둘 다 state.allData의 원본(한글 키) 형태를
-            // 기대함 — state.selectedItems는 정규화된(영문 키) 형태라 여기 쓰면 안 됨
-            // (addSelectedItem이 normalizeItem을 거쳐서 저장하기 때문).
-            const ids = [...state.selectedItems.keys()];
-            const items = ids.map(id => state.allData.find(v => v.id === id)).filter(Boolean);
-            const rowsHtml = items.map(createUpdateCard).join("");
-            showBulkEditModal(`선택 상품 수정 (${items.length}건)`, rowsHtml, {
+        // createUpdateRow/updateData 둘 다 state.allData의 원본(한글 키) 형태를
+        // 기대함 — state.selectedItems는 정규화된(영문 키) 형태라 여기 쓰면 안 됨
+        // (addSelectedItem이 normalizeItem을 거쳐서 저장하기 때문).
+        const ids = [...state.selectedItems.keys()];
+        const items = ids.map(id => state.allData.find(v => v.id === id)).filter(Boolean);
+        const rowsHtml = items.map(createUpdateCard).join("");
+        showBulkEditModal(`선택 상품 수정 (${items.length}건)`, rowsHtml, {
                 onSave: async (overlay) => {
                     const rows = overlay.querySelectorAll(".bulk-edit-card[data-id]");
                     const backups = [];
@@ -942,25 +940,20 @@ async function handleClick(e) {
                 },
             });
             return;
-        }
-        state.crudData = state.crudData === "update" ? null : "update";
-        renderTable();
-        return;
     }
 
-    // 홀딩 버튼 — 선택한 행 밑에 홀딩 입력행을 추가(다시 누르면 해제). 관리자+8001
-    // 전용 팝업 모달 분기는 위 update-btn과 동일한 원리.
+    // 홀딩 버튼 — 선택한 행을 팝업 모달로 예약(2026-08-24 전체 공개). 위 update-btn과
+    // 동일한 원리.
     if (e.target.classList.contains("holding-btn")) {
         if (state.selectedItems.size === 0) { showError("예약할 상품을 선택하세요."); return; }
-        if (isAdminTestFeatureEnabled()) {
-            // createHoldingInsertRow는 원본(한글 키, state.allData) 형태를 기대하지만
-            // holdingData는 정규화된(영문 키, state.selectedItems — addSelectedItem이
-            // normalizeItem을 거쳐서 저장) 형태를 기대함 — 화면 생성과 저장에 서로
-            // 다른 소스를 써야 함(기존 개별/전체 홀딩 처리 로직과 동일한 이유).
-            const ids = [...state.selectedItems.keys()];
-            const items = ids.map(id => state.allData.find(v => v.id === id)).filter(Boolean);
-            const rowsHtml = items.map(createHoldingCard).join("");
-            showBulkEditModal(`선택 상품 예약 (${items.length}건)`, rowsHtml, {
+        // createHoldingInsertRow는 원본(한글 키, state.allData) 형태를 기대하지만
+        // holdingData는 정규화된(영문 키, state.selectedItems — addSelectedItem이
+        // normalizeItem을 거쳐서 저장) 형태를 기대함 — 화면 생성과 저장에 서로
+        // 다른 소스를 써야 함(기존 개별/전체 홀딩 처리 로직과 동일한 이유).
+        const ids = [...state.selectedItems.keys()];
+        const items = ids.map(id => state.allData.find(v => v.id === id)).filter(Boolean);
+        const rowsHtml = items.map(createHoldingCard).join("");
+        showBulkEditModal(`선택 상품 예약 (${items.length}건)`, rowsHtml, {
                 onSave: async (overlay) => {
                     const rows = overlay.querySelectorAll(".bulk-edit-card[data-id]");
                     const backups = [];
@@ -998,10 +991,6 @@ async function handleClick(e) {
                 },
             });
             return;
-        }
-        state.crudData = state.crudData === "holding" ? null : "holding";
-        renderTable();
-        return;
     }
 
     // 업데이트/예약현황/타창고매출현황/전략단가 탭 — 재고장 표와 서로 배타적으로

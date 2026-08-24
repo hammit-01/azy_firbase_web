@@ -46,7 +46,7 @@ function closePopover() {
 const EDITOR_ONLY_SELECTORS = [".changes-tab-btn"];
 // 로그인만 하면 사원도 사용 가능 — 비로그인일 때만 숨김. 되돌리기는 탭 제한도
 // 같이 받아서(업데이트 탭에서 숨김, 2026-08-20) 아래에서 따로 처리.
-const LOGIN_ONLY_SELECTORS = [".reservations-tab-btn"];
+const LOGIN_ONLY_SELECTORS = [".reservations-tab-btn", ".order-sheet-tab-btn"];
 
 // 현재 열려 있는 탭 이름 — events.js를 import하지 않고 DOM만으로 판단
 // (순환 참조 방지). .table-container가 안 보이면 그 컨테이너가 곧 현재 탭.
@@ -106,10 +106,6 @@ export function applyRoleVisibility(role) {
     if (reservationsBtn) {
         reservationsBtn.textContent = hasEditorAccess(role) ? "예약 현황" : "나의 예약";
     }
-
-    // 발주장 탭 — 신규 기능 단계적 롤아웃 게이트(관리자+8001)로 버튼 자체를 숨김.
-    const orderSheetBtn = document.querySelector(".order-sheet-tab-btn");
-    if (orderSheetBtn) orderSheetBtn.style.display = isAdminTestFeatureEnabled() ? "" : "none";
 }
 
 function renderLoggedIn(user) {

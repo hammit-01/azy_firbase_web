@@ -297,7 +297,7 @@ export function createHoldingInsertRow(item) {
 }
 
 // =========================
-// 팝업 모달 전용 카드형 입력(2026-08-24, 관리자+8001 신규 기능) — 위
+// 팝업 모달 전용 카드형 입력(2026-08-24 전체 공개) — 위
 // createUpdateRow/createHoldingInsertRow는 원래 표 안 줄에 끼워 넣는
 // 용도라 칸이 좁고 라벨이 없어서, 모달 안에서는 라벨 붙은 카드로 대신
 // 보여준다. input class는 createUpdateRow/createHoldingInsertRow와
@@ -1127,7 +1127,7 @@ function reservationRowHtml(r, isSalesPage = false) {
     const unitPrice = parseUnitPrice(r.거래처);
     const weight = parseWeight(r.거래처);
     const completed = isSalesPage && r.status === "COMPLETED";
-    // 미리보기(2026-08-24, 관리자+8001 전용) — 출고일은 잡혔지만 아직 오늘이 안
+    // 미리보기(2026-08-24 전체 공개) — 출고일은 잡혔지만 아직 오늘이 안
     // 돼서 outbound로 안 넘어간 ACTIVE 예약. get_all_outbound()가 이 행들도
     // 같이 내려주는데(_preview:true), 실제 outbound 행이 아니라서 완료/내림/
     // 등록/메모 등 outbound 전용 액션을 걸면 없는 id를 건드리게 된다 — 변경/취소는
@@ -1490,13 +1490,13 @@ export async function renderSalesTab() {
         return;
     }
 
-    // 미리보기 행(2026-08-24, _preview:true — 출고일 예약된 ACTIVE 예약, 아직
-    // outbound로 안 넘어간 것) 노출은 관리자+8001 한정. login.js를 여기서
+    // 미리보기 행(_preview:true — 출고일 예약된 ACTIVE 예약, 아직 outbound로 안
+    // 넘어간 것) 노출은 로그인만 하면 됨(2026-08-24 전체 공개). login.js를 여기서
     // import하면 순환참조(login.js → table.js)라 localStorage를 직접 읽는다.
     let previewEnabled = false;
     try {
         const u = JSON.parse(localStorage.getItem("azy_login_user") || "null");
-        previewEnabled = u?.권한 === "관리자" && window.location.port === "8001";
+        previewEnabled = !!u?.권한;
     } catch {}
     if (!previewEnabled) rows = rows.filter(r => !r._preview);
 

@@ -78,13 +78,13 @@ export async function fetchAllData() {
         } catch (e) {
             console.warn("[API] moving_inventory 조회 실패:", e.message);
         }
-        // 익일 이고 미리보기(2026-08-24) 노출은 관리자+8001 한정 — login.js를
-        // 여기서 import하면 순환참조(login.js → table.js → firebase.js는 아니지만
-        // table.js와의 다른 순환 위험을 피하려고 기존 패턴대로 localStorage 직접 확인.
+        // 익일 이고 미리보기 노출은 로그인만 하면 됨(2026-08-24 전체 공개) —
+        // login.js를 여기서 import하면 순환참조 위험이 있어 기존 패턴대로
+        // localStorage 직접 확인.
         let previewEnabled = false;
         try {
             const u = JSON.parse(localStorage.getItem("azy_login_user") || "null");
-            previewEnabled = u?.권한 === "관리자" && window.location.port === "8001";
+            previewEnabled = !!u?.권한;
         } catch {}
         if (!previewEnabled) movingRows = movingRows.filter(r => r.메모 !== "익일 이고");
 
