@@ -802,13 +802,13 @@ export function renderTable() {
                 <td>${safeValue(item.브랜드)}</td>
                 <td>${safeValue(item.등급)}</td>
                 <td>${safeValue(item.ESTNO)}</td>
-                <td>${safeValue(item.BL)}</td>
-                <td>${whTag(item.창고)}</td>
                 <td>${safeValue(item.재고)}</td>
                 <td>${Number(item.예약수량) > 0
                     ? `<button class="view-reservations-btn" data-pk="${item._rawId ?? id}">${safeValue(item.예약수량)}</button>`
                     : ""}</td>
                 <td>${availableCell(item.가용재고)}</td>
+                <td>${safeValue(item.BL)}</td>
+                <td>${whTag(item.창고)}</td>
                 <td>${dueDateTag(item.유통기한, limitDate)}</td>
                 <td>${safeValue(item.평중)}</td>
                 <td>${safeValue(item.메모)}</td>
@@ -1191,10 +1191,10 @@ function reservationRowHtml(r, isSalesPage = false) {
             <td>${safeValue(r.브랜드)}</td>
             <td>${safeValue(r.등급)}</td>
             <td>${safeValue(r.ESTNO)}</td>
-            <td>${safeValue(r.BL)}</td>
-            <td>${whTag(r.창고)}</td>
             ${qtyCell}
             ${isSalesPage ? "" : `<td>${safeValue(r.재고)}</td><td>${availableCell(r.가용재고)}</td>`}
+            <td>${safeValue(r.BL)}</td>
+            <td>${whTag(r.창고)}</td>
             ${clientCell}
             ${reservationPriceCell}
             ${dateCell}
@@ -1216,10 +1216,10 @@ function reservationRowHtml(r, isSalesPage = false) {
 
 // sales.html "추가" 버튼 — 팝업 대신 엑셀처럼 표 맨 위에 입력행을 띄운다(2026-08-14).
 // 열 순서는 reservationsHead(true)와 동일해야 함: 비고,등록완료,담당자,상품명,브랜드,
-// 등급,ESTNO,BL,창고,수량,거래처,단가,중량,총금액,출고일,액션(2026-08-19 비고를 "!"
-// 옆으로 이동, 2026-08-24 실재고/가용재고 열 제거). 총금액은 아직 어떤 재고인지
-// 확정 전이라 입력칸 없이 빈칸으로 두고, 등록완료도 신규 입력행 단계에선 아직
-// 창고가 정해지지 않아 빈칸.
+// 등급,ESTNO,수량,BL,창고,거래처,단가,중량,총금액,출고일,액션(2026-08-19 비고를 "!"
+// 옆으로 이동, 2026-08-24 실재고/가용재고 열 제거, 수량을 BL/EST 사이로 이동).
+// 총금액은 아직 어떤 재고인지 확정 전이라 입력칸 없이 빈칸으로 두고, 등록완료도
+// 신규 입력행 단계에선 아직 창고가 정해지지 않아 빈칸.
 export function outboundInsertRowHtml() {
     return `
         <tr class="outbound-insert-row">
@@ -1231,9 +1231,9 @@ export function outboundInsertRowHtml() {
             <td><input type="text" class="ob-in-brand cell-input" placeholder="브랜드"></td>
             <td><input type="text" class="ob-in-grade cell-input" placeholder="등급"></td>
             <td><input type="text" class="ob-in-estno cell-input" placeholder="ESTNO"></td>
+            <td><input type="number" class="ob-in-qty cell-input" min="1" value="1"></td>
             <td><input type="text" class="ob-in-bl cell-input" placeholder="BL"></td>
             <td><input type="text" class="ob-in-wh cell-input" placeholder="창고"></td>
-            <td><input type="number" class="ob-in-qty cell-input" min="1" value="1"></td>
             <td><input type="text" class="ob-in-client cell-input" placeholder="거래처명"></td>
             <td><input type="number" class="ob-in-price cell-input" min="0" placeholder="단가"></td>
             <td><input type="number" step="0.01" min="0" class="ob-in-weight cell-input" placeholder="중량"></td>
@@ -1275,9 +1275,9 @@ function reservationsHead(isSalesPage = false) {
         <col style="width:6%">  <!--브랜드-->
         <col style="width:3%">  <!--등급-->
         <col style="width:4%">  <!--ESTNO-->
+        <col style="width:4%">  <!--수량-->
         <col style="width:12%"> <!--BL-->
         <col style="width:6%">  <!--창고-->
-        <col style="width:4%">  <!--수량-->
         <col style="width:6%">  <!--거래처-->
         <col style="width:4%">  <!--단가-->
         <col style="width:4%">  <!--중량-->
@@ -1289,7 +1289,7 @@ function reservationsHead(isSalesPage = false) {
         <tr>
             <th></th><th>비고</th><th>등록완료</th>
             <th>담당자</th><th>상품명</th><th>브랜드</th><th>등급</th><th>ESTNO</th>
-            <th>BL</th><th>창고</th><th>수량</th>
+            <th>수량</th><th>BL</th><th>창고</th>
             <th>거래처</th><th>단가</th><th>중량</th><th>총금액</th><th>출고일</th><th>액션</th>
         </tr>
     </thead>
@@ -1303,11 +1303,11 @@ function reservationsHead(isSalesPage = false) {
         <col style="width:6%">  <!--브랜드-->
         <col style="width:3%">  <!--등급-->
         <col style="width:4%">  <!--ESTNO-->
-        <col style="width:12%"> <!--BL-->
-        <col style="width:6%">  <!--창고-->
         <col style="width:4%">  <!--수량-->
         <col style="width:4%">  <!--실재고-->
         <col style="width:5%">  <!--가용재고-->
+        <col style="width:12%"> <!--BL-->
+        <col style="width:6%">  <!--창고-->
         <col style="width:7%">  <!--거래처-->
         <col style="width:4%">  <!--단가-->
         <col style="width:6%">  <!--예약일-->
@@ -1318,7 +1318,7 @@ function reservationsHead(isSalesPage = false) {
         <tr>
             <th></th>
             <th>담당자</th><th>상품명</th><th>브랜드</th><th>등급</th><th>ESTNO</th>
-            <th>BL</th><th>창고</th><th>수량</th><th>실재고</th><th>가용재고</th>
+            <th>수량</th><th>실재고</th><th>가용재고</th><th>BL</th><th>창고</th>
             <th>거래처</th><th>단가</th><th>예약일</th><th>출고일</th><th>액션</th>
         </tr>
     </thead>
