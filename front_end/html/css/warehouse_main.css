@@ -1103,7 +1103,7 @@ input[type="date"].price-edit-input {
 .stock-release-btn { background: #fef3c7; color: #b45309; }
 .stock-release-btn:hover { background: #fde68a; }
 .stock-release-btn.released { background: #fde68a; color: #92400e; }
-.qty-dropped-note { display: inline-block; margin-left: 4px; font-size: 11px; color: #b45309; white-space: nowrap; }
+.qty-dropped { color: #b91c1c; font-weight: 700; }
 .use-reservation-btn { background: #dcfce7; color: #15803d; }
 .use-reservation-btn:hover { background: #bbf7d0; }
 .cancel-reservation-btn { background: #fee2e2; color: #b91c1c; }
