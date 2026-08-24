@@ -303,7 +303,7 @@ PROCESS_MAP = {
     "대청": daechung,
     "대재": daejae,
     "한라동탄": hanladt,
-    "한라곤지암": hanla,
+    "한라": hanla,
     "강동1": gangdong1,
     "강동2": gangdong2,
     "경인": gyungin,

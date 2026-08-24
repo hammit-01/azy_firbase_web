@@ -1,4 +1,4 @@
-"""소갈비/SWIFT/3D(+한라곤지암 탕갈비(MEATY) 파생) 등급 하드코딩이 등급 빈값일
+"""소갈비/SWIFT/3D(+한라 탕갈비(MEATY) 파생) 등급 하드코딩이 등급 빈값일
 때만 걸리고, 원본에 실제 등급이 있으면 존중하는지 확인 (2026-08-11, 무조건
 덮어쓰던 것에서 조건부로 변경).
 """
@@ -15,7 +15,7 @@ from back_end.replace_name import replace_name
 def _row(**overrides):
     row = {
         "수탁품": "소갈비", "브랜드": "SWIFT", "등급": "", "ESTNO": "3D",
-        "창고": "한라곤지암", "재고수량": 1, "BL번호": "TESTBL", "유통기한": "",
+        "창고": "한라", "재고수량": 1, "BL번호": "TESTBL", "유통기한": "",
     }
     row.update(overrides)
     return pd.DataFrame([row])

@@ -35,7 +35,7 @@ warehouses = [
     "경인",
     "대청",
     "대재",
-    "한라곤지암",
+    "한라",
     "한라동탄",
     "CS",
     "아이린냉장"
@@ -70,7 +70,7 @@ def list_eda(final_df, jns):
     sjn = pd.concat([warehouse_dfs["삼진1"], warehouse_dfs["삼진2"]], ignore_index=True)
     ki = warehouse_dfs["경인"].copy()
     dch = warehouse_dfs["대청"].copy()
-    hlk = warehouse_dfs["한라곤지암"].copy()
+    hlk = warehouse_dfs["한라"].copy()
     hld = warehouse_dfs["한라동탄"].copy()
     cs = warehouse_dfs["CS"].copy()
     irn = warehouse_dfs["아이린냉장"].copy()
