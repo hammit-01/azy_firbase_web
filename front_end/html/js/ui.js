@@ -359,11 +359,29 @@ export function showBulkEditModal(title, cardsHtml, { onSave } = {}) {
         document.body.appendChild(overlay);
         const close = () => { overlay.remove(); resolve(); };
         overlay.querySelector(".bulk-modal-cancel-btn").addEventListener("click", close);
-        overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
         overlay.querySelector(".bulk-modal-save-btn").addEventListener("click", async (e) => {
             e.target.disabled = true;
             if (onSave) await onSave(overlay);
             close();
+        });
+        // 카드별 "✕" — 팝업 열어둔 채로 그 상품만 이번 처리 대상에서 뺀다(2026-08-24).
+        // 뒤에 깔린 표의 체크박스를 실제로 클릭해서(state.selectedItems.delete를
+        // 직접 하지 않고) 앱이 원래 쓰는 선택 해제 경로(handleChange)를 그대로
+        // 태워 상태 일관성을 유지한다 — 그래야 체크박스 표시/선택 카운트 등도 같이 맞음.
+        overlay.addEventListener("click", (e) => {
+            const removeBtn = e.target.closest(".bulk-edit-card-remove");
+            if (removeBtn) {
+                const id = removeBtn.dataset.id;
+                const checkbox = document.querySelector(`.row-check[data-id="${CSS.escape(id)}"]`);
+                if (checkbox?.checked) checkbox.click();
+                removeBtn.closest(".bulk-edit-card")?.remove();
+                const remaining = overlay.querySelectorAll(".bulk-edit-card[data-id]").length;
+                if (remaining === 0) { close(); return; }
+                const msg = overlay.querySelector(".confirm-msg");
+                if (msg) msg.textContent = msg.textContent.replace(/\d+(?=건\))/, remaining);
+                return;
+            }
+            if (e.target === overlay) close();
         });
     });
 }

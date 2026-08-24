@@ -310,6 +310,7 @@ export function createUpdateCard(item) {
                 <span class="bulk-edit-card-tag">${whTag(item.창고)}</span>
                 <span class="bulk-edit-card-title">${safeValue(item.상품명) || "(상품명 없음)"}</span>
                 <span class="bulk-edit-card-sub">${safeValue(item.BL)}</span>
+                <button type="button" class="bulk-edit-card-remove" data-id="${id}" title="이 상품 취소">✕</button>
             </div>
             <div class="bulk-edit-grid">
                 <label>상품명<input type="text" class="update-name cell-input" data-id="${id}" value="${safeValue(item.상품명)}"></label>
@@ -342,6 +343,7 @@ export function createHoldingCard(item) {
                 <span class="bulk-edit-card-tag">${whTag(item.창고)}</span>
                 <span class="bulk-edit-card-title">${safeValue(item.상품명) || "(상품명 없음)"}</span>
                 <span class="bulk-edit-card-sub">${[item.브랜드, item.등급, item.ESTNO].filter(safeValue).join(" · ")}</span>
+                <button type="button" class="bulk-edit-card-remove" data-id="${id}" title="이 상품 취소">✕</button>
             </div>
             <div class="bulk-edit-card-meta">
                 <span>재고 <b>${safeValue(item.재고)}</b></span>
