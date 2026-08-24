@@ -743,6 +743,7 @@ function handleChange(e) {
         state.crudData = null;
         dom.container?.classList.remove("active");
         if (dom.sideBox) dom.sideBox.innerHTML = "";
+        renderSelectData(); // "총 N행, M박스 선택" 배지도 같이 지워야 함(안 그러면 마지막 선택 해제해도 남아있음)
         return;
     }
 
