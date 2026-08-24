@@ -242,12 +242,16 @@ def get_outbound_sum(conn) -> dict:
 
 
 def get_outbound_active_pks(conn) -> set:
-    """ACTIVE 출고가 걸려있는 pk 집합 — stale 삭제 보호 판단 전용(2026-08-24).
-    "내림" 버튼으로 수량이 0이 된 행도 재고 행과의 연결은 여전히 필요하다
-    (그래야 타창고매출현황에 상품 정보가 안 비고 뜬다) — get_outbound_sum(수량
-    합계, 가용재고 계산용)과 달리 수량과 무관하게 ACTIVE 존재 여부만 본다."""
+    """ACTIVE/COMPLETED 출고가 걸려있는 pk 집합 — stale 삭제 보호 판단 전용
+    (2026-08-24). get_all_outbound()이 ACTIVE뿐 아니라 COMPLETED(출고완료
+    토글된 것도 회색으로 계속 표시)까지 조회하므로, 여기서도 COMPLETED를
+    빼면 완료 처리된 출고 건의 재고 행이 다음 크롤에서 삭제돼 타창고매출
+    현황이 다시 빈 값으로 뜬다(2026-08-24 재발 — 처음엔 ACTIVE만 봐서
+    COMPLETED로 넘어간 건은 보호가 풀렸었음). "내림"으로 수량이 0이 된
+    행도 재고 행과의 연결은 여전히 필요해서 — get_outbound_sum(수량 합계,
+    가용재고 계산용, ACTIVE만 맞음)과 달리 수량과 무관하게 존재 여부만 본다."""
     with conn.cursor() as cur:
-        cur.execute("SELECT DISTINCT pk FROM outbound WHERE pk != '' AND status='ACTIVE'")
+        cur.execute("SELECT DISTINCT pk FROM outbound WHERE pk != '' AND status IN ('ACTIVE','COMPLETED')")
         return {row["pk"] for row in cur.fetchall()}
 
 
