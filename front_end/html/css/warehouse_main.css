@@ -692,7 +692,7 @@ th.sort-active {
 .rl-field-strong { font-weight: 700; color: #1e293b; }
 /* ── 툴바 액션 버튼 ── */
 .rollback-btn, .clear-btn, .all-delete-btn, .changes-tab-btn, .reservations-tab-btn,
-.sales-tab-btn, .price-tab-btn,
+.sales-tab-btn, .price-tab-btn, .order-sheet-tab-btn,
 .insert-btn, .update-btn, .holding-btn, .main-download-btn {
     height: 42px;
     padding: 0 18px;
@@ -709,7 +709,8 @@ th.sort-active {
 
 .insert-btn:active, .update-btn:active, .holding-btn:active,
 .rollback-btn:active, .all-delete-btn:active, .changes-tab-btn:active,
-.reservations-tab-btn:active, .sales-tab-btn:active, .price-tab-btn:active {
+.reservations-tab-btn:active, .sales-tab-btn:active, .price-tab-btn:active,
+.order-sheet-tab-btn:active {
     transform: translateY(1px);
 }
 
@@ -754,6 +755,10 @@ th.sort-active {
 .price-tab-btn { background: #fef3c7; color: #92400e; }
 .price-tab-btn:hover { background: #fde68a; }
 .price-tab-btn.active { background: #b45309; color: #fff; }
+
+.order-sheet-tab-btn { background: #dbeafe; color: #1d4ed8; }
+.order-sheet-tab-btn:hover { background: #bfdbfe; }
+.order-sheet-tab-btn.active { background: #1d4ed8; color: #fff; }
 
 .main-download-btn { background: #dcfce7; color: #15803d; }
 .main-download-btn:hover { background: #bbf7d0; }
@@ -1958,7 +1963,7 @@ tr.insert-card .remove-insert-btn:hover {
        flex:1 1 calc(33.333% - 6px); height:44px;로 잡히므로 나머지 둘만 맞춤 —
        셋 다 여기서 다시 잡으면 cascade 순서상 뒤에 있는 그 규칙이 이겨서
        reservations-tab-btn만 높이가 달라진다. */
-    .sales-tab-btn, .price-tab-btn {
+    .sales-tab-btn, .price-tab-btn, .order-sheet-tab-btn {
         flex: 1 1 calc(33.333% - 6px);
         height: 44px;
         font-size: 13px;

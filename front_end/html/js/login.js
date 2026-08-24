@@ -54,6 +54,7 @@ function _currentTabName() {
     if (document.querySelector(".reservations-container")?.style.display === "") return "reservations";
     if (document.querySelector(".sales-container")?.style.display === "") return "sales";
     if (document.querySelector(".price-container")?.style.display === "") return "price";
+    if (document.querySelector(".order-sheet-container")?.style.display === "") return "order-sheet";
     if (document.querySelector(".changes-container")?.style.display === "") return "changes";
     return "main";
 }
@@ -105,6 +106,10 @@ export function applyRoleVisibility(role) {
     if (reservationsBtn) {
         reservationsBtn.textContent = hasEditorAccess(role) ? "예약 현황" : "나의 예약";
     }
+
+    // 발주장 탭 — 신규 기능 단계적 롤아웃 게이트(관리자+8001)로 버튼 자체를 숨김.
+    const orderSheetBtn = document.querySelector(".order-sheet-tab-btn");
+    if (orderSheetBtn) orderSheetBtn.style.display = isAdminTestFeatureEnabled() ? "" : "none";
 }
 
 function renderLoggedIn(user) {

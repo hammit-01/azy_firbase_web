@@ -2,7 +2,7 @@ import { state } from "./state.js";
 import { dom } from "./dom.js";
 import { employeeSelect, stateSelect } from "./panel.js";
 import { getStoredUser, hasEditorAccess, hasPriceEditAccess } from "./login.js";
-import { getAllReservations, getAllOutbound, getAllPrices } from "./firestoreService.js";
+import { getAllReservations, getAllOutbound, getAllPrices, getOrderSheet } from "./firestoreService.js";
 
 // 영문 브랜드를 한글 표기로 쳐도 검색되게 하는 별칭 테이블(2026-08-14).
 // key: 한글 표기, value: 실제 데이터의 영문 브랜드값 — 데이터에 실제로 존재하는
@@ -1736,6 +1736,82 @@ export async function renderPriceTab() {
             input.setSelectionRange(input.value.length, input.value.length);
         }
     }
+}
+
+// =========================
+// 발주장 탭(2026-08-24) — 부서별_발주장.md 아티팩트를 실제 탭으로 옮긴 것.
+// 로그인한 사용자의 부서(employees.부서, get_order_sheet_rows가 담당자 이름으로
+// 붙여줌) 것만 클라이언트에서 걸러 보여준다. 읽기 전용(수정/취소는 예약현황·
+// 타창고매출현황 탭에서).
+// =========================
+function orderSheetRowHtml(r) {
+    const qty = r.수량내림 && r.원수량
+        ? `<span class="qty-dropped">${safeValue(r.원수량)}</span>`
+        : safeValue(r.수량);
+    return `
+        <tr data-reservation-id="${r.id}">
+            <td>${clientPrefix(r.거래처)}</td>
+            <td>${safeValue(r.상품명)}</td>
+            <td>${safeValue(r.브랜드)}</td>
+            <td>${safeValue(r.등급)}</td>
+            <td>${safeValue(r.ESTNO)}</td>
+            <td>${qty}</td>
+            <td>${formatUnitPrice(parseUnitPrice(r.거래처))}</td>
+            <td>${safeValue(r.BL)}</td>
+            <td>${whTag(r.창고)}</td>
+            <td>${safeValue(r.비고)}</td>
+            <td>${safeValue(r.전달사항)}</td>
+            <td>${safeValue(r.출고일)}</td>
+        </tr>
+    `;
+}
+
+export async function renderOrderSheetTab() {
+    const container = document.querySelector(".order-sheet-container");
+    const listEl = document.getElementById("order-sheet-list");
+    if (!container || !listEl || container.style.display === "none") return;
+
+    let rows = [];
+    try {
+        rows = await getOrderSheet();
+    } catch (e) {
+        listEl.innerHTML = `<p class="reservations-empty">발주장을 불러오지 못했습니다.</p>`;
+        return;
+    }
+
+    const myDept = getStoredUser()?.부서;
+    rows = rows.filter(r => myDept && r.부서 === myDept);
+    rows = [...rows].sort((a, b) =>
+        String(a.출고일 || "9999").localeCompare(String(b.출고일 || "9999")) || String(a.담당자 || "").localeCompare(String(b.담당자 || ""), "ko")
+    );
+
+    const empty = rows.length ? "" : `<p class="reservations-empty">${myDept ? `${myDept} 발주 항목이 없습니다.` : "소속 부서 정보가 없습니다."}</p>`;
+    listEl.innerHTML = `
+        <table class="reservations-table">
+            <colgroup>
+                <col style="width:8%">  <!--거래처-->
+                <col style="width:14%"> <!--품목-->
+                <col style="width:8%">  <!--브랜드-->
+                <col style="width:5%">  <!--등급-->
+                <col style="width:5%">  <!--EST-->
+                <col style="width:5%">  <!--박스-->
+                <col style="width:6%">  <!--단가-->
+                <col style="width:13%"> <!--BL-->
+                <col style="width:8%">  <!--창고-->
+                <col style="width:8%">  <!--비고-->
+                <col style="width:10%"> <!--전달사항-->
+                <col style="width:7%">  <!--출고일-->
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>거래처</th><th>품목</th><th>브랜드</th><th>등급</th><th>EST</th>
+                    <th>박스</th><th>단가</th><th>BL</th><th>창고</th><th>비고</th><th>전달사항</th><th>출고일</th>
+                </tr>
+            </thead>
+            <tbody>${rows.map(orderSheetRowHtml).join("")}</tbody>
+        </table>
+        ${empty}
+    `;
 }
 
 

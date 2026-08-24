@@ -962,6 +962,21 @@ def get_all_outbound(conn) -> list[dict]:
         return result
 
 
+def get_order_sheet_rows(conn) -> list[dict]:
+    """부서별 발주장(2026-08-24) — get_all_outbound() 결과에 담당자 기준 부서를
+    붙여서 반환한다. 거래처/단가 분리 파싱(clientPrefix/parseUnitPrice)은
+    타창고매출현황과 동일하게 프론트에서 처리 — 여기서 중복 구현하지 않음.
+    프론트가 로그인한 사용자의 부서로 한 번 더 필터링해서 자기 부서 것만 보여준다."""
+    rows = [r for r in get_all_outbound(conn) if r.get("status") in ("ACTIVE", "COMPLETED")]
+    with conn.cursor() as cur:
+        cur.execute("SELECT 이름, 부서 FROM employees")
+        dept_by_name = {r["이름"]: r["부서"] for r in cur.fetchall()}
+    for r in rows:
+        manager = r.get("담당자") or ""
+        r["부서"] = dept_by_name.get(manager) or ("소매" if manager == "소매" else "미배정")
+    return rows
+
+
 def _inv_table_for_pk(cur, pk: str):
     """pk가 소속된 재고 테이블 이름("inventory" 또는 "azy_inventory") 반환,
     둘 다 없으면 None."""

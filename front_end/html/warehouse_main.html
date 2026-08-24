@@ -32,6 +32,7 @@
                     <button class="sales-tab-btn">타창고매출현황</button>
                     <button class="changes-tab-btn">업데이트</button>
                     <button class="price-tab-btn">전략단가</button>
+                    <button class="order-sheet-tab-btn" style="display:none">발주장</button>
                 </div>
                 <div class="toolbar-right">
                     <div class="toolbar-row">
@@ -188,6 +189,13 @@
              테이블 연동 구현) ── -->
         <div class="price-container" style="display:none">
             <div id="price-list"></div>
+        </div>
+
+        <!-- ── 발주장 탭(2026-08-24) — 로그인한 사용자의 부서 발주만 클라이언트에서
+             걸러 보여줌(table.js의 renderOrderSheetTab()). 관리자+8001 전용 신규
+             기능 게이트(login.js의 isAdminTestFeatureEnabled) 적용 ── -->
+        <div class="order-sheet-container" style="display:none">
+            <div id="order-sheet-list"></div>
         </div>
 
     </div>

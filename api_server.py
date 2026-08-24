@@ -18,7 +18,7 @@ from pipeline.mysql_db import (
     create_reservation, cancel_reservation, complete_reservation, use_reservation,
     reactivate_reservation, update_reservation,
     get_active_reservations_by_pk, get_all_active_reservations,
-    migrate_due_reservations_to_outbound, get_all_outbound, create_outbound,
+    migrate_due_reservations_to_outbound, get_all_outbound, get_order_sheet_rows, create_outbound,
     update_outbound, cancel_outbound, use_outbound, toggle_outbound_complete,
     toggle_outbound_register, toggle_outbound_stock_release,
     register_outbound_from_reservation, _today_iso,
@@ -98,7 +98,7 @@ class LoginBody(BaseModel):
 def login(body: LoginBody):
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id, 이름, 권한 FROM employees WHERE id=%s AND pw=%s", (body.id, body.pw))
+            cur.execute("SELECT id, 이름, 권한, 부서 FROM employees WHERE id=%s AND pw=%s", (body.id, body.pw))
             row = cur.fetchone()
     if not row:
         raise HTTPException(401, "아이디 또는 비밀번호가 올바르지 않습니다")
@@ -503,6 +503,14 @@ def list_outbound():
     with get_conn() as conn:
         migrate_due_reservations_to_outbound(conn)
         rows = get_all_outbound(conn)
+    return {"data": rows}
+
+
+@app.get("/api/order_sheet")
+def list_order_sheet():
+    with get_conn() as conn:
+        migrate_due_reservations_to_outbound(conn)
+        rows = get_order_sheet_rows(conn)
     return {"data": rows}
 
 

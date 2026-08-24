@@ -1,5 +1,5 @@
 import { state } from "./state.js";
-import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows, renderReservationsTab, renderSalesTab, renderPriceTab, priceInsertRowHtml, PRICE_FIELDS, priceFieldClass, clientPrefix, parseUnitPrice, parseWeight, buildClientWithDetails, outboundInsertRowHtml, createUpdateCard, createHoldingCard } from "./table.js";
+import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows, renderReservationsTab, renderSalesTab, renderPriceTab, renderOrderSheetTab, priceInsertRowHtml, PRICE_FIELDS, priceFieldClass, clientPrefix, parseUnitPrice, parseWeight, buildClientWithDetails, outboundInsertRowHtml, createUpdateCard, createHoldingCard } from "./table.js";
 import { renderSelectData, renderInsert, createInsertRow } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
@@ -41,8 +41,8 @@ function _logActivity(tableName, recordId, action, before, after, summary = "") 
 // 재고장 표와 배타적으로 토글되는 탭들(업데이트/예약현황/타창고매출현황/전략단가,
 // 2026-08-18) — 하나 열면 나머지는 다 닫힌다. 열릴 때만 render를 부르므로(이미
 // 열려있으면 콘텐츠 그대로 두고 숨기기만 함) 매번 다시 불러오지 않는다.
-const TAB_CONTAINERS = [".changes-container", ".reservations-container", ".sales-container", ".price-container"];
-const TAB_BUTTONS = [".changes-tab-btn", ".reservations-tab-btn", ".sales-tab-btn", ".price-tab-btn"];
+const TAB_CONTAINERS = [".changes-container", ".reservations-container", ".sales-container", ".price-container", ".order-sheet-container"];
+const TAB_BUTTONS = [".changes-tab-btn", ".reservations-tab-btn", ".sales-tab-btn", ".price-tab-btn", ".order-sheet-tab-btn"];
 
 // 탭 전환 시 재고장 검색/필터 초기화(2026-08-19) — 재고장에서 검색하다 예약현황/
 // 타창고매출현황으로 넘어가도 그 값이 그대로 남아 다른 탭 목록까지 걸러버리던
@@ -1011,6 +1011,7 @@ async function handleClick(e) {
     if (e.target.classList.contains("reservations-tab-btn")) { switchTab("reservations-tab-btn", ".reservations-container", renderReservationsTab); return; }
     if (e.target.classList.contains("sales-tab-btn")) { switchTab("sales-tab-btn", ".sales-container", renderSalesTab); return; }
     if (e.target.classList.contains("price-tab-btn")) { switchTab("price-tab-btn", ".price-container", renderPriceTab); return; }
+    if (e.target.classList.contains("order-sheet-tab-btn")) { switchTab("order-sheet-tab-btn", ".order-sheet-container", renderOrderSheetTab); return; }
 
     // 예약 현황 탭 — 출고일 필터 해제
     if (e.target.classList.contains("reservations-date-filter-clear")) {

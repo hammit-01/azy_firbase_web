@@ -181,6 +181,11 @@ export async function apiGetAllOutbound() {
     return r.data;
 }
 
+export async function apiGetOrderSheet() {
+    const r = await apiFetch("/api/order_sheet", {});
+    return r.data;
+}
+
 export async function apiCreateOutbound(product) {
     return apiFetch("/api/outbound", {
         method: "POST",
