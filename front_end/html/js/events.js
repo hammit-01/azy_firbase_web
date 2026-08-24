@@ -1,5 +1,5 @@
 import { state } from "./state.js";
-import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows, renderReservationsTab, renderSalesTab, renderPriceTab, priceInsertRowHtml, PRICE_FIELDS, priceFieldClass, clientPrefix, parseUnitPrice, parseWeight, buildClientWithDetails, outboundInsertRowHtml, createUpdateRow, createHoldingInsertRow } from "./table.js";
+import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows, renderReservationsTab, renderSalesTab, renderPriceTab, priceInsertRowHtml, PRICE_FIELDS, priceFieldClass, clientPrefix, parseUnitPrice, parseWeight, buildClientWithDetails, outboundInsertRowHtml, createUpdateCard, createHoldingCard } from "./table.js";
 import { renderSelectData, renderInsert, createInsertRow } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
@@ -904,10 +904,10 @@ async function handleClick(e) {
             // (addSelectedItem이 normalizeItem을 거쳐서 저장하기 때문).
             const ids = [...state.selectedItems.keys()];
             const items = ids.map(id => state.allData.find(v => v.id === id)).filter(Boolean);
-            const rowsHtml = items.map(createUpdateRow).join("");
+            const rowsHtml = items.map(createUpdateCard).join("");
             showBulkEditModal(`선택 상품 수정 (${items.length}건)`, rowsHtml, {
                 onSave: async (overlay) => {
-                    const rows = overlay.querySelectorAll("tr.update-row-edit[data-id]");
+                    const rows = overlay.querySelectorAll(".bulk-edit-card[data-id]");
                     const backups = [];
                     for (const row of rows) {
                         const id = row.dataset.id;
@@ -958,10 +958,10 @@ async function handleClick(e) {
             // 다른 소스를 써야 함(기존 개별/전체 홀딩 처리 로직과 동일한 이유).
             const ids = [...state.selectedItems.keys()];
             const items = ids.map(id => state.allData.find(v => v.id === id)).filter(Boolean);
-            const rowsHtml = items.map(createHoldingInsertRow).join("");
+            const rowsHtml = items.map(createHoldingCard).join("");
             showBulkEditModal(`선택 상품 예약 (${items.length}건)`, rowsHtml, {
                 onSave: async (overlay) => {
-                    const rows = overlay.querySelectorAll("tr.holding-insert-row[data-id]");
+                    const rows = overlay.querySelectorAll(".bulk-edit-card[data-id]");
                     const backups = [];
                     for (const row of rows) {
                         const id = row.dataset.id;

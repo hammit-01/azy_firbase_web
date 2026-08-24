@@ -2340,12 +2340,87 @@ tr.insert-card .remove-insert-btn:hover {
     cursor: pointer;
 }
 .confirm-yes:hover { background: #334155; }
-.bulk-edit-modal { max-width: min(96vw, 1400px); }
-.bulk-edit-scroll { overflow-x: auto; margin-bottom: 16px; }
-.bulk-edit-table { border-collapse: collapse; width: max-content; min-width: 100%; }
-.bulk-edit-table tr.update-row-edit td:first-child,
-.bulk-edit-table tr.holding-insert-row td:first-child { display: none; }
-.bulk-edit-table .insert-row-memo-cell button { display: none; }
+.bulk-edit-modal { max-width: min(92vw, 760px); text-align: left; padding: 24px 24px 20px; }
+.bulk-edit-modal .confirm-msg { text-align: center; font-weight: 700; font-size: 16px; margin-bottom: 16px; }
+.bulk-edit-scroll {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: min(70vh, 640px);
+    overflow-y: auto;
+    padding: 2px 4px 2px 2px;
+    margin-bottom: 18px;
+}
+.bulk-edit-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    background: #f8fafc;
+}
+.bulk-edit-card-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+}
+.bulk-edit-card-title { font-size: 15px; font-weight: 700; color: #1e293b; }
+.bulk-edit-card-sub { font-size: 12px; color: #94a3b8; margin-left: auto; }
+.bulk-edit-card-meta {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: #64748b;
+    margin: 4px 0 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed #e2e8f0;
+}
+.bulk-edit-card-meta b { color: #1e293b; font-weight: 700; }
+.bulk-edit-card-bl { margin-left: auto; color: #94a3b8; }
+.bulk-edit-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px 12px;
+}
+.bulk-edit-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    min-width: 0;
+}
+.bulk-edit-grid label.span-2 { grid-column: span 2; }
+.bulk-edit-grid input,
+.bulk-edit-grid select {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #1e293b;
+    background: #fff;
+    font-family: inherit;
+    text-transform: none;
+    letter-spacing: normal;
+}
+.bulk-edit-grid input:focus,
+.bulk-edit-grid select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+@media (max-width: 640px) {
+    .bulk-edit-grid { grid-template-columns: repeat(2, 1fr); }
+}
 .confirm-no {
     background: #f1f5f9;
     color: #475569;

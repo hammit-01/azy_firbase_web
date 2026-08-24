@@ -297,6 +297,70 @@ export function createHoldingInsertRow(item) {
 }
 
 // =========================
+// 팝업 모달 전용 카드형 입력(2026-08-24, 관리자+8001 신규 기능) — 위
+// createUpdateRow/createHoldingInsertRow는 원래 표 안 줄에 끼워 넣는
+// 용도라 칸이 좁고 라벨이 없어서, 모달 안에서는 라벨 붙은 카드로 대신
+// 보여준다. input class는 createUpdateRow/createHoldingInsertRow와
+// 동일하게 맞춰서 저장 로직(events.js)을 그대로 재사용한다.
+export function createUpdateCard(item) {
+    const id = item.id;
+    return `
+        <div class="bulk-edit-card" data-id="${id}">
+            <div class="bulk-edit-card-head">
+                <span class="bulk-edit-card-tag">${whTag(item.창고)}</span>
+                <span class="bulk-edit-card-title">${safeValue(item.상품명) || "(상품명 없음)"}</span>
+                <span class="bulk-edit-card-sub">${safeValue(item.BL)}</span>
+            </div>
+            <div class="bulk-edit-grid">
+                <label>상품명<input type="text" class="update-name cell-input" data-id="${id}" value="${safeValue(item.상품명)}"></label>
+                <label>브랜드<input type="text" class="update-brand cell-input" data-id="${id}" value="${safeValue(item.브랜드)}"></label>
+                <label>등급<input type="text" class="update-grade cell-input" data-id="${id}" value="${safeValue(item.등급)}"></label>
+                <label>ESTNO<input type="text" class="update-estNo cell-input" data-id="${id}" value="${safeValue(item.ESTNO)}"></label>
+                <label class="span-2">BL<input type="text" class="update-bl cell-input" data-id="${id}" value="${safeValue(item.BL)}"></label>
+                <label>창고<input type="text" class="update-warehouse cell-input" data-id="${id}" value="${safeValue(item.창고)}"></label>
+                <label>재고<input type="number" class="update-qty cell-input" data-id="${id}" value="${safeValue(item.재고)}"></label>
+                <label>유통기한<input type="date" class="update-dueDate cell-input" data-id="${id}" value="${toDateInputValue(item.유통기한)}"></label>
+                <label>평중<input type="number" step="0.01" class="update-weight cell-input" data-id="${id}" value="${safeValue(item.평중)}"></label>
+                <label>상태${stateSelect("update-state", safeValue(item.상태) || "없음", id)}</label>
+                <label class="span-2">비고<input type="text" class="update-memo cell-input" data-id="${id}" value="${safeValue(item.메모)}" placeholder="비고"></label>
+            </div>
+            <input type="hidden" class="update-releaseDate" data-id="${id}" value="${safeValue(item.출고일)}">
+            <input type="hidden" class="update-holding" data-id="${id}" value="${safeValue(item.홀딩)}">
+        </div>
+    `;
+}
+
+export function createHoldingCard(item) {
+    const id = item.id;
+    const user = getStoredUser();
+    const assigneeField = user?.권한 === "사원"
+        ? `<input type="hidden" class="hold-note" data-id="${id}" value="${user.이름}">`
+        : employeeSelect("hold-note", id, "");
+    return `
+        <div class="bulk-edit-card" data-id="${id}">
+            <div class="bulk-edit-card-head">
+                <span class="bulk-edit-card-tag">${whTag(item.창고)}</span>
+                <span class="bulk-edit-card-title">${safeValue(item.상품명) || "(상품명 없음)"}</span>
+                <span class="bulk-edit-card-sub">${[item.브랜드, item.등급, item.ESTNO].filter(safeValue).join(" · ")}</span>
+            </div>
+            <div class="bulk-edit-card-meta">
+                <span>재고 <b>${safeValue(item.재고)}</b></span>
+                <span>가용 <b>${availableCell(item.가용재고)}</b></span>
+                <span>유통기한 ${safeValue(item.유통기한)}</span>
+                <span class="bulk-edit-card-bl">${safeValue(item.BL)}</span>
+            </div>
+            <div class="bulk-edit-grid">
+                <label>담당자${assigneeField}</label>
+                <label>출고일자<input type="date" class="hold-releaseDate cell-input" data-id="${id}"></label>
+                <label>수량<input type="number" class="hold-qty cell-input" data-id="${id}" placeholder="수량"></label>
+                <label>평중<input type="number" step="0.01" class="hold-weight cell-input" data-id="${id}" value="${safeValue(item.평중)}"></label>
+                <label class="span-2">비고<input type="text" class="hold-memo cell-input" data-id="${id}" placeholder="비고"></label>
+            </div>
+        </div>
+    `;
+}
+
+// =========================
 // 우하단 전체 처리 바 — 추가/수정/홀딩 입력행이 있을 때만 표시
 // =========================
 export function renderBulkActionBar() {

@@ -337,21 +337,19 @@ export function showConfirm(msg) {
 }
 
 // 재고장 "수정"/"예약" 팝업 모달(2026-08-24, 관리자+8001 전용 신규 기능) — 여러
-// 행을 선택해도 하나의 팝업 안에 전부 들어간다. rowsHtml은 호출부(events.js)가
-// table.js의 createUpdateRow/createHoldingInsertRow로 미리 만들어서 넘긴다 —
+// 행을 선택해도 하나의 팝업 안에 전부 들어간다. cardsHtml은 호출부(events.js)가
+// table.js의 createUpdateCard/createHoldingCard로 미리 만들어서 넘긴다 —
 // 여기서는 저장/취소 버튼과 모달 껍데기만 관리하고, 실제 저장 로직(updateData/
 // holdingData 호출)은 onSave 콜백으로 위임한다(순환 import 방지 — crud.js/
 // firebase.js/crud_history.js를 ui.js가 직접 끌어오지 않음).
-export function showBulkEditModal(title, rowsHtml, { onSave } = {}) {
+export function showBulkEditModal(title, cardsHtml, { onSave } = {}) {
     return new Promise((resolve) => {
         const overlay = document.createElement("div");
         overlay.className = "confirm-overlay";
         overlay.innerHTML = `
             <div class="confirm-modal bulk-edit-modal">
                 <p class="confirm-msg">${title}</p>
-                <div class="bulk-edit-scroll">
-                    <table class="bulk-edit-table"><tbody>${rowsHtml}</tbody></table>
-                </div>
+                <div class="bulk-edit-scroll">${cardsHtml}</div>
                 <div class="confirm-btns">
                     <button class="confirm-yes bulk-modal-save-btn">저장</button>
                     <button class="confirm-no bulk-modal-cancel-btn">취소</button>
