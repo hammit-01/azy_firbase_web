@@ -354,7 +354,8 @@ export function createHoldingCard(item) {
                 <label>출고일자<input type="date" class="hold-releaseDate cell-input" data-id="${id}"></label>
                 <label>수량<input type="number" class="hold-qty cell-input" data-id="${id}" placeholder="수량"></label>
                 <label>평중<input type="number" step="0.01" class="hold-weight cell-input" data-id="${id}" value="${safeValue(item.평중)}"></label>
-                <label class="span-2">비고<input type="text" class="hold-memo cell-input" data-id="${id}" placeholder="비고"></label>
+                <label>거래처<input type="text" class="hold-client cell-input" data-id="${id}" placeholder="거래처명"></label>
+                <label>단가<input type="number" class="hold-price cell-input" data-id="${id}" placeholder="단가"></label>
             </div>
         </div>
     `;
@@ -1067,13 +1068,16 @@ function reservationCardHtml(r, isSalesPage = false) {
     const dateRow = isSalesPage
         ? `<div class="mc-row"><span class="mc-label">단가</span>${formatUnitPrice(unitPrice)}</div>`
         : `<div class="mc-row"><span class="mc-label">예약일</span>${safeValue(r.홀딩일자)}</div>`;
+    const priceRow = !isSalesPage && unitPrice !== null
+        ? `<div class="mc-row"><span class="mc-label">단가</span>${formatUnitPrice(unitPrice)}</div>`
+        : "";
     const weightRow = isSalesPage
         ? `<div class="mc-row"><span class="mc-label">중량</span>${formatWeight(weight)}</div>`
         : "";
     const totalRow = isSalesPage && unitPrice !== null && weight !== null
         ? `<div class="mc-row"><span class="mc-label">총금액</span>${formatUnitPrice(Math.round(unitPrice * weight))}</div>`
         : "";
-    const clientDisplay = isSalesPage ? clientPrefix(r.거래처) : safeValue(r.거래처);
+    const clientDisplay = clientPrefix(r.거래처);
     const completed = isSalesPage && r.status === "COMPLETED";
     const access = isSalesPage ? salesAccess(r) : { canEdit: true, canOthers: true, canCancel: true, canEditNote: true };
     return `
@@ -1096,6 +1100,7 @@ function reservationCardHtml(r, isSalesPage = false) {
                 <div class="mc-row"><span class="mc-label">담당자</span>${safeValue(r.담당자) || "(미지정)"}</div>
                 ${isSalesPage ? "" : `<div class="mc-row"><span class="mc-label">실재고</span>${safeValue(r.재고)}</div><div class="mc-row"><span class="mc-label">가용재고</span>${availableCell(r.가용재고)}</div>`}
                 ${dateRow}
+                ${priceRow}
                 ${weightRow}
                 ${totalRow}
                 ${safeValue(r.출고일) ? `<div class="mc-row"><span class="mc-label">출고일</span>${safeValue(r.출고일)}</div>` : ""}
@@ -1141,10 +1146,13 @@ function reservationRowHtml(r, isSalesPage = false) {
     const totalCell = isSalesPage
         ? `<td>${(unitPrice !== null && weight !== null) ? formatUnitPrice(Math.round(unitPrice * weight)) : ""}</td>`
         : "";
-    const clientDisplay = isSalesPage ? clientPrefix(r.거래처) : safeValue(r.거래처);
+    // 거래처/단가는 이제 입력 시점부터 나눠 받으므로(2026-08-24) 예약현황에서도
+    // 타창고매출현황과 동일하게 접두어만 보여주고 단가는 별도 칸으로 뺀다.
+    const clientDisplay = clientPrefix(r.거래처);
     const clientCell = canInlineEdit
         ? `<td class="sales-client-cell" data-id="${r.id}" data-raw="${rawClient}" title="더블클릭해서 수정">${clientDisplay}</td>`
         : `<td>${clientDisplay}</td>`;
+    const reservationPriceCell = isSalesPage ? "" : `<td>${formatUnitPrice(unitPrice)}</td>`;
     return `
         <tr data-reservation-id="${r.id}"${completed ? ' class="sales-completed-row"' : ""}>
             <td class="reservation-note-cell">${noteBtn(r, isSalesPage, access.canEditNote)}</td>
@@ -1160,6 +1168,7 @@ function reservationRowHtml(r, isSalesPage = false) {
             ${qtyCell}
             ${isSalesPage ? "" : `<td>${safeValue(r.재고)}</td><td>${availableCell(r.가용재고)}</td>`}
             ${clientCell}
+            ${reservationPriceCell}
             ${dateCell}
             ${weightCell}
             ${totalCell}
@@ -1271,8 +1280,9 @@ function reservationsHead(isSalesPage = false) {
         <col style="width:4%">  <!--수량-->
         <col style="width:4%">  <!--실재고-->
         <col style="width:5%">  <!--가용재고-->
-        <col style="width:10%"> <!--거래처-->
-        <col style="width:7%">  <!--예약일-->
+        <col style="width:7%">  <!--거래처-->
+        <col style="width:4%">  <!--단가-->
+        <col style="width:6%">  <!--예약일-->
         <col style="width:6%">  <!--출고일-->
         <col style="width:13%"> <!--액션-->
     </colgroup>
@@ -1281,7 +1291,7 @@ function reservationsHead(isSalesPage = false) {
             <th></th>
             <th>담당자</th><th>상품명</th><th>브랜드</th><th>등급</th><th>ESTNO</th>
             <th>BL</th><th>창고</th><th>수량</th><th>실재고</th><th>가용재고</th>
-            <th>거래처</th><th>예약일</th><th>출고일</th><th>액션</th>
+            <th>거래처</th><th>단가</th><th>예약일</th><th>출고일</th><th>액션</th>
         </tr>
     </thead>
 `;

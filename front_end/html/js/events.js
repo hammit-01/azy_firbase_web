@@ -967,12 +967,18 @@ async function handleClick(e) {
                         const id = row.dataset.id;
                         const item = state.selectedItems.get(id);
                         const holdWeight = row.querySelector(".hold-weight")?.value;
+                        // 거래처/단가를 입력 시점에 따로 받아서(2026-08-24) "거래처명 단가원"
+                        // 형태로 합쳐 저장 — 예약현황/타창고매출현황 둘 다 이 문자열을
+                        // clientPrefix/parseUnitPrice로 다시 갈라 거래처·단가 열에 보여준다.
+                        const client = row.querySelector(".hold-client")?.value || "";
+                        const price = row.querySelector(".hold-price")?.value;
+                        const combinedClient = buildClientWithDetails(client, price !== "" ? price : null, null);
                         const result = await holdingData(
                             item,
                             Number(row.querySelector(".hold-qty")?.value),
                             row.querySelector(".hold-releaseDate")?.value,
                             row.querySelector(".hold-note")?.value,
-                            row.querySelector(".hold-memo")?.value || "",
+                            combinedClient,
                             holdWeight !== "" ? holdWeight : null,
                             true
                         );
@@ -1294,10 +1300,10 @@ async function handleClick(e) {
                 });
                 await exportTable("타창고매출현황", headers, rows);
             } else {
-                const headers = ["담당자", "상품명", "브랜드", "등급", "ESTNO", "BL", "창고", "수량", "실재고", "가용재고", "거래처", "예약일", "출고일"];
+                const headers = ["담당자", "상품명", "브랜드", "등급", "ESTNO", "BL", "창고", "수량", "실재고", "가용재고", "거래처", "단가", "예약일", "출고일"];
                 const rows = state.filteredReservations.map(r => [
                     r.담당자 || "", r.상품명, r.브랜드, r.등급, r.ESTNO, r.BL, r.창고, r.수량,
-                    r.재고, r.가용재고 ?? "", r.거래처, r.홀딩일자, r.출고일,
+                    r.재고, r.가용재고 ?? "", clientPrefix(r.거래처), parseUnitPrice(r.거래처) ?? "", r.홀딩일자, r.출고일,
                 ]);
                 await exportTable("예약현황", headers, rows);
             }
