@@ -1088,6 +1088,9 @@ function reservationCardHtml(r, isSalesPage = false) {
     // id가 아님)면 날짜와 무관하게 계속 막는다 — 각 버튼에서 !isPreview로 따로 체크.
     const limitedActions = isSalesPage && !completed
         && safeValue(r.출고일) !== todayISOStr() && safeValue(r.출고일) !== tomorrowISOStr();
+    // 다음날짜(내일) 출고예정 건은 취소 버튼 자체를 없앰(2026-08-24) — 변경으로
+    // 출고일/수량 조정은 계속 가능하지만 아예 취소는 못 하게.
+    const isTomorrow = isSalesPage && safeValue(r.출고일) === tomorrowISOStr();
     const access = isSalesPage ? salesAccess(r) : { canEdit: true, canOthers: true, canCancel: true, canEditNote: true };
     return `
         <div class="mobile-card reservation-card${completed ? " sales-completed-row" : ""}" data-reservation-id="${r.id}">
@@ -1121,7 +1124,7 @@ function reservationCardHtml(r, isSalesPage = false) {
                 ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">변경</button>`}
                 ${!limitedActions && !isPreview && isSalesPage && access.canOthers ? `<button class="stock-release-btn${r.수량내림 ? " released" : ""}" data-id="${r.id}" title="이 출고 건 수량을 0으로 내렸다/복구">내림</button>` : ""}
                 ${!limitedActions && !isPreview && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
-                ${completed || !access.canCancel ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">취소</button>`}
+                ${completed || !access.canCancel || isTomorrow ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">취소</button>`}
                 ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
             </div>
         </div>
@@ -1144,6 +1147,9 @@ function reservationRowHtml(r, isSalesPage = false) {
     // 무관하게 각 버튼에서 !isPreview로 별도 차단.
     const limitedActions = isSalesPage && !completed
         && safeValue(r.출고일) !== todayISOStr() && safeValue(r.출고일) !== tomorrowISOStr();
+    // 다음날짜(내일) 출고예정 건은 취소 버튼 자체를 없앰(2026-08-24) — 변경으로
+    // 출고일/수량 조정은 계속 가능하지만 아예 취소는 못 하게.
+    const isTomorrow = isSalesPage && safeValue(r.출고일) === tomorrowISOStr();
     const access = isSalesPage ? salesAccess(r) : { canEdit: true, canOthers: true, canCancel: true, canEditNote: true };
     const canInlineEdit = isSalesPage && !completed && !isPreview && access.canEdit;
     const rawClient = attrEscape(r.거래처);
@@ -1200,7 +1206,7 @@ function reservationRowHtml(r, isSalesPage = false) {
                     ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">변경</button>`}
                     ${!limitedActions && !isPreview && isSalesPage && access.canOthers ? `<button class="stock-release-btn${r.수량내림 ? " released" : ""}" data-id="${r.id}" title="이 출고 건 수량을 0으로 내렸다/복구">내림</button>` : ""}
                     ${!limitedActions && !isPreview && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
-                    ${completed || !access.canCancel ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">취소</button>`}
+                    ${completed || !access.canCancel || isTomorrow ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">취소</button>`}
                     ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
                 </div>
             </td>
