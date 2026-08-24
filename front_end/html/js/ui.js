@@ -358,7 +358,14 @@ export function showBulkEditModal(title, cardsHtml, { onSave } = {}) {
         `;
         document.body.appendChild(overlay);
         const close = () => { overlay.remove(); resolve(); };
-        overlay.querySelector(".bulk-modal-cancel-btn").addEventListener("click", close);
+        // 팝업 전체 "취소"(2026-08-24) — 개별 카드 "✕"와 달리 이건 처리 자체를
+        // 그만두는 것이므로, 남아있는 선택을 재고장에서도 전부 초기화한다(실제
+        // 체크박스를 클릭시켜 handleChange를 그대로 태움 — 개별 취소와 동일한 방식).
+        const cancelAndClear = () => {
+            document.querySelectorAll(".row-check:checked").forEach(cb => cb.click());
+            close();
+        };
+        overlay.querySelector(".bulk-modal-cancel-btn").addEventListener("click", cancelAndClear);
         overlay.querySelector(".bulk-modal-save-btn").addEventListener("click", async (e) => {
             e.target.disabled = true;
             if (onSave) await onSave(overlay);

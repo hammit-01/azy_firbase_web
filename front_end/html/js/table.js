@@ -1081,12 +1081,13 @@ function reservationCardHtml(r, isSalesPage = false) {
         : "";
     const clientDisplay = clientPrefix(r.거래처);
     const completed = isSalesPage && r.status === "COMPLETED";
+    const isPreview = isSalesPage && !!r._preview;
     const access = isSalesPage ? salesAccess(r) : { canEdit: true, canOthers: true, canCancel: true, canEditNote: true };
     return `
-        <div class="mobile-card reservation-card${completed ? " sales-completed-row" : ""}" data-reservation-id="${r.id}">
+        <div class="mobile-card reservation-card${completed ? " sales-completed-row" : ""}${isPreview ? " sales-preview-row" : ""}" data-reservation-id="${r.id}">
             <div class="mc-header">
-                ${noteBtn(r, isSalesPage, access.canEditNote)}
-                ${isSalesPage && needsRegister(r) && access.canOthers ? `<label class="mc-register-label">${registerCheckboxHtml(r, access.canOthers)} 등록완료</label>` : ""}
+                ${isPreview ? "" : noteBtn(r, isSalesPage, access.canEditNote)}
+                ${!isPreview && isSalesPage && needsRegister(r) && access.canOthers ? `<label class="mc-register-label">${registerCheckboxHtml(r, access.canOthers)} 등록완료</label>` : ""}
                 <span class="mc-name">${safeValue(r.상품명)}</span>
                 ${whTag(r.창고)}
             </div>
@@ -1111,11 +1112,12 @@ function reservationCardHtml(r, isSalesPage = false) {
                 ${safeValue(r.BL) ? `<div class="mc-row mc-full"><span class="mc-label">BL</span>${safeValue(r.BL)}</div>` : ""}
             </div>
             <div class="reservation-card-actions">
+                ${isPreview ? `<span class="sales-preview-badge" title="출고일이 되면 자동으로 출고 목록에 반영됩니다. 실제 처리는 예약현황에서 해주세요.">예정</span>` : `
                 ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage ? "1" : ""}">변경</button>`}
                 ${isSalesPage && access.canOthers ? `<button class="stock-release-btn${r.수량내림 ? " released" : ""}" data-id="${r.id}" title="이 출고 건 수량을 0으로 내렸다/복구">내림</button>` : ""}
                 ${access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
                 ${completed || !access.canCancel ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">취소</button>`}
-                ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
+                ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}`}
             </div>
         </div>
     `;
@@ -1125,8 +1127,14 @@ function reservationRowHtml(r, isSalesPage = false) {
     const unitPrice = parseUnitPrice(r.거래처);
     const weight = parseWeight(r.거래처);
     const completed = isSalesPage && r.status === "COMPLETED";
+    // 미리보기(2026-08-24, 관리자+8001 전용) — 출고일은 잡혔지만 아직 오늘이 안
+    // 돼서 outbound로 안 넘어간 ACTIVE 예약. get_all_outbound()가 이 행들도
+    // 같이 내려주는데(_preview:true), 실제 outbound 행이 아니라서 완료/내림/
+    // 등록/메모 등 액션을 걸면 없는 id를 건드리게 된다 — 그래서 읽기 전용 배지만
+    // 보여주고 모든 액션을 막는다. 진짜 처리는 예약현황에서 하면 그대로 반영됨.
+    const isPreview = isSalesPage && !!r._preview;
     const access = isSalesPage ? salesAccess(r) : { canEdit: true, canOthers: true, canCancel: true, canEditNote: true };
-    const canInlineEdit = isSalesPage && !completed && access.canEdit;
+    const canInlineEdit = isSalesPage && !completed && !isPreview && access.canEdit;
     const rawClient = attrEscape(r.거래처);
     // "내림"(2026-08-24)으로 수량이 0이 된 행은 원수량을 그대로(빨간색으로만
     // 구분) 보여준다 — 실제 DB 수량은 0이라 가용재고 계산엔 안 잡히지만,
@@ -1155,11 +1163,12 @@ function reservationRowHtml(r, isSalesPage = false) {
         ? `<td class="sales-client-cell" data-id="${r.id}" data-raw="${rawClient}" title="더블클릭해서 수정">${clientDisplay}</td>`
         : `<td>${clientDisplay}</td>`;
     const reservationPriceCell = isSalesPage ? "" : `<td>${formatUnitPrice(unitPrice)}</td>`;
+    const rowClass = [completed && "sales-completed-row", isPreview && "sales-preview-row"].filter(Boolean).join(" ");
     return `
-        <tr data-reservation-id="${r.id}"${completed ? ' class="sales-completed-row"' : ""}>
-            <td class="reservation-note-cell">${noteBtn(r, isSalesPage, access.canEditNote)}</td>
-            ${isSalesPage ? `<td class="${access.canEditRemark ? "sales-remark-cell" : ""}" data-id="${r.id}" data-remark="${attrEscape(r.비고)}" title="${access.canEditRemark ? "더블클릭해서 수정" : ""}">${safeValue(r.비고)}</td>` : ""}
-            ${isSalesPage ? `<td class="reservation-register-cell">${registerCheckboxHtml(r, access.canOthers)}</td>` : ""}
+        <tr data-reservation-id="${r.id}"${rowClass ? ` class="${rowClass}"` : ""}>
+            <td class="reservation-note-cell">${isPreview ? "" : noteBtn(r, isSalesPage, access.canEditNote)}</td>
+            ${isSalesPage ? `<td class="${!isPreview && access.canEditRemark ? "sales-remark-cell" : ""}" data-id="${r.id}" data-remark="${attrEscape(r.비고)}" title="${!isPreview && access.canEditRemark ? "더블클릭해서 수정" : ""}">${safeValue(r.비고)}</td>` : ""}
+            ${isSalesPage ? `<td class="reservation-register-cell">${isPreview ? "" : registerCheckboxHtml(r, access.canOthers)}</td>` : ""}
             <td>${safeValue(r.담당자) || "(미지정)"}</td>
             <td>${safeValue(r.상품명)}</td>
             <td>${safeValue(r.브랜드)}</td>
@@ -1176,13 +1185,14 @@ function reservationRowHtml(r, isSalesPage = false) {
             ${totalCell}
             <td>${safeValue(r.출고일)}</td>
             <td class="reservation-row-actions-cell">
+                ${isPreview ? `<span class="sales-preview-badge" title="출고일이 되면 자동으로 출고 목록에 반영됩니다. 실제 처리는 예약현황에서 해주세요.">예정</span>` : `
                 <div class="reservation-row-actions">
                     ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage ? "1" : ""}">변경</button>`}
                     ${isSalesPage && access.canOthers ? `<button class="stock-release-btn${r.수량내림 ? " released" : ""}" data-id="${r.id}" title="이 출고 건 수량을 0으로 내렸다/복구">내림</button>` : ""}
                     ${access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
                     ${completed || !access.canCancel ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">취소</button>`}
                     ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
-                </div>
+                </div>`}
             </td>
         </tr>
     `;
@@ -1475,6 +1485,16 @@ export async function renderSalesTab() {
         listEl.innerHTML = `<p class="reservations-empty">출고 현황을 불러오지 못했습니다.</p>`;
         return;
     }
+
+    // 미리보기 행(2026-08-24, _preview:true — 출고일 예약된 ACTIVE 예약, 아직
+    // outbound로 안 넘어간 것) 노출은 관리자+8001 한정. login.js를 여기서
+    // import하면 순환참조(login.js → table.js)라 localStorage를 직접 읽는다.
+    let previewEnabled = false;
+    try {
+        const u = JSON.parse(localStorage.getItem("azy_login_user") || "null");
+        previewEnabled = u?.권한 === "관리자" && window.location.port === "8001";
+    } catch {}
+    if (!previewEnabled) rows = rows.filter(r => !r._preview);
 
     // 출고일 필터(2026-08-19) — 안 고르면 오늘(기존 고정 동작 그대로), 고르면 그 날짜.
     // outbound 잔여물(하루 지나도록 완료/취소 안 된 것)도 이걸로 확인 가능해짐.

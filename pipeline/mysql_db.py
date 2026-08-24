@@ -877,46 +877,74 @@ def register_outbound_from_reservation(conn, rec_id: str, qty: int, 출고일: s
     raise ValueError("예약을 찾을 수 없거나 이미 종료됨")
 
 
+def _outbound_product_join(cur, pk: str) -> dict | None:
+    """pk로 inventory/azy_inventory에서 상품 정보 + 가용재고 계산해서 합쳐
+    반환(없으면 None). get_all_outbound()이 실제 outbound 행과 미리보기(예약)
+    행 양쪽에 재사용."""
+    info = None
+    inv_table = None
+    for t in ("inventory", "azy_inventory"):
+        cur.execute(
+            f"SELECT 상품명, 브랜드, 등급, ESTNO, BL, 창고, 재고 FROM {t} WHERE id=%s",
+            (pk,),
+        )
+        info = cur.fetchone()
+        if info:
+            inv_table = t
+            break
+    if not info:
+        return None
+    hr_table = "holding_records" if inv_table == "inventory" else "azy_holding_records"
+    cur.execute(
+        f"SELECT COALESCE(SUM(수량),0) AS total FROM {hr_table} WHERE pk=%s AND status='ACTIVE'",
+        (pk,),
+    )
+    hold_sum = int(cur.fetchone()["total"] or 0)
+    cur.execute(
+        "SELECT COALESCE(SUM(수량),0) AS total FROM outbound WHERE pk=%s AND status='ACTIVE'",
+        (pk,),
+    )
+    outbound_sum = int(cur.fetchone()["total"] or 0)
+    return {**info, "가용재고": (info["재고"] or 0) - hold_sum - outbound_sum}
+
+
 def get_all_outbound(conn) -> list[dict]:
     """outbound(타창고매출현황) 전체 조회 + 상품 정보(상품명/브랜드/창고/재고)
     조인. pk가 inventory/azy_inventory 어느 쪽 소속인지 outbound 자체엔 표시가
     없어서 행마다 두 테이블을 순서대로 조회한다(건수가 적어 N+1이어도 무방).
     가용재고 = 실재고 − ACTIVE 예약 합계 − ACTIVE outbound 합계(get_all_active_
     reservations와 동일 원칙, 2026-08-14). status=COMPLETED(출고완료 토글)도
-    같이 내려준다 — CANCEL과 달리 화면에서 안 사라지고 회색으로 표시된다."""
+    같이 내려준다 — CANCEL과 달리 화면에서 안 사라지고 회색으로 표시된다.
+
+    미리보기(2026-08-24, _preview=True): 출고일이 잡혀있지만 아직 오늘이 안
+    돼서 migrate_due_reservations_to_outbound()로 outbound에 안 넘어간 ACTIVE
+    예약도 같이 내려준다 — 예약현황엔 그대로 남기고 타창고매출현황에서 날짜별로
+    미리 조회만 가능하게 하려는 용도. 프론트가 실제 노출 여부(관리자+8001)를
+    판단하므로 여기서는 항상 같이 내려준다."""
     with conn.cursor() as cur:
         cur.execute(
             "SELECT id, pk, 수량, 원수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, status, 전달사항, 등록, 비고, 수량내림 "
             "FROM outbound WHERE status IN ('ACTIVE','COMPLETED') ORDER BY 홀딩일자 DESC"
         )
-        rows = cur.fetchall()
         result = []
-        for row in rows:
-            info = None
-            inv_table = None
-            for t in ("inventory", "azy_inventory"):
-                cur.execute(
-                    f"SELECT 상품명, 브랜드, 등급, ESTNO, BL, 창고, 재고 FROM {t} WHERE id=%s",
-                    (row["pk"],),
-                )
-                info = cur.fetchone()
-                if info:
-                    inv_table = t
-                    break
-            if info:
-                hr_table = "holding_records" if inv_table == "inventory" else "azy_holding_records"
-                cur.execute(
-                    f"SELECT COALESCE(SUM(수량),0) AS total FROM {hr_table} WHERE pk=%s AND status='ACTIVE'",
-                    (row["pk"],),
-                )
-                hold_sum = int(cur.fetchone()["total"] or 0)
-                cur.execute(
-                    "SELECT COALESCE(SUM(수량),0) AS total FROM outbound WHERE pk=%s AND status='ACTIVE'",
-                    (row["pk"],),
-                )
-                outbound_sum = int(cur.fetchone()["total"] or 0)
-                info = {**info, "가용재고": (info["재고"] or 0) - hold_sum - outbound_sum}
-            result.append({**row, **(info or {})})
+        for row in cur.fetchall():
+            info = _outbound_product_join(cur, row["pk"])
+            result.append({**row, **(info or {}), "_preview": False})
+
+        for hr_table in ("holding_records", "azy_holding_records"):
+            cur.execute(
+                f"SELECT id, pk, 수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일 "
+                f"FROM {hr_table} WHERE status='ACTIVE' AND 출고일 != ''"
+            )
+            for row in cur.fetchall():
+                info = _outbound_product_join(cur, row["pk"])
+                if not info:
+                    continue
+                result.append({
+                    **row, **info, "status": "ACTIVE",
+                    "전달사항": None, "등록": None, "비고": None, "수량내림": None, "원수량": None,
+                    "_preview": True,
+                })
         return result
 
 
