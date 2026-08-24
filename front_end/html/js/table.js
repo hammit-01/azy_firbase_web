@@ -1082,13 +1082,18 @@ function reservationCardHtml(r, isSalesPage = false) {
     const clientDisplay = clientPrefix(r.거래처);
     const completed = isSalesPage && r.status === "COMPLETED";
     const isPreview = isSalesPage && !!r._preview;
-    const limitedActions = isSalesPage && !completed && safeValue(r.출고일) !== todayISOStr();
+    // 출고일이 오늘 또는 내일인 행은 완료/내림/등록완료까지 전부 허용(2026-08-24) —
+    // 그보다 먼 미래는 변경/취소만. 단, 내림/완료/등록완료는 실제 outbound 행에만
+    // 뜻이 있어서 isPreview(아직 outbound로 안 넘어간 ACTIVE 예약, id가 outbound
+    // id가 아님)면 날짜와 무관하게 계속 막는다 — 각 버튼에서 !isPreview로 따로 체크.
+    const limitedActions = isSalesPage && !completed
+        && safeValue(r.출고일) !== todayISOStr() && safeValue(r.출고일) !== tomorrowISOStr();
     const access = isSalesPage ? salesAccess(r) : { canEdit: true, canOthers: true, canCancel: true, canEditNote: true };
     return `
         <div class="mobile-card reservation-card${completed ? " sales-completed-row" : ""}" data-reservation-id="${r.id}">
             <div class="mc-header">
                 ${noteBtn(r, isSalesPage && !isPreview, access.canEditNote)}
-                ${!limitedActions && isSalesPage && needsRegister(r) && access.canOthers ? `<label class="mc-register-label">${registerCheckboxHtml(r, access.canOthers)} 등록완료</label>` : ""}
+                ${!limitedActions && !isPreview && isSalesPage && needsRegister(r) && access.canOthers ? `<label class="mc-register-label">${registerCheckboxHtml(r, access.canOthers)} 등록완료</label>` : ""}
                 <span class="mc-name">${safeValue(r.상품명)}</span>
                 ${whTag(r.창고)}
             </div>
@@ -1114,8 +1119,8 @@ function reservationCardHtml(r, isSalesPage = false) {
             </div>
             <div class="reservation-card-actions">
                 ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">변경</button>`}
-                ${!limitedActions && isSalesPage && access.canOthers ? `<button class="stock-release-btn${r.수량내림 ? " released" : ""}" data-id="${r.id}" title="이 출고 건 수량을 0으로 내렸다/복구">내림</button>` : ""}
-                ${!limitedActions && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
+                ${!limitedActions && !isPreview && isSalesPage && access.canOthers ? `<button class="stock-release-btn${r.수량내림 ? " released" : ""}" data-id="${r.id}" title="이 출고 건 수량을 0으로 내렸다/복구">내림</button>` : ""}
+                ${!limitedActions && !isPreview && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
                 ${completed || !access.canCancel ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">취소</button>`}
                 ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
             </div>
@@ -1133,11 +1138,12 @@ function reservationRowHtml(r, isSalesPage = false) {
     // 등록/메모 등 outbound 전용 액션을 걸면 없는 id를 건드리게 된다 — 변경/취소는
     // updateReservation/cancelReservation로 라우팅해서 계속 가능하게 둔다.
     const isPreview = isSalesPage && !!r._preview;
-    // 출고일이 오늘이 아닌 행(예정 예약이든, 출고등록으로 이미 outbound에 있는
-    // 미래 날짜 건이든)은 배지 없이 그냥 평범하게 보여주되(2026-08-24, 사용자
-    // 요청 — 예정 표시/구분 자체를 없앰) 완료/내림/등록완료처럼 "이미 실제로
-    // 처리됐다"는 뜻의 액션만 막고 변경/취소만 남긴다.
-    const limitedActions = isSalesPage && !completed && safeValue(r.출고일) !== todayISOStr();
+    // 출고일이 오늘이거나 내일인 행은 완료/내림/등록완료까지 전부 허용(2026-08-24),
+    // 그보다 먼 미래는 변경/취소만 남긴다. isPreview 행은 아직 outbound로 안 넘어간
+    // ACTIVE 예약이라 완료/내림/등록완료를 걸면 없는 id를 건드리게 되므로 날짜와
+    // 무관하게 각 버튼에서 !isPreview로 별도 차단.
+    const limitedActions = isSalesPage && !completed
+        && safeValue(r.출고일) !== todayISOStr() && safeValue(r.출고일) !== tomorrowISOStr();
     const access = isSalesPage ? salesAccess(r) : { canEdit: true, canOthers: true, canCancel: true, canEditNote: true };
     const canInlineEdit = isSalesPage && !completed && !isPreview && access.canEdit;
     const rawClient = attrEscape(r.거래처);
@@ -1173,7 +1179,7 @@ function reservationRowHtml(r, isSalesPage = false) {
         <tr data-reservation-id="${r.id}"${rowClass ? ` class="${rowClass}"` : ""}>
             <td class="reservation-note-cell">${noteBtn(r, isSalesPage && !isPreview, access.canEditNote)}</td>
             ${isSalesPage ? `<td class="${!isPreview && access.canEditRemark ? "sales-remark-cell" : ""}" data-id="${r.id}" data-remark="${attrEscape(r.비고)}" title="${!isPreview && access.canEditRemark ? "더블클릭해서 수정" : ""}">${safeValue(r.비고)}</td>` : ""}
-            ${isSalesPage ? `<td class="reservation-register-cell">${limitedActions ? "" : registerCheckboxHtml(r, access.canOthers)}</td>` : ""}
+            ${isSalesPage ? `<td class="reservation-register-cell">${limitedActions || isPreview ? "" : registerCheckboxHtml(r, access.canOthers)}</td>` : ""}
             <td>${safeValue(r.담당자) || "(미지정)"}</td>
             <td>${safeValue(r.상품명)}</td>
             <td>${safeValue(r.브랜드)}</td>
@@ -1192,8 +1198,8 @@ function reservationRowHtml(r, isSalesPage = false) {
             <td class="reservation-row-actions-cell">
                 <div class="reservation-row-actions">
                     ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">변경</button>`}
-                    ${!limitedActions && isSalesPage && access.canOthers ? `<button class="stock-release-btn${r.수량내림 ? " released" : ""}" data-id="${r.id}" title="이 출고 건 수량을 0으로 내렸다/복구">내림</button>` : ""}
-                    ${!limitedActions && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
+                    ${!limitedActions && !isPreview && isSalesPage && access.canOthers ? `<button class="stock-release-btn${r.수량내림 ? " released" : ""}" data-id="${r.id}" title="이 출고 건 수량을 0으로 내렸다/복구">내림</button>` : ""}
+                    ${!limitedActions && !isPreview && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
                     ${completed || !access.canCancel ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">취소</button>`}
                     ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
                 </div>
@@ -1320,6 +1326,14 @@ function reservationsHead(isSalesPage = false) {
 // 같은 "YYYY-MM-DD" 형식으로 저장되므로 그 형식으로 오늘 날짜를 만든다.
 function todayISOStr() {
     const d = new Date();
+    const pad = n => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+// 타창고매출현황에서 오늘뿐 아니라 다음날짜(내일)까지는 변경/내림/완료/취소를
+// 전부 허용(2026-08-24) — limitedActions 판단에 같이 씀.
+function tomorrowISOStr() {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
     const pad = n => String(n).padStart(2, "0");
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
