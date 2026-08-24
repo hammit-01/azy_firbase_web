@@ -575,7 +575,7 @@ def toggle_outbound_stock_release_endpoint(rec_id: str):
             released = toggle_outbound_stock_release(conn, rec_id)
         except ValueError as e:
             raise HTTPException(400, str(e))
-    return {"재고차감": released}
+    return {"수량내림": released}
 
 
 class UseOutboundBody(BaseModel):
