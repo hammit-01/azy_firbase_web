@@ -560,9 +560,9 @@ def reset_changes_log():
 def _in_operating_hours(dt: datetime) -> bool:
     if dt.weekday() >= 5:  # 토(5), 일(6) 제외
         return False
-    return (dt.hour == 8 and dt.minute == 0) or \
-           (8 < dt.hour < 17) or \
-           (dt.hour == 17 and dt.minute == 0)
+    return (dt.hour == 7 and dt.minute == 0) or \
+           (7 < dt.hour < 19) or \
+           (dt.hour == 19 and dt.minute == 0)
 
 
 def main():
@@ -572,15 +572,15 @@ def main():
 
     log.info("=" * 50)
     log.info("창고 재고 파이프라인 서비스 시작")
-    log.info("스케줄: 나머지창고/JNS 평일 08:00~17:00 1분 간격(서로 독립) + 에이스 정각 1시간 간격 별도")
+    log.info("스케줄: 나머지창고/JNS 평일 07:00~19:00 1분 간격(서로 독립) + 에이스 정각 1시간 간격 별도")
     log.info("=" * 50)
 
     scheduler = BlockingScheduler(timezone="Asia/Seoul")
 
-    # 평일(월~금) 08:00~16:59 매분 실행 + 17:00 마지막 실행
+    # 평일(월~금) 07:00~18:59 매분 실행 + 19:00 마지막 실행
     trigger = OrTrigger([
-        CronTrigger(hour="8-16", minute="*", day_of_week="mon-fri", timezone="Asia/Seoul"),
-        CronTrigger(hour="17",   minute="0", day_of_week="mon-fri", timezone="Asia/Seoul"),
+        CronTrigger(hour="7-18", minute="*", day_of_week="mon-fri", timezone="Asia/Seoul"),
+        CronTrigger(hour="19",   minute="0", day_of_week="mon-fri", timezone="Asia/Seoul"),
     ])
 
     scheduler.add_job(
@@ -603,12 +603,12 @@ def main():
         id="jns_pipeline",
     )
 
-    # 에이스냉장 전용 — 평일 08~16시 정각 + 16:59(마지막 실행)에, 메인 잡과 완전히 독립적으로 실행.
+    # 에이스냉장 전용 — 평일 07~18시 정각 + 18:59(마지막 실행)에, 메인 잡과 완전히 독립적으로 실행.
     # 동시접속 1명 제한 사이트라 메인 파이프라인 소요시간(최대 ~150초)과 무관하게
-    # 매 정각에 정확히 트리거되도록 별도 잡으로 분리. 마지막 실행만 17:00 대신 16:59로 앞당김.
+    # 매 정각에 정확히 트리거되도록 별도 잡으로 분리. 마지막 실행만 19:00 대신 18:59로 앞당김.
     ace_trigger = OrTrigger([
-        CronTrigger(hour="8-16", minute="0", day_of_week="mon-fri", timezone="Asia/Seoul"),
-        CronTrigger(hour="16",   minute="59", day_of_week="mon-fri", timezone="Asia/Seoul"),
+        CronTrigger(hour="7-18", minute="0", day_of_week="mon-fri", timezone="Asia/Seoul"),
+        CronTrigger(hour="18",   minute="59", day_of_week="mon-fri", timezone="Asia/Seoul"),
     ])
 
     scheduler.add_job(
@@ -627,10 +627,10 @@ def main():
         id="changes_log_reset",
     )
 
-    # 평일 장 마감(17:10, 메인/JNS 17:00·에이스 16:59 마지막 실행 이후) 스냅샷
+    # 평일 장 마감(19:10, 메인/JNS 19:00·에이스 18:59 마지막 실행 이후) 스냅샷
     scheduler.add_job(
         run_daily_snapshot,
-        CronTrigger(hour="17", minute="10", day_of_week="mon-fri", timezone="Asia/Seoul"),
+        CronTrigger(hour="19", minute="10", day_of_week="mon-fri", timezone="Asia/Seoul"),
         id="daily_snapshot",
     )
 
@@ -652,7 +652,7 @@ def main():
         run_pipeline()
         run_jns_pipeline()
     else:
-        log.info(f"현재 시각 {now.strftime('%H:%M')} - 운영 시간(평일 08:00~17:00) 외, 다음 평일 08:00까지 대기")
+        log.info(f"현재 시각 {now.strftime('%H:%M')} - 운영 시간(평일 07:00~19:00) 외, 다음 평일 07:00까지 대기")
 
     try:
         scheduler.start()
