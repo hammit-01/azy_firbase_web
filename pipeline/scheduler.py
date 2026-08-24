@@ -353,9 +353,19 @@ def run_pipeline():
             # 1) 이동창고에 이미 이고 수량만큼 입고돼 있으면 그 행은 제외(입고 완료).
             # 2) 남은(미입고) 행만 출고창고 쪽 재고에서 차감 — 홀딩처럼 매 사이클 재계산.
             try:
+                from datetime import timedelta as _timedelta
                 from pipeline.moving_reader import load_moving_rows
                 from pipeline.mysql_db import get_conn as _get_conn, sync_moving_inventory, apply_moving_deductions
                 moving_rows = load_moving_rows()
+                # 익일 미리보기(2026-08-24) — 내일 탭 이고 행도 같이 보여주되, 절대
+                # apply_moving_deductions에는 안 넘긴다(재고 차감 없이 화면 표시만).
+                try:
+                    from zoneinfo import ZoneInfo as _ZoneInfo
+                    tomorrow = datetime.now(_ZoneInfo("Asia/Seoul")) + _timedelta(days=1)
+                    moving_rows_next = load_moving_rows(dt=tomorrow)
+                except Exception as e:
+                    log.warning(f"익일 이고 미리보기 로드 실패: {e}")
+                    moving_rows_next = []
                 with _get_conn() as conn:
                     # inventory(JNS)는 run_jns_pipeline이 독립 스케줄로 원본을 덮어쓰므로
                     # 여기서는 방금 갱신한 azy_inventory만 차감한다 (이중/유실 차감 방지).
@@ -368,7 +378,7 @@ def run_pipeline():
                     remaining_rows = apply_moving_deductions(
                         conn, moving_rows, deduct_targets=("azy_inventory",), deduct_warehouses=deduct_warehouses
                     )
-                    sync_moving_inventory(conn, remaining_rows)
+                    sync_moving_inventory(conn, remaining_rows + moving_rows_next)
             except Exception as e:
                 log.warning(f"이고 동기화 실패: {e}")
 
@@ -421,8 +431,10 @@ def run_jns_pipeline():
                 from pipeline.mysql_db import get_conn as _get_conn, apply_moving_deductions
                 with _get_conn() as conn:
                     with conn.cursor() as cur:
+                        # 익일 미리보기 행("익일 이고")은 아직 오늘 차감 대상이 아니므로 제외.
                         cur.execute(
-                            "SELECT 상품명, 브랜드, 등급, ESTNO, BL, 이력번호, 재고, 출고창고, 이동창고 FROM moving_inventory"
+                            "SELECT 상품명, 브랜드, 등급, ESTNO, BL, 이력번호, 재고, 출고창고, 이동창고 "
+                            "FROM moving_inventory WHERE 비고 IS NULL OR 비고 != '익일 이고'"
                         )
                         current_moving = cur.fetchall()
                     apply_moving_deductions(conn, current_moving, deduct_targets=("inventory",))
@@ -500,8 +512,10 @@ def run_ace_pipeline():
                 from pipeline.mysql_db import get_conn as _get_conn, apply_moving_deductions
                 with _get_conn() as conn:
                     with conn.cursor() as cur:
+                        # 익일 미리보기 행("익일 이고")은 아직 오늘 차감 대상이 아니므로 제외.
                         cur.execute(
-                            "SELECT 상품명, 브랜드, 등급, ESTNO, BL, 이력번호, 재고, 출고창고, 이동창고 FROM moving_inventory"
+                            "SELECT 상품명, 브랜드, 등급, ESTNO, BL, 이력번호, 재고, 출고창고, 이동창고 "
+                            "FROM moving_inventory WHERE 비고 IS NULL OR 비고 != '익일 이고'"
                         )
                         current_moving = cur.fetchall()
                     apply_moving_deductions(

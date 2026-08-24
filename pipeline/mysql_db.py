@@ -346,8 +346,10 @@ def snapshot_daily(conn):
 
 def sync_moving_inventory(conn, rows: list[dict]):
     """이고(창고이동) 취합 시트 → moving_inventory 통째로 교체.
-    이 테이블은 '오늘' 상태만 보여주는 용도라 매 사이클 전체 삭제 후 다시 채운다."""
-    cols = ["id", "상품명", "브랜드", "등급", "ESTNO", "재고", "BL", "이력번호", "출고창고", "이동창고"]
+    이 테이블은 '오늘'(+ 익일 미리보기) 상태만 보여주는 용도라 매 사이클 전체
+    삭제 후 다시 채운다. 비고는 "이고"(오늘, 실제 차감 대상) 또는 "익일 이고"
+    (내일 탭 미리보기, sync만 되고 apply_moving_deductions는 절대 안 거침)."""
+    cols = ["id", "상품명", "브랜드", "등급", "ESTNO", "재고", "BL", "이력번호", "출고창고", "이동창고", "비고"]
     with conn.cursor() as cur:
         cur.execute("DELETE FROM moving_inventory")
         if rows:
@@ -933,7 +935,7 @@ def get_all_outbound(conn) -> list[dict]:
 
         for hr_table in ("holding_records", "azy_holding_records"):
             cur.execute(
-                f"SELECT id, pk, 수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일 "
+                f"SELECT id, pk, 수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, 전달사항 "
                 f"FROM {hr_table} WHERE status='ACTIVE' AND 출고일 != ''"
             )
             for row in cur.fetchall():
@@ -942,7 +944,7 @@ def get_all_outbound(conn) -> list[dict]:
                     continue
                 result.append({
                     **row, **info, "status": "ACTIVE",
-                    "전달사항": None, "등록": None, "비고": None, "수량내림": None, "원수량": None,
+                    "등록": None, "비고": None, "수량내림": None, "원수량": None,
                     "_preview": True,
                 })
         return result

@@ -30,17 +30,28 @@ def _tab_name(dt=None) -> str:
     return "이고_" + dt.strftime("%Y-%m-%d")
 
 
-def load_moving_rows() -> list[dict]:
-    """오늘 탭의 이고 취합 행 → [{id, 상품명, 브랜드, 등급, ESTNO, 재고, BL, 이동창고}, ...]
-    실패 시 [] 반환 (파이프라인 중단 없음)."""
+def load_moving_rows(dt=None) -> list[dict]:
+    """dt 탭(기본 오늘)의 이고 취합 행 → [{id, 상품명, 브랜드, 등급, ESTNO, 재고,
+    BL, 이동창고, 비고}, ...] 실패 시 [] 반환(파이프라인 중단 없음).
+
+    익일 미리보기(2026-08-24): dt에 내일 날짜를 넘기면 내일 탭을 읽되, 각 행의
+    id를 그 탭 날짜 기준으로 만들고(오늘 탭 id와 안 겹치게) 비고에 "익일 이고"를
+    붙인다 — 호출부(scheduler.py)가 이 결과를 apply_moving_deductions()에는
+    절대 넘기지 않고 sync_moving_inventory()에만 얹어서, 재고 차감 없이 재고장에
+    미리보기 행으로만 보이게 한다."""
     try:
         import gspread
     except ImportError:
         log.warning("gspread 미설치 (pip install gspread) → 스킵")
         return []
 
-    tab = _tab_name()
-    today = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y%m%d")
+    if dt is None:
+        dt = datetime.now(ZoneInfo("Asia/Seoul"))
+    is_today = dt.date() == datetime.now(ZoneInfo("Asia/Seoul")).date()
+    note = "이고" if is_today else "익일 이고"
+
+    tab = _tab_name(dt)
+    today = dt.strftime("%Y%m%d")
     try:
         gc = gspread.service_account(filename=CRED_PATH)
         sh = gc.open_by_key(SHEET_ID)
@@ -87,6 +98,7 @@ def load_moving_rows() -> list[dict]:
             "이력번호": history_last4,
             "출고창고": str(row.get(_COL["warehouse"], "") or "").strip(),
             "이동창고": str(row.get(_COL["to_warehouse"], "") or "").strip(),
+            "비고":    note,
         })
 
     # 같은 이고 요청이 시트에 행만 다르게 중복 입력된 경우 방지 — apply_moving_deductions는
