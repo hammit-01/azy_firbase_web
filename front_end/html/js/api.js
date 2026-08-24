@@ -214,6 +214,10 @@ export async function apiToggleOutboundRegister(id) {
     return apiFetch(`/api/outbound/${encodeURIComponent(id)}/toggle_register`, { method: "POST" });
 }
 
+export async function apiToggleOutboundStockRelease(id) {
+    return apiFetch(`/api/outbound/${encodeURIComponent(id)}/toggle_stock_release`, { method: "POST" });
+}
+
 // ── 전략단가(price, 2026-08-19) ────────────────────────────────
 export async function apiGetAllPrices() {
     const r = await apiFetch("/api/price", {});

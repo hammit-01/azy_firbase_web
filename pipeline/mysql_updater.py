@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 
 from pipeline.mysql_db import (
     get_conn, upsert_inventory, delete_inventory,
-    get_holding_sum, get_snapshot,
+    get_holding_sum, get_outbound_sum, get_snapshot,
     sync_freeze, sync_estno_prefix, sync_name_rename, sync_grade_clear, sync_field_fill,
 )
 from pipeline.updater import _df_to_dict, _row_sig
@@ -30,6 +30,7 @@ class MySQLUpdater:
 
         with get_conn() as conn:
             holding_sum = get_holding_sum(conn)  # holdingTotal 참고용 스냅샷에만 사용
+            outbound_sum = get_outbound_sum(conn)  # stale 삭제 보호 판단에만 사용(아래)
             db_snapshot = get_snapshot(conn)     # 현재 MySQL 상태
 
         # 첫 실행(MySQL 비어 있음): pickle도 비워서 전량 INSERT 유도
@@ -79,11 +80,14 @@ class MySQLUpdater:
         for pk in db_snapshot:
             if pk in new_data:
                 continue
-            if holding_sum.get(pk, 0) > 0:
+            if holding_sum.get(pk, 0) > 0 or outbound_sum.get(pk, 0) > 0:
                 # 크롤 결과에서 사라진(재고 0/일시 누락) 항목이라도 ACTIVE 예약이 걸려
                 # 있으면 행을 지우지 않는다 — 지우면 holding_records.pk가 가리킬 곳이
                 # 없어져 예약이 "예약 현황"에서 조용히 고아가 돼버린다(2026-08-07,
                 # 실제 운영 DB에서 발견). 재고만 0으로 남겨 예약 화면에 계속 보이게 한다.
+                # ACTIVE outbound(출고일 당일이라 이미 outbound로 넘어간 것)도 동일하게
+                # 보호해야 한다 — 안 그러면 타창고매출현황에서 상품명/BL 등이 빈 채로
+                # 뜬다(2026-08-24 실사고, 위 get_outbound_sum 주석 참고).
                 db_prev = db_snapshot[pk]
                 to_update[pk] = {
                     **db_prev, "재고": 0,

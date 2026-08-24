@@ -3,7 +3,7 @@ import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, 
 import { renderSelectData, renderInsert, createInsertRow } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
-import { getReservationsByPk, cancelReservation, useReservation, updateReservation, updateOutbound, cancelOutbound, createOutbound, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, createPrice, updatePrice, deletePrice } from "./firestoreService.js";
+import { getReservationsByPk, cancelReservation, useReservation, updateReservation, updateOutbound, cancelOutbound, createOutbound, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, toggleOutboundStockRelease, createPrice, updatePrice, deletePrice } from "./firestoreService.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
@@ -929,6 +929,24 @@ async function handleClick(e) {
         return;
     }
 
+    // 타창고매출현황 "내림" — 실재고에서 이 출고 수량만큼 차감/복구 토글
+    // (2026-08-24). "완료"(use-reservation-btn)와 독립된 별개 동작 — 완료는
+    // 서류상 절차 완료 표시일 뿐 재고를 안 건드리고, 내림만 실재고를 직접
+    // 깎는다. 행 회색 처리 등 디자인 변화는 완료 쪽에만 있고 내림은 없음.
+    if (e.target.classList.contains("stock-release-btn")) {
+        const id = e.target.dataset.id;
+        try {
+            const { 재고차감 } = await toggleOutboundStockRelease(id);
+            pushUndo({ type: "outbound-toggle-stock-release", id });
+            _logActivity("outbound", id, "재고내림토글", null, { 재고차감 }, "재고 내림 상태 토글");
+            renderSalesTab();
+            fetchAllData();
+        } catch (err) {
+            showError(err.message || "처리에 실패했습니다.");
+        }
+        return;
+    }
+
     // 예약 현황 탭 — 사용완료(입력한 수량만큼 수량 차감, 전량이면 종료 처리).
     // sales.html(data-sales="1")의 "출고완료"는 다른 동작 — outbound.status를
     // ACTIVE↔COMPLETED로 토글만 한다(수량 변경 없음). COMPLETED면 회색 배경 +
@@ -1088,14 +1106,14 @@ async function handleClick(e) {
 
         if (reservationsOpen || salesOpen) {
             if (salesOpen) {
-                const headers = ["담당자", "상품명", "브랜드", "등급", "ESTNO", "BL", "창고", "수량", "실재고", "가용재고", "거래처", "비고", "단가", "중량", "총금액", "출고일", "상태"];
+                const headers = ["담당자", "상품명", "브랜드", "등급", "ESTNO", "BL", "창고", "수량", "거래처", "비고", "단가", "중량", "총금액", "출고일", "상태"];
                 const rows = state.filteredReservations.map(r => {
                     const unitPrice = parseUnitPrice(r.거래처);
                     const weight = parseWeight(r.거래처);
                     const total = (unitPrice !== null && weight !== null) ? Math.round(unitPrice * weight) : "";
                     return [
                         r.담당자 || "", r.상품명, r.브랜드, r.등급, r.ESTNO, r.BL, r.창고, r.수량,
-                        r.재고, r.가용재고 ?? "", clientPrefix(r.거래처), r.비고 || "", unitPrice ?? "", weight ?? "",
+                        clientPrefix(r.거래처), r.비고 || "", unitPrice ?? "", weight ?? "",
                         total, r.출고일, r.status === "COMPLETED" ? "출고완료" : "",
                     ];
                 });

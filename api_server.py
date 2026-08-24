@@ -20,7 +20,7 @@ from pipeline.mysql_db import (
     get_active_reservations_by_pk, get_all_active_reservations,
     migrate_due_reservations_to_outbound, get_all_outbound, create_outbound,
     update_outbound, cancel_outbound, use_outbound, toggle_outbound_complete,
-    toggle_outbound_register,
+    toggle_outbound_register, toggle_outbound_stock_release,
     register_outbound_from_reservation, _today_iso,
     get_all_prices, create_price, update_price, delete_price,
 )
@@ -566,6 +566,16 @@ def toggle_outbound_register_endpoint(rec_id: str):
         except ValueError as e:
             raise HTTPException(404, str(e))
     return {"등록": registered}
+
+
+@app.post("/api/outbound/{rec_id}/toggle_stock_release")
+def toggle_outbound_stock_release_endpoint(rec_id: str):
+    with get_conn() as conn:
+        try:
+            released = toggle_outbound_stock_release(conn, rec_id)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    return {"재고차감": released}
 
 
 class UseOutboundBody(BaseModel):

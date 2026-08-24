@@ -7,7 +7,7 @@ import {
     apiUpdateReservation, apiRegisterOutboundFromReservation,
     apiGetReservationsByPk, apiGetAllReservations,
     apiGetAllOutbound, apiCreateOutbound, apiUpdateOutbound, apiCancelOutbound, apiUseOutbound,
-    apiToggleOutboundComplete, apiToggleOutboundRegister,
+    apiToggleOutboundComplete, apiToggleOutboundRegister, apiToggleOutboundStockRelease,
     apiGetAllPrices, apiCreatePrice, apiUpdatePrice, apiDeletePrice,
 } from "./api.js";
 
@@ -62,6 +62,9 @@ export async function toggleOutboundComplete(id) {
 }
 export async function toggleOutboundRegister(id) {
     return apiToggleOutboundRegister(id);
+}
+export async function toggleOutboundStockRelease(id) {
+    return apiToggleOutboundStockRelease(id);
 }
 
 // 추가

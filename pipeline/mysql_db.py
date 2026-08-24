@@ -229,6 +229,18 @@ def get_holding_sum(conn) -> dict:
         return {row["pk"]: int(row["total"] or 0) for row in cur.fetchall()}
 
 
+def get_outbound_sum(conn) -> dict:
+    """pk → ACTIVE 출고(outbound) 수량 합계. inventory/azy_inventory 공용 —
+    stale 삭제 보호 로직(get_holding_sum과 같은 용도)이 예약뿐 아니라 출고일
+    당일이 되어 outbound로 넘어간 뒤에도 사라지지 않게 하려면 이것도 같이 봐야
+    한다(2026-08-24, 출고일이 오늘인 ACTIVE outbound가 있는데도 크롤에서 그
+    상품이 실제로 빠져서 재고 행이 통째로 삭제 → 타창고매출현황에서 상품명/BL/
+    창고 등이 빈 채로 뜨는 사고 원인이었음)."""
+    with conn.cursor() as cur:
+        cur.execute("SELECT pk, SUM(수량) as total FROM outbound WHERE pk != '' AND status='ACTIVE' GROUP BY pk")
+        return {row["pk"]: int(row["total"] or 0) for row in cur.fetchall()}
+
+
 def get_holding_records_by_key(conn) -> dict:
     """(BL, ESTNO, 등급) → [record] 인덱스."""
     result = {}
@@ -860,7 +872,7 @@ def get_all_outbound(conn) -> list[dict]:
     같이 내려준다 — CANCEL과 달리 화면에서 안 사라지고 회색으로 표시된다."""
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT id, pk, 수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, status, 전달사항, 등록, 비고 "
+            "SELECT id, pk, 수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, status, 전달사항, 등록, 비고, 재고차감 "
             "FROM outbound WHERE status IN ('ACTIVE','COMPLETED') ORDER BY 홀딩일자 DESC"
         )
         rows = cur.fetchall()
@@ -1132,6 +1144,35 @@ def toggle_outbound_complete(conn, rec_id: str) -> str:
                 raise ValueError("등록완료 체크 후 출고완료할 수 있습니다")
         cur.execute("UPDATE outbound SET status=%s WHERE id=%s", (new_status, rec_id))
         return new_status
+
+
+def toggle_outbound_stock_release(conn, rec_id: str) -> bool:
+    """타창고매출현황 "내림" 버튼 토글(2026-08-24) — 실제 창고 재고(inventory/
+    azy_inventory.재고)에서 이 출고 수량만큼 빼거나(처음 누름) 되돌린다(다시 누름).
+    "출고완료"(toggle_outbound_complete)와 별개 개념 — 완료는 담당자가 서류상
+    절차를 끝냈다는 표시일 뿐 재고를 안 건드리고, 내림은 실물이 실제로 빠졌다는
+    뜻으로 실재고를 직접 깎는다. 반환값은 바뀐 뒤의 재고차감 값."""
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT status, pk, 수량, 재고차감 FROM outbound WHERE id=%s FOR UPDATE",
+            (rec_id,),
+        )
+        row = cur.fetchone()
+        if not row or row["status"] not in ("ACTIVE", "COMPLETED"):
+            raise ValueError("항목을 찾을 수 없거나 이미 취소됨")
+        pk = row["pk"]
+        inv_table = _inv_table_for_pk(cur, pk)
+        if not inv_table:
+            raise ValueError("연결된 재고를 찾을 수 없습니다")
+        new_value = 0 if row["재고차감"] else 1
+        delta = -int(row["수량"] or 0) if new_value else int(row["수량"] or 0)
+        cur.execute(
+            f"UPDATE {inv_table} SET 재고=GREATEST(재고+%s, 0), "
+            f"stock_version=stock_version+1 WHERE id=%s OR pk=%s",
+            (delta, pk, pk),
+        )
+        cur.execute("UPDATE outbound SET 재고차감=%s WHERE id=%s", (new_value, rec_id))
+        return bool(new_value)
 
 
 def toggle_outbound_register(conn, rec_id: str) -> bool:

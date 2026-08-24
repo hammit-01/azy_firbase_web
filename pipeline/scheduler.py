@@ -117,7 +117,7 @@ def _upload_azy(azy_df, warehouse_scope=None):
     from datetime import datetime
     from zoneinfo import ZoneInfo
     from pipeline.mysql_db import (
-        get_conn, upsert_azy_inventory, delete_azy_inventory, get_azy_holding_sum,
+        get_conn, upsert_azy_inventory, delete_azy_inventory, get_azy_holding_sum, get_outbound_sum,
     )
 
     if azy_df is None or azy_df.empty:
@@ -132,6 +132,7 @@ def _upload_azy(azy_df, warehouse_scope=None):
 
     with get_conn() as conn:
         holding_sum = get_azy_holding_sum(conn)
+        outbound_sum = get_outbound_sum(conn)  # stale 삭제 보호 판단에만 사용(아래)
         with conn.cursor() as cur:
             # 대청은 통관분(JNS/곤대청) 계정과 일반(azy/대청) 계정이 같은 재고를 그대로
             # 보여줘서 BL이 겹치면 두 테이블에 통째로 중복 적재된다(2026-08-03, DB에
@@ -275,11 +276,14 @@ def _upload_azy(azy_df, warehouse_scope=None):
         for uid, prev in existing.items():
             if uid in rows:
                 continue
-            if holding_sum.get(uid, 0) > 0:
+            if holding_sum.get(uid, 0) > 0 or outbound_sum.get(uid, 0) > 0:
                 # 크롤에서 사라진(재고 0/일시 누락) 항목이라도 ACTIVE 예약이 걸려 있으면
                 # 지우지 않는다 — 지우면 azy_holding_records.pk가 가리킬 곳이 없어져
                 # 예약이 "예약 현황"에서 조용히 고아가 돼버린다(2026-08-07, 운영 DB에서
                 # 실제 발견: 170박스 예약이 재고 소진과 함께 화면에서 사라짐).
+                # ACTIVE outbound(출고일 당일이라 이미 outbound로 넘어간 것)도 동일하게
+                # 보호해야 한다 — 안 그러면 타창고매출현황에서 상품명/BL 등이 빈 채로
+                # 뜬다(2026-08-24 실사고).
                 rows[uid] = {
                     **prev, "id": uid, "pk": "", "재고": 0, "중량": None,
                     "수집일": today, "holdingTotal": holding_sum.get(uid, 0),

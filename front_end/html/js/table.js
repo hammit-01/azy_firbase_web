@@ -1030,8 +1030,7 @@ function reservationCardHtml(r, isSalesPage = false) {
             </div>
             <div class="mc-info">
                 <div class="mc-row"><span class="mc-label">담당자</span>${safeValue(r.담당자) || "(미지정)"}</div>
-                <div class="mc-row"><span class="mc-label">실재고</span>${safeValue(r.재고)}</div>
-                <div class="mc-row"><span class="mc-label">가용재고</span>${availableCell(r.가용재고)}</div>
+                ${isSalesPage ? "" : `<div class="mc-row"><span class="mc-label">실재고</span>${safeValue(r.재고)}</div><div class="mc-row"><span class="mc-label">가용재고</span>${availableCell(r.가용재고)}</div>`}
                 ${dateRow}
                 ${weightRow}
                 ${totalRow}
@@ -1041,9 +1040,10 @@ function reservationCardHtml(r, isSalesPage = false) {
                 ${safeValue(r.BL) ? `<div class="mc-row mc-full"><span class="mc-label">BL</span>${safeValue(r.BL)}</div>` : ""}
             </div>
             <div class="reservation-card-actions">
-                ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고변경" : "예약변경"}</button>`}
-                ${access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "출고완료" : "사용완료"}</button>` : ""}
-                ${completed || !access.canCancel ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고취소" : "예약취소"}</button>`}
+                ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "변경" : "예약변경"}</button>`}
+                ${isSalesPage && access.canOthers ? `<button class="stock-release-btn${r.재고차감 ? " released" : ""}" data-id="${r.id}" title="실재고에서 수량 차감/복구">내림</button>` : ""}
+                ${access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "완료" : "사용완료"}</button>` : ""}
+                ${completed || !access.canCancel ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "취소" : "예약취소"}</button>`}
                 ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고등록</button>`}
             </div>
         </div>
@@ -1076,8 +1076,7 @@ function reservationRowHtml(r, isSalesPage = false) {
             <td>${safeValue(r.BL)}</td>
             <td>${whTag(r.창고)}</td>
             <td>${safeValue(r.수량)}</td>
-            <td>${safeValue(r.재고)}</td>
-            <td>${availableCell(r.가용재고)}</td>
+            ${isSalesPage ? "" : `<td>${safeValue(r.재고)}</td><td>${availableCell(r.가용재고)}</td>`}
             <td>${clientDisplay}</td>
             ${dateCell}
             ${weightCell}
@@ -1085,9 +1084,10 @@ function reservationRowHtml(r, isSalesPage = false) {
             <td>${safeValue(r.출고일)}</td>
             <td class="reservation-row-actions-cell">
                 <div class="reservation-row-actions">
-                    ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고변경" : "예약변경"}</button>`}
-                    ${access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "출고완료" : "사용완료"}</button>` : ""}
-                    ${completed || !access.canCancel ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "출고취소" : "예약취소"}</button>`}
+                    ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "변경" : "예약변경"}</button>`}
+                    ${isSalesPage && access.canOthers ? `<button class="stock-release-btn${r.재고차감 ? " released" : ""}" data-id="${r.id}" title="실재고에서 수량 차감/복구">내림</button>` : ""}
+                    ${access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "완료" : "사용완료"}</button>` : ""}
+                    ${completed || !access.canCancel ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "취소" : "예약취소"}</button>`}
                     ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고등록</button>`}
                 </div>
             </td>
@@ -1097,8 +1097,8 @@ function reservationRowHtml(r, isSalesPage = false) {
 
 // sales.html "추가" 버튼 — 팝업 대신 엑셀처럼 표 맨 위에 입력행을 띄운다(2026-08-14).
 // 열 순서는 reservationsHead(true)와 동일해야 함: 비고,등록완료,담당자,상품명,브랜드,
-// 등급,ESTNO,BL,창고,수량,실재고,가용재고,거래처,단가,중량,총금액,출고일,액션(18칸,
-// 2026-08-19 비고를 "!" 옆으로 이동). 실재고/가용재고/총금액은 아직 어떤 재고인지
+// 등급,ESTNO,BL,창고,수량,거래처,단가,중량,총금액,출고일,액션(2026-08-19 비고를 "!"
+// 옆으로 이동, 2026-08-24 실재고/가용재고 열 제거). 총금액은 아직 어떤 재고인지
 // 확정 전이라 입력칸 없이 빈칸으로 두고, 등록완료도 신규 입력행 단계에선 아직
 // 창고가 정해지지 않아 빈칸.
 export function outboundInsertRowHtml() {
@@ -1115,8 +1115,6 @@ export function outboundInsertRowHtml() {
             <td><input type="text" class="ob-in-bl cell-input" placeholder="BL"></td>
             <td><input type="text" class="ob-in-wh cell-input" placeholder="창고"></td>
             <td><input type="number" class="ob-in-qty cell-input" min="1" value="1"></td>
-            <td></td>
-            <td></td>
             <td><input type="text" class="ob-in-client cell-input" placeholder="거래처명"></td>
             <td><input type="number" class="ob-in-price cell-input" min="0" placeholder="단가"></td>
             <td><input type="number" step="0.01" min="0" class="ob-in-weight cell-input" placeholder="중량"></td>
@@ -1153,16 +1151,14 @@ function reservationsHead(isSalesPage = false) {
         <col style="width:4%">  <!--전달사항-->
         <col style="width:3%">  <!--비고-->
         <col style="width:4%">  <!--등록완료-->
-        <col style="width:5%">  <!--담당자-->
-        <col style="width:8%">  <!--상품명-->
-        <col style="width:5%">  <!--브랜드-->
+        <col style="width:6%">  <!--담당자-->
+        <col style="width:10%"> <!--상품명-->
+        <col style="width:6%">  <!--브랜드-->
         <col style="width:3%">  <!--등급-->
         <col style="width:4%">  <!--ESTNO-->
-        <col style="width:11%"> <!--BL-->
-        <col style="width:5%">  <!--창고-->
+        <col style="width:12%"> <!--BL-->
+        <col style="width:6%">  <!--창고-->
         <col style="width:4%">  <!--수량-->
-        <col style="width:4%">  <!--실재고-->
-        <col style="width:5%">  <!--가용재고-->
         <col style="width:6%">  <!--거래처-->
         <col style="width:4%">  <!--단가-->
         <col style="width:4%">  <!--중량-->
@@ -1174,7 +1170,7 @@ function reservationsHead(isSalesPage = false) {
         <tr>
             <th></th><th>비고</th><th>등록완료</th>
             <th>담당자</th><th>상품명</th><th>브랜드</th><th>등급</th><th>ESTNO</th>
-            <th>BL</th><th>창고</th><th>수량</th><th>실재고</th><th>가용재고</th>
+            <th>BL</th><th>창고</th><th>수량</th>
             <th>거래처</th><th>단가</th><th>중량</th><th>총금액</th><th>출고일</th><th>액션</th>
         </tr>
     </thead>

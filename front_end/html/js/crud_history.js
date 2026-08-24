@@ -2,7 +2,7 @@ import {
     updateItem, insertItem, moveHoldingToHistory, deleteItem as _deleteItem, cancelReservation,
     createReservation, updateReservation, reactivateReservation,
     createOutbound, updateOutbound, cancelOutbound,
-    toggleOutboundComplete, toggleOutboundRegister,
+    toggleOutboundComplete, toggleOutboundRegister, toggleOutboundStockRelease,
 } from "./firestoreService.js";
 import { showToast, showError } from "./ui.js";
 import { getStoredUser } from "./login.js";
@@ -114,6 +114,9 @@ function _buildFn(desc) {
 
         case "outbound-toggle-register":
             return async () => toggleOutboundRegister(desc.id);
+
+        case "outbound-toggle-stock-release":
+            return async () => toggleOutboundStockRelease(desc.id);
 
         // sales.html "추가"로 새로 만든 출고건 — 되돌리기 = 완전 삭제(원래 없던 행이라
         // 예약으로 되돌릴 대상 자체가 없음)
