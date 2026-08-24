@@ -835,11 +835,17 @@ def create_outbound(conn, product: dict) -> dict:
 
 
 def register_outbound_from_reservation(conn, rec_id: str, qty: int, 출고일: str = "", 거래처: str = "") -> dict:
-    """재고장(메인) 예약현황의 "출고등록" 버튼 — 예약 수량 중 일부/전체를
-    outbound로 등록한다(2026-08-14). 수량이 예약 전체와 같으면 예약 행 자체를
-    outbound로 옮기고(원본 삭제), 일부만 지정하면 예약 수량만 그만큼 차감하고
-    outbound에 별도 항목을 새로 만든다(use_reservation의 부분/전체 패턴과
-    동일). 출고일 미지정 시 오늘로 채움, 거래처는 지정하면 덮어씀."""
+    """재고장(메인) 예약현황의 "출고등록" 버튼(2026-08-24 재설계) — outbound로
+    실제로 옮기지 않는다. 예약 수량 중 일부/전체의 출고일자만 지정하는 동작이다
+    (사용자 피드백: 예전엔 outbound로 즉시 이동시켰는데, 그러면 "출고일이
+    오늘인 것만 outbound로 옮긴다"는 자동 이동 규칙과 별개로 미래 날짜 건도
+    outbound에 들어가버려서 "이미 나간 것"과 "아직 예정인 것"이 섞였음).
+
+    수량이 예약 전체와 같으면 그 행의 출고일(+거래처)만 바꾸고, 일부만
+    지정하면 예약을 갈라서 그 수량만큼만 새 출고일을 가진 별도 예약 행을
+    새로 만든다(나머지는 원래 출고일 그대로 남음) — use_reservation의
+    부분/전체 패턴과 동일. 실제 outbound 이동은 migrate_due_reservations_
+    to_outbound()가 출고일이 오늘이 됐을 때 자동으로 처리한다."""
     if qty <= 0:
         raise ValueError("수량은 1 이상이어야 합니다")
     if not 출고일:
@@ -856,26 +862,32 @@ def register_outbound_from_reservation(conn, rec_id: str, qty: int, 출고일: s
             if qty > remaining:
                 raise ValueError(f"예약 수량({remaining})보다 많이 출고등록할 수 없습니다")
 
+            if qty == remaining:
+                set_cols = ["출고일=%s"]
+                params = [출고일]
+                if 거래처:
+                    set_cols.append("메모=%s")
+                    params.append(거래처)
+                params.append(rec_id)
+                cur.execute(f"UPDATE {hr_table} SET {', '.join(set_cols)} WHERE id=%s", params)
+                return {"id": rec_id}
+
             new_id = uuid.uuid4().hex
-            outbound_row = dict(row)
-            outbound_row["id"] = new_id
-            outbound_row["수량"] = qty
-            outbound_row["출고일"] = 출고일
+            new_row = dict(row)
+            new_row["id"] = new_id
+            new_row["수량"] = qty
+            new_row["출고일"] = 출고일
             if 거래처:
-                outbound_row["메모"] = 거래처
+                new_row["메모"] = 거래처
 
             cols = ", ".join(f"`{c}`" for c in _RESERVATION_COLS)
             placeholders = ", ".join(["%s"] * len(_RESERVATION_COLS))
             cur.execute(
-                f"INSERT INTO outbound ({cols}) VALUES ({placeholders})",
-                [outbound_row.get(c) for c in _RESERVATION_COLS],
+                f"INSERT INTO {hr_table} ({cols}) VALUES ({placeholders})",
+                [new_row.get(c) for c in _RESERVATION_COLS],
             )
-
-            if qty == remaining:
-                cur.execute(f"DELETE FROM {hr_table} WHERE id=%s", (rec_id,))
-            else:
-                cur.execute(f"UPDATE {hr_table} SET 수량=수량-%s WHERE id=%s", (qty, rec_id))
-            return {"outbound_id": new_id}
+            cur.execute(f"UPDATE {hr_table} SET 수량=수량-%s WHERE id=%s", (qty, rec_id))
+            return {"id": new_id}
     raise ValueError("예약을 찾을 수 없거나 이미 종료됨")
 
 

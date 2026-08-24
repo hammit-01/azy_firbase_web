@@ -1210,16 +1210,26 @@ async function handleClick(e) {
         return;
     }
 
-    // 예약 현황 탭 — 출고등록(예약 수량 중 일부/전체를 outbound로 등록, 2026-08-14).
+    // 예약 현황 탭 — 출고등록(2026-08-24 재설계: outbound로 안 옮기고 예약
+    // 수량 중 일부/전체의 출고일자만 지정 — 실제 이동은 출고일이 오늘이 됐을 때
+    // migrate_due_reservations_to_outbound가 자동으로 처리).
     if (e.target.classList.contains("register-outbound-btn")) {
         const id = e.target.dataset.id;
         const maxQty = Number(e.target.dataset.qty || 0);
         const result = await showRegisterOutboundModal({ 수량: maxQty });
         if (!result) return;
+        const prev = state.filteredReservations.find(row => row.id === id);
         try {
             const res = await registerOutboundFromReservation(id, result);
-            if (res?.outbound_id) pushUndo({ type: "outbound-registered", outboundId: res.outbound_id });
-            _logActivity("reservation", id, "출고등록", { 수량: maxQty }, { ...result, outboundId: res?.outbound_id }, `${result.수량}개 출고등록`);
+            if (res?.id === id) {
+                // 전체 등록 — 그 행의 출고일(+거래처)만 바뀜, 그대로 되돌리기 가능.
+                pushUndo({ type: "reservation-fields", id, prev: { 출고일: prev?.출고일 ?? "", 거래처: prev?.거래처 ?? "" } });
+            } else if (res?.id) {
+                // 부분 등록 — 새 예약 행이 갈라져 나옴, 되돌리려면 그 행을 취소하고
+                // 원래 행 수량을 복구해야 함.
+                pushUndo({ type: "outbound-register-split", newId: res.id, originalId: id, splitQty: result.수량, prevQty: maxQty });
+            }
+            _logActivity("reservation", id, "출고등록", { 수량: maxQty }, { ...result, newId: res?.id }, `${result.수량}개 출고등록`);
             showToast("✓ 출고등록됨");
             renderReservationsTab();
             fetchAllData();

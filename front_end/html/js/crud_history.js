@@ -96,9 +96,13 @@ function _buildFn(desc) {
         case "outbound-note":
             return async () => updateOutbound(desc.id, { 전달사항: desc.prevNote });
 
-        // 출고등록(예약→outbound로 일부/전체 이동)의 역동작 = 그 출고건 취소(예약으로 복귀)
-        case "outbound-registered":
-            return async () => cancelOutbound(desc.outboundId);
+        // 출고등록(2026-08-24 재설계: outbound로 안 옮기고 출고일만 지정) 부분
+        // 등록의 역동작 — 갈라져 나온 새 예약 행을 취소하고 원래 행 수량을 복구.
+        case "outbound-register-split":
+            return async () => {
+                await cancelReservation(desc.newId);
+                await updateReservation(desc.originalId, { 수량: desc.prevQty });
+            };
 
         // 예약취소/출고취소의 역동작 = 취소 직전 스냅샷으로 다시 생성(같은 id는
         // 아니지만 같은 내용의 ACTIVE 행이 다시 생김 — "delete" 되돌리기와 동일 패턴)
