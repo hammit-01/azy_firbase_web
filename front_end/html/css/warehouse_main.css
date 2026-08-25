@@ -926,6 +926,18 @@ th.sort-active {
 .reservations-table tr.sales-completed-row td { background: #fde047; }
 .reservation-card.sales-completed-row { background: #fde047; }
 
+/* 타창고매출현황 — "수정중" 체크 시 담당자별 행 색(2026-08-25, 고정 매핑:
+   미림=핑크/나미=노랑/채연=보라/보연=하늘색). 짝수행 줄무늬를 이겨야 해서
+   위 규칙과 동일하게 .reservations-table로 특이도를 올림. */
+.reservations-table tr.mgr-color-pink td   { background: #fbcfe8; }
+.reservations-table tr.mgr-color-yellow td { background: #fef08a; }
+.reservations-table tr.mgr-color-purple td { background: #e9d5ff; }
+.reservations-table tr.mgr-color-skyblue td { background: #bae6fd; }
+.reservation-card.mgr-color-pink   { background: #fbcfe8; }
+.reservation-card.mgr-color-yellow { background: #fef08a; }
+.reservation-card.mgr-color-purple { background: #e9d5ff; }
+.reservation-card.mgr-color-skyblue { background: #bae6fd; }
+
 
 /* 타창고매출현황 비고 칸 — 더블클릭하면 그 자리에서 바로 입력창으로 바뀜
    (2026-08-19). 평소엔 살짝 손 모양 커서로만 편집 가능함을 암시. 입력창은
@@ -1095,7 +1107,7 @@ input[type="date"].price-edit-input {
     margin-top: 10px;
 }
 
-.edit-reservation-btn, .use-reservation-btn, .cancel-reservation-btn, .register-outbound-btn, .price-delete-btn, .stock-release-btn, .save-outbound-insert-btn, .cancel-outbound-insert-btn {
+.edit-reservation-btn, .use-reservation-btn, .cancel-reservation-btn, .register-outbound-btn, .price-delete-btn, .save-outbound-insert-btn, .cancel-outbound-insert-btn {
     height: 28px;
     padding: 0 8px;
     border: none;
@@ -1107,9 +1119,6 @@ input[type="date"].price-edit-input {
 }
 .edit-reservation-btn { background: #dbeafe; color: #1d4ed8; }
 .edit-reservation-btn:hover { background: #bfdbfe; }
-.stock-release-btn { background: #fef3c7; color: #b45309; }
-.stock-release-btn:hover { background: #fde68a; }
-.stock-release-btn.released { background: #fde68a; color: #92400e; }
 .qty-dropped { color: #b91c1c; font-weight: 700; }
 .use-reservation-btn { background: #dcfce7; color: #15803d; }
 .use-reservation-btn:hover { background: #bbf7d0; }

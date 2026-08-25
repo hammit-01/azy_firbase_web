@@ -1013,6 +1013,18 @@ function registerCheckboxHtml(r, canOthers = true) {
         : "";
 }
 
+// "수정중" 체크 시 담당자별로 다른 행 색(2026-08-25) — 사용자가 지정한 고정
+// 매핑. 목록에 없는 담당자는 색 없음(체크해도 행 색 그대로).
+const MANAGER_ROW_COLORS = {
+    "미림": "mgr-color-pink",
+    "나미": "mgr-color-yellow",
+    "채연": "mgr-color-purple",
+    "보연": "mgr-color-skyblue",
+};
+function managerRowColorClass(name) {
+    return MANAGER_ROW_COLORS[name] || "";
+}
+
 // sales.html 단가/중량 = 거래처 문자열에 "이름 가격원 중량kg" 형태로 같이 인코딩
 // (2026-08-14). 예: "에이젯유통 111999원 22.5kg" -> prefix="에이젯유통",
 // price=111999, weight=22.5. 거래처/단가/중량 모두 예약 테이블에 자체 컬럼이
@@ -1077,11 +1089,12 @@ function reservationCardHtml(r, isSalesPage = false) {
     // 출고일/수량 조정은 계속 가능하지만 아예 취소는 못 하게.
     const isTomorrow = isSalesPage && safeValue(r.출고일) === tomorrowISOStr();
     const access = isSalesPage ? salesAccess(r) : { canEdit: true, canOthers: true, canCancel: true, canEditNote: true };
+    const managerColorClass = (isSalesPage && !completed && r.등록) ? managerRowColorClass(r.담당자) : "";
     return `
-        <div class="mobile-card reservation-card${completed ? " sales-completed-row" : ""}" data-reservation-id="${r.id}">
+        <div class="mobile-card reservation-card${completed ? " sales-completed-row" : managerColorClass ? ` ${managerColorClass}` : ""}" data-reservation-id="${r.id}">
             <div class="mc-header">
                 ${noteBtn(r, isSalesPage && !isPreview, access.canEditNote)}
-                ${!limitedActions && !isPreview && isSalesPage && access.canOthers ? `<label class="mc-register-label">${registerCheckboxHtml(r, access.canOthers)} 등록완료</label>` : ""}
+                ${!limitedActions && !isPreview && isSalesPage && access.canOthers ? `<label class="mc-register-label">${registerCheckboxHtml(r, access.canOthers)} 수정중</label>` : ""}
                 <span class="mc-name">${safeValue(r.상품명)}</span>
                 ${whTag(r.창고)}
             </div>
@@ -1107,7 +1120,6 @@ function reservationCardHtml(r, isSalesPage = false) {
             </div>
             <div class="reservation-card-actions">
                 ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">변경</button>`}
-                ${!limitedActions && !isPreview && isSalesPage && access.canOthers ? `<button class="stock-release-btn${r.수량내림 ? " released" : ""}" data-id="${r.id}" title="이 출고 건 수량을 0으로 내렸다/복구">내림</button>` : ""}
                 ${!limitedActions && !isPreview && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
                 ${completed || !access.canCancel || isTomorrow ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">취소</button>`}
                 ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
@@ -1165,7 +1177,9 @@ function reservationRowHtml(r, isSalesPage = false) {
         ? `<td class="sales-client-cell" data-id="${r.id}" data-raw="${rawClient}" title="더블클릭해서 수정">${clientDisplay}</td>`
         : `<td>${clientDisplay}</td>`;
     const reservationPriceCell = isSalesPage ? "" : `<td>${formatUnitPrice(unitPrice)}</td>`;
-    const rowClass = completed ? "sales-completed-row" : "";
+    // 완료 행은 회색 배경이 우선(2026-08-14 기존 규칙) — 수정중 색은 미완료 행에만.
+    const managerColorClass = (isSalesPage && !completed && r.등록) ? managerRowColorClass(r.담당자) : "";
+    const rowClass = completed ? "sales-completed-row" : managerColorClass;
     return `
         <tr data-reservation-id="${r.id}"${rowClass ? ` class="${rowClass}"` : ""}>
             <td class="reservation-note-cell">${noteBtn(r, isSalesPage && !isPreview, access.canEditNote)}</td>
@@ -1189,8 +1203,7 @@ function reservationRowHtml(r, isSalesPage = false) {
             <td class="reservation-row-actions-cell">
                 <div class="reservation-row-actions">
                     ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">변경</button>`}
-                    ${!limitedActions && !isPreview && isSalesPage && access.canOthers ? `<button class="stock-release-btn${r.수량내림 ? " released" : ""}" data-id="${r.id}" title="이 출고 건 수량을 0으로 내렸다/복구">내림</button>` : ""}
-                    ${!limitedActions && !isPreview && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
+                        ${!limitedActions && !isPreview && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
                     ${completed || !access.canCancel || isTomorrow ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">취소</button>`}
                     ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
                 </div>
@@ -1276,7 +1289,7 @@ function reservationsHead(isSalesPage = false, sortColumns = []) {
     </colgroup>
     <thead>
         <tr>
-            <th></th>${sh("비고", "비고")}<th>등록완료</th>
+            <th></th>${sh("비고", "비고")}<th>수정중</th>
             ${sh("담당자", "담당자")}${sh("상품명", "상품명")}${sh("브랜드", "브랜드")}${sh("등급", "등급")}${sh("ESTNO", "ESTNO")}
             ${sh("수량", "수량")}${sh("BL", "BL")}${sh("창고", "창고")}
             ${sh("거래처", "거래처")}<th>단가</th><th>중량</th><th>총금액</th>${sh("출고일", "출고일")}<th>액션</th>

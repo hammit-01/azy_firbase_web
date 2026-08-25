@@ -1157,25 +1157,6 @@ async function handleClick(e) {
         return;
     }
 
-    // 타창고매출현황 "내림" — 이 출고 행의 수량을 0으로 내렸다가(처음 누름)
-    // 되돌리는(다시 누름) 토글(2026-08-24, 재설계). 실재고는 안 건드리고,
-    // 가용재고 계산(재고−예약합계−ACTIVE출고합계)에서 이 건만 빠지게/다시
-    // 잡히게 한다. "완료"(use-reservation-btn)와 독립된 별개 동작 — 완료는
-    // 서류상 절차 완료 표시일 뿐 수량도 안 건드린다. 행 회색 처리 등 디자인
-    // 변화는 완료 쪽에만 있고 내림은 없음.
-    if (e.target.classList.contains("stock-release-btn")) {
-        const id = e.target.dataset.id;
-        try {
-            const { 수량내림 } = await toggleOutboundStockRelease(id);
-            pushUndo({ type: "outbound-toggle-stock-release", id });
-            _logActivity("outbound", id, "수량내림토글", null, { 수량내림 }, "출고 수량 내림 상태 토글");
-            renderSalesTab();
-        } catch (err) {
-            showError(err.message || "처리에 실패했습니다.");
-        }
-        return;
-    }
-
     // 예약 현황 탭 — 사용완료(입력한 수량만큼 수량 차감, 전량이면 종료 처리).
     // sales.html(data-sales="1")의 "출고완료"는 다른 동작 — outbound.status를
     // ACTIVE↔COMPLETED로 토글만 한다(수량 변경 없음). COMPLETED면 회색 배경 +
