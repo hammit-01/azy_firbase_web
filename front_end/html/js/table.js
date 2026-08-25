@@ -61,12 +61,6 @@ const BRAND_ALIASES = {
     "윙햄": "WINGHAM",
 };
 
-// 타창고매출현황(sales.html) "등록완료" 체크박스 — mysql outbound.등록 열이 이
-// 창고들만 의미가 있어서(2026-08-18) 그 외 창고는 체크박스 없이 빈칸.
-// 신우냉장은 정확히 일치, 그 외엔 창고명에 "CS"가 들어가면 다 해당(2026-08-19,
-// 오로라CS처럼 CS가 포함된 창고명이 늘어나서 정확히 "CS"인 것만으론 부족했음).
-const REGISTER_REQUIRED_EXACT = new Set(["신우냉장"]);
-
 const WH_CLASS = {
     "곤지암": "wh-곤지암",
     "곤CS":   "wh-곤CS",
@@ -1010,22 +1004,13 @@ function salesAccess(r) {
     };
 }
 
-// sales.html "등록완료" 체크박스(2026-08-18) — 창고가 신우냉장/CS인 행만 노출,
-// 체크되기 전엔 needsRegisterBlock()이 true가 되고 출고완료 버튼에
-// data-needs-register="1"이 붙는다 — events.js가 그 상태에서 클릭을 가로채
-// 팝업으로 안내한다(버튼을 disabled로 막으면 클릭해도 아무 반응이 없어
-// 헷갈린다는 피드백으로 2026-08-18 변경).
-function needsRegister(r) {
-    const wh = String(r.창고 ?? "").trim();
-    return REGISTER_REQUIRED_EXACT.has(wh) || /cs/i.test(wh);
-}
+// sales.html "등록완료" 체크박스 — 신우냉장/CS 창고 한정 노출 + 미체크 시 출고완료
+// 차단 로직 폐지(2026-08-25), 형태만 남기고 모든 행에 노출. 출고완료를 막지 않는
+// 단순 토글(outbound.등록)로 동작.
 function registerCheckboxHtml(r, canOthers = true) {
-    return needsRegister(r) && canOthers
+    return canOthers
         ? `<input type="checkbox" class="outbound-register-check" data-id="${r.id}" ${r.등록 ? "checked" : ""}>`
         : "";
-}
-function needsRegisterBlock(r) {
-    return needsRegister(r) && !r.등록 && r.status !== "COMPLETED";
 }
 
 // sales.html 단가/중량 = 거래처 문자열에 "이름 가격원 중량kg" 형태로 같이 인코딩
@@ -1096,7 +1081,7 @@ function reservationCardHtml(r, isSalesPage = false) {
         <div class="mobile-card reservation-card${completed ? " sales-completed-row" : ""}" data-reservation-id="${r.id}">
             <div class="mc-header">
                 ${noteBtn(r, isSalesPage && !isPreview, access.canEditNote)}
-                ${!limitedActions && !isPreview && isSalesPage && needsRegister(r) && access.canOthers ? `<label class="mc-register-label">${registerCheckboxHtml(r, access.canOthers)} 등록완료</label>` : ""}
+                ${!limitedActions && !isPreview && isSalesPage && access.canOthers ? `<label class="mc-register-label">${registerCheckboxHtml(r, access.canOthers)} 등록완료</label>` : ""}
                 <span class="mc-name">${safeValue(r.상품명)}</span>
                 ${whTag(r.창고)}
             </div>
@@ -1123,7 +1108,7 @@ function reservationCardHtml(r, isSalesPage = false) {
             <div class="reservation-card-actions">
                 ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">변경</button>`}
                 ${!limitedActions && !isPreview && isSalesPage && access.canOthers ? `<button class="stock-release-btn${r.수량내림 ? " released" : ""}" data-id="${r.id}" title="이 출고 건 수량을 0으로 내렸다/복구">내림</button>` : ""}
-                ${!limitedActions && !isPreview && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
+                ${!limitedActions && !isPreview && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
                 ${completed || !access.canCancel || isTomorrow ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">취소</button>`}
                 ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
             </div>
@@ -1205,7 +1190,7 @@ function reservationRowHtml(r, isSalesPage = false) {
                 <div class="reservation-row-actions">
                     ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">변경</button>`}
                     ${!limitedActions && !isPreview && isSalesPage && access.canOthers ? `<button class="stock-release-btn${r.수량내림 ? " released" : ""}" data-id="${r.id}" title="이 출고 건 수량을 0으로 내렸다/복구">내림</button>` : ""}
-                    ${!limitedActions && !isPreview && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}" data-needs-register="${isSalesPage && needsRegisterBlock(r) ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
+                    ${!limitedActions && !isPreview && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
                     ${completed || !access.canCancel || isTomorrow ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">취소</button>`}
                     ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
                 </div>
@@ -1259,7 +1244,11 @@ export function outboundInsertRowHtml() {
 // isSalesPage: sales.html에서는 "예약일" 대신 "단가"+"중량"+"총금액"(단가×중량,
 // 자동계산) 세 칸을 보여준다(단가/중량은 예약 데이터에 아직 없는 값이라 빈칸일
 // 수 있고 그러면 총금액도 빈칸).
-function reservationsHead(isSalesPage = false) {
+function reservationsHead(isSalesPage = false, sortColumns = []) {
+    const sh = (key, label) => {
+        const active = sortColumns.some(s => s.key === key);
+        return `<th data-key="${key}" class="sortable${active ? " sort-active" : ""}">${label}${sortArrow(sortColumns, key)}</th>`;
+    };
     // 타창고매출현황(2026-08-19) — 비고를 "!" 바로 옆으로 옮기고, 상품명/BL은
     // 줄어든 만큼(안 잘리는 선에서 최소한만) 재고 관련 열(수량/실재고/가용재고)과
     // 출고일/액션에 더 배분. table-layout이 auto라 % 미만이어도 내용이 넘치면
@@ -1287,10 +1276,10 @@ function reservationsHead(isSalesPage = false) {
     </colgroup>
     <thead>
         <tr>
-            <th></th><th>비고</th><th>등록완료</th>
-            <th>담당자</th><th>상품명</th><th>브랜드</th><th>등급</th><th>ESTNO</th>
-            <th>수량</th><th>BL</th><th>창고</th>
-            <th>거래처</th><th>단가</th><th>중량</th><th>총금액</th><th>출고일</th><th>액션</th>
+            <th></th>${sh("비고", "비고")}<th>등록완료</th>
+            ${sh("담당자", "담당자")}${sh("상품명", "상품명")}${sh("브랜드", "브랜드")}${sh("등급", "등급")}${sh("ESTNO", "ESTNO")}
+            ${sh("수량", "수량")}${sh("BL", "BL")}${sh("창고", "창고")}
+            ${sh("거래처", "거래처")}<th>단가</th><th>중량</th><th>총금액</th>${sh("출고일", "출고일")}<th>액션</th>
         </tr>
     </thead>
 `;
@@ -1317,9 +1306,9 @@ function reservationsHead(isSalesPage = false) {
     <thead>
         <tr>
             <th></th>
-            <th>담당자</th><th>상품명</th><th>브랜드</th><th>등급</th><th>ESTNO</th>
-            <th>수량</th><th>BL</th><th>창고</th><th>실재고</th><th>가용재고</th>
-            <th>거래처</th><th>단가</th><th>예약일</th><th>출고일</th><th>액션</th>
+            ${sh("담당자", "담당자")}${sh("상품명", "상품명")}${sh("브랜드", "브랜드")}${sh("등급", "등급")}${sh("ESTNO", "ESTNO")}
+            ${sh("수량", "수량")}${sh("BL", "BL")}${sh("창고", "창고")}${sh("재고", "실재고")}${sh("가용재고", "가용재고")}
+            ${sh("거래처", "거래처")}<th>단가</th>${sh("홀딩일자", "예약일")}${sh("출고일", "출고일")}<th>액션</th>
         </tr>
     </thead>
 `;
@@ -1364,21 +1353,68 @@ function matchesReservationKeyword(r, kw) {
 
 // 예약현황/타창고매출현황 검색·필터(2026-08-20) — 재고장 전용 툴바를 공유하던 걸
 // 전략단가 탭과 같은 방식(자체 통합검색 + 창고/브랜드 드롭다운, state 기반)으로 교체.
-function filterReservationRowsByState(rows, search, warehouse, brand) {
+// manager는 타창고매출현황 전용(2026-08-25) — 예약현황은 이미 자체 담당자
+// 그룹핑 드롭다운(state.reservationsFilter)이 따로 있어서 안 씀.
+function filterReservationRowsByState(rows, search, warehouse, brand, manager) {
     const kw = cleanText(search || "").toLowerCase();
     let data = rows;
     if (kw) data = data.filter(r => matchesReservationKeyword(r, kw));
     if (warehouse) data = data.filter(r => r.창고 === warehouse);
     if (brand) data = data.filter(r => r.브랜드 === brand);
+    if (manager) data = data.filter(r => r.담당자 === manager);
     return data;
 }
 
+// 예약현황/타창고매출현황 열 클릭 정렬(2026-08-25) — 재고장의 state.sortColumns와
+// 같은 원리(클릭할 때마다 오름차→내림차→해제 순환)지만 별도 테이블이라 자체
+// state(reservationsSortColumns/salesSortColumns)를 쓴다. 원본 배열은 안 건드리고
+// 정렬된 새 배열을 반환.
+const RESERVATION_NUMERIC_SORT_KEYS = new Set(["수량", "재고", "가용재고"]);
+function applyReservationSort(rows, sortColumns) {
+    if (!sortColumns.length) return rows;
+    return [...rows].sort((a, b) => {
+        for (const { key, dir } of sortColumns) {
+            const factor = dir === 1 ? 1 : -1;
+            const av = String(a[key] ?? "").trim();
+            const bv = String(b[key] ?? "").trim();
+            if (!av && !bv) continue;
+            if (!av) return 1;
+            if (!bv) return -1;
+            if (RESERVATION_NUMERIC_SORT_KEYS.has(key)) {
+                const an = Number(av), bn = Number(bv);
+                if (!isNaN(an) && !isNaN(bn)) {
+                    const r = (an - bn) * factor;
+                    if (r !== 0) return r;
+                    continue;
+                }
+            }
+            if (av < bv) return -factor;
+            if (av > bv) return factor;
+        }
+        return 0;
+    });
+}
+function sortArrow(sortColumns, key) {
+    const entry = sortColumns.find(s => s.key === key);
+    return entry ? (entry.dir === 1 ? " ▲" : " ▼") : "";
+}
+
 // 담당자/출고일 등 탭별 컨트롤과 한 줄에 같이 넣어야 해서 바깥 <div> 없이
-// 창고/브랜드/검색 컨트롤만 반환 — 호출부에서 직접 감싼다.
-function reservationFilterControlsHtml({ idPrefix, rows, search, warehouse, brand }) {
+// 창고/브랜드/검색 컨트롤만 반환 — 호출부에서 직접 감싼다. showManagerFilter는
+// 타창고매출현황 전용(2026-08-25) — 예약현황은 이미 자체 담당자 그룹핑
+// 드롭다운이 있어서 안 켬.
+function reservationFilterControlsHtml({ idPrefix, rows, search, warehouse, brand, manager, showManagerFilter = false }) {
     const warehouses = [...new Set(rows.map(r => r.창고).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"));
     const brands = [...new Set(rows.map(r => r.브랜드).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"));
+    const managers = showManagerFilter
+        ? [...new Set(rows.map(r => r.담당자).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"))
+        : [];
     return `
+        ${showManagerFilter ? `
+        <select id="${idPrefix}-manager-filter" class="reservations-filter-select">
+            <option value="">담당자 전체</option>
+            ${managers.map(m => `<option value="${m}" ${m === manager ? "selected" : ""}>${m}</option>`).join("")}
+        </select>` : ""}
         <select id="${idPrefix}-warehouse-filter" class="reservations-filter-select">
             <option value="">창고 전체</option>
             ${warehouses.map(w => `<option value="${w}" ${w === warehouse ? "selected" : ""}>${w}</option>`).join("")}
@@ -1429,6 +1465,7 @@ export async function renderReservationsTab() {
         search: state.reservationsSearch, warehouse: state.reservationsWarehouseFilter, brand: state.reservationsBrandFilter,
     });
     rows = filterReservationRowsByState(rows, state.reservationsSearch, state.reservationsWarehouseFilter, state.reservationsBrandFilter);
+    rows = applyReservationSort(rows, state.reservationsSortColumns);
     const searchHadFocus = document.activeElement?.id === "reservations-search";
 
     if (isEditor) {
@@ -1461,7 +1498,7 @@ export async function renderReservationsTab() {
             <div class="reservations-group">
                 <h3>${name} <span class="reservations-group-count">${groups[name].length}건</span></h3>
                 <table class="reservations-table">
-                    ${reservationsHead()}
+                    ${reservationsHead(false, state.reservationsSortColumns)}
                     <tbody>${groups[name].map(r => reservationRowHtml(r)).join("")}</tbody>
                 </table>
                 <div class="reservations-mobile-list">${groups[name].map(r => reservationCardHtml(r)).join("")}</div>
@@ -1475,7 +1512,7 @@ export async function renderReservationsTab() {
         const empty = `<p class="reservations-empty">조건에 맞는 예약이 없습니다.</p>`;
         listEl.innerHTML = filterHtml + (rows.length ? `
             <table class="reservations-table">
-                ${reservationsHead()}
+                ${reservationsHead(false, state.reservationsSortColumns)}
                 <tbody>${rows.map(r => reservationRowHtml(r)).join("")}</tbody>
             </table>
             <div class="reservations-mobile-list">${rows.map(r => reservationCardHtml(r)).join("")}</div>
@@ -1530,12 +1567,16 @@ export async function renderSalesTab() {
     const filterControlsHtml = reservationFilterControlsHtml({
         idPrefix: "sales", rows,
         search: state.salesSearch, warehouse: state.salesWarehouseFilter, brand: state.salesBrandFilter,
+        manager: state.salesManagerFilter, showManagerFilter: true,
     });
-    rows = filterReservationRowsByState(rows, state.salesSearch, state.salesWarehouseFilter, state.salesBrandFilter);
+    rows = filterReservationRowsByState(rows, state.salesSearch, state.salesWarehouseFilter, state.salesBrandFilter, state.salesManagerFilter);
+    rows = applyReservationSort(rows, state.salesSortColumns);
     const searchHadFocus = document.activeElement?.id === "sales-search";
 
     // 출고완료(status=COMPLETED) 행은 맨 뒤로 보내고 회색 배경 — 그 안에서는
-    // 원래 순서 그대로 유지(2026-08-14, DB status 토글로 새로고침해도 유지됨).
+    // 열 정렬(또는 원래 순서) 그대로 유지(2026-08-14, DB status 토글로 새로고침해도
+    // 유지됨. Array.sort는 안정 정렬이라 위에서 적용한 열 정렬 순서가 완료/미완료
+    // 그룹 내부에서 보존됨, 2026-08-25).
     rows = [...rows].sort((a, b) =>
         Number(a.status === "COMPLETED") - Number(b.status === "COMPLETED")
     );
@@ -1554,7 +1595,7 @@ export async function renderSalesTab() {
     listEl.innerHTML = `
         ${dateFilterHtml}
         <table class="reservations-table">
-            ${reservationsHead(true)}
+            ${reservationsHead(true, state.salesSortColumns)}
             <tbody id="outbound-insert-rows"></tbody>
             <tbody>${rows.map(r => reservationRowHtml(r, true)).join("")}</tbody>
         </table>

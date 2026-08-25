@@ -15,10 +15,13 @@ export const state = {
     reservationsSearch: "", // 예약 현황 탭 — 통합 검색어(전략단가와 동일 방식, 2026-08-20)
     reservationsWarehouseFilter: "", // 예약 현황 탭 — 창고 필터
     reservationsBrandFilter: "", // 예약 현황 탭 — 브랜드 필터
+    reservationsSortColumns: [], // 예약 현황 탭 — 열 클릭 정렬([{key, dir}], 2026-08-25)
     salesDateFilter: "", // 타창고매출현황 탭 — 출고일 필터(YYYY-MM-DD, ""=오늘)
     salesSearch: "", // 타창고매출현황 탭 — 통합 검색어(전략단가와 동일 방식, 2026-08-20)
     salesWarehouseFilter: "", // 타창고매출현황 탭 — 창고 필터
     salesBrandFilter: "", // 타창고매출현황 탭 — 브랜드 필터
+    salesManagerFilter: "", // 타창고매출현황 탭 — 담당자 필터(2026-08-25)
+    salesSortColumns: [], // 타창고매출현황 탭 — 열 클릭 정렬([{key, dir}], 2026-08-25)
     filteredReservations: [], // 예약/출고 현황 탭 — 툴바 검색·필터 적용된 현재 표시 행(엑셀 다운로드용)
     priceSearch: "", // 전략단가 탭 — 통합 검색어
     priceCategoryFilter: "", // 전략단가 탭 — 분류 필터

@@ -23,6 +23,21 @@ async function refreshReservationViews() {
     await renderSalesTab();
 }
 
+// 타창고매출현황 비고 저장 시 내림 상태 동기화(2026-08-25) — 비고에 값이 있으면
+// 내림 ON, 비우면 OFF. toggleOutboundStockRelease는 순수 토글이라 원하는 상태와
+// 현재 상태가 다를 때만 호출(같으면 그대로 둠, 불필요한 토글로 되돌아가는 것 방지).
+async function syncStockReleaseWithRemark(id, remarkValue) {
+    const row = state.filteredReservations?.find(r => r.id === id);
+    const wantDropped = !!String(remarkValue ?? "").trim();
+    const currentDropped = !!row?.수량내림;
+    if (wantDropped === currentDropped) return;
+    try {
+        await toggleOutboundStockRelease(id);
+    } catch (err) {
+        showError(err.message || "내림 상태 동기화에 실패했습니다.");
+    }
+}
+
 // activity_log(2026-08-18, 예약현황/타창고매출현황 연결) — crud.js의 _logActivity와
 // 같은 목적, 재고장 쪽 테이블(inventory/azy_inventory) 구분과 달리 여기는 근원 창고가
 // main/azy 어느 쪽이든 예약/출고 자체는 한 테이블(holding_records류/outbound)이라
@@ -413,6 +428,10 @@ export function bindEvents() {
             state.salesBrandFilter = e.target.value;
             renderSalesTab();
         }
+        if (e.target.id === "sales-manager-filter") {
+            state.salesManagerFilter = e.target.value;
+            renderSalesTab();
+        }
         if (e.target.id === "changes-warehouse-filter") {
             state.changesWarehouseFilter = e.target.value;
             renderChangesTab();
@@ -493,6 +512,7 @@ export function bindEvents() {
                     try {
                         await updateOutbound(id, { 비고: newValue });
                         _logActivity("outbound", id, "수정", { 비고: original }, { 비고: newValue }, "비고 변경");
+                        await syncStockReleaseWithRemark(id, newValue);
                         showToast("✓ 비고 저장됨");
                     } catch (err) {
                         showError(err.message || "저장에 실패했습니다.");
@@ -773,6 +793,23 @@ function handleChange(e) {
 }
 
 async function handleClick(e) {
+    // 예약현황/타창고매출현황 열 클릭 정렬(2026-08-25) — 재고장 표의 th[data-key]
+    // 클릭 정렬(오름차→내림차→해제 순환)과 같은 로직이지만, 이 두 탭은 필터가
+    // 바뀔 때마다 표 전체가 innerHTML로 새로 그려져서 th에 리스너를 한 번만 붙여둘
+    // 수 없다 — document 위임 클릭으로 매번 새로 그려진 th도 잡히게 한다.
+    const sortTh = e.target.closest(".reservations-table thead th[data-key]");
+    if (sortTh) {
+        const key = sortTh.dataset.key;
+        const isSalesTh = !!sortTh.closest(".sales-container");
+        const cols = isSalesTh ? state.salesSortColumns : state.reservationsSortColumns;
+        const idx = cols.findIndex(s => s.key === key);
+        if (idx === -1) cols.push({ key, dir: 1 });
+        else if (cols[idx].dir === 1) cols[idx].dir = 2;
+        else cols.splice(idx, 1);
+        if (isSalesTh) renderSalesTab(); else renderReservationsTab();
+        return;
+    }
+
     // 예약 수량 클릭 — 팝업으로 거래처별 예약/출고 목록 표시(조회 전용, 취소
     // 버튼 없음 — 여러 군데서 가능하면 혼란스러워질 수 있어 2026-08-06 결정,
     // 2026-08-20 아코디언에서 모달로 변경).
@@ -1070,6 +1107,7 @@ async function handleClick(e) {
             if (showPrice) await updateOutbound(id, fields); else await updateReservation(id, fields);
             pushUndo({ type: showPrice ? "outbound-fields" : "reservation-fields", id, prev });
             _logActivity(showPrice ? "outbound" : "reservation", id, "수정", prev, fields, `${Object.keys(fields).join(", ")} 변경`);
+            if (showPrice && "비고" in fields) await syncStockReleaseWithRemark(id, fields.비고);
             showToast("✓ 변경됨");
             refreshReservationViews();
             fetchAllData();
@@ -1146,10 +1184,6 @@ async function handleClick(e) {
         const id = e.target.dataset.id;
         const isOutbound = e.target.dataset.sales === "1";
         if (isOutbound) {
-            if (e.target.dataset.needsRegister === "1") {
-                await showAlertModal("등록완료 체크 후 출고완료할 수 있습니다.\n출고 등록 여부를 확인해주세요.");
-                return;
-            }
             try {
                 await toggleOutboundComplete(id);
                 pushUndo({ type: "outbound-toggle-complete", id });
@@ -1312,8 +1346,11 @@ async function handleClick(e) {
                     const unitPrice = parseUnitPrice(r.거래처);
                     const weight = parseWeight(r.거래처);
                     const total = (unitPrice !== null && weight !== null) ? Math.round(unitPrice * weight) : "";
+                    // 내림(수량내림)된 행은 실제 DB 수량이 0이라 그대로 내려받으면 0으로
+                    // 찍힘 — 화면 표시(qtyDisplay)와 동일하게 원수량으로 대체(2026-08-25).
+                    const qty = r.수량내림 && r.원수량 ? r.원수량 : r.수량;
                     return [
-                        r.담당자 || "", r.상품명, r.브랜드, r.등급, r.ESTNO, r.BL, r.창고, r.수량,
+                        r.담당자 || "", r.상품명, r.브랜드, r.등급, r.ESTNO, r.BL, r.창고, qty,
                         clientPrefix(r.거래처), r.비고 || "", unitPrice ?? "", weight ?? "",
                         total, r.출고일, r.status === "COMPLETED" ? "출고완료" : "",
                     ];
