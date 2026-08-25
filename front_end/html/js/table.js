@@ -1013,8 +1013,9 @@ function registerCheckboxHtml(r, canOthers = true) {
         : "";
 }
 
-// "수정중" 체크 시 담당자별로 다른 행 색(2026-08-25) — 사용자가 지정한 고정
-// 매핑. 목록에 없는 담당자는 색 없음(체크해도 행 색 그대로).
+// "수정중" 체크 시 로그인한 사람 기준으로 행 색(2026-08-25) — 행의 담당자가
+// 아니라 지금 체크박스를 누른 로그인 계정 이름으로 색을 정한다. 고정 매핑,
+// 목록에 없는 사람이 체크하면 색 없음(체크박스 자체는 항상 동작).
 const MANAGER_ROW_COLORS = {
     "전미림": "mgr-color-pink",
     "김나미": "mgr-color-yellow",
@@ -1089,7 +1090,9 @@ function reservationCardHtml(r, isSalesPage = false) {
     // 출고일/수량 조정은 계속 가능하지만 아예 취소는 못 하게.
     const isTomorrow = isSalesPage && safeValue(r.출고일) === tomorrowISOStr();
     const access = isSalesPage ? salesAccess(r) : { canEdit: true, canOthers: true, canCancel: true, canEditNote: true };
-    const managerColorClass = (isSalesPage && !completed && r.등록) ? managerRowColorClass(r.담당자) : "";
+    // 행의 담당자가 아니라 지금 로그인한 사람 기준(2026-08-25 수정) — 색이
+    // 지정된 4명 중 하나가 로그인해서 체크하면 그 사람 색으로 행이 바뀐다.
+    const managerColorClass = (isSalesPage && !completed && r.등록) ? managerRowColorClass(getStoredUser()?.이름) : "";
     return `
         <div class="mobile-card reservation-card${completed ? " sales-completed-row" : managerColorClass ? ` ${managerColorClass}` : ""}" data-reservation-id="${r.id}">
             <div class="mc-header">
@@ -1178,7 +1181,9 @@ function reservationRowHtml(r, isSalesPage = false) {
         : `<td>${clientDisplay}</td>`;
     const reservationPriceCell = isSalesPage ? "" : `<td>${formatUnitPrice(unitPrice)}</td>`;
     // 완료 행은 회색 배경이 우선(2026-08-14 기존 규칙) — 수정중 색은 미완료 행에만.
-    const managerColorClass = (isSalesPage && !completed && r.등록) ? managerRowColorClass(r.담당자) : "";
+    // 행의 담당자가 아니라 지금 로그인한 사람 기준(2026-08-25 수정) — 색이
+    // 지정된 4명 중 하나가 로그인해서 체크하면 그 사람 색으로 행이 바뀐다.
+    const managerColorClass = (isSalesPage && !completed && r.등록) ? managerRowColorClass(getStoredUser()?.이름) : "";
     const rowClass = completed ? "sales-completed-row" : managerColorClass;
     return `
         <tr data-reservation-id="${r.id}"${rowClass ? ` class="${rowClass}"` : ""}>

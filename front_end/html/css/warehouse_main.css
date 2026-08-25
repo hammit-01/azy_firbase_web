@@ -926,20 +926,20 @@ th.sort-active {
 .reservations-table tr.sales-completed-row td { background: #fde047; }
 .reservation-card.sales-completed-row { background: #fde047; }
 
-/* 타창고매출현황 — "수정중" 체크 시 담당자별 행 색(2026-08-25, 고정 매핑:
-   전미림=핑크/김나미=노랑/박채연=보라/임보연=하늘색). 짝수행 줄무늬를 이겨야
-   해서 위 규칙과 동일하게 .reservations-table로 특이도를 올림. 처음엔 파스텔로
-   했다가 배경/줄무늬에 묻힌다는 피드백으로 채도를 크게 올림(2026-08-25) —
-   왼쪽에 굵은 색 띠도 같이 둬서 셀 안의 다른 색(창고 태그 등)에 안 묻히게.
-   노랑은 출고완료(#fde047)와 겹치지 않게 앰버 계열로. */
-.reservations-table tr.mgr-color-pink td   { background: #f9a8d4; box-shadow: inset 4px 0 0 #db2777; }
-.reservations-table tr.mgr-color-yellow td { background: #fbbf24; box-shadow: inset 4px 0 0 #b45309; }
-.reservations-table tr.mgr-color-purple td { background: #c084fc; box-shadow: inset 4px 0 0 #7e22ce; }
-.reservations-table tr.mgr-color-skyblue td { background: #38bdf8; box-shadow: inset 4px 0 0 #0369a1; }
-.reservation-card.mgr-color-pink   { background: #f9a8d4; border-left: 4px solid #db2777; }
-.reservation-card.mgr-color-yellow { background: #fbbf24; border-left: 4px solid #b45309; }
-.reservation-card.mgr-color-purple { background: #c084fc; border-left: 4px solid #7e22ce; }
-.reservation-card.mgr-color-skyblue { background: #38bdf8; border-left: 4px solid #0369a1; }
+/* 타창고매출현황 — "수정중" 체크 시 로그인한 사람 기준 행 색(2026-08-25, 고정
+   매핑: 전미림=핑크/김나미=골드/박채연=보라/임보연=하늘색). 짝수행 줄무늬를
+   이겨야 해서 위 규칙과 동일하게 .reservations-table로 특이도를 올림.
+   1차: 파스텔 → 묻힌다는 피드백 → 2차: 원색 채도로 올렸다가 "안 이쁘다"는
+   피드백(2026-08-25) → 3차: 은은한 틴트 배경 + 진한 왼쪽 띠(6px) 조합으로
+   재조정 — 배경은 톤을 낮춰 튀지 않게, 식별은 왼쪽 띠 색으로. */
+.reservations-table tr.mgr-color-pink td   { background: #fdf1f7; box-shadow: inset 6px 0 0 #d6336c; }
+.reservations-table tr.mgr-color-yellow td { background: #fdf7ea; box-shadow: inset 6px 0 0 #d97706; }
+.reservations-table tr.mgr-color-purple td { background: #f5f1fc; box-shadow: inset 6px 0 0 #7c3aed; }
+.reservations-table tr.mgr-color-skyblue td { background: #eff8fd; box-shadow: inset 6px 0 0 #0284c7; }
+.reservation-card.mgr-color-pink   { background: #fdf1f7; border-left: 6px solid #d6336c; }
+.reservation-card.mgr-color-yellow { background: #fdf7ea; border-left: 6px solid #d97706; }
+.reservation-card.mgr-color-purple { background: #f5f1fc; border-left: 6px solid #7c3aed; }
+.reservation-card.mgr-color-skyblue { background: #eff8fd; border-left: 6px solid #0284c7; }
 
 
 /* 타창고매출현황 비고 칸 — 더블클릭하면 그 자리에서 바로 입력창으로 바뀜
