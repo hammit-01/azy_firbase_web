@@ -1016,10 +1016,10 @@ function registerCheckboxHtml(r, canOthers = true) {
 // "수정중" 체크 시 담당자별로 다른 행 색(2026-08-25) — 사용자가 지정한 고정
 // 매핑. 목록에 없는 담당자는 색 없음(체크해도 행 색 그대로).
 const MANAGER_ROW_COLORS = {
-    "미림": "mgr-color-pink",
-    "나미": "mgr-color-yellow",
-    "채연": "mgr-color-purple",
-    "보연": "mgr-color-skyblue",
+    "전미림": "mgr-color-pink",
+    "김나미": "mgr-color-yellow",
+    "박채연": "mgr-color-purple",
+    "임보연": "mgr-color-skyblue",
 };
 function managerRowColorClass(name) {
     return MANAGER_ROW_COLORS[name] || "";
