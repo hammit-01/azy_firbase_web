@@ -59,6 +59,28 @@ function _logActivity(tableName, recordId, action, before, after, summary = "") 
 const TAB_CONTAINERS = [".changes-container", ".reservations-container", ".sales-container", ".price-container", ".order-sheet-container"];
 const TAB_BUTTONS = [".changes-tab-btn", ".reservations-tab-btn", ".sales-tab-btn", ".price-tab-btn", ".order-sheet-tab-btn"];
 
+// 탭별 컨테이너/렌더 함수 매핑(2026-08-25) — 새로고침해도 열려있던 탭을 그대로
+// 유지하기 위해 클릭 핸들러와 restoreLastTab() 둘 다 이 표를 같이 쓴다.
+const TAB_SWITCH_MAP = {
+    "changes-tab-btn": [".changes-container", () => renderChangesTab()],
+    "reservations-tab-btn": [".reservations-container", () => renderReservationsTab()],
+    "sales-tab-btn": [".sales-container", () => renderSalesTab()],
+    "price-tab-btn": [".price-container", () => renderPriceTab()],
+    "order-sheet-tab-btn": [".order-sheet-container", () => renderOrderSheetTab()],
+};
+const ACTIVE_TAB_KEY = "azy_active_tab";
+
+// 새로고침하면 항상 재고장으로 돌아가던 문제(2026-08-25) — 탭 전환 때마다 현재
+// 탭을 localStorage에 저장해두고, 앱 시작 시 restoreLastTab()으로 되살린다.
+// 데이터(subscribeData)가 아직 안 왔어도 각 render 함수가 자체적으로 API를
+// 불러오므로 순서 문제 없음.
+export function restoreLastTab() {
+    const btnClass = localStorage.getItem(ACTIVE_TAB_KEY);
+    const entry = btnClass && TAB_SWITCH_MAP[btnClass];
+    if (!entry) return;
+    switchTab(btnClass, entry[0], entry[1]);
+}
+
 // 탭 전환 시 재고장 검색/필터 초기화(2026-08-19) — 재고장에서 검색하다 예약현황/
 // 타창고매출현황으로 넘어가도 그 값이 그대로 남아 다른 탭 목록까지 걸러버리던
 // 문제. 검색1·검색2 입력창과 4개 드롭다운을 전부 비운다.
@@ -101,6 +123,9 @@ function switchTab(btnClass, containerSelector, render) {
     if (opening) {
         targetContainer.style.display = "";
         document.querySelector(`.${btnClass}`)?.classList.add("active");
+        localStorage.setItem(ACTIVE_TAB_KEY, btnClass);
+    } else {
+        localStorage.removeItem(ACTIVE_TAB_KEY);
     }
 
     clearSearchAndFilters();

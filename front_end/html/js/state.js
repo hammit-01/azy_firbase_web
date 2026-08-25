@@ -21,7 +21,10 @@ export const state = {
     salesWarehouseFilter: "", // 타창고매출현황 탭 — 창고 필터
     salesBrandFilter: "", // 타창고매출현황 탭 — 브랜드 필터
     salesManagerFilter: "", // 타창고매출현황 탭 — 담당자 필터(2026-08-25)
-    salesSortColumns: [], // 타창고매출현황 탭 — 열 클릭 정렬([{key, dir}], 2026-08-25)
+    // 타창고매출현황 탭 — 열 클릭 정렬([{key, dir}], 2026-08-25). 기본값을
+    // 홀딩일자(예약/등록 시점) 내림차순으로 둬서 최신순이 기본이 되게 함
+    // (2026-08-25) — 사용자가 다른 열을 클릭하면 그 선택으로 바뀜.
+    salesSortColumns: [{ key: "홀딩일자", dir: 2 }],
     filteredReservations: [], // 예약/출고 현황 탭 — 툴바 검색·필터 적용된 현재 표시 행(엑셀 다운로드용)
     priceSearch: "", // 전략단가 탭 — 통합 검색어
     priceCategoryFilter: "", // 전략단가 탭 — 분류 필터
