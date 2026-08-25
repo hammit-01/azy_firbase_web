@@ -1568,6 +1568,10 @@ export async function renderSalesTab() {
         return;
     }
 
+    // 담당자 제갈준 출고건은 타창고매출현황에서 숨김(2026-08-25) — 예약현황/
+    // 발주장 등 다른 화면은 그대로 보이고 이 탭에서만 제외.
+    rows = rows.filter(r => r.담당자 !== "제갈준");
+
     // 미리보기 행(_preview:true — 출고일 예약된 ACTIVE 예약, 아직 outbound로 안
     // 넘어간 것) 노출은 로그인만 하면 됨(2026-08-24 전체 공개). login.js를 여기서
     // import하면 순환참조(login.js → table.js)라 localStorage를 직접 읽는다.
