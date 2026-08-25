@@ -215,8 +215,11 @@ export async function apiToggleOutboundComplete(id) {
     return apiFetch(`/api/outbound/${encodeURIComponent(id)}/toggle_complete`, { method: "POST" });
 }
 
-export async function apiToggleOutboundRegister(id) {
-    return apiFetch(`/api/outbound/${encodeURIComponent(id)}/toggle_register`, { method: "POST" });
+export async function apiToggleOutboundRegister(id, managerName = "") {
+    return apiFetch(`/api/outbound/${encodeURIComponent(id)}/toggle_register`, {
+        method: "POST",
+        body: JSON.stringify({ 담당자: managerName }),
+    });
 }
 
 export async function apiToggleOutboundStockRelease(id) {

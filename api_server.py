@@ -579,10 +579,11 @@ def toggle_outbound_complete_endpoint(rec_id: str):
 
 
 @app.post("/api/outbound/{rec_id}/toggle_register")
-def toggle_outbound_register_endpoint(rec_id: str):
+def toggle_outbound_register_endpoint(rec_id: str, body: dict[str, Any] = {}):
+    user_name = body.get("담당자") or ""
     with get_conn() as conn:
         try:
-            registered = toggle_outbound_register(conn, rec_id)
+            registered = toggle_outbound_register(conn, rec_id, user_name)
         except ValueError as e:
             raise HTTPException(404, str(e))
     return {"등록": registered}

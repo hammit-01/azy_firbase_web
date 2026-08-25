@@ -117,7 +117,7 @@ function _buildFn(desc) {
             return async () => toggleOutboundComplete(desc.id);
 
         case "outbound-toggle-register":
-            return async () => toggleOutboundRegister(desc.id);
+            return async () => toggleOutboundRegister(desc.id, getStoredUser()?.이름 || "");
 
         // sales.html "추가"로 새로 만든 출고건 — 되돌리기 = 완전 삭제(원래 없던 행이라
         // 예약으로 되돌릴 대상 자체가 없음)

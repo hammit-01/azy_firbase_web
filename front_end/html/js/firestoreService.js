@@ -63,8 +63,8 @@ export async function useOutbound(id, qty) {
 export async function toggleOutboundComplete(id) {
     return apiToggleOutboundComplete(id);
 }
-export async function toggleOutboundRegister(id) {
-    return apiToggleOutboundRegister(id);
+export async function toggleOutboundRegister(id, managerName = "") {
+    return apiToggleOutboundRegister(id, managerName);
 }
 export async function toggleOutboundStockRelease(id) {
     return apiToggleOutboundStockRelease(id);

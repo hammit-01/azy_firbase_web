@@ -380,7 +380,10 @@ export function bindEvents() {
             const id = e.target.dataset.id;
             const checkbox = e.target;
             checkbox.disabled = true;
-            toggleOutboundRegister(id)
+            // 체크한 사람 이름을 같이 보내서 서버가 수정자 컬럼에 기록(2026-08-25) —
+            // 행 색을 "지금 보는 사람"이 아니라 "실제로 체크한 사람" 기준으로
+            // 모두에게 동일하게 보여주기 위함.
+            toggleOutboundRegister(id, getStoredUser()?.이름 || "")
                 .then(() => {
                     pushUndo({ type: "outbound-toggle-register", id });
                     _logActivity("outbound", id, "등록완료토글", null, null, "등록완료 체크 토글");

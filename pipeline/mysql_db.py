@@ -937,7 +937,7 @@ def get_all_outbound(conn) -> list[dict]:
     판단하므로 여기서는 항상 같이 내려준다."""
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT id, pk, 수량, 원수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, status, 전달사항, 등록, 비고, 수량내림 "
+            "SELECT id, pk, 수량, 원수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, status, 전달사항, 등록, 비고, 수량내림, 수정자 "
             "FROM outbound WHERE status IN ('ACTIVE','COMPLETED') ORDER BY 홀딩일자 DESC"
         )
         result = []
@@ -956,7 +956,7 @@ def get_all_outbound(conn) -> list[dict]:
                     continue
                 result.append({
                     **row, **info, "status": "ACTIVE",
-                    "등록": None, "비고": None, "수량내림": None, "원수량": None,
+                    "등록": None, "비고": None, "수량내림": None, "원수량": None, "수정자": None,
                     "_preview": True,
                 })
         return result
@@ -1221,16 +1221,21 @@ def toggle_outbound_stock_release(conn, rec_id: str) -> bool:
         return True
 
 
-def toggle_outbound_register(conn, rec_id: str) -> bool:
-    """타창고매출현황 "등록완료" 체크박스 토글(2026-08-18) — outbound.등록을
-    뒤집는다. 반환값은 바뀐 뒤의 값."""
+def toggle_outbound_register(conn, rec_id: str, user_name: str = "") -> bool:
+    """타창고매출현황 "수정중" 체크박스 토글(2026-08-18, 2026-08-25 이름 변경 +
+    체크한 사람 기록 추가) — outbound.등록을 뒤집는다. 켜질 때 누가 체크했는지
+    (user_name)를 수정자 컬럼에 같이 저장 — 행 색을 "지금 보고 있는 사람"이
+    아니라 "실제로 체크한 사람" 기준으로 모든 사용자에게 동일하게 보여주기
+    위함(2026-08-25, 로그인한 사람 기준으로 잘못 구현했던 버그 수정). 끌 때는
+    수정자를 비운다. 반환값은 바뀐 뒤의 값."""
     with conn.cursor() as cur:
         cur.execute("SELECT 등록 FROM outbound WHERE id=%s AND status IN ('ACTIVE','COMPLETED') FOR UPDATE", (rec_id,))
         row = cur.fetchone()
         if not row:
             raise ValueError("항목을 찾을 수 없거나 이미 취소됨")
         new_value = 0 if row["등록"] else 1
-        cur.execute("UPDATE outbound SET 등록=%s WHERE id=%s", (new_value, rec_id))
+        수정자 = user_name if new_value else ""
+        cur.execute("UPDATE outbound SET 등록=%s, 수정자=%s WHERE id=%s", (new_value, 수정자, rec_id))
         return bool(new_value)
 
 
