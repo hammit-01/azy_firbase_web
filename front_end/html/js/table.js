@@ -1192,9 +1192,9 @@ function reservationRowHtml(r, isSalesPage = false) {
             <td>${safeValue(r.등급)}</td>
             <td>${safeValue(r.ESTNO)}</td>
             ${qtyCell}
-            ${isSalesPage ? "" : `<td>${safeValue(r.재고)}</td><td>${availableCell(r.가용재고)}</td>`}
             <td>${safeValue(r.BL)}</td>
             <td>${whTag(r.창고)}</td>
+            ${isSalesPage ? "" : `<td>${safeValue(r.재고)}</td><td>${availableCell(r.가용재고)}</td>`}
             ${clientCell}
             ${reservationPriceCell}
             ${dateCell}
@@ -1304,10 +1304,10 @@ function reservationsHead(isSalesPage = false) {
         <col style="width:3%">  <!--등급-->
         <col style="width:4%">  <!--ESTNO-->
         <col style="width:4%">  <!--수량-->
-        <col style="width:4%">  <!--실재고-->
-        <col style="width:5%">  <!--가용재고-->
         <col style="width:12%"> <!--BL-->
         <col style="width:6%">  <!--창고-->
+        <col style="width:4%">  <!--실재고-->
+        <col style="width:5%">  <!--가용재고-->
         <col style="width:7%">  <!--거래처-->
         <col style="width:4%">  <!--단가-->
         <col style="width:6%">  <!--예약일-->
@@ -1318,7 +1318,7 @@ function reservationsHead(isSalesPage = false) {
         <tr>
             <th></th>
             <th>담당자</th><th>상품명</th><th>브랜드</th><th>등급</th><th>ESTNO</th>
-            <th>수량</th><th>실재고</th><th>가용재고</th><th>BL</th><th>창고</th>
+            <th>수량</th><th>BL</th><th>창고</th><th>실재고</th><th>가용재고</th>
             <th>거래처</th><th>단가</th><th>예약일</th><th>출고일</th><th>액션</th>
         </tr>
     </thead>

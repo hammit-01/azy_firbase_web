@@ -56,6 +56,20 @@ function clearSearchAndFilters() {
     });
 }
 
+// 팝업 모달(수정/예약) 일괄 처리 결과 안내(2026-08-25 버그 수정) — 이전엔 실패한
+// 행이 있어도(예: 가용재고 부족) holdingData/updateData가 개별로 띄운 에러 토스트를
+// 루프 끝의 무조건 "완료" 토스트가 그대로 덮어써서 실제로는 실패했는데 성공한 것처럼
+// 보였다. 성공/실패 건수를 세서 실패가 하나라도 있으면 성공 토스트를 띄우지 않는다.
+function reportBulkResult(label, successCount, failCount) {
+    if (failCount === 0) {
+        showToast(`✓ ${label} 완료 (${successCount}건)`);
+    } else if (successCount > 0) {
+        showError(`${label} ${successCount}건 완료, ${failCount}건 실패`);
+    } else {
+        showError(`${label} 실패 (${failCount}건)`);
+    }
+}
+
 function switchTab(btnClass, containerSelector, render) {
     const tableContainer = document.querySelector(".table-container");
     const targetContainer = document.querySelector(containerSelector);
@@ -908,6 +922,7 @@ async function handleClick(e) {
                 onSave: async (overlay) => {
                     const rows = overlay.querySelectorAll(".bulk-edit-card[data-id]");
                     const backups = [];
+                    let failCount = 0;
                     for (const row of rows) {
                         const id = row.dataset.id;
                         const item = state.allData.find(v => v.id === id);
@@ -928,14 +943,14 @@ async function handleClick(e) {
                             row.querySelector(".update-memo")?.value || "",
                             true
                         );
-                        if (result) backups.push(result);
+                        if (result) backups.push(result); else failCount++;
                     }
                     if (backups.length > 0) {
                         pushUndo({ type: "bulk-update", backups: backups.map(b => ({ id: b.rawId, prevData: b.prevData, azy: b.azy })) });
                     }
                     state.selectedItems.clear();
                     state.crudData = null;
-                    showToast("✓ 수정 완료");
+                    reportBulkResult("수정", backups.length, failCount);
                     await fetchAllData();
                 },
             });
@@ -957,6 +972,7 @@ async function handleClick(e) {
                 onSave: async (overlay) => {
                     const rows = overlay.querySelectorAll(".bulk-edit-card[data-id]");
                     const backups = [];
+                    let failCount = 0;
                     for (const row of rows) {
                         const id = row.dataset.id;
                         const item = state.selectedItems.get(id);
@@ -979,14 +995,14 @@ async function handleClick(e) {
                             holdWeight !== "" ? holdWeight : null,
                             true
                         );
-                        if (result) backups.push(result);
+                        if (result) backups.push(result); else failCount++;
                     }
                     if (backups.length > 0) {
                         pushUndo({ type: "bulk-reservation", ids: backups.map(b => b.reservationId) });
                     }
                     state.selectedItems.clear();
                     state.crudData = null;
-                    showToast("✓ 예약 완료");
+                    reportBulkResult("예약", backups.length, failCount);
                     await fetchAllData();
                 },
             });
