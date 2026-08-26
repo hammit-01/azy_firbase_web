@@ -608,6 +608,24 @@ def use_reservation(conn, rec_id: str, use_qty: int) -> bool:
     return False
 
 
+def _apply_bigo_stock_release(cur, table: str, rec_id: str) -> None:
+    """비고 값 유무에 따라 수량내림을 맞춘다(2026-08-27, "비고란이 빈칸이
+    아니면 발동되게 해" 요청) — 비고를 바꾸는 경로가 여러 곳(추가/수정/
+    미리보기)이라 프론트 개별 호출에 의존하지 않고 여기 한 곳에서 공통
+    적용한다. 이미 원하는 상태면 아무것도 안 함(불필요한 토글 방지)."""
+    cur.execute(f"SELECT 수량, 원수량, 수량내림, 비고 FROM {table} WHERE id=%s", (rec_id,))
+    row = cur.fetchone()
+    if not row:
+        return
+    want_dropped = bool(str(row.get("비고") or "").strip())
+    if want_dropped == bool(row.get("수량내림")):
+        return
+    if want_dropped:
+        cur.execute(f"UPDATE {table} SET 원수량=수량, 수량=0, 수량내림=1 WHERE id=%s", (rec_id,))
+    else:
+        cur.execute(f"UPDATE {table} SET 수량=%s, 원수량=NULL, 수량내림=0 WHERE id=%s", (row["원수량"], rec_id))
+
+
 def update_reservation(conn, rec_id: str, updates: dict) -> bool:
     """예약 변경 — 수량/출고일/거래처를 한 번에 또는 일부만 바꿀 수 있다
     (2026-08-14, "수량변경"을 "예약변경"으로 확장). updates에 없는 필드는
@@ -674,6 +692,8 @@ def update_reservation(conn, rec_id: str, updates: dict) -> bool:
                 if new_qty > available:
                     raise ValueError(f"가용재고 부족(가용 {available}, 요청 {new_qty})")
             cur.execute(f"UPDATE {hr_table} SET {', '.join(set_cols)} WHERE id=%s", (*params, rec_id))
+            if "비고" in updates:
+                _apply_bigo_stock_release(cur, hr_table, rec_id)
             return True
     return False
 
@@ -877,11 +897,11 @@ def create_outbound(conn, product: dict) -> dict:
     to_outbound()로 출고일에 맞게 정리한다 — 출고일이 오늘이면 방금 만든 게
     바로 outbound로 넘어가고, 미래 날짜면 예약 테이블에 그대로 남는다.
 
-    비고는 outbound 전용 컬럼(holding_records엔 없음, 2026-08-19)이라
-    _RESERVATION_COLS를 거치는 create_reservation/migrate로는 못 옮기고, 여기서
-    migrate 뒤에 outbound 행을 따로 한 번 더 UPDATE한다 — 출고일이 미래라 아직
-    outbound로 안 넘어갔으면 이 UPDATE는 0행 적용되고 조용히 넘어간다(예약
-    단계엔 비고를 붙일 자리가 없으므로 출고등록/추가 시점에 다시 넣어야 함)."""
+    비고는 create_reservation()의 INSERT 컬럼 목록엔 없어서(2026-08-14 원래
+    설계 그대로) 여기서 migrate 뒤에 따로 UPDATE한다 — 출고일이 미래라 아직
+    outbound로 안 넘어갔으면(_RESERVATION_COLS엔 비고가 2026-08-26에 추가돼
+    holding_records에도 있음) 대신 그 예약 테이블 쪽에 UPDATE한다. 비고가
+    채워지면 수량내림도 같이 켜진다(_apply_bigo_stock_release, 2026-08-27)."""
     product = dict(product)
     if not product.get("출고일"):
         product["출고일"] = _today_iso()
@@ -891,6 +911,11 @@ def create_outbound(conn, product: dict) -> dict:
     if 비고:
         with conn.cursor() as cur:
             cur.execute("UPDATE outbound SET 비고=%s WHERE id=%s", (비고, rec["id"]))
+            target_table = "outbound"
+            if cur.rowcount == 0:
+                cur.execute(f"UPDATE {rec['table']} SET 비고=%s WHERE id=%s", (비고, rec["id"]))
+                target_table = rec["table"]
+            _apply_bigo_stock_release(cur, target_table, rec["id"])
     return rec
 
 
@@ -1203,6 +1228,8 @@ def update_outbound(conn, rec_id: str, updates: dict) -> bool:
                         f"INSERT INTO {hr_table} ({cols}) VALUES ({placeholders})",
                         [revived.get(c) for c in _RESERVATION_COLS],
                     )
+        if "비고" in updates:
+            _apply_bigo_stock_release(cur, "outbound", rec_id)
         return True
 
 
