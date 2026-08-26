@@ -585,6 +585,11 @@ export function bindEvents() {
             if (remarkCell.querySelector("input")) return;
             const id = remarkCell.dataset.id;
             const original = remarkCell.dataset.remark || "";
+            // 익일(이후) 출고 예정으로 아직 outbound로 안 넘어간 미리보기 행
+            // (2026-08-26, "다음날 출고 건도 비고 입력되게" 요청) — outbound가
+            // 아니라 원본 예약(holding_records/azy_holding_records)에 저장해야
+            // 하므로 저장 대상 테이블/undo 종류만 갈라서 처리, 나머지 UI/로직은 동일.
+            const isPreview = remarkCell.dataset.preview === "1";
             remarkCell.innerHTML = `<input type="text" class="sales-remark-input" value="${original.replace(/"/g, "&quot;")}">`;
             const input = remarkCell.querySelector("input");
             input.focus();
@@ -597,9 +602,16 @@ export function bindEvents() {
                 const newValue = input.value.trim();
                 if (save && newValue !== original) {
                     try {
-                        await updateOutbound(id, { 비고: newValue });
-                        _logActivity("outbound", id, "수정", { 비고: original }, { 비고: newValue }, "비고 변경");
-                        await syncStockReleaseWithRemark(id, newValue);
+                        if (isPreview) {
+                            await updateReservation(id, { 비고: newValue });
+                            pushUndo({ type: "reservation-remark", id, prevRemark: original });
+                            _logActivity("reservation", id, "수정", { 비고: original }, { 비고: newValue }, "비고 변경");
+                        } else {
+                            await updateOutbound(id, { 비고: newValue });
+                            pushUndo({ type: "outbound-remark", id, prevRemark: original });
+                            _logActivity("outbound", id, "수정", { 비고: original }, { 비고: newValue }, "비고 변경");
+                            await syncStockReleaseWithRemark(id, newValue);
+                        }
                         showToast("✓ 비고 저장됨");
                     } catch (err) {
                         showError(err.message || "저장에 실패했습니다.");

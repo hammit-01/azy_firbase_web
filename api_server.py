@@ -477,6 +477,7 @@ class UpdateReservationBody(BaseModel):
     출고일: str | None = None
     거래처: str | None = None
     전달사항: str | None = None
+    비고: str | None = None
 
 @app.post("/api/reservations/{rec_id}/update")
 def update_reservation_endpoint(rec_id: str, body: UpdateReservationBody):

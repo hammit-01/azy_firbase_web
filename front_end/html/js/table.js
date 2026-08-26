@@ -1191,7 +1191,7 @@ function reservationRowHtml(r, isSalesPage = false) {
     return `
         <tr data-reservation-id="${r.id}"${rowClass ? ` class="${rowClass}"` : ""}>
             <td class="reservation-note-cell">${noteBtn(r, isSalesPage && !isPreview, access.canEditNote)}</td>
-            ${isSalesPage ? `<td class="${!isPreview && access.canEditRemark ? "sales-remark-cell" : ""}" data-id="${r.id}" data-remark="${attrEscape(r.비고)}" title="${!isPreview && access.canEditRemark ? "더블클릭해서 수정" : ""}">${safeValue(r.비고)}</td>` : ""}
+            ${isSalesPage ? `<td class="${access.canEditRemark ? "sales-remark-cell" : ""}" data-id="${r.id}" data-remark="${attrEscape(r.비고)}" data-preview="${isPreview ? "1" : ""}" title="${access.canEditRemark ? "더블클릭해서 수정" : ""}">${safeValue(r.비고)}</td>` : ""}
             ${isSalesPage ? `<td class="reservation-register-cell">${limitedActions || isPreview ? "" : registerCheckboxHtml(r, access.canOthers)}</td>` : ""}
             <td>${safeValue(r.담당자) || "(미지정)"}</td>
             <td>${safeValue(r.상품명)}</td>

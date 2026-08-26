@@ -638,6 +638,9 @@ def update_reservation(conn, rec_id: str, updates: dict) -> bool:
     if "전달사항" in updates:
         set_cols.append("전달사항=%s")
         params.append(updates["전달사항"])
+    if "비고" in updates:
+        set_cols.append("비고=%s")
+        params.append(updates["비고"])
     if not set_cols:
         return False
 
@@ -753,7 +756,7 @@ def get_all_active_reservations(conn) -> list[dict]:
         for hr_table, inv_table in pairs:
             cur.execute(
                 f"SELECT r.id, r.pk, r.수량, r.홀딩 AS 담당자, r.메모 AS 거래처, r.홀딩일자, r.출고일, "
-                f"r.전달사항, "
+                f"r.전달사항, r.비고, "
                 f"i.상품명, i.브랜드, i.등급, i.ESTNO, i.BL, i.창고, i.재고, "
                 f"i.재고 - COALESCE(agg.총예약, 0) - COALESCE(ob.총출고, 0) AS 가용재고 "
                 f"FROM {hr_table} r LEFT JOIN {inv_table} i ON r.pk = i.id "
@@ -775,7 +778,7 @@ def get_all_active_reservations(conn) -> list[dict]:
 _RESERVATION_COLS = (
     "id", "pk", "BL", "ESTNO", "등급", "수량", "홀딩", "출고일", "메모", "uid",
     "홀딩일자", "status", "stock_when_reserved", "available_when_reserved",
-    "stock_version_when_reserved", "released_at", "전달사항",
+    "stock_version_when_reserved", "released_at", "전달사항", "비고",
 )
 
 
@@ -979,7 +982,7 @@ def get_all_outbound(conn) -> list[dict]:
 
         for hr_table in ("holding_records", "azy_holding_records"):
             cur.execute(
-                f"SELECT id, pk, 수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, 전달사항 "
+                f"SELECT id, pk, 수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, 전달사항, 비고 "
                 f"FROM {hr_table} WHERE status='ACTIVE' AND 출고일 != ''"
             )
             for row in cur.fetchall():
@@ -988,7 +991,7 @@ def get_all_outbound(conn) -> list[dict]:
                     continue
                 result.append({
                     **row, **info, "status": "ACTIVE",
-                    "등록": None, "비고": None, "수량내림": None, "원수량": None, "수정자": None,
+                    "등록": None, "수량내림": None, "원수량": None, "수정자": None,
                     "전표": None, "배송취소": None,
                     "_preview": True,
                 })

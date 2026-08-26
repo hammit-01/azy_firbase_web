@@ -98,6 +98,12 @@ function _buildFn(desc) {
         case "outbound-note":
             return async () => updateOutbound(desc.id, { 전달사항: desc.prevNote });
 
+        case "reservation-remark":
+            return async () => updateReservation(desc.id, { 비고: desc.prevRemark });
+
+        case "outbound-remark":
+            return async () => updateOutbound(desc.id, { 비고: desc.prevRemark });
+
         // 출고등록(2026-08-24 재설계: outbound로 안 옮기고 출고일만 지정) 부분
         // 등록의 역동작 — 갈라져 나온 새 예약 행을 취소하고 원래 행 수량을 복구.
         case "outbound-register-split":
