@@ -16,7 +16,7 @@ from pipeline.mysql_db import (
     upsert_azy_inventory, delete_azy_inventory,
     upsert_azy_holding_record, delete_azy_holding_record,
     create_reservation, cancel_reservation, complete_reservation, use_reservation,
-    reactivate_reservation, update_reservation, toggle_reservation_register,
+    reactivate_reservation, update_reservation, toggle_reservation_register, toggle_reservation_stock_release,
     get_active_reservations_by_pk, get_all_active_reservations,
     migrate_due_reservations_to_outbound, get_all_outbound, get_order_sheet_rows, create_outbound,
     update_outbound, cancel_outbound, use_outbound, toggle_outbound_complete,
@@ -501,6 +501,16 @@ def toggle_reservation_register_endpoint(rec_id: str, body: dict[str, Any] = {})
         except ValueError as e:
             raise HTTPException(404, str(e))
     return {"등록": registered}
+
+
+@app.post("/api/reservations/{rec_id}/toggle_stock_release")
+def toggle_reservation_stock_release_endpoint(rec_id: str):
+    with get_conn() as conn:
+        try:
+            released = toggle_reservation_stock_release(conn, rec_id)
+        except ValueError as e:
+            raise HTTPException(404, str(e))
+    return {"수량내림": released}
 
 
 class RegisterOutboundBody(BaseModel):

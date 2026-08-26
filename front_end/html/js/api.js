@@ -175,6 +175,10 @@ export async function apiToggleReservationRegister(id, managerName = "") {
     });
 }
 
+export async function apiToggleReservationStockRelease(id) {
+    return apiFetch(`/api/reservations/${encodeURIComponent(id)}/toggle_stock_release`, { method: "POST" });
+}
+
 export async function apiRegisterOutboundFromReservation(id, { 수량, 출고일, 거래처 }) {
     return apiFetch(`/api/reservations/${encodeURIComponent(id)}/register_outbound`, {
         method: "POST",

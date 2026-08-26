@@ -3,7 +3,7 @@ import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, 
 import { renderSelectData, renderInsert, createInsertRow } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
-import { getReservationsByPk, cancelReservation, useReservation, updateReservation, toggleReservationRegister, updateOutbound, cancelOutbound, createOutbound, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, toggleOutboundStockRelease, toggleOutboundSlip, toggleOutboundDeliveryCancel, createPrice, updatePrice, deletePrice } from "./firestoreService.js";
+import { getReservationsByPk, cancelReservation, useReservation, updateReservation, toggleReservationRegister, toggleReservationStockRelease, updateOutbound, cancelOutbound, createOutbound, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, toggleOutboundStockRelease, toggleOutboundSlip, toggleOutboundDeliveryCancel, createPrice, updatePrice, deletePrice } from "./firestoreService.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
@@ -26,13 +26,16 @@ async function refreshReservationViews() {
 // 타창고매출현황 비고 저장 시 내림 상태 동기화(2026-08-25) — 비고에 값이 있으면
 // 내림 ON, 비우면 OFF. toggleOutboundStockRelease는 순수 토글이라 원하는 상태와
 // 현재 상태가 다를 때만 호출(같으면 그대로 둠, 불필요한 토글로 되돌아가는 것 방지).
-async function syncStockReleaseWithRemark(id, remarkValue) {
+async function syncStockReleaseWithRemark(id, remarkValue, isPreview = false) {
     const row = state.filteredReservations?.find(r => r.id === id);
     const wantDropped = !!String(remarkValue ?? "").trim();
     const currentDropped = !!row?.수량내림;
     if (wantDropped === currentDropped) return;
     try {
-        await toggleOutboundStockRelease(id);
+        // 익일 이후 출고 예정(미리보기) 행은 아직 outbound가 아니라 원본 예약에
+        // 저장(2026-08-27) — 그래야 출고일이 와서 outbound로 넘어갈 때도 내림
+        // 상태(빨간 표시)가 그대로 유지된다.
+        await (isPreview ? toggleReservationStockRelease(id) : toggleOutboundStockRelease(id));
     } catch (err) {
         showError(err.message || "내림 상태 동기화에 실패했습니다.");
     }
@@ -614,8 +617,8 @@ export function bindEvents() {
                             await updateOutbound(id, { 비고: newValue });
                             pushUndo({ type: "outbound-remark", id, prevRemark: original });
                             _logActivity("outbound", id, "수정", { 비고: original }, { 비고: newValue }, "비고 변경");
-                            await syncStockReleaseWithRemark(id, newValue);
                         }
+                        await syncStockReleaseWithRemark(id, newValue, isPreview);
                         showToast("✓ 비고 저장됨");
                     } catch (err) {
                         showError(err.message || "저장에 실패했습니다.");

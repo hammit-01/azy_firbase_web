@@ -697,6 +697,37 @@ def toggle_reservation_register(conn, rec_id: str, user_name: str = "") -> bool:
     raise ValueError("항목을 찾을 수 없거나 이미 종료됨")
 
 
+def toggle_reservation_stock_release(conn, rec_id: str) -> bool:
+    """익일 이후 출고 예정(미리보기) 건의 "내림" 동기화(2026-08-27) —
+    toggle_outbound_stock_release와 동일한 개념이지만 아직 outbound로 안
+    넘어간 예약 행이라 holding_records/azy_holding_records를 직접 뒤집는다.
+    비고를 채우면 수량을 0으로 내리고 원수량에 보관, 비우면 되돌린다 — 이
+    상태 그대로 출고일이 와서 outbound로 이관되면(migrate_due_reservations_
+    to_outbound, _RESERVATION_COLS에 수량내림/원수량 포함) 이관 즉시 빨간
+    표시가 유지된다. 반환값은 바뀐 뒤의 수량내림 값."""
+    with conn.cursor() as cur:
+        for hr_table in ("holding_records", "azy_holding_records"):
+            cur.execute(
+                f"SELECT 수량, 원수량, 수량내림 FROM {hr_table} WHERE id=%s AND status='ACTIVE' FOR UPDATE",
+                (rec_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                continue
+            if row["수량내림"]:
+                cur.execute(
+                    f"UPDATE {hr_table} SET 수량=%s, 원수량=NULL, 수량내림=0 WHERE id=%s",
+                    (row["원수량"], rec_id),
+                )
+                return False
+            cur.execute(
+                f"UPDATE {hr_table} SET 원수량=수량, 수량=0, 수량내림=1 WHERE id=%s",
+                (rec_id,),
+            )
+            return True
+    raise ValueError("항목을 찾을 수 없거나 이미 종료됨")
+
+
 def _set_reservation_status(conn, rec_id: str, status: str) -> bool:
     from datetime import datetime
     from zoneinfo import ZoneInfo
@@ -798,6 +829,7 @@ _RESERVATION_COLS = (
     "id", "pk", "BL", "ESTNO", "등급", "수량", "홀딩", "출고일", "메모", "uid",
     "홀딩일자", "status", "stock_when_reserved", "available_when_reserved",
     "stock_version_when_reserved", "released_at", "전달사항", "비고", "등록", "수정자",
+    "수량내림", "원수량",
 )
 
 
@@ -1001,7 +1033,7 @@ def get_all_outbound(conn) -> list[dict]:
 
         for hr_table in ("holding_records", "azy_holding_records"):
             cur.execute(
-                f"SELECT id, pk, 수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, 전달사항, 비고, 등록, 수정자 "
+                f"SELECT id, pk, 수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, 전달사항, 비고, 등록, 수정자, 수량내림, 원수량 "
                 f"FROM {hr_table} WHERE status='ACTIVE' AND 출고일 != ''"
             )
             for row in cur.fetchall():
@@ -1010,7 +1042,6 @@ def get_all_outbound(conn) -> list[dict]:
                     continue
                 result.append({
                     **row, **info, "status": "ACTIVE",
-                    "수량내림": None, "원수량": None,
                     "전표": None, "배송취소": None,
                     "_preview": True,
                 })
