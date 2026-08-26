@@ -33,4 +33,8 @@ export const state = {
     changesSearch: "", // 업데이트 탭 — 통합 검색어(전략단가와 동일 방식, 2026-08-20)
     changesWarehouseFilter: "", // 업데이트 탭 — 창고 필터
     changesBrandFilter: "", // 업데이트 탭 — 브랜드 필터
+    orderSheetSearch: "", // 발주장 탭 — 통합 검색어(2026-08-26)
+    orderSheetWarehouseFilter: "", // 발주장 탭 — 창고 필터
+    orderSheetBrandFilter: "", // 발주장 탭 — 브랜드 필터
+    orderSheetManagerFilter: "", // 발주장 탭 — 담당자 필터
 };

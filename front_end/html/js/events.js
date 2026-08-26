@@ -466,6 +466,18 @@ export function bindEvents() {
             state.salesManagerFilter = e.target.value;
             renderSalesTab();
         }
+        if (e.target.id === "order-sheet-warehouse-filter") {
+            state.orderSheetWarehouseFilter = e.target.value;
+            renderOrderSheetTab();
+        }
+        if (e.target.id === "order-sheet-brand-filter") {
+            state.orderSheetBrandFilter = e.target.value;
+            renderOrderSheetTab();
+        }
+        if (e.target.id === "order-sheet-manager-filter") {
+            state.orderSheetManagerFilter = e.target.value;
+            renderOrderSheetTab();
+        }
         if (e.target.id === "changes-warehouse-filter") {
             state.changesWarehouseFilter = e.target.value;
             renderChangesTab();
@@ -480,6 +492,7 @@ export function bindEvents() {
     let reservationsSearchTimer = null;
     let salesSearchTimer = null;
     let changesSearchTimer = null;
+    let orderSheetSearchTimer = null;
     document.addEventListener("input", (e) => {
         if (e.target.id === "price-search") {
             clearTimeout(priceSearchTimer);
@@ -507,6 +520,13 @@ export function bindEvents() {
             changesSearchTimer = setTimeout(() => {
                 state.changesSearch = e.target.value;
                 renderChangesTab();
+            }, 200);
+        }
+        if (e.target.id === "order-sheet-search") {
+            clearTimeout(orderSheetSearchTimer);
+            orderSheetSearchTimer = setTimeout(() => {
+                state.orderSheetSearch = e.target.value;
+                renderOrderSheetTab();
             }, 200);
         }
     });

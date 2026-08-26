@@ -1868,9 +1868,19 @@ export async function renderOrderSheetTab() {
 
     const myDept = getStoredUser()?.부서;
     rows = rows.filter(r => myDept && r.부서 === myDept);
+
+    // 검색/창고/브랜드/담당자 필터 — 예약현황·타창고매출현황과 동일 방식
+    // (2026-08-26). 옵션 목록은 필터 적용 전(부서로만 걸러진) rows 기준.
+    const filterControlsHtml = reservationFilterControlsHtml({
+        idPrefix: "order-sheet", rows,
+        search: state.orderSheetSearch, warehouse: state.orderSheetWarehouseFilter, brand: state.orderSheetBrandFilter,
+        manager: state.orderSheetManagerFilter, showManagerFilter: true,
+    });
+    rows = filterReservationRowsByState(rows, state.orderSheetSearch, state.orderSheetWarehouseFilter, state.orderSheetBrandFilter, state.orderSheetManagerFilter);
     rows = [...rows].sort((a, b) =>
         String(a.출고일 || "9999").localeCompare(String(b.출고일 || "9999")) || String(a.담당자 || "").localeCompare(String(b.담당자 || ""), "ko")
     );
+    const searchHadFocus = document.activeElement?.id === "order-sheet-search";
 
     const empty = rows.length ? "" : `<p class="reservations-empty">${myDept ? `${myDept} 발주 항목이 없습니다.` : "소속 부서 정보가 없습니다."}</p>`;
     // 출고일 → 담당자 순 정렬인데 담당자 칸이 아예 안 보여서 어느 행이 누구
@@ -1878,6 +1888,7 @@ export async function renderOrderSheetTab() {
     // 열 추가 + 담당자가 바뀌는 지점마다 굵은 구분선을 넣어 묶음이 눈에 띄게.
     const rowsHtml = rows.map((r, i) => orderSheetRowHtml(r, i === 0 || r.담당자 !== rows[i - 1].담당자)).join("");
     listEl.innerHTML = `
+        <div class="reservations-filter-bar">${filterControlsHtml}</div>
         <table class="reservations-table order-sheet-table">
             <colgroup>
                 <col style="width:7%">  <!--담당자-->
@@ -1904,6 +1915,10 @@ export async function renderOrderSheetTab() {
         </table>
         ${empty}
     `;
+    if (searchHadFocus) {
+        const input = document.getElementById("order-sheet-search");
+        if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+    }
 }
 
 
