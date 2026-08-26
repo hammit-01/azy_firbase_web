@@ -48,7 +48,6 @@ def load_moving_rows(dt=None) -> list[dict]:
     if dt is None:
         dt = datetime.now(ZoneInfo("Asia/Seoul"))
     is_today = dt.date() == datetime.now(ZoneInfo("Asia/Seoul")).date()
-    note = "이고" if is_today else "익일 이고"
 
     tab = _tab_name(dt)
     today = dt.strftime("%Y%m%d")
@@ -84,8 +83,8 @@ def load_moving_rows(dt=None) -> list[dict]:
         # 안내 문구만 있고, 대신 수정사항 열에 이력번호를 미리 적어둔다 — 도착/출발
         # 매칭을 BL 대신 이력번호(뒤 4자리, id 안에 포함돼 있음)로 대체한다
         # (2026-08-04, 사용자 설명으로 도입).
-        note = str(row.get(_COL["note"], "") or "").strip()
-        history_last4 = note[-4:] if ("출고분" in bl and note) else ""
+        row_note = str(row.get(_COL["note"], "") or "").strip()
+        history_last4 = row_note[-4:] if ("출고분" in bl and row_note) else ""
 
         result.append({
             "id":     f"{today}_{i}",
@@ -98,7 +97,12 @@ def load_moving_rows(dt=None) -> list[dict]:
             "이력번호": history_last4,
             "출고창고": str(row.get(_COL["warehouse"], "") or "").strip(),
             "이동창고": str(row.get(_COL["to_warehouse"], "") or "").strip(),
-            "비고":    note,
+            # 오늘 탭은 시트의 "수정사항" 메모를 그대로 노출(기존 동작 유지),
+            # 내일 탭은 이 메모를 덮고 "익일 이고" 태그로 확정 — scheduler.py의
+            # 재차감 제외 필터와 firebase.js의 미리보기 구분이 이 문자열과
+            # 정확히 일치해야 동작한다(2026-08-26, row_note와 변수명이 같아서
+            # 이 태그가 한 번도 실제로 안 붙던 버그 수정).
+            "비고":    row_note if is_today else "익일 이고",
         })
 
     # 같은 이고 요청이 시트에 행만 다르게 중복 입력된 경우 방지 — apply_moving_deductions는
