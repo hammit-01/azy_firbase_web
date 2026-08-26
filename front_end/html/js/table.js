@@ -1868,6 +1868,9 @@ export async function renderOrderSheetTab() {
 
     const myDept = getStoredUser()?.부서;
     rows = rows.filter(r => myDept && r.부서 === myDept);
+    // 출고일이 오늘인 것만(2026-08-26 사용자 요청) — 지난 날짜/미래 예정 건은
+    // 발주장에서 안 보이고 예약현황·타창고매출현황에서 계속 확인 가능.
+    rows = rows.filter(r => safeValue(r.출고일) === todayISOStr());
 
     // 검색/창고/브랜드/담당자 필터 — 예약현황·타창고매출현황과 동일 방식
     // (2026-08-26). 옵션 목록은 필터 적용 전(부서로만 걸러진) rows 기준.
