@@ -1647,7 +1647,9 @@ export const PRICE_FIELDS = [
     { key: "창고/비고", type: "text" },
     { key: "평중", type: "number" },
     { key: "도매가", type: "number" },
-    { key: "전략가", type: "number" },
+    // 전략가는 "협의"/"5톤 -100" 같은 글자 메모도 들어갈 수 있어야 해서(2026-08-26
+    // 요청) number가 아니라 text — 숫자만 입력해도 그대로 저장/표시된다.
+    { key: "전략가", type: "text" },
 ];
 
 export function priceFieldClass(key) {
@@ -1677,8 +1679,12 @@ function priceHead() {
 `;
 }
 
+// 전략가는 "협의"/"5톤 -100" 같은 숫자 아닌 문구도 그대로 들어갈 수 있어서
+// (2026-08-26) 숫자로 안 바뀌면 원문 그대로 보여준다.
 function formatWon(n) {
-    return (n === null || n === undefined || n === "") ? "" : Number(n).toLocaleString("ko-KR");
+    if (n === null || n === undefined || n === "") return "";
+    const num = Number(n);
+    return isNaN(num) ? String(n) : num.toLocaleString("ko-KR");
 }
 
 function priceRowHtml(row) {

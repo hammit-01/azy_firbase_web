@@ -649,7 +649,9 @@ class PriceBody(BaseModel):
     창고_비고: str | None = Field(None, alias="창고/비고")
     평중: float | None = None
     도매가: int | None = None
-    전략가: int | None = None
+    # "협의"/"5톤 -100" 같은 글자 메모도 들어갈 수 있어야 해서(2026-08-26) 숫자
+    # 전용이 아니라 문자열 — 숫자만 입력해도 문자열로 그대로 저장된다.
+    전략가: str | None = None
     업데이트일자: str | None = None
 
     class Config:
