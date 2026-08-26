@@ -174,7 +174,7 @@ function renderMobileView(data) {
         if (item.상태 === "freeze")  cardCls += " mobile-freeze";
         if (item.상태 === "stopped") cardCls += " mobile-stopped";
         if (item.상태 === "moving")  cardCls += " mobile-moving";
-        if (item._isMoving)          cardCls += " mobile-moving-inventory";
+        if (item._isMoving)           cardCls += item._isTomorrowMoving ? " mobile-moving-inventory-tomorrow" : " mobile-moving-inventory";
 
         const wh   = safeValue(item.창고);
         const name = safeValue(item.상품명);
@@ -777,7 +777,7 @@ export function renderTable() {
         if (item.상태 === "freeze")  rowClass += " freezed-row";
         if (item.상태 === "stopped") rowClass += " stopped-row";
         if (item.상태 === "moving")  rowClass += " moving-row";
-        if (item._isMoving)          rowClass += " moving-inventory-row";
+        if (item._isMoving)          rowClass += item._isTomorrowMoving ? " moving-inventory-tomorrow-row" : " moving-inventory-row";
 
         html += `
             <tr class="${rowClass}" data-id="${id}" data-출고일="${safeValue(item.출고일)}" data-홀딩="${safeValue(item.홀딩)}" data-pk="${item._rawId ?? id}" data-예약수량="${Number(item.예약수량) || 0}">

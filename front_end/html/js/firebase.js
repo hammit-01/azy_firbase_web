@@ -34,6 +34,7 @@ function normalizeMovingRow(r) {
         id: `moving:${r.id}`,
         _rawId: r.id,
         _isMoving: true,
+        _isTomorrowMoving: r.비고 === "익일 이고",
         상품명: r.상품명,
         브랜드: r.브랜드,
         등급: r.등급,

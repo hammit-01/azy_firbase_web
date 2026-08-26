@@ -1270,6 +1270,11 @@ tbody tr {
     background:#fff3b0 !important;
 }
 
+/* 익일 이고(내일자) — 오늘 이고와 구분되는 분홍 배경(2026-08-26) */
+.moving-inventory-tomorrow-row td{
+    background:#ffd6e8 !important;
+}
+
 /* 체크한 행 = 연초록 */
 .selected-row td{
     background:#d4f7a0 !important;
@@ -1748,6 +1753,7 @@ tr.insert-card .remove-insert-btn:hover {
 .mobile-stopped { border-left-color: #f59e0b; }
 .mobile-moving  { border-left-color: #f97316; }
 .mobile-moving-inventory { background: #fff3b0; }
+.mobile-moving-inventory-tomorrow { background: #ffd6e8; }
 
 .mc-status-badge {
     display: inline-flex;
