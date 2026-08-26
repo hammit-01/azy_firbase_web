@@ -638,12 +638,15 @@ def use_outbound_endpoint(rec_id: str, body: UseOutboundBody):
 
 # ── 전략단가(price, 2026-08-19) ───────────────────────────────
 class PriceBody(BaseModel):
-    분류: str = ""
-    브랜드: str = ""
-    품목: str = ""
-    등급_포장: str = Field("", alias="등급/포장")
-    EST: str = ""
-    창고_비고: str = Field("", alias="창고/비고")
+    # 모든 칸이 비어 있어도 추가 가능해야 해서(2026-08-26) str 필드도 None을
+    # 허용 — 프론트가 빈 입력칸을 null로 보내는데 기존 str-only 타입이 이를
+    # 거부(422)해 추가 자체가 조용히 실패하던 버그였음.
+    분류: str | None = None
+    브랜드: str | None = None
+    품목: str | None = None
+    등급_포장: str | None = Field(None, alias="등급/포장")
+    EST: str | None = None
+    창고_비고: str | None = Field(None, alias="창고/비고")
     평중: float | None = None
     도매가: int | None = None
     전략가: int | None = None

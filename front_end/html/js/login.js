@@ -19,16 +19,18 @@ export function hasEditorAccess(role) {
     return role === "편집자" || role === "관리자";
 }
 
-// 전략단가 탭 추가/수정/삭제 권한(2026-08-20 관리자만 → 2026-08-26 확장) —
-// 관리자 + 매장영업팀/특판팀/영업팀 팀장 + 총괄 + 대표. role 문자열(권한: 관리자/
-// 편집자/사원)만으론 "팀장" 여부를 가릴 수 없어 getStoredUser()의 부서/직급을
-// 직접 본다.
+// 단가표(구 전략단가) 탭 추가/수정/삭제 권한(2026-08-20 관리자만 → 2026-08-26
+// 확장) — 관리자 + 매장영업팀/특판팀/영업팀 팀장 + 총괄 + 대표 + 영업팀 주임
+// 강석현(개별 예외 요청). role 문자열(권한: 관리자/편집자/사원)만으론 "팀장"
+// 여부를 가릴 수 없어 getStoredUser()의 부서/직급을 직접 본다.
 const PRICE_EDIT_TEAM_LEAD_DEPTS = new Set(["매장영업팀", "특판팀", "영업팀"]);
+const PRICE_EDIT_INDIVIDUAL_NAMES = new Set(["강석현"]);
 export function hasPriceEditAccess() {
     const u = getStoredUser();
     if (!u) return false;
     if (u.권한 === "관리자") return true;
     if (u.직급 === "팀장" && PRICE_EDIT_TEAM_LEAD_DEPTS.has(u.부서)) return true;
+    if (PRICE_EDIT_INDIVIDUAL_NAMES.has(u.이름)) return true;
     return u.직급 === "총괄" || u.직급 === "대표이사";
 }
 

@@ -1778,7 +1778,7 @@ export async function renderPriceTab() {
     try {
         rows = await getAllPrices();
     } catch (e) {
-        listEl.innerHTML = `<p class="reservations-empty">전략단가를 불러오지 못했습니다.</p>`;
+        listEl.innerHTML = `<p class="reservations-empty">단가표를 불러오지 못했습니다.</p>`;
         return;
     }
 
@@ -1802,7 +1802,7 @@ export async function renderPriceTab() {
         </div>
     `;
 
-    const empty = filtered.length ? "" : `<p class="reservations-empty">조건에 맞는 전략단가가 없습니다.</p>`;
+    const empty = filtered.length ? "" : `<p class="reservations-empty">조건에 맞는 단가표 항목이 없습니다.</p>`;
     // 검색창이 매 렌더마다 통째로 교체돼서 포커스가 날아가는 문제(2026-08-19) —
     // 렌더 전에 포커스 상태였으면 렌더 후 다시 포커스 + 커서를 끝으로.
     const searchHadFocus = document.activeElement?.id === "price-search";

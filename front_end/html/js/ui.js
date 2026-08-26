@@ -294,7 +294,7 @@ export function showEditPriceModal(row) {
         overlay.className = "confirm-overlay";
         overlay.innerHTML =
             `<div class="confirm-modal edit-reservation-modal edit-price-modal">` +
-            `<p class="confirm-msg">전략단가 수정</p>` +
+            `<p class="confirm-msg">단가표 수정</p>` +
             `<div class="edit-reservation-form">${fieldsHtml}</div>` +
             `<div class="confirm-btns">` +
             `<button class="confirm-yes">저장</button>` +

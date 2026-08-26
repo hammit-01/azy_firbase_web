@@ -756,7 +756,7 @@ export function bindEvents() {
                     }
                     try {
                         await deletePrice(id);
-                        _logActivity("price", id, "삭제", original, null, "전략단가 삭제");
+                        _logActivity("price", id, "삭제", original, null, "단가표 삭제");
                         pushUndo({ type: "price-delete", restoreData: original });
                         showToast("✓ 삭제됨");
                     } catch (err) {
@@ -778,7 +778,7 @@ export function bindEvents() {
                     if (changed) {
                         try {
                             await updatePrice(id, fields);
-                            _logActivity("price", id, "수정", original, fields, "전략단가 수정");
+                            _logActivity("price", id, "수정", original, fields, "단가표 수정");
                             pushUndo({ type: "price-update", id, prevData: original });
                             showToast("✓ 저장됨");
                         } catch (err) {
@@ -971,12 +971,13 @@ async function handleClick(e) {
             const raw = el?.value ?? "";
             fields[f.key] = f.type === "number" ? (raw === "" ? null : Number(raw)) : (raw || null);
         });
-        if (!fields.품목) { showError("품목은 필수입니다."); return; }
+        // 품목을 포함해 모든 칸이 비어 있어도 추가 가능(2026-08-26 요청) — 나머지는
+        // 나중에 채워도 되게. id는 create_price가 자동 생성하므로 필수 입력 없음.
         try {
             const res = await createPrice(fields);
             showToast("✓ 추가됨");
             if (res?.id) {
-                _logActivity("price", res.id, "삽입", null, fields, `${fields.품목} 전략단가 추가`);
+                _logActivity("price", res.id, "삽입", null, fields, `${fields.품목 || "품목 미입력"} 단가표 추가`);
                 pushUndo({ type: "price-insert", newId: res.id });
             }
             renderPriceTab();
@@ -1237,7 +1238,7 @@ async function handleClick(e) {
         if (!changed) return;
         try {
             await updatePrice(id, result);
-            _logActivity("price", id, "수정", original, result, "전략단가 수정");
+            _logActivity("price", id, "수정", original, result, "단가표 수정");
             pushUndo({ type: "price-update", id, prevData: original });
             showToast("✓ 저장됨");
         } catch (err) {
@@ -1253,7 +1254,7 @@ async function handleClick(e) {
         if (!await showConfirm(`"${original?.품목 || "이 항목"}"을(를) 삭제합니다.\n계속하시겠습니까?`)) return;
         try {
             await deletePrice(id);
-            _logActivity("price", id, "삭제", original, null, "전략단가 삭제");
+            _logActivity("price", id, "삭제", original, null, "단가표 삭제");
             pushUndo({ type: "price-delete", restoreData: original });
             showToast("✓ 삭제됨");
         } catch (err) {
@@ -1422,7 +1423,7 @@ async function handleClick(e) {
                 if (choice.전략가) row.push(r.전략가 ?? "");
                 return row;
             });
-            await exportTable("전략단가", headers, rows);
+            await exportTable("단가표", headers, rows);
             return;
         }
 
