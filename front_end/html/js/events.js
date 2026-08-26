@@ -656,7 +656,7 @@ export function bindEvents() {
         // 포커스가 행 밖으로 완전히 나갔을 때만 저장한다(칸 사이 Tab 이동은 무시).
         const priceRow = e.target.closest("tr.price-row");
         if (priceRow) {
-            if (!hasPriceEditAccess(getStoredUser()?.권한)) return;
+            if (!hasPriceEditAccess()) return;
             if (priceRow.querySelector("input")) return;
             const id = priceRow.dataset.id;
             const original = state.filteredPrices.find(r => String(r.id) === id);
@@ -1157,7 +1157,7 @@ async function handleClick(e) {
     // 전략단가 모바일 카드 — 수정/삭제(2026-08-19). 데스크톱은 더블클릭으로 행을
     // 통째로 입력창으로 바꾸지만 카드는 탭이 더블클릭 인식이 안 좋아 모달로 대신.
     if (e.target.classList.contains("price-card-edit-btn")) {
-        if (!hasPriceEditAccess(getStoredUser()?.권한)) return;
+        if (!hasPriceEditAccess()) return;
         const id = e.target.dataset.id;
         const original = state.filteredPrices.find(r => String(r.id) === id);
         if (!original) return;
@@ -1176,7 +1176,7 @@ async function handleClick(e) {
         return;
     }
     if (e.target.classList.contains("price-card-delete-btn")) {
-        if (!hasPriceEditAccess(getStoredUser()?.권한)) return;
+        if (!hasPriceEditAccess()) return;
         const id = e.target.dataset.id;
         const original = state.filteredPrices.find(r => String(r.id) === id);
         if (!await showConfirm(`"${original?.품목 || "이 항목"}"을(를) 삭제합니다.\n계속하시겠습니까?`)) return;

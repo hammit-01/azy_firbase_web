@@ -110,7 +110,7 @@ class LoginBody(BaseModel):
 def login(body: LoginBody):
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id, 이름, 권한, 부서 FROM employees WHERE id=%s AND pw=%s", (body.id, body.pw))
+            cur.execute("SELECT id, 이름, 권한, 부서, 직급 FROM employees WHERE id=%s AND pw=%s", (body.id, body.pw))
             row = cur.fetchone()
     if not row:
         raise HTTPException(401, "아이디 또는 비밀번호가 올바르지 않습니다")

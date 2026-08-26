@@ -1682,7 +1682,7 @@ function formatWon(n) {
 }
 
 function priceRowHtml(row) {
-    const canEdit = hasPriceEditAccess(getStoredUser()?.권한);
+    const canEdit = hasPriceEditAccess();
     const cells = PRICE_FIELDS.map(f => {
         if (f.key === "평중" || f.key === "도매가") return `<td class="price-highlight">${f.key === "도매가" ? formatWon(row[f.key]) : safeValue(row[f.key])}</td>`;
         if (f.key === "전략가") return `<td>${formatWon(row[f.key])}</td>`;
@@ -1726,7 +1726,7 @@ function priceCardHtml(row) {
                 <div class="mc-row"><span class="mc-label">평중</span>${safeValue(row.평중)}</div>
                 ${hasStrategy ? `<div class="mc-row"><span class="mc-label">도매가</span>${formatWon(row.도매가)}</div>` : ""}
             </div>
-            ${hasPriceEditAccess(getStoredUser()?.권한) ? `
+            ${hasPriceEditAccess() ? `
             <div class="reservation-card-actions">
                 <button class="price-card-edit-btn" data-id="${row.id}">수정</button>
                 <button class="price-card-delete-btn" data-id="${row.id}">삭제</button>

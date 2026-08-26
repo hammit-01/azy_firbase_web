@@ -19,10 +19,17 @@ export function hasEditorAccess(role) {
     return role === "편집자" || role === "관리자";
 }
 
-// 전략단가 탭 추가/수정/삭제는 편집자도 아니고 관리자만(2026-08-20, 우선 관리자만
-// 열어두고 필요하면 나중에 편집자로 넓히기로 함).
-export function hasPriceEditAccess(role) {
-    return role === "관리자";
+// 전략단가 탭 추가/수정/삭제 권한(2026-08-20 관리자만 → 2026-08-26 확장) —
+// 관리자 + 매장영업팀/특판팀/영업팀 팀장 + 총괄 + 대표. role 문자열(권한: 관리자/
+// 편집자/사원)만으론 "팀장" 여부를 가릴 수 없어 getStoredUser()의 부서/직급을
+// 직접 본다.
+const PRICE_EDIT_TEAM_LEAD_DEPTS = new Set(["매장영업팀", "특판팀", "영업팀"]);
+export function hasPriceEditAccess() {
+    const u = getStoredUser();
+    if (!u) return false;
+    if (u.권한 === "관리자") return true;
+    if (u.직급 === "팀장" && PRICE_EDIT_TEAM_LEAD_DEPTS.has(u.부서)) return true;
+    return u.직급 === "총괄" || u.직급 === "대표이사";
 }
 
 // 신규 기능 단계적 롤아웃 게이트(2026-08-24) — 관리자 권한 + 로컬 테스트
@@ -83,7 +90,7 @@ export function applyRoleVisibility(role) {
     const allDeleteBtn = document.querySelector(".all-delete-btn");
     const rollbackBtn = document.querySelector(".rollback-btn");
     // 전략단가 탭의 "추가"는 관리자만(2026-08-20) — 다른 탭은 기존처럼 편집자도 가능.
-    const canAddOnTab = tab === "price" ? hasPriceEditAccess(role) : isEditor;
+    const canAddOnTab = tab === "price" ? hasPriceEditAccess() : isEditor;
     if (insertBtn) insertBtn.style.display = (tab !== "reservations" && tab !== "changes" && canAddOnTab) ? "" : "none";
     if (updateBtn) updateBtn.style.display = (mainOnly && isEditor) ? "" : "none";
     if (holdingBtn) holdingBtn.style.display = (mainOnly && !!role) ? "" : "none";
