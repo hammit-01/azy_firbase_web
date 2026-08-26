@@ -1,4 +1,5 @@
 """MySQL 연결 및 공통 쿼리 유틸리티."""
+import json
 import os
 import re
 import pymysql
@@ -907,7 +908,33 @@ def _outbound_product_join(cur, pk: str) -> dict | None:
             inv_table = t
             break
     if not info:
-        return None
+        # 원본 재고 행이 이미 사라진 경우(완전 소진 등으로 크롤 결과에서 빠짐,
+        # 2026-08-26) — 타창고매출현황에 상품명/브랜드 등이 빈 채로 뜨던 문제
+        # (이미 두 번 root-cause된 패턴의 세 번째 변종: COMPLETED로 되돌아갔던
+        # 예약이 재활성화된 뒤 원본 재고가 이미 없어진 채로 출고일이 와서
+        # outbound로 넘어간 경우). activity_log에서 마지막으로 기록된 상품
+        # 정보를 복구해 최소한 상품명/브랜드/창고는 보여준다 — 재고/가용재고는
+        # 더 이상 알 수 없으니 0으로 둔다.
+        cur.execute(
+            "SELECT after_json FROM activity_log WHERE record_id=%s AND after_json IS NOT NULL "
+            "ORDER BY created_at DESC LIMIT 1",
+            (pk,),
+        )
+        log_row = cur.fetchone()
+        if not log_row:
+            return None
+        try:
+            snap = json.loads(log_row["after_json"])
+        except (ValueError, TypeError):
+            return None
+        if not snap.get("상품명"):
+            return None
+        return {
+            "상품명": snap.get("상품명"), "브랜드": snap.get("브랜드", ""),
+            "등급": snap.get("등급", ""), "ESTNO": snap.get("ESTNO", ""),
+            "BL": snap.get("BL", ""), "창고": snap.get("창고", ""),
+            "재고": 0, "가용재고": 0,
+        }
     hr_table = "holding_records" if inv_table == "inventory" else "azy_holding_records"
     cur.execute(
         f"SELECT COALESCE(SUM(수량),0) AS total FROM {hr_table} WHERE pk=%s AND status='ACTIVE'",

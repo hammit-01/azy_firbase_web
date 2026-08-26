@@ -238,6 +238,12 @@ export function bindEvents() {
         }
     });
 
+    // 상단 "재고장" 로고 클릭 시 탭 복원(azy_active_tab) 무시하고 항상 메인 탭으로
+    // 이동 — 새로고침은 계속 마지막 탭을 복원해야 하므로 로고 클릭에서만 지움(2026-08-18).
+    document.querySelector(".logo-link")?.addEventListener("click", () => {
+        localStorage.removeItem("azy_active_tab");
+    });
+
     // sales.html "추가" 입력행 — 재고장(메인 표) 행 하나를 통째로 복사해서
     // 붙여넣으면 탭으로 구분된 여러 값이 한 번에 들어오는데, 클릭한 칸 하나에만
     // 박히지 않고 재고장 열 순서에 맞춰 각 칸에 자동으로 나눠 들어가게 함
