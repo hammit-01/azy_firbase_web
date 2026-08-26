@@ -3,6 +3,7 @@ import {
     createReservation, updateReservation, reactivateReservation,
     createOutbound, updateOutbound, cancelOutbound,
     toggleOutboundComplete, toggleOutboundRegister,
+    createPrice, updatePrice, deletePrice,
 } from "./firestoreService.js";
 import { showToast, showError } from "./ui.js";
 import { getStoredUser } from "./login.js";
@@ -133,6 +134,16 @@ function _buildFn(desc) {
                 if (desc.wasFullUse) await reactivateReservation(desc.id);
                 else await updateReservation(desc.id, { 수량: desc.prevQty });
             };
+
+        // 전략단가 탭(2026-08-26) — 추가/수정/삭제의 자연스러운 역동작.
+        case "price-insert":
+            return async () => deletePrice(desc.newId);
+
+        case "price-update":
+            return async () => updatePrice(desc.id, desc.prevData);
+
+        case "price-delete":
+            return async () => createPrice(desc.restoreData);
 
         default:
             return null;

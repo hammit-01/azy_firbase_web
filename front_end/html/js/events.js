@@ -692,6 +692,7 @@ export function bindEvents() {
                     try {
                         await deletePrice(id);
                         _logActivity("price", id, "삭제", original, null, "전략단가 삭제");
+                        pushUndo({ type: "price-delete", restoreData: original });
                         showToast("✓ 삭제됨");
                     } catch (err) {
                         showError(err.message || "삭제에 실패했습니다.");
@@ -713,6 +714,7 @@ export function bindEvents() {
                         try {
                             await updatePrice(id, fields);
                             _logActivity("price", id, "수정", original, fields, "전략단가 수정");
+                            pushUndo({ type: "price-update", id, prevData: original });
                             showToast("✓ 저장됨");
                         } catch (err) {
                             showError(err.message || "저장에 실패했습니다.");
@@ -908,7 +910,10 @@ async function handleClick(e) {
         try {
             const res = await createPrice(fields);
             showToast("✓ 추가됨");
-            if (res?.id) _logActivity("price", res.id, "삽입", null, fields, `${fields.품목} 전략단가 추가`);
+            if (res?.id) {
+                _logActivity("price", res.id, "삽입", null, fields, `${fields.품목} 전략단가 추가`);
+                pushUndo({ type: "price-insert", newId: res.id });
+            }
             renderPriceTab();
         } catch (err) {
             showError(err.message || "추가에 실패했습니다.");
@@ -1168,6 +1173,7 @@ async function handleClick(e) {
         try {
             await updatePrice(id, result);
             _logActivity("price", id, "수정", original, result, "전략단가 수정");
+            pushUndo({ type: "price-update", id, prevData: original });
             showToast("✓ 저장됨");
         } catch (err) {
             showError(err.message || "저장에 실패했습니다.");
@@ -1183,6 +1189,7 @@ async function handleClick(e) {
         try {
             await deletePrice(id);
             _logActivity("price", id, "삭제", original, null, "전략단가 삭제");
+            pushUndo({ type: "price-delete", restoreData: original });
             showToast("✓ 삭제됨");
         } catch (err) {
             showError(err.message || "삭제에 실패했습니다.");
@@ -1670,6 +1677,7 @@ async function handleClick(e) {
         state.crudData = null;
         await fetchAllData();
         await refreshReservationViews();
+        await renderPriceTab();
         return;
     }
 
