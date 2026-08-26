@@ -819,9 +819,10 @@ th.sort-active {
     color: #1e293b;
 }
 
-/* ── 예약 현황 / 타창고매출현황 / 전략단가 탭(2026-08-18, 뒤 둘은 sales.html·
-   price.html에서 이관) ── */
-.reservations-container, .sales-container, .price-container {
+/* ── 예약 현황 / 타창고매출현황 / 전략단가 / 발주장 탭(2026-08-18, sales.html·
+   price.html에서 이관; 발주장은 2026-08-24 추가인데 이 규칙에서 빠져있어서
+   overflow:auto가 안 걸리고 스크롤바가 안 생기던 문제를 2026-08-26에 수정) ── */
+.reservations-container, .sales-container, .price-container, .order-sheet-container {
     flex: 1;
     overflow-y: auto;
     /* 액션 버튼이 3개(수량변경/사용완료/홀딩취소)로 늘어나면서 표가 컨테이너보다
