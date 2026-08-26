@@ -1009,7 +1009,7 @@ function salesAccess(r) {
 // 단순 토글(outbound.등록)로 동작.
 function registerCheckboxHtml(r, canOthers = true) {
     return canOthers
-        ? `<input type="checkbox" class="outbound-register-check" data-id="${r.id}" ${r.등록 ? "checked" : ""}>`
+        ? `<input type="checkbox" class="outbound-register-check" data-id="${r.id}" data-preview="${r._preview ? "1" : ""}" ${r.등록 ? "checked" : ""}>`
         : "";
 }
 
@@ -1082,9 +1082,12 @@ function reservationCardHtml(r, isSalesPage = false) {
     const completed = isSalesPage && r.status === "COMPLETED";
     const isPreview = isSalesPage && !!r._preview;
     // 출고일이 오늘 또는 내일인 행은 완료/내림/등록완료까지 전부 허용(2026-08-24) —
-    // 그보다 먼 미래는 변경/취소만. 단, 내림/완료/등록완료는 실제 outbound 행에만
-    // 뜻이 있어서 isPreview(아직 outbound로 안 넘어간 ACTIVE 예약, id가 outbound
-    // id가 아님)면 날짜와 무관하게 계속 막는다 — 각 버튼에서 !isPreview로 따로 체크.
+    // 그보다 먼 미래는 변경/취소만. 내림/완료는 실제 outbound 행에만 뜻이 있어서
+    // isPreview(아직 outbound로 안 넘어간 ACTIVE 예약, id가 outbound id가 아님)면
+    // 날짜와 무관하게 계속 막는다(각 버튼에서 !isPreview로 따로 체크) — 단
+    // "수정중"(등록)은 holding_records/azy_holding_records에도 같은 컬럼이 있어
+    // preview 행도 지원(2026-08-26, registerCheckboxHtml의 data-preview로 저장
+    // 대상 테이블을 구분해 이벤트 핸들러가 갈라 처리).
     const limitedActions = isSalesPage && !completed
         && safeValue(r.출고일) !== todayISOStr() && safeValue(r.출고일) !== tomorrowISOStr();
     // 다음날짜(내일) 출고예정 건은 취소 버튼 자체를 없앰(2026-08-24) — 변경으로
@@ -1099,7 +1102,7 @@ function reservationCardHtml(r, isSalesPage = false) {
         <div class="mobile-card reservation-card${completed ? " sales-completed-row" : managerColorClass ? ` ${managerColorClass}` : ""}" data-reservation-id="${r.id}">
             <div class="mc-header">
                 ${noteBtn(r, isSalesPage && !isPreview, access.canEditNote)}
-                ${!limitedActions && !isPreview && isSalesPage && access.canOthers ? `<label class="mc-register-label">${registerCheckboxHtml(r, access.canOthers)} 수정중</label>` : ""}
+                ${!limitedActions && isSalesPage && access.canOthers ? `<label class="mc-register-label">${registerCheckboxHtml(r, access.canOthers)} 수정중</label>` : ""}
                 <span class="mc-name">${safeValue(r.상품명)}</span>
                 ${whTag(r.창고)}
             </div>
@@ -1192,7 +1195,7 @@ function reservationRowHtml(r, isSalesPage = false) {
         <tr data-reservation-id="${r.id}"${rowClass ? ` class="${rowClass}"` : ""}>
             <td class="reservation-note-cell">${noteBtn(r, isSalesPage && !isPreview, access.canEditNote)}</td>
             ${isSalesPage ? `<td class="${access.canEditRemark ? "sales-remark-cell" : ""}" data-id="${r.id}" data-remark="${attrEscape(r.비고)}" data-preview="${isPreview ? "1" : ""}" title="${access.canEditRemark ? "더블클릭해서 수정" : ""}">${safeValue(r.비고)}</td>` : ""}
-            ${isSalesPage ? `<td class="reservation-register-cell">${limitedActions || isPreview ? "" : registerCheckboxHtml(r, access.canOthers)}</td>` : ""}
+            ${isSalesPage ? `<td class="reservation-register-cell">${limitedActions ? "" : registerCheckboxHtml(r, access.canOthers)}</td>` : ""}
             <td>${safeValue(r.담당자) || "(미지정)"}</td>
             <td>${safeValue(r.상품명)}</td>
             <td>${safeValue(r.브랜드)}</td>

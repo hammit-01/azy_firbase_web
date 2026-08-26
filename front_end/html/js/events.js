@@ -3,7 +3,7 @@ import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, 
 import { renderSelectData, renderInsert, createInsertRow } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
-import { getReservationsByPk, cancelReservation, useReservation, updateReservation, updateOutbound, cancelOutbound, createOutbound, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, toggleOutboundStockRelease, toggleOutboundSlip, toggleOutboundDeliveryCancel, createPrice, updatePrice, deletePrice } from "./firestoreService.js";
+import { getReservationsByPk, cancelReservation, useReservation, updateReservation, toggleReservationRegister, updateOutbound, cancelOutbound, createOutbound, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, toggleOutboundStockRelease, toggleOutboundSlip, toggleOutboundDeliveryCancel, createPrice, updatePrice, deletePrice } from "./firestoreService.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
@@ -410,14 +410,18 @@ export function bindEvents() {
         if (e.target.classList.contains("outbound-register-check")) {
             const id = e.target.dataset.id;
             const checkbox = e.target;
+            const isPreview = checkbox.dataset.preview === "1";
             checkbox.disabled = true;
             // 체크한 사람 이름을 같이 보내서 서버가 수정자 컬럼에 기록(2026-08-25) —
             // 행 색을 "지금 보는 사람"이 아니라 "실제로 체크한 사람" 기준으로
-            // 모두에게 동일하게 보여주기 위함.
-            toggleOutboundRegister(id, getStoredUser()?.이름 || "")
+            // 모두에게 동일하게 보여주기 위함. 익일 이후 출고 예정(미리보기) 행은
+            // 아직 outbound가 아니라 원본 예약에 저장(2026-08-26).
+            const toggleFn = isPreview ? toggleReservationRegister : toggleOutboundRegister;
+            const undoType = isPreview ? "reservation-toggle-register" : "outbound-toggle-register";
+            toggleFn(id, getStoredUser()?.이름 || "")
                 .then(() => {
-                    pushUndo({ type: "outbound-toggle-register", id });
-                    _logActivity("outbound", id, "등록완료토글", null, null, "등록완료 체크 토글");
+                    pushUndo({ type: undoType, id });
+                    _logActivity(isPreview ? "reservation" : "outbound", id, "등록완료토글", null, null, "등록완료 체크 토글");
                     refreshReservationViews();
                 })
                 .catch((err) => {

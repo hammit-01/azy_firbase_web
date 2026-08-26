@@ -678,6 +678,25 @@ def update_reservation(conn, rec_id: str, updates: dict) -> bool:
     return False
 
 
+def toggle_reservation_register(conn, rec_id: str, user_name: str = "") -> bool:
+    """익일 이후 출고 예정(미리보기) 건의 "수정중" 체크박스(2026-08-26) —
+    outbound.등록과 동일한 개념이지만 아직 outbound로 안 넘어간 예약 행이라
+    holding_records/azy_holding_records.등록을 직접 뒤집는다. toggle_outbound_
+    register와 동일하게 켤 때 수정자를 같이 기록, 끌 때는 비운다. 반환값은
+    바뀐 뒤의 값."""
+    with conn.cursor() as cur:
+        for hr_table in ("holding_records", "azy_holding_records"):
+            cur.execute(f"SELECT 등록 FROM {hr_table} WHERE id=%s AND status='ACTIVE' FOR UPDATE", (rec_id,))
+            row = cur.fetchone()
+            if not row:
+                continue
+            new_value = 0 if row["등록"] else 1
+            수정자 = user_name if new_value else ""
+            cur.execute(f"UPDATE {hr_table} SET 등록=%s, 수정자=%s WHERE id=%s", (new_value, 수정자, rec_id))
+            return bool(new_value)
+    raise ValueError("항목을 찾을 수 없거나 이미 종료됨")
+
+
 def _set_reservation_status(conn, rec_id: str, status: str) -> bool:
     from datetime import datetime
     from zoneinfo import ZoneInfo
@@ -778,7 +797,7 @@ def get_all_active_reservations(conn) -> list[dict]:
 _RESERVATION_COLS = (
     "id", "pk", "BL", "ESTNO", "등급", "수량", "홀딩", "출고일", "메모", "uid",
     "홀딩일자", "status", "stock_when_reserved", "available_when_reserved",
-    "stock_version_when_reserved", "released_at", "전달사항", "비고",
+    "stock_version_when_reserved", "released_at", "전달사항", "비고", "등록", "수정자",
 )
 
 
@@ -982,7 +1001,7 @@ def get_all_outbound(conn) -> list[dict]:
 
         for hr_table in ("holding_records", "azy_holding_records"):
             cur.execute(
-                f"SELECT id, pk, 수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, 전달사항, 비고 "
+                f"SELECT id, pk, 수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, 전달사항, 비고, 등록, 수정자 "
                 f"FROM {hr_table} WHERE status='ACTIVE' AND 출고일 != ''"
             )
             for row in cur.fetchall():
@@ -991,7 +1010,7 @@ def get_all_outbound(conn) -> list[dict]:
                     continue
                 result.append({
                     **row, **info, "status": "ACTIVE",
-                    "등록": None, "수량내림": None, "원수량": None, "수정자": None,
+                    "수량내림": None, "원수량": None,
                     "전표": None, "배송취소": None,
                     "_preview": True,
                 })

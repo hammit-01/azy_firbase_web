@@ -4,7 +4,7 @@ import {
     apiUpdateHoldingRecord, apiDeleteHoldingRecord, apiFetch,
     apiCreateReservation, apiCancelReservation, apiCompleteReservation, apiUseReservation,
     apiReactivateReservation,
-    apiUpdateReservation, apiRegisterOutboundFromReservation,
+    apiUpdateReservation, apiToggleReservationRegister, apiRegisterOutboundFromReservation,
     apiGetReservationsByPk, apiGetAllReservations,
     apiGetAllOutbound, apiGetOrderSheet, apiCreateOutbound, apiUpdateOutbound, apiCancelOutbound, apiUseOutbound,
     apiToggleOutboundComplete, apiToggleOutboundRegister, apiToggleOutboundStockRelease,
@@ -31,6 +31,9 @@ export async function reactivateReservation(id) {
 }
 export async function updateReservation(id, fields) {
     return apiUpdateReservation(id, fields);
+}
+export async function toggleReservationRegister(id, managerName = "") {
+    return apiToggleReservationRegister(id, managerName);
 }
 export async function registerOutboundFromReservation(id, fields) {
     return apiRegisterOutboundFromReservation(id, fields);

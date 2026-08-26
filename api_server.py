@@ -16,7 +16,7 @@ from pipeline.mysql_db import (
     upsert_azy_inventory, delete_azy_inventory,
     upsert_azy_holding_record, delete_azy_holding_record,
     create_reservation, cancel_reservation, complete_reservation, use_reservation,
-    reactivate_reservation, update_reservation,
+    reactivate_reservation, update_reservation, toggle_reservation_register,
     get_active_reservations_by_pk, get_all_active_reservations,
     migrate_due_reservations_to_outbound, get_all_outbound, get_order_sheet_rows, create_outbound,
     update_outbound, cancel_outbound, use_outbound, toggle_outbound_complete,
@@ -490,6 +490,17 @@ def update_reservation_endpoint(rec_id: str, body: UpdateReservationBody):
     if not ok:
         raise HTTPException(404, "예약을 찾을 수 없거나 이미 종료됨")
     return {"ok": True}
+
+
+@app.post("/api/reservations/{rec_id}/toggle_register")
+def toggle_reservation_register_endpoint(rec_id: str, body: dict[str, Any] = {}):
+    user_name = body.get("담당자") or ""
+    with get_conn() as conn:
+        try:
+            registered = toggle_reservation_register(conn, rec_id, user_name)
+        except ValueError as e:
+            raise HTTPException(404, str(e))
+    return {"등록": registered}
 
 
 class RegisterOutboundBody(BaseModel):

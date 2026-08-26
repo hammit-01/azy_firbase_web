@@ -168,6 +168,13 @@ export async function apiUpdateReservation(id, fields) {
     });
 }
 
+export async function apiToggleReservationRegister(id, managerName = "") {
+    return apiFetch(`/api/reservations/${encodeURIComponent(id)}/toggle_register`, {
+        method: "POST",
+        body: JSON.stringify({ 담당자: managerName }),
+    });
+}
+
 export async function apiRegisterOutboundFromReservation(id, { 수량, 출고일, 거래처 }) {
     return apiFetch(`/api/reservations/${encodeURIComponent(id)}/register_outbound`, {
         method: "POST",

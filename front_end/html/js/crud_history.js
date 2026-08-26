@@ -1,6 +1,6 @@
 import {
     updateItem, insertItem, moveHoldingToHistory, deleteItem as _deleteItem, cancelReservation,
-    createReservation, updateReservation, reactivateReservation,
+    createReservation, updateReservation, reactivateReservation, toggleReservationRegister,
     createOutbound, updateOutbound, cancelOutbound,
     toggleOutboundComplete, toggleOutboundRegister,
     toggleOutboundSlip, toggleOutboundDeliveryCancel,
@@ -126,6 +126,11 @@ function _buildFn(desc) {
 
         case "outbound-toggle-register":
             return async () => toggleOutboundRegister(desc.id, getStoredUser()?.이름 || "");
+
+        // 익일 이후 출고 예정(미리보기) 행의 "수정중" 되돌리기(2026-08-26) — 대칭
+        // 토글이라 한 번 더 누르면 원상복구.
+        case "reservation-toggle-register":
+            return async () => toggleReservationRegister(desc.id, getStoredUser()?.이름 || "");
 
         // 발주장(특판팀) 배송란 전표/취소 체크박스 — 대칭 토글이라 한 번 더
         // 누르면 그대로 원상복구(2026-08-26).
