@@ -789,7 +789,11 @@ def migrate_due_reservations_to_outbound(conn) -> int:
     """ACTIVE 예약 중 출고일이 오늘인 것을 outbound로 옮긴다(원본 삭제).
     sales.html이 목록을 불러올 때마다 먼저 호출해서 그 시점 기준 최신 상태로
     맞춘다. 옮겨진 뒤로는 실재고 가용성 계산(홀딩 합계)에서 빠진다 — 출고일이
-    오늘인 예약은 이미 출고 확정 단계로 보고 예약 단계 계산에서 제외."""
+    오늘인 예약은 이미 출고 확정 단계로 보고 예약 단계 계산에서 제외.
+
+    담당자(홀딩 컬럼)가 "제갈준"인 예약은 예외 — outbound로 넘기지 않고 예약
+    현황에 계속 ACTIVE로 남긴다(2026-08-26 사용자 요청: 출고일이 와도 자동으로
+    타창고매출현황으로 넘어가면 안 됨)."""
     today = _today_iso()
     moved = 0
     cols = ", ".join(f"`{c}`" for c in _RESERVATION_COLS)
@@ -797,7 +801,8 @@ def migrate_due_reservations_to_outbound(conn) -> int:
     for hr_table in ("holding_records", "azy_holding_records"):
         with conn.cursor() as cur:
             cur.execute(
-                f"SELECT * FROM {hr_table} WHERE status='ACTIVE' AND 출고일=%s FOR UPDATE",
+                f"SELECT * FROM {hr_table} WHERE status='ACTIVE' AND 출고일=%s "
+                f"AND (홀딩 IS NULL OR 홀딩 <> '제갈준') FOR UPDATE",
                 (today,),
             )
             rows = cur.fetchall()
