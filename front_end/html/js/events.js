@@ -3,7 +3,7 @@ import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, 
 import { renderSelectData, renderInsert, createInsertRow } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
-import { getReservationsByPk, cancelReservation, useReservation, updateReservation, updateOutbound, cancelOutbound, createOutbound, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, toggleOutboundStockRelease, createPrice, updatePrice, deletePrice } from "./firestoreService.js";
+import { getReservationsByPk, cancelReservation, useReservation, updateReservation, updateOutbound, cancelOutbound, createOutbound, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, toggleOutboundStockRelease, toggleOutboundSlip, toggleOutboundDeliveryCancel, createPrice, updatePrice, deletePrice } from "./firestoreService.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
@@ -419,6 +419,39 @@ export function bindEvents() {
                     pushUndo({ type: "outbound-toggle-register", id });
                     _logActivity("outbound", id, "등록완료토글", null, null, "등록완료 체크 토글");
                     refreshReservationViews();
+                })
+                .catch((err) => {
+                    checkbox.checked = !checkbox.checked;
+                    checkbox.disabled = false;
+                    showError(err.message || "처리에 실패했습니다.");
+                });
+        }
+        // 발주장(특판팀 전용) 배송란 — 전표/취소 체크박스(2026-08-26). 실제
+        // 출고/재고 로직과 무관한 서류상 표시라 outbound-register-check와 달리
+        // activity_log는 안 남기고 되돌리기만 지원.
+        if (e.target.classList.contains("order-sheet-slip-check")) {
+            const id = e.target.dataset.id;
+            const checkbox = e.target;
+            checkbox.disabled = true;
+            toggleOutboundSlip(id)
+                .then(() => {
+                    pushUndo({ type: "outbound-toggle-slip", id });
+                    renderOrderSheetTab();
+                })
+                .catch((err) => {
+                    checkbox.checked = !checkbox.checked;
+                    checkbox.disabled = false;
+                    showError(err.message || "처리에 실패했습니다.");
+                });
+        }
+        if (e.target.classList.contains("order-sheet-cancel-check")) {
+            const id = e.target.dataset.id;
+            const checkbox = e.target;
+            checkbox.disabled = true;
+            toggleOutboundDeliveryCancel(id)
+                .then(() => {
+                    pushUndo({ type: "outbound-toggle-delivery-cancel", id });
+                    renderOrderSheetTab();
                 })
                 .catch((err) => {
                     checkbox.checked = !checkbox.checked;
@@ -1698,6 +1731,7 @@ async function handleClick(e) {
         await fetchAllData();
         await refreshReservationViews();
         await renderPriceTab();
+        await renderOrderSheetTab();
         return;
     }
 

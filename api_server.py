@@ -21,6 +21,7 @@ from pipeline.mysql_db import (
     migrate_due_reservations_to_outbound, get_all_outbound, get_order_sheet_rows, create_outbound,
     update_outbound, cancel_outbound, use_outbound, toggle_outbound_complete,
     toggle_outbound_register, toggle_outbound_stock_release,
+    toggle_outbound_slip, toggle_outbound_delivery_cancel,
     register_outbound_from_reservation, _today_iso,
     get_all_prices, create_price, update_price, delete_price,
 )
@@ -597,6 +598,26 @@ def toggle_outbound_stock_release_endpoint(rec_id: str):
         except ValueError as e:
             raise HTTPException(400, str(e))
     return {"수량내림": released}
+
+
+@app.post("/api/outbound/{rec_id}/toggle_slip")
+def toggle_outbound_slip_endpoint(rec_id: str):
+    with get_conn() as conn:
+        try:
+            slip = toggle_outbound_slip(conn, rec_id)
+        except ValueError as e:
+            raise HTTPException(404, str(e))
+    return {"전표": slip}
+
+
+@app.post("/api/outbound/{rec_id}/toggle_delivery_cancel")
+def toggle_outbound_delivery_cancel_endpoint(rec_id: str):
+    with get_conn() as conn:
+        try:
+            cancelled = toggle_outbound_delivery_cancel(conn, rec_id)
+        except ValueError as e:
+            raise HTTPException(404, str(e))
+    return {"배송취소": cancelled}
 
 
 class UseOutboundBody(BaseModel):

@@ -969,7 +969,7 @@ def get_all_outbound(conn) -> list[dict]:
     판단하므로 여기서는 항상 같이 내려준다."""
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT id, pk, 수량, 원수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, status, 전달사항, 등록, 비고, 수량내림, 수정자 "
+            "SELECT id, pk, 수량, 원수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, status, 전달사항, 등록, 비고, 수량내림, 수정자, 전표, 배송취소 "
             "FROM outbound WHERE status IN ('ACTIVE','COMPLETED') ORDER BY 홀딩일자 DESC"
         )
         result = []
@@ -989,6 +989,7 @@ def get_all_outbound(conn) -> list[dict]:
                 result.append({
                     **row, **info, "status": "ACTIVE",
                     "등록": None, "비고": None, "수량내림": None, "원수량": None, "수정자": None,
+                    "전표": None, "배송취소": None,
                     "_preview": True,
                 })
         return result
@@ -1268,6 +1269,34 @@ def toggle_outbound_register(conn, rec_id: str, user_name: str = "") -> bool:
         new_value = 0 if row["등록"] else 1
         수정자 = user_name if new_value else ""
         cur.execute("UPDATE outbound SET 등록=%s, 수정자=%s WHERE id=%s", (new_value, 수정자, rec_id))
+        return bool(new_value)
+
+
+def toggle_outbound_slip(conn, rec_id: str) -> bool:
+    """발주장(특판팀 전용, 2026-08-26) "전표" 체크박스 토글 — 배송 전표를
+    발행했는지만 표시하는 서류상 체크로, 실제 출고/재고 로직과는 무관.
+    반환값은 바뀐 뒤의 값."""
+    with conn.cursor() as cur:
+        cur.execute("SELECT 전표 FROM outbound WHERE id=%s AND status IN ('ACTIVE','COMPLETED') FOR UPDATE", (rec_id,))
+        row = cur.fetchone()
+        if not row:
+            raise ValueError("항목을 찾을 수 없거나 이미 취소됨")
+        new_value = 0 if row["전표"] else 1
+        cur.execute("UPDATE outbound SET 전표=%s WHERE id=%s", (new_value, rec_id))
+        return bool(new_value)
+
+
+def toggle_outbound_delivery_cancel(conn, rec_id: str) -> bool:
+    """발주장(특판팀 전용, 2026-08-26) "취소" 체크박스 토글 — 배송 취소 여부를
+    표시하는 서류상 체크. status 기반 실제 취소(cancel_outbound)와는 별개의
+    독립적인 플래그. 반환값은 바뀐 뒤의 값."""
+    with conn.cursor() as cur:
+        cur.execute("SELECT 배송취소 FROM outbound WHERE id=%s AND status IN ('ACTIVE','COMPLETED') FOR UPDATE", (rec_id,))
+        row = cur.fetchone()
+        if not row:
+            raise ValueError("항목을 찾을 수 없거나 이미 취소됨")
+        new_value = 0 if row["배송취소"] else 1
+        cur.execute("UPDATE outbound SET 배송취소=%s WHERE id=%s", (new_value, rec_id))
         return bool(new_value)
 
 

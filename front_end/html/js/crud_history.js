@@ -3,6 +3,7 @@ import {
     createReservation, updateReservation, reactivateReservation,
     createOutbound, updateOutbound, cancelOutbound,
     toggleOutboundComplete, toggleOutboundRegister,
+    toggleOutboundSlip, toggleOutboundDeliveryCancel,
     createPrice, updatePrice, deletePrice,
 } from "./firestoreService.js";
 import { showToast, showError } from "./ui.js";
@@ -119,6 +120,14 @@ function _buildFn(desc) {
 
         case "outbound-toggle-register":
             return async () => toggleOutboundRegister(desc.id, getStoredUser()?.이름 || "");
+
+        // 발주장(특판팀) 배송란 전표/취소 체크박스 — 대칭 토글이라 한 번 더
+        // 누르면 그대로 원상복구(2026-08-26).
+        case "outbound-toggle-slip":
+            return async () => toggleOutboundSlip(desc.id);
+
+        case "outbound-toggle-delivery-cancel":
+            return async () => toggleOutboundDeliveryCancel(desc.id);
 
         // sales.html "추가"로 새로 만든 출고건 — 되돌리기 = 완전 삭제(원래 없던 행이라
         // 예약으로 되돌릴 대상 자체가 없음)

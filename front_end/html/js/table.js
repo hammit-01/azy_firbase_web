@@ -1828,12 +1828,17 @@ export async function renderPriceTab() {
 // 발주장 탭(2026-08-24) — 부서별_발주장.md 아티팩트를 실제 탭으로 옮긴 것.
 // 로그인한 사용자의 부서(employees.부서, get_order_sheet_rows가 담당자 이름으로
 // 붙여줌) 것만 클라이언트에서 걸러 보여준다. 읽기 전용(수정/취소는 예약현황·
-// 타창고매출현황 탭에서).
+// 타창고매출현황 탭에서) — 단, 특판팀은 배송란(전표/취소 체크박스, 2026-08-26)
+// 예외로 이 탭에서 바로 체크 가능(실제 출고/재고 로직과는 무관한 서류상 표시).
 // =========================
-function orderSheetRowHtml(r, isNewGroup) {
+function orderSheetRowHtml(r, isNewGroup, showDeliveryCols) {
     const qty = r.수량내림 && r.원수량
         ? `<span class="qty-dropped">${safeValue(r.원수량)}</span>`
         : safeValue(r.수량);
+    const deliveryCols = showDeliveryCols && !r._preview ? `
+            <td><input type="checkbox" class="order-sheet-slip-check" data-id="${r.id}" ${r.전표 ? "checked" : ""}></td>
+            <td><input type="checkbox" class="order-sheet-cancel-check" data-id="${r.id}" ${r.배송취소 ? "checked" : ""}></td>
+    ` : (showDeliveryCols ? `<td></td><td></td>` : "");
     return `
         <tr data-reservation-id="${r.id}"${isNewGroup ? ' class="order-sheet-group-start"' : ""}>
             <td class="order-sheet-manager">${safeValue(r.담당자)}</td>
@@ -1848,7 +1853,7 @@ function orderSheetRowHtml(r, isNewGroup) {
             <td>${whTag(r.창고)}</td>
             <td>${safeValue(r.비고)}</td>
             <td>${safeValue(r.전달사항)}</td>
-            <td>${safeValue(r.출고일)}</td>
+            <td>${safeValue(r.출고일)}</td>${deliveryCols}
         </tr>
     `;
 }
@@ -1871,6 +1876,8 @@ export async function renderOrderSheetTab() {
     // 출고일이 오늘인 것만(2026-08-26 사용자 요청) — 지난 날짜/미래 예정 건은
     // 발주장에서 안 보이고 예약현황·타창고매출현황에서 계속 확인 가능.
     rows = rows.filter(r => safeValue(r.출고일) === todayISOStr());
+    // 배송란(전표/취소 체크박스, 2026-08-26) — 특판팀 발주장에서만 노출.
+    const showDeliveryCols = myDept === "특판팀";
 
     // 검색/창고/브랜드/담당자 필터 — 예약현황·타창고매출현황과 동일 방식
     // (2026-08-26). 옵션 목록은 필터 적용 전(부서로만 걸러진) rows 기준.
@@ -1889,7 +1896,7 @@ export async function renderOrderSheetTab() {
     // 출고일 → 담당자 순 정렬인데 담당자 칸이 아예 안 보여서 어느 행이 누구
     // 것인지 구분이 안 되던 문제(2026-08-26, "가독성 떨어진다" 피드백) — 담당자
     // 열 추가 + 담당자가 바뀌는 지점마다 굵은 구분선을 넣어 묶음이 눈에 띄게.
-    const rowsHtml = rows.map((r, i) => orderSheetRowHtml(r, i === 0 || r.담당자 !== rows[i - 1].담당자)).join("");
+    const rowsHtml = rows.map((r, i) => orderSheetRowHtml(r, i === 0 || r.담당자 !== rows[i - 1].담당자, showDeliveryCols)).join("");
     listEl.innerHTML = `
         <div class="reservations-filter-bar">${filterControlsHtml}</div>
         <table class="reservations-table order-sheet-table">
@@ -1907,11 +1914,14 @@ export async function renderOrderSheetTab() {
                 <col style="width:7%">  <!--비고-->
                 <col style="width:9%">  <!--전달사항-->
                 <col style="width:6%">  <!--출고일-->
+                ${showDeliveryCols ? `
+                <col style="width:5%">  <!--전표-->
+                <col style="width:5%">  <!--취소-->` : ""}
             </colgroup>
             <thead>
                 <tr>
                     <th>담당자</th><th>거래처</th><th>품목</th><th>브랜드</th><th>등급</th><th>EST</th>
-                    <th>박스</th><th>단가</th><th>BL</th><th>창고</th><th>비고</th><th>전달사항</th><th>출고일</th>
+                    <th>박스</th><th>단가</th><th>BL</th><th>창고</th><th>비고</th><th>전달사항</th><th>출고일</th>${showDeliveryCols ? `<th>전표</th><th>취소</th>` : ""}
                 </tr>
             </thead>
             <tbody>${rowsHtml}</tbody>
