@@ -1037,19 +1037,38 @@ tr.outbound-insert-row input[type="date"].cell-input::-webkit-calendar-picker-in
 /* 전략단가 "추가" 입력행 + 더블클릭 행수정 — 위 outbound-insert-row와 같은
    "빈칸처럼 보이다 포커스 때만 티나는" 스타일(2026-08-19). */
 tr.price-insert-row .cell-input,
-.price-edit-input {
+tr.price-row .price-edit-input {
     width: 100%;
     box-sizing: border-box;
     margin-top: 0;
-    padding: 6px 6px;
     border: 1.5px solid transparent;
     border-radius: 6px;
     font-size: 14px;
     font-family: inherit;
     color: #334155;
     background: transparent;
-    text-align: center;
     transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+tr.price-insert-row .cell-input {
+    padding: 6px 6px;
+    text-align: center;
+}
+/* 더블클릭 수정 모드 — 평소 표시 상태(.reservations-table td: 왼쪽 정렬,
+   패딩 없이 td 자체 패딩만 사용)와 똑같이 보이도록 인풋 자체 패딩/정렬을
+   없앰(2026-08-26, "수정 전후 행 UI가 달라 불편하다" 피드백). 선택자에
+   tr.price-row를 붙인 건 장식이 아니라 필수 — 전역 input:not([type="checkbox"])
+   규칙(스타일시트 뒤쪽)이 클래스 단독 선택자보다 우선순위가 높아서 그냥
+   .price-edit-input로는 이 규칙 전체가 무시되고 있었음. */
+tr.price-row .price-edit-input {
+    padding: 0;
+    text-align: left;
+}
+/* 평중/도매가 칸의 굵은 빨간 강조(.price-highlight)가 수정 모드에서도
+   그대로 유지되게 — 안 그러면 입력창 안 글자만 색이 옅어져 보임. 위
+   tr.price-row .price-edit-input의 color보다 더 구체적이어야 이긴다. */
+tr.price-row .price-highlight .price-edit-input {
+    color: inherit;
+    font-weight: inherit;
 }
 tr.price-insert-row .cell-input:hover,
 .price-edit-input:hover {
