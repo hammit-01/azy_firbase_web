@@ -918,6 +918,11 @@ th.sort-active {
     border-bottom: 1px solid #f1f5f9;
     white-space: nowrap;
 }
+/* 발주장(2026-08-24, 2026-08-26 가독성 개선) — 담당자 열을 강조하고, 정렬
+   기준인 담당자가 바뀌는 지점마다 굵은 구분선을 넣어 한 사람 몫씩 묶어 보이게. */
+.order-sheet-table .order-sheet-manager { font-weight: 700; color: #0f766e; }
+.order-sheet-table tr.order-sheet-group-start td { border-top: 2px solid #cbd5e1; }
+
 /* 타창고매출현황 — 출고완료 표시(2026-08-14, 2026-08-19 취소선 빼고 노란
    배경만 남김). 맨 뒤 정렬은 table.js에서 처리. */
 /* 짝수행 줄무늬(tbody tr:nth-child(even) td, 전역 규칙)가 특이도에서 이겨서

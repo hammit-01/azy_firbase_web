@@ -1830,12 +1830,13 @@ export async function renderPriceTab() {
 // 붙여줌) 것만 클라이언트에서 걸러 보여준다. 읽기 전용(수정/취소는 예약현황·
 // 타창고매출현황 탭에서).
 // =========================
-function orderSheetRowHtml(r) {
+function orderSheetRowHtml(r, isNewGroup) {
     const qty = r.수량내림 && r.원수량
         ? `<span class="qty-dropped">${safeValue(r.원수량)}</span>`
         : safeValue(r.수량);
     return `
-        <tr data-reservation-id="${r.id}">
+        <tr data-reservation-id="${r.id}"${isNewGroup ? ' class="order-sheet-group-start"' : ""}>
+            <td class="order-sheet-manager">${safeValue(r.담당자)}</td>
             <td>${clientPrefix(r.거래처)}</td>
             <td>${safeValue(r.상품명)}</td>
             <td>${safeValue(r.브랜드)}</td>
@@ -1872,29 +1873,34 @@ export async function renderOrderSheetTab() {
     );
 
     const empty = rows.length ? "" : `<p class="reservations-empty">${myDept ? `${myDept} 발주 항목이 없습니다.` : "소속 부서 정보가 없습니다."}</p>`;
+    // 출고일 → 담당자 순 정렬인데 담당자 칸이 아예 안 보여서 어느 행이 누구
+    // 것인지 구분이 안 되던 문제(2026-08-26, "가독성 떨어진다" 피드백) — 담당자
+    // 열 추가 + 담당자가 바뀌는 지점마다 굵은 구분선을 넣어 묶음이 눈에 띄게.
+    const rowsHtml = rows.map((r, i) => orderSheetRowHtml(r, i === 0 || r.담당자 !== rows[i - 1].담당자)).join("");
     listEl.innerHTML = `
-        <table class="reservations-table">
+        <table class="reservations-table order-sheet-table">
             <colgroup>
-                <col style="width:8%">  <!--거래처-->
-                <col style="width:14%"> <!--품목-->
-                <col style="width:8%">  <!--브랜드-->
+                <col style="width:7%">  <!--담당자-->
+                <col style="width:7%">  <!--거래처-->
+                <col style="width:12%"> <!--품목-->
+                <col style="width:7%">  <!--브랜드-->
                 <col style="width:5%">  <!--등급-->
                 <col style="width:5%">  <!--EST-->
                 <col style="width:5%">  <!--박스-->
                 <col style="width:6%">  <!--단가-->
-                <col style="width:13%"> <!--BL-->
-                <col style="width:8%">  <!--창고-->
-                <col style="width:8%">  <!--비고-->
-                <col style="width:10%"> <!--전달사항-->
-                <col style="width:7%">  <!--출고일-->
+                <col style="width:12%"> <!--BL-->
+                <col style="width:7%">  <!--창고-->
+                <col style="width:7%">  <!--비고-->
+                <col style="width:9%">  <!--전달사항-->
+                <col style="width:6%">  <!--출고일-->
             </colgroup>
             <thead>
                 <tr>
-                    <th>거래처</th><th>품목</th><th>브랜드</th><th>등급</th><th>EST</th>
+                    <th>담당자</th><th>거래처</th><th>품목</th><th>브랜드</th><th>등급</th><th>EST</th>
                     <th>박스</th><th>단가</th><th>BL</th><th>창고</th><th>비고</th><th>전달사항</th><th>출고일</th>
                 </tr>
             </thead>
-            <tbody>${rows.map(orderSheetRowHtml).join("")}</tbody>
+            <tbody>${rowsHtml}</tbody>
         </table>
         ${empty}
     `;
