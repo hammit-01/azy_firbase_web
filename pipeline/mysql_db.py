@@ -504,9 +504,10 @@ def create_reservation(conn, product: dict) -> dict:
         cur.execute(
             f"SELECT id, pk, 재고, stock_version FROM {table} WHERE 상품명=%s AND 브랜드=%s "
             f"AND 등급=%s AND ESTNO=%s AND BL=%s AND 창고=%s AND COALESCE(상태, '')=%s "
-            f"AND 수집일 != '' FOR UPDATE",
+            f"AND COALESCE(유통기한, '')=%s AND 수집일 != '' FOR UPDATE",
             (product["상품명"], product.get("브랜드", ""), product.get("등급", ""),
-             product.get("ESTNO", ""), product["BL"], product["창고"], product.get("상태", "")),
+             product.get("ESTNO", ""), product["BL"], product["창고"], product.get("상태", ""),
+             product.get("유통기한", "")),
         )
         matches = cur.fetchall()
         if len(matches) != 1:
