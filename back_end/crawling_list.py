@@ -1,9 +1,17 @@
 import re
+import logging
 from bs4 import BeautifulSoup
 import pandas as pd
 from back_end.eda_common import eda_common
 from requests.exceptions import RequestException, Timeout, ConnectionError
 from back_end.eda_column import jns,beige,samil,sinu,huichang,aurora,hyosung,eastbelly,swc,ch,daechung,hanladt,hanla,gangdong1,gangdong2,gyungin,plaza,samjin1,samjin2,cs,daejae,irn
+
+# print()만 쓰던 걸 로거로 바꿈(2026-08-28) — pipeline/scheduler.py가 root logging을
+# 파일 핸들러로 구성해두므로(propagate 기본값 True) 이름만 있으면 pipeline.log에
+# 자동으로 남는다. 20개 창고 동시 병렬 크롤 중 로그인 타임아웃/연결오류가 print로만
+# 찍혀서 로그 파일엔 전혀 안 남고 있었음 — 그래서 "실패 창고"가 매 사이클 거의
+# 전부인데도 몇 달째 아무도 원인을 못 봤다(경인 stale 재고 조사 중 발견).
+log = logging.getLogger("crawling_list")
 
 # 실제 브라우저와 유사한 UA — 세션 하나 동안은 절대 바꾸지 않음(중간에 바뀌면 오히려 봇 신호)
 USER_AGENT = (
@@ -156,16 +164,16 @@ def login(session, ip_port, path, id, pw, warehouse):
             raise Exception("로그인 실패 (원인 불명)")
 
     except Timeout:
-        print(f"[{warehouse}] 서버 응답 시간 초과")
+        log.warning(f"[{warehouse}] 로그인 서버 응답 시간 초과")
 
     except ConnectionError:
-        print(f"[{warehouse}] 서버 연결 실패")
+        log.warning(f"[{warehouse}] 로그인 서버 연결 실패")
 
     except RequestException as e:
-        print(f"[{warehouse}] HTTP 오류: {e}")
+        log.warning(f"[{warehouse}] 로그인 HTTP 오류: {e}")
 
     except Exception as e:
-        print(f"[{warehouse}] 로그인 오류: {e}")
+        log.warning(f"[{warehouse}] 로그인 오류: {e}")
 
     return None
 
