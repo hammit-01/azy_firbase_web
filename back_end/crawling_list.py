@@ -243,8 +243,12 @@ def get_data(session, ip_port, path, scustcd, scmdept, warehouse, date=None):
         return pd.DataFrame(data)
 
     except Exception as e:
+        # 예전엔 여기서 빈 DataFrame을 반환해서 "진짜 네트워크/파싱 오류"와
+        # "실제로 재고 0"이 똑같이 보였다(2026-08-28) — 호출부(crawler.py의
+        # _crawl_single_row)가 이미 이 함수를 try/except로 감싸고 있으니
+        # 그쪽에서 정상적으로 실패로 처리되도록 그대로 올려보낸다.
         print(f"데이터 수집 실패: {e}")
-        return pd.DataFrame()
+        raise
 
 
 def get_eastbelly_brand_map(session, scustcd, scmdept) -> dict:

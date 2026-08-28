@@ -44,6 +44,10 @@ def _crawl_single_row(row: pd.Series, session_cache: dict, cache_lock: threading
     ip_port   = str(row["ip포트"])
     path      = str(row["약식주소"])
     frames    = []
+    # 계정 하나라도 로그인+조회가 실제로 끝까지 성공했는지(결과가 비어있어도) —
+    # "성공했지만 진짜 재고 0"과 "로그인/조회 자체가 실패"를 구분해서 stale
+    # 삭제 판단에 쓰기 위함(2026-08-28, 아래 return 참고).
+    had_success = False
 
     users = get_users(row)
     if warehouse in _DUPLICATE_ACCOUNT_WAREHOUSES:
@@ -79,7 +83,11 @@ def _crawl_single_row(row: pd.Series, session_cache: dict, cache_lock: threading
                     session_cache[cache_key] = session
                 data = get_data(session, ip_port, path, scustcd, scmdept, warehouse)
 
-            if data is None or data.empty:
+            if data is None:
+                # 재로그인 직후에도 세션 만료 신호 — 이 계정은 실패로 취급
+                continue
+            had_success = True  # 여기까지 왔으면 로그인+조회 자체는 성공(빈 결과 포함)
+            if data.empty:
                 continue
 
             if warehouse == "이스트밸리" and "B/L NO,식별번호" in data.columns:
@@ -107,7 +115,16 @@ def _crawl_single_row(row: pd.Series, session_cache: dict, cache_lock: threading
                 dead.close()
             log.error(f"  [{warehouse}] {user_type} 오류: {e}")
 
-    return warehouse, pd.concat(frames, ignore_index=True) if frames else None
+    if frames:
+        return warehouse, pd.concat(frames, ignore_index=True)
+    if had_success:
+        # 로그인/조회는 됐는데 진짜로 재고가 0건 — None(실패)이 아니라 빈
+        # DataFrame으로 돌려줘야 호출부의 stale 삭제 로직이 이 창고를 정상
+        # 크롤된 것으로 보고 오래된 재고 행을 지운다(2026-08-28 버그 수정 —
+        # 예전엔 이 경우도 None으로 뭉뚱그려져서 실제 재고 0인 창고의 옛
+        # 행이 다시 뭔가 입고될 때까지 영원히 안 지워졌음, 경인 9일째 방치 발견).
+        return warehouse, pd.DataFrame()
+    return warehouse, None
 
 
 class CrawlerPool:

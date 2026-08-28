@@ -321,9 +321,17 @@ def run_pipeline():
             # 1. 병렬 크롤링 (JNS 제외 — 별도 잡에서 독립 실행)
             results = crawler.crawl_all(exclude=[JNS_WAREHOUSE])
 
-            failed = [w for w, df in results.items() if df is None or (hasattr(df, "empty") and df.empty)]
+            # df가 None이면 진짜 실패(로그인/조회 자체가 안 됨), 빈 DataFrame이면
+            # 로그인·조회는 성공했는데 실제로 재고가 0건 — 둘을 한 목록으로 뭉뚱그리면
+            # "매 사이클 거의 다 실패"처럼 보여서 진짜 실패를 못 알아채게 된다
+            # (2026-08-28, crawler.py의 _crawl_single_row가 이제 이 둘을 구분해서
+            # 반환하므로 로그도 따로 남긴다).
+            failed = [w for w, df in results.items() if df is None]
+            empty = [w for w, df in results.items() if df is not None and hasattr(df, "empty") and df.empty]
             if failed:
                 log.warning(f"실패 창고: {', '.join(failed)}")
+            if empty:
+                log.info(f"재고 0건 창고: {', '.join(empty)}")
 
             # 2. 정규화 (타창고 → azy_inventory. JNS는 어차피 crawl_all에서 빠졌으니 빈 값)
             _normalized, azy_normalized, handmade_ok = crawler.normalize(results)
