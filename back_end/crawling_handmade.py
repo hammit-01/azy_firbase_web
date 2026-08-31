@@ -27,6 +27,18 @@ def cleanup_orphaned_chrome():
         pass
 
 
+def _get_login(warehouse: str) -> tuple[str, str]:
+    """셀레니움 창고(에이스/견우오아시스/유상/고려/미빙냉장) 아이디/비밀번호를
+    소스코드 하드코딩 대신 DB(warehouse_login)에서 조회(2026-08-31, 사용자 요청 —
+    이 계정들이 git에 평문으로 그대로 커밋돼 있던 문제 발견 후 이전)."""
+    from pipeline.mysql_db import get_conn, get_warehouse_login
+    with get_conn() as conn:
+        row = get_warehouse_login(conn, warehouse)
+    if not row:
+        raise RuntimeError(f"warehouse_login 테이블에 '{warehouse}' 로그인 정보가 없습니다")
+    return row["아이디"], row["비밀번호"]
+
+
 def _selenium_driver():
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
@@ -187,7 +199,7 @@ def _ecms_fetch_cached(key, base_url, instock_url, user, pw):
     return records
 
 
-# 미빙냉장 (eCSMS, 로그인 az0810/0101 확인 완료)
+# 미빙냉장 (eCSMS, 로그인 정보는 warehouse_login 테이블 참고)
 # TODO: DevExpress Blazor 그리드(dxbl-grid)라 고려/유상의 <table> 파싱이 안 먹힘.
 #       현재 실 재고 0건이라 그리드 DOM 구조 미확인 — 실제 재고 들어오면 구조 보고 파서 교체할 것.
 def mibing_eda():
@@ -195,9 +207,10 @@ def mibing_eda():
     # 같은 기간 조회라 실제 현재고와 안 맞음 — 재고현황(2)("instockpage2prime")가
     # 진짜 현재 시점 스냅샷이라 이걸로 교체(2026-08-12, 고려/유상 라이브 데이터로
     # 컬럼 위치까지 교차검증 완료. 컬럼 배치가 (1)과 달라 인덱스도 같이 바뀜).
+    user, pw = _get_login("미빙냉장")
     records = _ecms_fetch_cached(
         "미빙냉장", "http://112.170.18.24/", "http://112.170.18.24/instockpage2prime",
-        "az0810", "0101",
+        user, pw,
     )
 
     if records is None:
@@ -236,9 +249,10 @@ def korea_eda():
     # 같은 기간 조회라 실제 현재고와 안 맞음 — 재고현황(2)("instockpage2prime")가
     # 진짜 현재 시점 스냅샷이라 이걸로 교체(2026-08-12, 라이브 데이터 BL 교차검증으로
     # 컬럼 위치 확인. 컬럼 배치가 (1)과 달라 인덱스도 같이 바뀜).
+    user, pw = _get_login("고려")
     records = _ecms_fetch_cached(
         "고려", "http://krcs.itfarm.co.kr/", "http://krcs.itfarm.co.kr/instockpage2prime",
-        "az0810", "0101",
+        user, pw,
     )
 
     if records is None:
@@ -283,11 +297,17 @@ def _ace_login(driver):
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
     from selenium.webdriver.common.by import By
+    user, pw = _get_login(_ACE_KEY)
     wait = WebDriverWait(driver, 15)
     driver.get("https://cs.acecs.co.kr/IL6/")
     time.sleep(3)
-    wait.until(EC.element_to_be_clickable((By.ID, "UserID"))).send_keys("AZ0810")
-    driver.find_element(By.ID, "UserPw").send_keys("0101")
+    wait.until(EC.element_to_be_clickable((By.ID, "UserID"))).send_keys(user)
+    # 비밀번호 필드는 click()으로 포커스를 먼저 주지 않으면 send_keys가 씹혀서
+    # 빈 값으로 로그인 시도되는 경우가 있었음(2026-08-31, 에이스 로그인 장애
+    # 조사 중 재현 — 이번 장애의 원인은 아니었지만 잠재 버그라 같이 고침).
+    pw_field = driver.find_element(By.ID, "UserPw")
+    pw_field.click()
+    pw_field.send_keys(pw)
     for b in driver.find_elements(By.TAG_NAME, "button"):
         if "로그인" in b.text:
             b.click()
@@ -418,9 +438,10 @@ def yousang_eda():
     # 같은 기간 조회라 실제 현재고와 안 맞음 — 재고현황(2)("instockpage2prime")가
     # 진짜 현재 시점 스냅샷이라 이걸로 교체(2026-08-12, 라이브 데이터 BL 교차검증으로
     # 컬럼 위치 확인. 컬럼 배치가 (1)과 달라 인덱스도 같이 바뀜).
+    user, pw = _get_login("유상")
     records = _ecms_fetch_cached(
         "유상", "http://www.xn--hg4bn0j.kr/", "http://www.xn--hg4bn0j.kr/instockpage2prime",
-        "az0810", "0101",
+        user, pw,
     )
 
     if records is None:
@@ -453,13 +474,14 @@ _KYUNU_KEY = "견우오아시스"
 
 
 def _kyunu_login(driver):
+    user, pw = _get_login(_KYUNU_KEY)
     driver.get("http://gwfood.itfarm.co.kr/")
     time.sleep(3)
     driver.execute_script("""
         function setVal(el, val) { el.value = val; el.dispatchEvent(new Event('change', {bubbles:true})); }
-        setVal(document.getElementById('ctl00_ctl00_TopPanel_txtID_I'), 'az0810');
-        setVal(document.getElementById('ctl00_ctl00_TopPanel_txtPWD_I'), '0101');
-    """)
+        setVal(document.getElementById('ctl00_ctl00_TopPanel_txtID_I'), arguments[0]);
+        setVal(document.getElementById('ctl00_ctl00_TopPanel_txtPWD_I'), arguments[1]);
+    """, user, pw)
     time.sleep(0.5)
     driver.execute_script("document.getElementById('ctl00_ctl00_TopPanel_btnLogin').click();")
     time.sleep(3)

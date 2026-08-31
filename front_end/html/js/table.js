@@ -115,6 +115,15 @@ function availableCell(value) {
     return String(n);
 }
 
+// 예약현황/타창고매출현황의 예약일자·출고일자는 월.일만(2026-08-31, 사용자 요청) —
+// 원본 값은 그대로 두고(정렬/검색은 원본 문자열 기준) 화면 표시만 잘라 보여준다.
+// "YYYY.MM.DD"와 "YYYY-MM-DD"(뒤에 시분초가 붙어도) 둘 다 처리.
+function monthDayOnly(dateStr) {
+    const v = safeValue(dateStr);
+    const m = v.match(/^\d{4}[.-](\d{2})[.-](\d{2})/);
+    return m ? `${m[1]}.${m[2]}` : v;
+}
+
 function whTag(warehouse) {
     const v = String(warehouse ?? "").trim();
     if (!v || v === "nan") return "";
@@ -1076,7 +1085,7 @@ function reservationCardHtml(r, isSalesPage = false) {
     const weight = parseWeight(r.거래처);
     const dateRow = isSalesPage
         ? `<div class="mc-row"><span class="mc-label">단가</span>${formatUnitPrice(unitPrice)}</div>`
-        : `<div class="mc-row"><span class="mc-label">예약일</span>${safeValue(r.홀딩일자)}</div>`;
+        : `<div class="mc-row"><span class="mc-label">예약일</span>${monthDayOnly(r.홀딩일자)}</div>`;
     // 어제예약(2026-08-31) — 마지막 마감 시점 수량
     const yesterdayQtyRow = isSalesPage ? "" : `<div class="mc-row"><span class="mc-label">어제예약</span>${r.어제예약 == null ? "-" : safeValue(r.어제예약)}</div>`;
     const priceRow = !isSalesPage && unitPrice !== null
@@ -1132,7 +1141,7 @@ function reservationCardHtml(r, isSalesPage = false) {
                 ${priceRow}
                 ${weightRow}
                 ${totalRow}
-                ${safeValue(r.출고일) ? `<div class="mc-row"><span class="mc-label">출고일</span>${safeValue(r.출고일)}</div>` : ""}
+                ${safeValue(r.출고일) ? `<div class="mc-row"><span class="mc-label">출고일</span>${monthDayOnly(r.출고일)}</div>` : ""}
                 ${clientDisplay ? `<div class="mc-row"><span class="mc-label">거래처</span>${clientDisplay}</div>` : ""}
                 ${isSalesPage && safeValue(r.비고) ? `<div class="mc-row mc-full"><span class="mc-label">비고</span>${safeValue(r.비고)}</div>` : ""}
                 ${safeValue(r.BL) ? `<div class="mc-row mc-full"><span class="mc-label">BL</span>${safeValue(r.BL)}</div>` : ""}
@@ -1179,7 +1188,7 @@ function reservationRowHtml(r, isSalesPage = false) {
         ? `<td class="sales-qty-cell" data-id="${r.id}" data-value="${safeValue(r.수량) || 0}" title="더블클릭해서 수정">${qtyDisplay}</td>`
         : `<td>${qtyDisplay}</td>`;
     const dateCell = !isSalesPage
-        ? `<td>${safeValue(r.홀딩일자)}</td>`
+        ? `<td>${monthDayOnly(r.홀딩일자)}</td>`
         : canInlineEdit
             ? `<td class="sales-price-cell" data-id="${r.id}" data-raw="${rawClient}" title="더블클릭해서 수정">${formatUnitPrice(unitPrice)}</td>`
             : `<td>${formatUnitPrice(unitPrice)}</td>`;
@@ -1224,7 +1233,7 @@ function reservationRowHtml(r, isSalesPage = false) {
             ${yesterdayQtyCell}
             ${weightCell}
             ${totalCell}
-            <td>${safeValue(r.출고일)}</td>
+            <td>${monthDayOnly(r.출고일)}</td>
             <td class="reservation-row-actions-cell">
                 <div class="reservation-row-actions">
                     ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">변경</button>`}

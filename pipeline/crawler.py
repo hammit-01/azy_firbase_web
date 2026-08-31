@@ -10,7 +10,6 @@ from back_end.back_eda_main import list_eda
 
 log = logging.getLogger("crawler")
 
-WAREHOUSE_XLSX = "back_end/data/warehouse_list.xlsx"
 TIMEOUT_SEC    = 120  # 창고 수 증가로 여유 확보
 
 # 여러 계정으로 로그인해도 완전히 동일한 전체 재고를 반환하는 창고 — 일반 계정만 사용.
@@ -23,13 +22,20 @@ _DUPLICATE_ACCOUNT_WAREHOUSES = {
 
 
 def _load_active_warehouses() -> pd.DataFrame:
-    df = pd.read_excel(WAREHOUSE_XLSX)
-    df.columns = df.iloc[0]
-    df = df[1:].reset_index(drop=True)
+    # 2026-08-31(사용자 요청): warehouse_list.xlsx가 git에 평문으로 커밋돼 있던
+    # 문제를 발견해 DB(warehouse_login)로 이전 — 창고 계정 정보를 더 이상
+    # 소스 저장소에 두지 않는다.
+    from pipeline.mysql_db import get_conn
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM warehouse_login")
+            rows = cur.fetchall()
+    df = pd.DataFrame(rows)
     df["ip포트"] = df["ip포트"].astype(str).str.strip()
 
-    # ip포트가 있는 모든 창고 활성화 (NaN 제외)
-    active = df[df["ip포트"].notna() & (df["ip포트"] != "nan") & (df["ip포트"] != "")]
+    # ip포트가 있는 모든 창고 활성화 (NaN 제외) — 에이스/견우오아시스/유상/고려/
+    # 미빙냉장(셀레니움 전용, crawling_handmade.py가 따로 처리)은 ip포트가 없어 자동 제외.
+    active = df[df["ip포트"].notna() & (df["ip포트"] != "nan") & (df["ip포트"] != "") & (df["ip포트"] != "None")]
     return active
 
 

@@ -388,6 +388,16 @@ def get_yesterday_holding_qty(conn) -> dict:
         return {row["holding_id"]: row["수량"] for row in cur.fetchall()}
 
 
+def get_warehouse_login(conn, warehouse: str) -> dict | None:
+    """crawling_handmade.py 셀레니움 창고(에이스/견우오아시스/유상/고려/미빙냉장)
+    로그인 정보 조회 — 소스코드에 하드코딩하지 않고 DB(warehouse_login)에서 가져온다
+    (2026-08-31, 사용자 요청 — 이 계정들이 git에 그대로 커밋돼 있던 문제 발견).
+    없으면 None(호출부가 "로그인 정보 없음"으로 처리)."""
+    with conn.cursor() as cur:
+        cur.execute("SELECT 아이디, 비밀번호, base_url FROM warehouse_login WHERE 창고 = %s", (warehouse,))
+        return cur.fetchone()
+
+
 def sync_moving_inventory(conn, rows: list[dict]):
     """이고(창고이동) 취합 시트 → moving_inventory 통째로 교체.
     이 테이블은 '오늘'(+ 익일 미리보기) 상태만 보여주는 용도라 매 사이클 전체
