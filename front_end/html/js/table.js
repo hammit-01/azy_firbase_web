@@ -71,6 +71,14 @@ const WH_CLASS = {
     "곤에이스처인": "wh-곤에이스처인",
 };
 
+// 창고명 화면 표시 축약(2026-08-31) — 데이터/필터링은 원래 창고명 그대로 쓰고
+// 화면에 찍히는 글자만 짧게 보여준다.
+const WH_DISPLAY_NAME = {
+    "신우냉장": "신우",
+    "효성냉장": "효성",
+    "희창냉장": "희창",
+};
+
 function dueDateTag(dateStr, limitDate) {
     const v = safeValue(dateStr);
     if (!v) return "";
@@ -111,7 +119,7 @@ function whTag(warehouse) {
     const v = String(warehouse ?? "").trim();
     if (!v || v === "nan") return "";
     const cls = WH_CLASS[v] ?? "wh-default";
-    return `<span class="wh-tag ${cls}">${v}</span>`;
+    return `<span class="wh-tag ${cls}">${WH_DISPLAY_NAME[v] ?? v}</span>`;
 }
 
 // =========================
@@ -410,7 +418,7 @@ export function renderWarehouseOptions() {
 
     select.innerHTML =
         `<option value="">창고</option>` +
-        warehouses.map(w => `<option value="${w}">${w}</option>`).join("");
+        warehouses.map(w => `<option value="${w}">${WH_DISPLAY_NAME[w] ?? w}</option>`).join("");
 
     if (warehouses.includes(current)) select.value = current;
 }
@@ -1441,7 +1449,7 @@ function reservationFilterControlsHtml({ idPrefix, rows, search, warehouse, bran
         </select>` : ""}
         <select id="${idPrefix}-warehouse-filter" class="reservations-filter-select">
             <option value="">창고 전체</option>
-            ${warehouses.map(w => `<option value="${w}" ${w === warehouse ? "selected" : ""}>${w}</option>`).join("")}
+            ${warehouses.map(w => `<option value="${w}" ${w === warehouse ? "selected" : ""}>${WH_DISPLAY_NAME[w] ?? w}</option>`).join("")}
         </select>
         <select id="${idPrefix}-brand-filter" class="reservations-filter-select">
             <option value="">브랜드 전체</option>

@@ -175,10 +175,13 @@ def _upload_azy(azy_df, warehouse_scope=None):
         except Exception:
             avg_w = None
         if uid in rows:
-            # 같은 BL+ESTNO+창고로 로트/저장위치만 다른 중복 — 합산
+            # 같은 BL+ESTNO+창고로 로트/저장위치만 다른 중복 — 재고는 합산.
+            # holdingTotal은 uid 기준 예약 합계(h_qty)라 이미 처음 만들 때 한 번
+            # 들어갔음 — 여기서 또 더하면 로트 수만큼(2개면 2배, 3개면 3배) 부풀어서
+            # 화면 "예약" 표시가 실제보다 배로 찍힌다(2026-08-31, 한라/강동2 등에서
+            # 3배까지 찍힌 사례로 발견). 그대로 둔다.
             rows[uid]["재고"] += qty
             rows[uid]["원본재고"] += raw_qty
-            rows[uid]["holdingTotal"] += h_qty
             continue
 
         rows[uid] = {
