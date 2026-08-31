@@ -449,18 +449,10 @@ def apply_moving_deductions(conn, moving_rows: list[dict], deduct_targets=("inve
                 continue  # 어제 없던 새 로트가 이고 수량 이상으로 생김 — 입고 완료
             remaining.append(row)
 
-        for row in remaining:
-            src_table = _table_for_warehouse(row["출고창고"])
-            if src_table not in deduct_targets:
-                continue
-            if deduct_warehouses is not None and row["출고창고"] not in deduct_warehouses:
-                continue
-            where, where_params = _row_where(row, row["출고창고"])
-            params = (row["재고"],) + where_params
-            cur.execute(
-                f"UPDATE {src_table} SET 재고 = GREATEST(재고 - %s, 0) WHERE {where}",
-                params,
-            )
+        # 2026-08-31(사용자 요청): 출고창고 재고 차감 기능을 껐다. 이고 시트에 올라온
+        # 수량이 이미 예약(홀딩)으로 잡혀있는 경우 재고와 예약 양쪽에서 이중으로 빠져
+        # 가용재고가 음수로 어긋나는 사고가 있었음 — 이제 미입고 표시(remaining)만
+        # 계속하고 출고창고 재고는 건드리지 않는다.
 
     return remaining
 
