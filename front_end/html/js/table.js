@@ -2,7 +2,7 @@ import { state } from "./state.js";
 import { dom } from "./dom.js";
 import { employeeSelect, stateSelect } from "./panel.js";
 import { getStoredUser, hasEditorAccess, hasPriceEditAccess } from "./login.js";
-import { getAllReservations, getAllOutbound, getAllPrices, getOrderSheet } from "./firestoreService.js";
+import { getAllReservations, getAllOutbound, getAllPrices, getOrderSheet, getYesterdayReservationQty } from "./firestoreService.js";
 
 // 영문 브랜드를 한글 표기로 쳐도 검색되게 하는 별칭 테이블(2026-08-14).
 // key: 한글 표기, value: 실제 데이터의 영문 브랜드값 — 데이터에 실제로 존재하는
@@ -1077,6 +1077,8 @@ function reservationCardHtml(r, isSalesPage = false) {
     const dateRow = isSalesPage
         ? `<div class="mc-row"><span class="mc-label">단가</span>${formatUnitPrice(unitPrice)}</div>`
         : `<div class="mc-row"><span class="mc-label">예약일</span>${safeValue(r.홀딩일자)}</div>`;
+    // 어제예약(2026-08-31) — 마지막 마감 시점 수량
+    const yesterdayQtyRow = isSalesPage ? "" : `<div class="mc-row"><span class="mc-label">어제예약</span>${r.어제예약 == null ? "-" : safeValue(r.어제예약)}</div>`;
     const priceRow = !isSalesPage && unitPrice !== null
         ? `<div class="mc-row"><span class="mc-label">단가</span>${formatUnitPrice(unitPrice)}</div>`
         : "";
@@ -1126,6 +1128,7 @@ function reservationCardHtml(r, isSalesPage = false) {
                 <div class="mc-row"><span class="mc-label">담당자</span>${safeValue(r.담당자) || "(미지정)"}</div>
                 ${isSalesPage ? "" : `<div class="mc-row"><span class="mc-label">실재고</span>${safeValue(r.재고)}</div><div class="mc-row"><span class="mc-label">가용재고</span>${availableCell(r.가용재고)}</div>`}
                 ${dateRow}
+                ${yesterdayQtyRow}
                 ${priceRow}
                 ${weightRow}
                 ${totalRow}
@@ -1180,6 +1183,8 @@ function reservationRowHtml(r, isSalesPage = false) {
         : canInlineEdit
             ? `<td class="sales-price-cell" data-id="${r.id}" data-raw="${rawClient}" title="더블클릭해서 수정">${formatUnitPrice(unitPrice)}</td>`
             : `<td>${formatUnitPrice(unitPrice)}</td>`;
+    // 어제예약(2026-08-31) — 마지막 마감 시점 수량. 스냅샷이 아직 없는 신규 예약은 "-"
+    const yesterdayQtyCell = isSalesPage ? "" : `<td>${r.어제예약 == null ? "-" : safeValue(r.어제예약)}</td>`;
     const weightCell = !isSalesPage ? "" : canInlineEdit
         ? `<td class="sales-weight-cell" data-id="${r.id}" data-raw="${rawClient}" title="더블클릭해서 수정">${formatWeight(weight)}</td>`
         : `<td>${formatWeight(weight)}</td>`;
@@ -1216,6 +1221,7 @@ function reservationRowHtml(r, isSalesPage = false) {
             ${clientCell}
             ${reservationPriceCell}
             ${dateCell}
+            ${yesterdayQtyCell}
             ${weightCell}
             ${totalCell}
             <td>${safeValue(r.출고일)}</td>
@@ -1332,6 +1338,7 @@ function reservationsHead(isSalesPage = false, sortColumns = []) {
         <col style="width:7%">  <!--거래처-->
         <col style="width:4%">  <!--단가-->
         <col style="width:6%">  <!--예약일-->
+        <col style="width:5%">  <!--어제예약-->
         <col style="width:6%">  <!--출고일-->
         <col style="width:13%"> <!--액션-->
     </colgroup>
@@ -1340,7 +1347,7 @@ function reservationsHead(isSalesPage = false, sortColumns = []) {
             <th></th>
             ${sh("담당자", "담당자")}${sh("상품명", "상품명")}${sh("브랜드", "브랜드")}${sh("등급", "등급")}${sh("ESTNO", "ESTNO")}
             ${sh("수량", "수량")}${sh("BL", "BL")}${sh("창고", "창고")}${sh("재고", "실재고")}${sh("가용재고", "가용재고")}
-            ${sh("거래처", "거래처")}<th>단가</th>${sh("홀딩일자", "예약일")}${sh("출고일", "출고일")}<th>액션</th>
+            ${sh("거래처", "거래처")}<th>단가</th>${sh("홀딩일자", "예약일")}<th title="마지막 마감 시점 수량">어제예약</th>${sh("출고일", "출고일")}<th>액션</th>
         </tr>
     </thead>
 `;
@@ -1473,6 +1480,14 @@ export async function renderReservationsTab() {
     } catch (e) {
         listEl.innerHTML = `<p class="reservations-empty">예약 현황을 불러오지 못했습니다.</p>`;
         return;
+    }
+
+    // 어제예약(2026-08-31) — 실패해도 예약현황 자체는 계속 보여야 하니 조용히 무시
+    try {
+        const yesterdayQty = await getYesterdayReservationQty();
+        rows.forEach(r => { r.어제예약 = yesterdayQty[r.id]; });
+    } catch (e) {
+        console.warn("[API] 어제예약 조회 실패:", e.message);
     }
 
     if (!isEditor) {

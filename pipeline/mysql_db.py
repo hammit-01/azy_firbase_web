@@ -345,6 +345,49 @@ def snapshot_daily(conn):
         cur.execute("INSERT INTO yesterday_azy_inventory SELECT * FROM azy_inventory")
 
 
+def snapshot_holding_history(conn):
+    """하루 마감 시점의 ACTIVE 예약(홀딩) 수량을 past_holding_records에 하루치 행으로
+    누적 기록(2026-08-31, 사용자 요청) — yesterday_*와 달리 매일 TRUNCATE하지 않고
+    계속 쌓아서, 예약현황의 "어제예약" 열이 마지막 마감 이후 수량이 얼마나 바뀌었는지
+    보여주는 데 쓴다."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    today = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d")
+    cols = "(snapshot_date, source_table, holding_id, pk, 담당자, 상품명, 브랜드, 등급, BL, 창고, 거래처, 수량, 홀딩일자, status)"
+    with conn.cursor() as cur:
+        # 재실행돼도 같은 날짜가 중복 쌓이지 않게 오늘치를 먼저 지움
+        cur.execute("DELETE FROM past_holding_records WHERE snapshot_date = %s", (today,))
+        cur.execute(
+            f"INSERT INTO past_holding_records {cols} "
+            "SELECT %s, 'holding_records', h.id, h.pk, h.홀딩, i.상품명, i.브랜드, i.등급, h.BL, i.창고, "
+            "h.메모, h.수량, h.홀딩일자, h.status "
+            "FROM holding_records h JOIN inventory i ON i.id = h.pk WHERE h.status = 'ACTIVE'",
+            (today,),
+        )
+        cur.execute(
+            f"INSERT INTO past_holding_records {cols} "
+            "SELECT %s, 'azy_holding_records', h.id, h.pk, h.홀딩, i.상품명, i.브랜드, i.등급, h.BL, i.창고, "
+            "h.메모, h.수량, h.홀딩일자, h.status "
+            "FROM azy_holding_records h JOIN azy_inventory i ON i.id = h.pk WHERE h.status = 'ACTIVE'",
+            (today,),
+        )
+
+
+def get_yesterday_holding_qty(conn) -> dict:
+    """holding_id → 마지막 마감(오늘 이전 가장 최근 snapshot_date) 시점 수량.
+    "어제예약" 열이 이 값과 현재 수량을 비교해서 마지막 수정 전 몇 개였는지 보여준다."""
+    with conn.cursor() as cur:
+        cur.execute("SELECT MAX(snapshot_date) AS d FROM past_holding_records WHERE snapshot_date < CURDATE()")
+        last_date = (cur.fetchone() or {}).get("d")
+        if not last_date:
+            return {}
+        cur.execute(
+            "SELECT holding_id, 수량 FROM past_holding_records WHERE snapshot_date = %s",
+            (last_date,),
+        )
+        return {row["holding_id"]: row["수량"] for row in cur.fetchall()}
+
+
 def sync_moving_inventory(conn, rows: list[dict]):
     """이고(창고이동) 취합 시트 → moving_inventory 통째로 교체.
     이 테이블은 '오늘'(+ 익일 미리보기) 상태만 보여주는 용도라 매 사이클 전체

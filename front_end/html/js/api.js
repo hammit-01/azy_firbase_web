@@ -135,6 +135,12 @@ export async function apiGetReservationsByPk(pk) {
     return r.data;
 }
 
+// 어제예약(2026-08-31) — holding_id → 마지막 마감 시점 수량
+export async function apiGetYesterdayReservationQty() {
+    const r = await apiFetch("/api/reservations/yesterday_qty", {});
+    return r.data;
+}
+
 export async function apiCreateReservation(product) {
     return apiFetch("/api/reservations", {
         method: "POST",

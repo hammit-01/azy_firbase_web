@@ -5,7 +5,7 @@ import {
     apiCreateReservation, apiCancelReservation, apiCompleteReservation, apiUseReservation,
     apiReactivateReservation,
     apiUpdateReservation, apiToggleReservationRegister, apiToggleReservationStockRelease, apiRegisterOutboundFromReservation,
-    apiGetReservationsByPk, apiGetAllReservations,
+    apiGetReservationsByPk, apiGetAllReservations, apiGetYesterdayReservationQty,
     apiGetAllOutbound, apiGetOrderSheet, apiCreateOutbound, apiUpdateOutbound, apiCancelOutbound, apiUseOutbound,
     apiToggleOutboundComplete, apiToggleOutboundRegister, apiToggleOutboundStockRelease,
     apiToggleOutboundSlip, apiToggleOutboundDeliveryCancel,
@@ -46,6 +46,9 @@ export async function getReservationsByPk(pk) {
 }
 export async function getAllReservations() {
     return apiGetAllReservations();
+}
+export async function getYesterdayReservationQty() {
+    return apiGetYesterdayReservationQty();
 }
 
 // outbound(타창고매출현황) — 예약과 분리된 별도 저장소(2026-08-14)

@@ -544,12 +544,15 @@ def run_ace_pipeline():
 
 def run_daily_snapshot():
     """평일 장 마감(17:10) 직후 1회 — 오늘 최종 재고를 yesterday_* 테이블로 복사.
-    업데이트 탭이 다음날 이 스냅샷과 비교해서 "어제 대비 뭐가 바뀌었나"를 보여준다."""
+    업데이트 탭이 다음날 이 스냅샷과 비교해서 "어제 대비 뭐가 바뀌었나"를 보여준다.
+    같은 타이밍에 ACTIVE 예약(홀딩) 수량도 past_holding_records에 하루치로 쌓아
+    예약현황의 "어제예약" 열이 쓸 기준선을 남긴다(2026-08-31)."""
     log.info("일일 스냅샷(yesterday_inventory) 갱신 시작")
     try:
-        from pipeline.mysql_db import get_conn, snapshot_daily
+        from pipeline.mysql_db import get_conn, snapshot_daily, snapshot_holding_history
         with get_conn() as conn:
             snapshot_daily(conn)
+            snapshot_holding_history(conn)
         log.info("일일 스냅샷 갱신 완료")
     except Exception as e:
         log.error(f"일일 스냅샷 갱신 실패: {e}", exc_info=True)

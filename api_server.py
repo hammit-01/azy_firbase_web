@@ -24,6 +24,7 @@ from pipeline.mysql_db import (
     toggle_outbound_slip, toggle_outbound_delivery_cancel,
     register_outbound_from_reservation, _today_iso,
     get_all_prices, create_price, update_price, delete_price,
+    get_yesterday_holding_qty,
 )
 
 app = FastAPI()
@@ -414,6 +415,14 @@ def list_all_reservations():
     with get_conn() as conn:
         rows = get_all_active_reservations(conn)
     return {"data": rows}
+
+
+@app.get("/api/reservations/yesterday_qty")
+def get_reservations_yesterday_qty():
+    """holding_id → 마지막 마감 시점 수량. 예약현황 "어제예약" 열이 씀(2026-08-31)."""
+    with get_conn() as conn:
+        data = get_yesterday_holding_qty(conn)
+    return {"data": data}
 
 
 @app.get("/api/reservations/by_pk/{pk:path}")
