@@ -171,7 +171,7 @@ def insert_item(body: ItemBody):
     return {"id": row["id"]}
 
 
-@app.put("/api/inventory/{item_id}")
+@app.put("/api/inventory/{item_id:path}")
 def update_item(item_id: str, body: ItemBody):
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -192,7 +192,7 @@ def update_item(item_id: str, body: ItemBody):
     return {"ok": True}
 
 
-@app.delete("/api/inventory/{item_id}")
+@app.delete("/api/inventory/{item_id:path}")
 def delete_item(item_id: str):
     with get_conn() as conn:
         # 홀딩 표시 행을 그냥 지우면 짝지어진 holding_records가 안 지워져서, 그 수량이
@@ -251,7 +251,7 @@ def get_holding_detail(rec_id: str):
     return {"data": row}
 
 
-@app.get("/api/holding_records/count/{pk}")
+@app.get("/api/holding_records/count/{pk:path}")
 def count_holding_by_pk(pk: str):
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -305,7 +305,7 @@ def insert_azy_item(body: ItemBody):
     return {"id": row["id"]}
 
 
-@app.put("/api/azy_inventory/{item_id}")
+@app.put("/api/azy_inventory/{item_id:path}")
 def update_azy_item(item_id: str, body: ItemBody):
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -326,7 +326,7 @@ def update_azy_item(item_id: str, body: ItemBody):
     return {"ok": True}
 
 
-@app.delete("/api/azy_inventory/{item_id}")
+@app.delete("/api/azy_inventory/{item_id:path}")
 def delete_azy_item(item_id: str):
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -377,7 +377,7 @@ def get_azy_holding_detail(rec_id: str):
     return {"data": row}
 
 
-@app.get("/api/azy_holding_records/count/{pk}")
+@app.get("/api/azy_holding_records/count/{pk:path}")
 def count_azy_holding_by_pk(pk: str):
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -416,7 +416,7 @@ def list_all_reservations():
     return {"data": rows}
 
 
-@app.get("/api/reservations/by_pk/{pk}")
+@app.get("/api/reservations/by_pk/{pk:path}")
 def list_reservations_by_pk(pk: str):
     with get_conn() as conn:
         rows = get_active_reservations_by_pk(conn, pk)

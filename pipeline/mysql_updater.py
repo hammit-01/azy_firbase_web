@@ -63,7 +63,11 @@ class MySQLUpdater:
                     # db_prev 값이 비어있으면 보존하지 않고 새 크롤/파싱 결과를 그대로 씀 —
                     # 안 그러면 원래 비어있거나 잘못 들어간 값이 영원히 안 고쳐짐
                     # (2026-07-29, eda_standard 파싱 개선이 기존 행엔 전혀 안 먹던 사고).
-                    if db_prev.get(f) not in (None, ""):
+                    # 평중은 0도 "비어있음"으로 취급 — 그렇지 않으면 과거에 한 번이라도
+                    # 파싱 실패로 0이 찍힌 행은 이후 원본이 정상 값을 줘도 영원히 0에
+                    # 고정된다(2026-08-31, 곤지암 작업/동결 품목 평중 0 고착 발견).
+                    empty_vals = (None, "", 0, 0.0) if f == "평중" else (None, "")
+                    if db_prev.get(f) not in empty_vals:
                         merged[f] = db_prev[f]
                 merged["홀딩"] = db_prev.get("홀딩", "")
                 merged["상태"] = db_prev.get("상태", "없음")
