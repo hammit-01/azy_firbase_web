@@ -522,7 +522,8 @@ def create_reservation(conn, product: dict) -> dict:
             raise ValueError(f"가용재고 부족(가용 {available}, 요청 {reserve_qty})")
 
         rec_id    = uuid.uuid4().hex
-        today_str = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y.%m.%d")
+        # 담당자/날짜만으론 같은 날 여러 건 구분이 안 돼 초 단위까지 기록(2026-08-31, 사용자 요청)
+        today_str = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y.%m.%d %H:%M:%S")
         cur.execute(
             f"INSERT INTO {hr_table} "
             "(id, pk, BL, ESTNO, 등급, 수량, 홀딩, 출고일, 메모, uid, 홀딩일자, status, "
