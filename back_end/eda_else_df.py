@@ -70,6 +70,15 @@ def kd_eda(data):
         .astype(float)
     )
 
+    # 규격단위중량에 브랜드만 있고 숫자(중량)가 아예 없는 로트(예: "SMITHFIELD")는
+    # 위 추출이 NaN으로 빠진다 — 총중량÷재고수량으로 대체 계산(hl_eda와 동일 방식,
+    # 2026-08-31 강동1/2 평중 누락 발견).
+    missing = df["평균중량"].isna()
+    if missing.any():
+        _weight = pd.to_numeric(df["중량"].astype(str).str.replace(",", "", regex=False), errors="coerce")
+        _qty = pd.to_numeric(df["재고수량"].astype(str).str.replace(",", "", regex=False), errors="coerce")
+        df.loc[missing, "평균중량"] = (_weight / _qty).round(2)[missing]
+
     # -------------------------------------------------
     # 기타정보 제거
     # -------------------------------------------------
