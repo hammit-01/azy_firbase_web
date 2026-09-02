@@ -20,6 +20,17 @@ _DUPLICATE_ACCOUNT_WAREHOUSES = {
     "대재", "강동2", "삼일물류", "SWC", "신우냉장", "오로라CS", "한라", "한라동탄", "시에이치물류",
 }
 
+# 계정 중 일부만 다른 계정과 완전히 중복되고 나머지는 진짜 별도 재고인 창고 —
+# _DUPLICATE_ACCOUNT_WAREHOUSES(일반만 남기고 나머지 다 버림)를 쓰면 진짜 데이터까지
+# 같이 날아가므로, (창고, 계정타입) 단위로 그 계정만 콕 집어 제외한다.
+# 확인된 목록(직접 원본 비교로 검증). 추가 전 반드시 crawl_one() 등으로 재확인할 것.
+_SKIP_ACCOUNT_TYPES = {
+    # 2026-09-02: "일반"(az0810)과 "웹출고"(az08100) 계정이 완전히 동일한 2개 로트를
+    # 반환(재고 2배 표시 사고로 발견) — "웹출고(통관분)"(zenith15)은 브라질산
+    # 돈목뼈/돈단족 등 전혀 다른 7개 로트라 그대로 유지.
+    ("대청", "웹출고"),
+}
+
 
 def _load_active_warehouses() -> pd.DataFrame:
     # 2026-08-31(사용자 요청): warehouse_list.xlsx가 git에 평문으로 커밋돼 있던
@@ -63,6 +74,7 @@ def _crawl_single_row(row: pd.Series, session_cache: dict, cache_lock: threading
         # SWC/신우냉장/오로라CS/한라/시에이치물류 2배 사고 — 원본 크롤 데이터가
         # 계정별로 100% 완전히 중복되는 것을 직접 확인함). 일반 계정 하나만 쓰도록 제한.
         users = [u for u in users if u[0] == "일반"]
+    users = [u for u in users if (warehouse, u[0]) not in _SKIP_ACCOUNT_TYPES]
 
     for user_type, uid, pw, scustcd, scmdept in users:
         cache_key = (warehouse, user_type)
