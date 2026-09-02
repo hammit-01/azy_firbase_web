@@ -4,7 +4,7 @@ import { renderTable, renderWarehouseOptions, renderBrandOptions, renderProductN
 import { renderSelectData } from "./panel.js";
 import { fetchAllInventory, fetchEmployees, fetchMovingInventory, fetchYesterdayInventory } from "./api.js";
 
-const POLL_INTERVAL_MS = 15 * 1000; // 15초(2026-09-02, 사용자 요청 — 다른 사용자 수정사항을 빠르게 반영)
+const POLL_INTERVAL_MS = 5 * 1000; // 5초(2026-09-02, 사용자 요청 — 더 빠르게)
 
 export async function initFirebase() {
     // MySQL 버전: 별도 초기화 불필요
