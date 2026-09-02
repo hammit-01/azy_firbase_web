@@ -1023,70 +1023,88 @@ def register_outbound_from_reservation(conn, rec_id: str, qty: int, 출고일: s
     raise ValueError("예약을 찾을 수 없거나 이미 종료됨")
 
 
-def _outbound_product_join(cur, pk: str) -> dict | None:
-    """pk로 inventory/azy_inventory에서 상품 정보 + 가용재고 계산해서 합쳐
-    반환(없으면 None). get_all_outbound()이 실제 outbound 행과 미리보기(예약)
-    행 양쪽에 재사용."""
-    info = None
-    inv_table = None
-    for t in ("inventory", "azy_inventory"):
-        cur.execute(
-            f"SELECT 상품명, 브랜드, 등급, ESTNO, BL, 창고, 재고 FROM {t} WHERE id=%s",
-            (pk,),
-        )
-        info = cur.fetchone()
-        if info:
-            inv_table = t
-            break
-    if not info:
-        # 원본 재고 행이 이미 사라진 경우(완전 소진 등으로 크롤 결과에서 빠짐,
-        # 2026-08-26) — 타창고매출현황에 상품명/브랜드 등이 빈 채로 뜨던 문제
-        # (이미 두 번 root-cause된 패턴의 세 번째 변종: COMPLETED로 되돌아갔던
-        # 예약이 재활성화된 뒤 원본 재고가 이미 없어진 채로 출고일이 와서
-        # outbound로 넘어간 경우). activity_log에서 마지막으로 기록된 상품
-        # 정보를 복구해 최소한 상품명/브랜드/창고는 보여준다 — 재고/가용재고는
-        # 더 이상 알 수 없으니 0으로 둔다.
-        cur.execute(
-            "SELECT after_json FROM activity_log WHERE record_id=%s AND after_json IS NOT NULL "
-            "ORDER BY created_at DESC LIMIT 1",
-            (pk,),
-        )
-        log_row = cur.fetchone()
-        if not log_row:
-            return None
-        try:
-            snap = json.loads(log_row["after_json"])
-        except (ValueError, TypeError):
-            return None
-        if not snap.get("상품명"):
-            return None
-        return {
-            "상품명": snap.get("상품명"), "브랜드": snap.get("브랜드", ""),
-            "등급": snap.get("등급", ""), "ESTNO": snap.get("ESTNO", ""),
-            "BL": snap.get("BL", ""), "창고": snap.get("창고", ""),
-            "재고": 0, "가용재고": 0,
-        }
-    hr_table = "holding_records" if inv_table == "inventory" else "azy_holding_records"
-    cur.execute(
-        f"SELECT COALESCE(SUM(수량),0) AS total FROM {hr_table} WHERE pk=%s AND status='ACTIVE'",
-        (pk,),
-    )
-    hold_sum = int(cur.fetchone()["total"] or 0)
-    cur.execute(
-        "SELECT COALESCE(SUM(수량),0) AS total FROM outbound WHERE pk=%s AND status='ACTIVE'",
-        (pk,),
-    )
-    outbound_sum = int(cur.fetchone()["total"] or 0)
-    return {**info, "가용재고": (info["재고"] or 0) - hold_sum - outbound_sum}
+def _bulk_product_join(conn, pks: set) -> dict:
+    """pk 집합 → {pk: 상품정보+가용재고} 한 번에 조회(2026-09-02 — 타창고매출현황이
+    outbound/예약 행 수(800건+)만큼 pk 하나씩 순서대로 조회(N+1)해서 여는 데
+    4초 넘게 걸리던 문제 수정. 원래 로직(_outbound_product_join)을 pk 단위 대신
+    집합 단위 일괄 조회로 재작성 — inventory/azy_inventory 조회 2번, 예약/출고
+    합계 조회 3번으로 건수 상관없이 고정."""
+    if not pks:
+        return {}
+    pks = list(pks)
+    placeholders = ", ".join(["%s"] * len(pks))
+    found, table_of = {}, {}
+    with conn.cursor() as cur:
+        for t in ("inventory", "azy_inventory"):
+            cur.execute(
+                f"SELECT id, 상품명, 브랜드, 등급, ESTNO, BL, 창고, 재고 FROM {t} WHERE id IN ({placeholders})",
+                pks,
+            )
+            for row in cur.fetchall():
+                if row["id"] not in found:
+                    found[row["id"]] = row
+                    table_of[row["id"]] = t
+
+        # 원본 재고 행이 이미 사라진 pk(완전 소진 등으로 크롤 결과에서 빠짐, 2026-08-26)는
+        # activity_log에서 마지막 스냅샷으로 복구 — 드문 경우라 pk별로 조회해도 무방.
+        for pk in pks:
+            if pk in found:
+                continue
+            cur.execute(
+                "SELECT after_json FROM activity_log WHERE record_id=%s AND after_json IS NOT NULL "
+                "ORDER BY created_at DESC LIMIT 1",
+                (pk,),
+            )
+            log_row = cur.fetchone()
+            if not log_row:
+                continue
+            try:
+                snap = json.loads(log_row["after_json"])
+            except (ValueError, TypeError):
+                continue
+            if not snap.get("상품명"):
+                continue
+            found[pk] = {
+                "상품명": snap.get("상품명"), "브랜드": snap.get("브랜드", ""),
+                "등급": snap.get("등급", ""), "ESTNO": snap.get("ESTNO", ""),
+                "BL": snap.get("BL", ""), "창고": snap.get("창고", ""),
+                "재고": 0,
+            }
+            table_of[pk] = None  # 가용재고 계산 불가 — 아래서 0 처리
+
+        hold_sum = {}
+        for hr_table in ("holding_records", "azy_holding_records"):
+            cur.execute(f"SELECT pk, COALESCE(SUM(수량),0) AS total FROM {hr_table} WHERE status='ACTIVE' GROUP BY pk")
+            for row in cur.fetchall():
+                hold_sum[row["pk"]] = hold_sum.get(row["pk"], 0) + int(row["total"] or 0)
+
+        outbound_sum = {}
+        cur.execute("SELECT pk, COALESCE(SUM(수량),0) AS total FROM outbound WHERE status='ACTIVE' GROUP BY pk")
+        for row in cur.fetchall():
+            outbound_sum[row["pk"]] = int(row["total"] or 0)
+
+    result = {}
+    for pk, info in found.items():
+        # info의 "id"는 inventory/azy_inventory 원본 행 id라 outbound/holding_records
+        # 자기 자신의 id와 다르다 — 병합 시 그대로 두면 호출부(get_all_outbound)에서
+        # outbound 행의 진짜 id를 덮어써서 "완료" 등 액션이 엉뚱한 id로 나가 "항목을
+        # 찾을 수 없음" 오류가 났다(2026-09-02, N+1 최적화 중 도입된 회귀 버그 발견).
+        info = {k: v for k, v in info.items() if k != "id"}
+        if table_of.get(pk) is None:
+            result[pk] = {**info, "가용재고": 0}
+        else:
+            avail = (info["재고"] or 0) - hold_sum.get(pk, 0) - outbound_sum.get(pk, 0)
+            result[pk] = {**info, "가용재고": avail}
+    return result
 
 
 def get_all_outbound(conn) -> list[dict]:
     """outbound(타창고매출현황) 전체 조회 + 상품 정보(상품명/브랜드/창고/재고)
     조인. pk가 inventory/azy_inventory 어느 쪽 소속인지 outbound 자체엔 표시가
-    없어서 행마다 두 테이블을 순서대로 조회한다(건수가 적어 N+1이어도 무방).
-    가용재고 = 실재고 − ACTIVE 예약 합계 − ACTIVE outbound 합계(get_all_active_
-    reservations와 동일 원칙, 2026-08-14). status=COMPLETED(출고완료 토글)도
-    같이 내려준다 — CANCEL과 달리 화면에서 안 사라지고 회색으로 표시된다.
+    없어서 _bulk_product_join()으로 관련 pk를 한 번에 조회한다(2026-09-02,
+    N+1 제거). 가용재고 = 실재고 − ACTIVE 예약 합계 − ACTIVE outbound 합계
+    (get_all_active_reservations와 동일 원칙, 2026-08-14). status=COMPLETED
+    (출고완료 토글)도 같이 내려준다 — CANCEL과 달리 화면에서 안 사라지고 회색으로 표시된다.
 
     미리보기(2026-08-24, _preview=True): 출고일이 잡혀있지만 아직 오늘이 안
     돼서 migrate_due_reservations_to_outbound()로 outbound에 안 넘어간 ACTIVE
@@ -1098,26 +1116,33 @@ def get_all_outbound(conn) -> list[dict]:
             "SELECT id, pk, 수량, 원수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, status, 전달사항, 등록, 비고, 수량내림, 수정자, 전표, 배송취소 "
             "FROM outbound WHERE status IN ('ACTIVE','COMPLETED') ORDER BY 홀딩일자 DESC"
         )
-        result = []
-        for row in cur.fetchall():
-            info = _outbound_product_join(cur, row["pk"])
-            result.append({**row, **(info or {}), "_preview": False})
+        outbound_rows = cur.fetchall()
 
+        preview_rows = []
         for hr_table in ("holding_records", "azy_holding_records"):
             cur.execute(
                 f"SELECT id, pk, 수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, 전달사항, 비고, 등록, 수정자, 수량내림, 원수량 "
                 f"FROM {hr_table} WHERE status='ACTIVE' AND 출고일 != ''"
             )
-            for row in cur.fetchall():
-                info = _outbound_product_join(cur, row["pk"])
-                if not info:
-                    continue
-                result.append({
-                    **row, **info, "status": "ACTIVE",
-                    "전표": None, "배송취소": None,
-                    "_preview": True,
-                })
-        return result
+            preview_rows.extend(cur.fetchall())
+
+    pks = {r["pk"] for r in outbound_rows} | {r["pk"] for r in preview_rows}
+    info_by_pk = _bulk_product_join(conn, pks)
+
+    result = []
+    for row in outbound_rows:
+        info = info_by_pk.get(row["pk"])
+        result.append({**row, **(info or {}), "_preview": False})
+    for row in preview_rows:
+        info = info_by_pk.get(row["pk"])
+        if not info:
+            continue
+        result.append({
+            **row, **info, "status": "ACTIVE",
+            "전표": None, "배송취소": None,
+            "_preview": True,
+        })
+    return result
 
 
 def get_order_sheet_rows(conn) -> list[dict]:
