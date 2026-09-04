@@ -34,13 +34,16 @@ export function hasPriceEditAccess() {
     return u.직급 === "총괄" || u.직급 === "대표이사";
 }
 
-// 신규 기능 단계적 롤아웃 게이트(2026-08-24) — 관리자 권한 + 로컬 테스트
-// 서버(8001)에서만 켠다. prod(8000)나 일반 권한에서는 기존 동작 그대로.
 export function hasAdminAccess(role) {
     return role === "관리자";
 }
-export function isAdminTestFeatureEnabled() {
-    return hasAdminAccess(getStoredUser()?.권한) && window.location.port === "8001";
+
+// 창고이동 기능 접근 권한(2026-09-04) — 관리자 전체 + id 54(개별 테스트 허용
+// 요청) 만 보이게. 이전엔 관리자+로컬 테스트 서버(8001)로만 제한했었는데,
+// 이제 포트 상관없이 이 조건으로만 판단한다.
+export function hasWarehouseMovesAccess() {
+    const u = getStoredUser();
+    return u?.권한 === "관리자" || u?.id === "54";
 }
 
 function closePopover() {
@@ -70,9 +73,10 @@ function _currentTabName() {
 }
 
 export function applyRoleVisibility(role) {
-    // 창고이동(2026-09-04) — 관리자+8001 롤아웃 게이트. role뿐 아니라 포트도 봐야
-    // 해서 EDITOR_ONLY_SELECTORS/LOGIN_ONLY_SELECTORS 목록에 안 넣고 따로 처리.
-    const movesEnabled = isAdminTestFeatureEnabled();
+    // 창고이동(2026-09-04) — 관리자+id 54 전용 게이트. role만으론 안 되고
+    // id도 봐야 해서 EDITOR_ONLY_SELECTORS/LOGIN_ONLY_SELECTORS 목록에 안 넣고
+    // 따로 처리.
+    const movesEnabled = hasWarehouseMovesAccess();
     const movesTabBtn = document.querySelector(".moves-tab-btn");
     if (movesTabBtn) movesTabBtn.style.display = movesEnabled ? "" : "none";
 

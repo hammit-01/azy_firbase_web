@@ -9,7 +9,7 @@ import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
 import { fetchAllData } from "./firebase.js";
 import { showToast, showError, showConfirm, showEditReservationModal, showRegisterOutboundModal, showNoteModal, showCancelOutboundModal, showAlertModal, showPriceExportModal, showEditPriceModal, showReservationDetailModal, showBulkEditModal, showMoveToWarehouseModal, showOutboundManualInsertModal, showMoveManualInsertModal } from "./ui.js";
-import { getStoredUser, applyRoleVisibility, hasPriceEditAccess, isAdminTestFeatureEnabled } from "./login.js";
+import { getStoredUser, applyRoleVisibility, hasPriceEditAccess, hasWarehouseMovesAccess } from "./login.js";
 import { apiLogActivity } from "./api.js";
 
 // 예약현황/타창고매출현황 액션(취소/완료/변경/토글 등) 이후 공용 새로고침(2026-08-19) —
@@ -1258,7 +1258,7 @@ async function handleClick(e) {
     // 재고장의 item.평중을 그대로 자동 반영(사용자 입력 아님). 실재고 차감/예약과는
     // 무관 — 창고이동 탭에서 조회용으로만 쌓인다(시트 연동/자동예약은 나중 이야기).
     if (e.target.classList.contains("move-btn")) {
-        if (!isAdminTestFeatureEnabled()) return;
+        if (!hasWarehouseMovesAccess()) return;
         if (state.selectedItems.size === 0) { showError("이동할 상품을 선택하세요."); return; }
         const ids = [...state.selectedItems.keys()];
         const items = ids.map(id => state.allData.find(v => v.id === id)).filter(Boolean);

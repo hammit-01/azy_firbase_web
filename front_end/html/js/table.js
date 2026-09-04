@@ -1,7 +1,7 @@
 import { state } from "./state.js";
 import { dom } from "./dom.js";
 import { employeeSelect, stateSelect, dispatcherSelect, moveWarehouseSelect, employeeAutocomplete } from "./panel.js";
-import { getStoredUser, hasEditorAccess, hasPriceEditAccess, hasAdminAccess, isAdminTestFeatureEnabled } from "./login.js";
+import { getStoredUser, hasEditorAccess, hasPriceEditAccess, hasWarehouseMovesAccess } from "./login.js";
 import { getAllReservations, getAllOutbound, getAllPrices, getOrderSheet, getYesterdayReservationQty, getAllWarehouseMoves } from "./firestoreService.js";
 
 // 영문 브랜드를 한글 표기로 쳐도 검색되게 하는 별칭 테이블(2026-08-14).
@@ -1281,7 +1281,7 @@ function reservationRowHtml(r, isSalesPage = false) {
                         ${!limitedActions && !cancelled && !isPreview && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
                     ${completed || cancelled || !access.canCancel || isTomorrow ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">취소</button>`}
                     ${isSalesPage || cancelled || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
-                    ${isSalesPage || !access.canOthers || !isAdminTestFeatureEnabled() ? "" : `<button class="move-from-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">이동</button>`}
+                    ${isSalesPage || !access.canOthers || !hasWarehouseMovesAccess() ? "" : `<button class="move-from-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">이동</button>`}
                 </div>
             </td>
         </tr>
