@@ -230,6 +230,19 @@ export function bindEvents() {
         localStorage.removeItem("azy_active_tab");
     });
 
+    // 재고장 메인 "추가" 입력행(2026-09-04) — 수정/예약은 이미 팝업(showBulkEditModal)이라
+    // Esc/Enter가 되는데, 추가만 표 안 인라인 행이라 안 됐던 것을 맞춰줌. 여러 행을
+    // 동시에 열어둘 수 있어서(+ 버튼) 포커스가 있는 행에만 적용한다.
+    document.addEventListener("keydown", (e) => {
+        if (e.key !== "Escape" && e.key !== "Enter") return;
+        const card = document.activeElement?.closest(".insert-card");
+        if (!card) return;
+        if (e.key === "Enter" && (document.activeElement.tagName === "SELECT" || document.activeElement.tagName === "TEXTAREA")) return;
+        e.preventDefault();
+        if (e.key === "Escape") card.querySelector(".remove-insert-btn")?.click();
+        else card.querySelector(".select-insert-btn")?.click();
+    });
+
     // sales.html "추가" 입력행 — 재고장(메인 표) 행 하나를 통째로 복사해서
     // 붙여넣으면 탭으로 구분된 여러 값이 한 번에 들어오는데, 클릭한 칸 하나에만
     // 박히지 않고 재고장 열 순서에 맞춰 각 칸에 자동으로 나눠 들어가게 함
@@ -1148,6 +1161,8 @@ async function handleClick(e) {
     // 추가 입력행 하나 더 늘리기 (여러 상품 연속 입력)
     if (e.target.classList.contains("add-insert-row-btn")) {
         e.target.closest(".insert-card")?.insertAdjacentHTML("afterend", createInsertRow());
+        // 다른 팝업들처럼 새 행이 뜨면 바로 입력할 수 있게 첫 칸에 포커스(2026-09-04).
+        e.target.closest("tr")?.nextElementSibling?.querySelector(".insert-name")?.focus();
         return;
     }
 

@@ -88,6 +88,8 @@ export function renderInsert() {
     if (!dom.insertRowsBody) return;
     if (dom.insertRowsBody.children.length > 0) return;
     dom.insertRowsBody.insertAdjacentHTML("beforeend", createInsertRow());
+    // 다른 팝업들처럼 뜨자마자 첫 칸에 바로 입력할 수 있게(2026-09-04).
+    dom.insertRowsBody.querySelector(".insert-name")?.focus();
 }
 
 export function createInsertRow() {
