@@ -1,5 +1,5 @@
 import { PRICE_FIELDS, reservationListItemsHtml } from "./table.js";
-import { dispatcherSelect, moveWarehouseSelect, employeeSelect } from "./panel.js";
+import { dispatcherSelect, moveWarehouseSelect, employeeSelect, stateSelect } from "./panel.js";
 
 // BL이 영문+숫자 조합이면(실제 크롤링 BL 형식) 재고 매칭 없이 바로 추가하는
 // "추가" 팝업 대상이 아니다(2026-09-04 사용자 지정: 매칭 없이 그냥 추가하는
@@ -263,6 +263,64 @@ export function showMoveToWarehouseModal(current) {
                 이동일자: dispatcher === "새벽" ? "" : overlay.querySelector(".move-res-date").value,
                 이동창고: warehouse,
             });
+        });
+        overlay.querySelector(".confirm-no").addEventListener("click", () => close(null));
+        wireModalOverlay(overlay, { onCancel: () => close(null), onSubmit: () => overlay.querySelector(".confirm-yes").click() });
+    });
+}
+
+// 재고장 메인 "추가" 팝업(2026-09-04 재설계 — 표 맨 위 인라인 입력행 대신
+// 다른 "추가" 기능들과 같은 팝업 + "+ 행 추가" 방식으로 통일). 저장 누르면
+// [{name, brand, grade, estNo, qty, bl, warehouse, dueDate, weight, dataState,
+// memo}, ...] 배열로 resolve(빈 행은 자동 제외, insertData의 파라미터 이름
+// 그대로 맞춤), 취소/바깥클릭이면 null.
+export function showInventoryInsertModal() {
+    return new Promise(resolve => {
+        const rowFieldsHtml = () => `
+            <div class="edit-reservation-form">
+                <label class="mi-field-lg">상품명<input type="text" class="mi-name" placeholder="상품명"></label>
+                <label class="mi-field-md">브랜드<input type="text" class="mi-brand"></label>
+                <label class="mi-field-xs">등급<input type="text" class="mi-grade"></label>
+                <label class="mi-field-sm">ESTNO<input type="text" class="mi-estno"></label>
+                <label class="mi-field-xs">재고<input type="number" min="1" class="mi-qty"></label>
+                <label class="mi-field-lg">BL<input type="text" class="mi-bl" placeholder="BL"></label>
+                <label class="mi-field-sm">창고<input type="text" class="mi-wh" placeholder="창고"></label>
+                <label class="mi-field-md">유통기한<input type="date" class="mi-duedate"></label>
+                <label class="mi-field-xs">평중<input type="number" step="0.01" class="mi-weight"></label>
+                <label class="mi-field-md">상태${stateSelect("mi-state")}</label>
+                <label class="mi-field-lg">비고<input type="text" class="mi-memo" placeholder="비고"></label>
+            </div>
+        `;
+        const overlay = document.createElement("div");
+        overlay.className = "confirm-overlay";
+        overlay.innerHTML =
+            `<div class="confirm-modal multi-insert-modal">` +
+            `<p class="confirm-msg">재고 추가</p>` +
+            `<div class="multi-insert-rows"><div class="multi-insert-row">${rowFieldsHtml()}<button type="button" class="multi-insert-remove-row" title="이 행 삭제" style="display:none">✕</button></div></div>` +
+            `<button type="button" class="multi-insert-add-row">+ 행 추가</button>` +
+            `<div class="confirm-btns">` +
+            `<button class="confirm-yes">저장</button>` +
+            `<button class="confirm-no">취소</button>` +
+            `</div></div>`;
+        document.body.appendChild(overlay);
+        _wireMultiRowInsert(overlay, rowFieldsHtml);
+
+        const close = (result) => { overlay.remove(); resolve(result); };
+        overlay.querySelector(".confirm-yes").addEventListener("click", () => {
+            const results = [];
+            for (const row of overlay.querySelectorAll(".multi-insert-row")) {
+                const val = sel => row.querySelector(sel)?.value.trim() ?? "";
+                const name = val(".mi-name"), qty = val(".mi-qty"), bl = val(".mi-bl"), warehouse = val(".mi-wh");
+                if (!name && !qty && !bl && !warehouse) continue; // 빈 채로 남은 여분 행은 건너뜀
+                results.push({
+                    name, brand: val(".mi-brand"), grade: val(".mi-grade"), estNo: val(".mi-estno"),
+                    qty, bl, warehouse, dueDate: val(".mi-duedate"), weight: val(".mi-weight"),
+                    dataState: row.querySelector(".mi-state")?.value || "",
+                    memo: val(".mi-memo"),
+                });
+            }
+            if (results.length === 0) { showError("최소 1건은 입력하세요."); return; }
+            close(results);
         });
         overlay.querySelector(".confirm-no").addEventListener("click", () => close(null));
         wireModalOverlay(overlay, { onCancel: () => close(null), onSubmit: () => overlay.querySelector(".confirm-yes").click() });

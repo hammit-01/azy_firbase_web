@@ -410,20 +410,18 @@ export function createMoveCard(item) {
 }
 
 // =========================
-// 우하단 전체 처리 바 — 추가/수정/홀딩 입력행이 있을 때만 표시
+// 우하단 전체 처리 바 — 수정/홀딩 입력행이 있을 때만 표시(추가는 2026-09-04
+// 팝업으로 바뀌면서 표 안 입력행 자체가 없어져 대상에서 빠짐)
 // =========================
 export function renderBulkActionBar() {
     const bar = document.getElementById("bulk-action-bar");
     if (!bar) return;
 
-    const insertCount = document.querySelectorAll("tr.insert-card").length;
     const updateCount = document.querySelectorAll("tr.update-row-edit").length;
     const holdingCount = document.querySelectorAll("tr.holding-insert-row").length;
 
     let cls = "", label = "", btnLabel = "", btnCls = "";
-    if (insertCount > 0) {
-        cls = "bulk-insert"; label = `${insertCount}개 상품 입력 중`; btnLabel = "전체 추가"; btnCls = "all-insert-btn";
-    } else if (updateCount > 0) {
+    if (updateCount > 0) {
         cls = "bulk-update"; label = `${updateCount}개 항목 수정 중`; btnLabel = "전체 수정"; btnCls = "all-update-btn";
     } else if (holdingCount > 0) {
         cls = "bulk-holding"; label = `${holdingCount}개 항목 예약 입력 중`; btnLabel = "전체 예약"; btnCls = "all-holding-btn";

@@ -1,6 +1,6 @@
 import { state } from "./state.js";
 import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows, renderReservationsTab, renderSalesTab, renderMovesTab, renderPriceTab, renderOrderSheetTab, priceInsertRowHtml, PRICE_FIELDS, priceFieldClass, clientPrefix, parseUnitPrice, parseWeight, buildClientWithDetails, todayISOStr, createUpdateCard, createHoldingCard, createMoveCard } from "./table.js";
-import { renderSelectData, renderInsert, createInsertRow, dispatcherSelect, moveWarehouseSelect, employeeAutocomplete } from "./panel.js";
+import { renderSelectData, dispatcherSelect, moveWarehouseSelect, employeeAutocomplete } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
 import { getReservationsByPk, cancelReservation, useReservation, updateReservation, toggleReservationRegister, updateOutbound, cancelOutbound, createOutbound, createOutboundManual, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, toggleOutboundSlip, toggleOutboundDeliveryCancel, createPrice, updatePrice, deletePrice, createWarehouseMove, createWarehouseMoveManual, updateWarehouseMove, createWarehouseMoveFromReservation } from "./firestoreService.js";
@@ -8,7 +8,7 @@ import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
 import { fetchAllData } from "./firebase.js";
-import { showToast, showError, showConfirm, showEditReservationModal, showRegisterOutboundModal, showNoteModal, showCancelOutboundModal, showAlertModal, showPriceExportModal, showEditPriceModal, showReservationDetailModal, showBulkEditModal, showMoveToWarehouseModal, showOutboundManualInsertModal, showMoveManualInsertModal } from "./ui.js";
+import { showToast, showError, showConfirm, showEditReservationModal, showRegisterOutboundModal, showNoteModal, showCancelOutboundModal, showAlertModal, showPriceExportModal, showEditPriceModal, showReservationDetailModal, showBulkEditModal, showMoveToWarehouseModal, showOutboundManualInsertModal, showMoveManualInsertModal, showInventoryInsertModal } from "./ui.js";
 import { getStoredUser, applyRoleVisibility, hasPriceEditAccess, hasWarehouseMovesAccess } from "./login.js";
 import { apiLogActivity } from "./api.js";
 
@@ -230,18 +230,6 @@ export function bindEvents() {
         localStorage.removeItem("azy_active_tab");
     });
 
-    // 재고장 메인 "추가" 입력행(2026-09-04) — 수정/예약은 이미 팝업(showBulkEditModal)이라
-    // Esc/Enter가 되는데, 추가만 표 안 인라인 행이라 안 됐던 것을 맞춰줌. 여러 행을
-    // 동시에 열어둘 수 있어서(+ 버튼) 포커스가 있는 행에만 적용한다.
-    document.addEventListener("keydown", (e) => {
-        if (e.key !== "Escape" && e.key !== "Enter") return;
-        const card = document.activeElement?.closest(".insert-card");
-        if (!card) return;
-        if (e.key === "Enter" && (document.activeElement.tagName === "SELECT" || document.activeElement.tagName === "TEXTAREA")) return;
-        e.preventDefault();
-        if (e.key === "Escape") card.querySelector(".remove-insert-btn")?.click();
-        else card.querySelector(".select-insert-btn")?.click();
-    });
 
     // sales.html "추가" 입력행 — 재고장(메인 표) 행 하나를 통째로 복사해서
     // 붙여넣으면 탭으로 구분된 여러 값이 한 번에 들어오는데, 클릭한 칸 하나에만
@@ -1141,28 +1129,28 @@ async function handleClick(e) {
         return;
     }
 
-    // 추가 버튼 — 테이블 맨 위에 입력행을 띄우거나(없으면) 닫는다(있으면). 선택/수정/홀딩 패널과는 무관하게 독립 동작.
+    // 추가 버튼 — 재고장 메인(2026-09-04 재설계: 표 안 인라인 행 대신 다른 "추가"들과
+    // 동일한 팝업 + "+ 행 추가" 방식). 여러 건 저장은 all-insert-btn이 하던 방식 그대로
+    // (noUndo=true로 개별 저장 후 한 번에 bulk-insert로 되돌리기 등록) 재사용.
     if (e.target.classList.contains("insert-btn")) {
-        if (dom.insertRowsBody && dom.insertRowsBody.children.length > 0) {
-            dom.insertRowsBody.innerHTML = "";
-            return;
+        const rows = await showInventoryInsertModal();
+        if (!rows) return;
+        const ids = [];
+        for (const r of rows) {
+            const newId = await insertData(
+                r.name, r.brand, r.grade, r.estNo, r.qty, r.bl, r.warehouse,
+                r.dueDate, r.weight, "", "", r.dataState, r.memo,
+                true // noUndo — 전체 undo는 아래 pushUndo(bulk-insert)로 한 번에 처리
+            );
+            if (newId) ids.push(newId);
         }
-        renderInsert();
-        return;
-    }
-
-    // 추가 입력행 취소
-    const removeBtn = e.target.closest(".remove-insert-btn, .card-close-btn");
-    if (removeBtn && removeBtn.closest(".insert-card")) {
-        removeBtn.closest(".insert-card").remove();
-        return;
-    }
-
-    // 추가 입력행 하나 더 늘리기 (여러 상품 연속 입력)
-    if (e.target.classList.contains("add-insert-row-btn")) {
-        e.target.closest(".insert-card")?.insertAdjacentHTML("afterend", createInsertRow());
-        // 다른 팝업들처럼 새 행이 뜨면 바로 입력할 수 있게 첫 칸에 포커스(2026-09-04).
-        e.target.closest("tr")?.nextElementSibling?.querySelector(".insert-name")?.focus();
+        if (ids.length === 0) return;
+        pushUndo({ type: "bulk-insert", ids });
+        showToast(`✓ ${ids.length}건 추가 완료`);
+        await fetchAllData();
+        ids.forEach(id => state.flashIds.add(id));
+        renderTable();
+        setTimeout(() => { ids.forEach(id => state.flashIds.delete(id)); renderTable(); }, 1500);
         return;
     }
 
@@ -1724,35 +1712,6 @@ async function handleClick(e) {
         return;
     }
 
-    // 개별 추가 (테이블 입력행 저장)
-    if (e.target.classList.contains("select-insert-btn")) {
-        const card     = e.target.closest(".insert-card");
-        const name     = card?.querySelector(".insert-name")?.value || "";
-        const brand    = card?.querySelector(".insert-brand")?.value || "";
-        const grade    = card?.querySelector(".insert-grade")?.value || "";
-        const estNo    = card?.querySelector(".insert-estNo")?.value || "";
-        const qty      = card?.querySelector(".insert-qty")?.value || "";
-        const bl       = card?.querySelector(".insert-bl")?.value || "";
-        const warehouse = card?.querySelector(".insert-warehouse")?.value || "";
-        const dueDate  = card?.querySelector(".insert-dueDate")?.value || "";
-        const weight   = card?.querySelector(".insert-weight")?.value || "";
-        const releaseDate = card?.querySelector(".insert-releaseDate")?.value || "";
-        const holding  = card?.querySelector(".insert-holding")?.value || "";
-        const dataState = card?.querySelector(".insert-state")?.value || "";
-        const memo     = card?.querySelector(".input-note")?.value || "";
-
-        const newId = await insertData(name, brand, grade, estNo, qty, bl, warehouse, dueDate, weight, releaseDate, holding, dataState, memo);
-        if (!newId) return;
-
-        card?.remove();
-        renderTable();
-
-        showToast("✓ 추가 완료");
-        state.flashIds.add(newId);
-        setTimeout(() => { state.flashIds.delete(newId); renderTable(); }, 1500);
-        return;
-    }
-
     // 개별 수정
     if (e.target.classList.contains("select-update-btn")) {
         const id = e.target.dataset.id;
@@ -1826,40 +1785,6 @@ async function handleClick(e) {
         state.selectedItems.delete(id);
         showToast("✓ 삭제 완료");
         renderAll();
-        return;
-    }
-
-    // 전체 추가 (입력 중인 상품 행 모두 저장)
-    if (e.target.classList.contains("all-insert-btn")) {
-        const cards = document.querySelectorAll("tr.insert-card");
-        const ids = [];
-        for (const card of cards) {
-            const newId = await insertData(
-                card.querySelector(".insert-name")?.value || "",
-                card.querySelector(".insert-brand")?.value || "",
-                card.querySelector(".insert-grade")?.value || "",
-                card.querySelector(".insert-estNo")?.value || "",
-                card.querySelector(".insert-qty")?.value || "",
-                card.querySelector(".insert-bl")?.value || "",
-                card.querySelector(".insert-warehouse")?.value || "",
-                card.querySelector(".insert-dueDate")?.value || "",
-                card.querySelector(".insert-weight")?.value || "",
-                card.querySelector(".insert-releaseDate")?.value || "",
-                card.querySelector(".insert-holding")?.value || "",
-                card.querySelector(".insert-state")?.value || "",
-                card.querySelector(".insert-memo")?.value || "",
-                true  // noUndo — 전체 undo는 아래 pushUndo(bulk-insert)로 처리
-            );
-            if (newId) ids.push(newId);
-        }
-        if (ids.length === 0) return;
-        pushUndo({ type: "bulk-insert", ids });
-        if (dom.insertRowsBody) dom.insertRowsBody.innerHTML = "";
-        showToast(`✓ ${ids.length}건 추가 완료`);
-        await fetchAllData();
-        ids.forEach(id => state.flashIds.add(id));
-        renderTable();
-        setTimeout(() => { ids.forEach(id => state.flashIds.delete(id)); renderTable(); }, 1500);
         return;
     }
 
