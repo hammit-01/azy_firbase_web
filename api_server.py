@@ -19,12 +19,15 @@ from pipeline.mysql_db import (
     reactivate_reservation, update_reservation, toggle_reservation_register, toggle_reservation_stock_release,
     get_active_reservations_by_pk, get_all_active_reservations,
     migrate_due_reservations_to_outbound, get_all_outbound, get_order_sheet_rows, create_outbound,
+    create_outbound_manual,
     update_outbound, cancel_outbound, use_outbound, toggle_outbound_complete,
     toggle_outbound_register, toggle_outbound_stock_release,
     toggle_outbound_slip, toggle_outbound_delivery_cancel,
     register_outbound_from_reservation, _today_iso,
     get_all_prices, create_price, update_price, delete_price,
     get_yesterday_holding_qty,
+    get_all_warehouse_moves, create_warehouse_move, update_warehouse_move,
+    create_warehouse_move_from_reservation, create_warehouse_move_manual, delete_warehouse_move,
 )
 
 app = FastAPI()
@@ -571,6 +574,31 @@ def create_outbound_endpoint(body: ReservationBody):
     return rec
 
 
+class ManualOutboundBody(BaseModel):
+    """타창고매출현황 "추가" 입력행(2026-09-04, 매칭 없이 바로 추가) — 실재고와
+    매칭하지 않으므로 상태/유통기한이 없다."""
+    상품명: str
+    브랜드: str = ""
+    등급: str = ""
+    ESTNO: str = ""
+    BL: str = ""
+    창고: str = ""
+    수량: int
+    거래처: str = ""
+    담당자: str = ""
+    출고일: str = ""
+    비고: str = ""
+
+@app.post("/api/outbound/manual")
+def create_outbound_manual_endpoint(body: ManualOutboundBody):
+    with get_conn() as conn:
+        try:
+            rec = create_outbound_manual(conn, body.dict())
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    return rec
+
+
 class UpdateOutboundBody(BaseModel):
     수량: int | None = None
     출고일: str | None = None
@@ -721,6 +749,103 @@ def delete_price_endpoint(price_id: str):
     if not ok:
         raise HTTPException(404, "항목을 찾을 수 없음")
     return {"ok": True}
+
+
+# ── 창고이동 탭(2026-09-04, 관리자+8001 테스트 기능) — 재고장에서 "이동" 버튼으로
+# 등록하는 수동 기록. 실재고/예약과 분리된 단순 CRUD(price와 동일 패턴).
+class WarehouseMoveBody(BaseModel):
+    pk: str | None = None
+    출고증: str | None = None
+    상품명: str | None = None
+    브랜드: str | None = None
+    등급: str | None = None
+    ESTNO: str | None = None
+    BL: str | None = None
+    매입처: str | None = None
+    창고: str | None = None
+    # 재고 매칭(create_reservation)에 상품명/브랜드/등급/ESTNO/BL/창고와 함께
+    # 정확히 일치해야 하는 나머지 2개(2026-09-04, 이동 시 예약 동시 생성용).
+    상태: str | None = None
+    유통기한: str | None = None
+    수량: int
+    배차자: str | None = None
+    이동일자: str | None = None
+    이동창고: str | None = None
+    실중량: float | None = None
+    담당자: str | None = None
+    매출처: str | None = None
+    수정사항: str | None = None
+    평중: float | None = None
+    비고: str | None = None
+    등록자: str | None = None
+
+@app.get("/api/warehouse_moves")
+def list_warehouse_moves():
+    with get_conn() as conn:
+        rows = get_all_warehouse_moves(conn)
+    return {"data": rows}
+
+
+@app.post("/api/warehouse_moves")
+def create_warehouse_move_endpoint(body: WarehouseMoveBody):
+    with get_conn() as conn:
+        try:
+            rec = create_warehouse_move(conn, body.dict())
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    return rec
+
+
+@app.post("/api/warehouse_moves/manual")
+def create_warehouse_move_manual_endpoint(body: WarehouseMoveBody):
+    with get_conn() as conn:
+        try:
+            rec = create_warehouse_move_manual(conn, body.dict())
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    return rec
+
+
+@app.delete("/api/warehouse_moves/{move_id}")
+def delete_warehouse_move_endpoint(move_id: str):
+    with get_conn() as conn:
+        ok = delete_warehouse_move(conn, move_id)
+    if not ok:
+        raise HTTPException(404, "항목을 찾을 수 없음")
+    return {"ok": True}
+
+
+@app.post("/api/warehouse_moves/{move_id}/update")
+def update_warehouse_move_endpoint(move_id: str, body: dict[str, Any]):
+    with get_conn() as conn:
+        try:
+            ok = update_warehouse_move(conn, move_id, body)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    if not ok:
+        raise HTTPException(404, "항목을 찾을 수 없음")
+    return {"ok": True}
+
+
+# 예약현황 "이동" 버튼(2026-09-04, 관리자+8001 테스트 기능) — 기존 예약의 수량
+# 중 일부/전체를 창고이동으로 등록. 담당자/거래처/상품 정보는 예약에서 그대로
+# 가져오므로 body엔 배차자/이동일자/이동창고/수량만 받는다.
+class MoveFromReservationBody(BaseModel):
+    수량: int
+    배차자: str | None = None
+    이동일자: str | None = None
+    이동창고: str | None = None
+    등록자: str | None = None
+
+@app.post("/api/reservations/{rec_id}/move_to_warehouse")
+def create_warehouse_move_from_reservation_endpoint(rec_id: str, body: MoveFromReservationBody):
+    fields = body.dict(exclude={"수량"})
+    with get_conn() as conn:
+        try:
+            rec = create_warehouse_move_from_reservation(conn, rec_id, body.수량, fields)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    return rec
 
 
 # ── 정적 파일 (프론트엔드) ───────────────────────────────────

@@ -30,6 +30,7 @@
                 <div class="toolbar-center">
                     <button class="reservations-tab-btn">예약 현황</button>
                     <button class="sales-tab-btn">타창고매출현황</button>
+                    <button class="moves-tab-btn" style="display:none">창고이동</button>
                     <button class="changes-tab-btn">업데이트</button>
                     <button class="price-tab-btn">단가표</button>
                     <button class="order-sheet-tab-btn" style="display:none">발주장</button>
@@ -98,6 +99,7 @@
                     <button class="insert-btn">추가</button>
                     <button class="update-btn">수정</button>
                     <button class="holding-btn">예약</button>
+                    <button class="move-btn" style="display:none">이동</button>
 
                     <div class="tb-sep"></div>
 
@@ -183,6 +185,12 @@
              renderSalesTab()) ── -->
         <div class="sales-container" style="display:none">
             <div id="sales-list"></div>
+        </div>
+
+        <!-- ── 창고이동 탭(2026-09-04, 관리자+8001 테스트 기능) — 재고장에서 "이동"
+             버튼으로 등록한 기록(warehouse_moves) 조회 전용. ── -->
+        <div class="moves-container" style="display:none">
+            <div id="moves-list"></div>
         </div>
 
         <!-- ── 전략단가 탭(2026-08-18 price.html에서 이관, 2026-08-19 mysql price

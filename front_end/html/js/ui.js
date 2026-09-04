@@ -1,4 +1,12 @@
 import { PRICE_FIELDS, reservationListItemsHtml } from "./table.js";
+import { dispatcherSelect, moveWarehouseSelect, employeeSelect } from "./panel.js";
+
+// BL이 영문+숫자 조합이면(실제 크롤링 BL 형식) 재고 매칭 없이 바로 추가하는
+// "추가" 팝업 대상이 아니다(2026-09-04 사용자 지정: 매칭 없이 그냥 추가하는
+// 대신, 진짜 재고 BL처럼 보이면 막는다) — 타창고매출현황/창고이동 공용.
+export function looksLikeRealBl(bl) {
+    return /[A-Za-z]/.test(bl) && /[0-9]/.test(bl);
+}
 
 export function showToast(msg, type = "success") {
     let t = document.getElementById("toast-msg");
@@ -16,6 +24,83 @@ export function showToast(msg, type = "success") {
 
 export function showError(msg) {
     showToast(msg, "error");
+}
+
+// 모든 팝업 공용 배경 클릭/Esc/Enter 처리(2026-09-04 사용자 요청).
+// - 바깥클릭 닫기: mousedown이 오버레이 자체에서 시작했을 때만 닫는다 — 입력칸
+//   안에서 텍스트를 드래그 선택하다 마우스가 팝업 밖으로 나가서 놓이면(mouseup이
+//   오버레이에서 발생) click의 target도 오버레이가 돼버려 그냥 닫히던 버그 수정.
+// - Esc: onCancel(보통 close(null)/close())을 그대로 부른다.
+// - Enter: onSubmit이 있으면 그 버튼을 눌러 각 모달의 기존 검증 로직을 그대로
+//   태운다 — textarea(줄바꿈 용도)와 select(방향키로 옵션 고르는 중 오작동 방지)
+//   안에서는 무시.
+function wireModalOverlay(overlay, { onCancel, onSubmit } = {}) {
+    let mouseDownOnOverlay = false;
+    overlay.addEventListener("mousedown", (e) => { mouseDownOnOverlay = e.target === overlay; });
+    overlay.addEventListener("click", (e) => {
+        if (e.target === overlay && mouseDownOnOverlay) onCancel?.();
+        mouseDownOnOverlay = false;
+    });
+    overlay.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") { e.preventDefault(); onCancel?.(); return; }
+        if (e.key === "Enter" && onSubmit && e.target.tagName !== "TEXTAREA" && e.target.tagName !== "SELECT") {
+            e.preventDefault();
+            onSubmit();
+        }
+    });
+    autoFocusFirstField(overlay);
+}
+
+// 팝업 뜨자마자 바로 입력할 수 있게 첫 입력칸에 포커스(2026-09-04 사용자 요청) —
+// 입력칸이 없는(조회 전용) 팝업은 대신 첫 버튼에 포커스해서 Enter/Space로 바로
+// 확인 가능하게. 텍스트 입력칸이면 기존 값을 전체 선택해서 바로 덮어쓸 수 있게.
+function autoFocusFirstField(overlay) {
+    const field = overlay.querySelector("input, select, textarea");
+    if (field) {
+        field.focus();
+        if (typeof field.select === "function") field.select();
+    } else {
+        overlay.querySelector("button")?.focus();
+    }
+}
+
+// 여러 행을 한 번에 입력하는 팝업 공용 골격(2026-09-04, 사용자 요청 — 표 안에서
+// 바로 입력하던 방식 대신 팝업 + "+ 행 추가" 버튼으로 바꿈). rowFieldsHtml()이
+// 빈 행 하나의 입력칸 HTML을 돌려주면, 여기서 행 추가/삭제를 붙인다.
+// "+"/"✕" 버튼에 포커스된 채 Enter를 누르면 원래 그 버튼을 누른 것처럼 동작해야
+// 하는데, wireModalOverlay의 전역 Enter 핸들러가 먼저 가로채 전체 폼을 저장해
+// 버리는 문제가 있어(2026-09-04 실측) 버튼 자신의 keydown에서 stopPropagation
+// 으로 막아준다.
+function _wireMultiRowInsert(overlay, rowFieldsHtml) {
+    const rowsBody = overlay.querySelector(".multi-insert-rows");
+    const updateRemoveButtons = () => {
+        const rows = rowsBody.querySelectorAll(".multi-insert-row");
+        rows.forEach(r => {
+            const btn = r.querySelector(".multi-insert-remove-row");
+            if (btn) btn.style.display = rows.length > 1 ? "" : "none";
+        });
+    };
+    const addRow = () => {
+        const div = document.createElement("div");
+        div.className = "multi-insert-row";
+        div.innerHTML = rowFieldsHtml() + `<button type="button" class="multi-insert-remove-row" title="이 행 삭제">✕</button>`;
+        rowsBody.appendChild(div);
+        updateRemoveButtons();
+        div.querySelector("input, select")?.focus();
+    };
+    rowsBody.addEventListener("click", (e) => {
+        if (e.target.classList.contains("multi-insert-remove-row")) {
+            e.target.closest(".multi-insert-row")?.remove();
+            updateRemoveButtons();
+        }
+    });
+    rowsBody.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && e.target.classList.contains("multi-insert-remove-row")) e.stopPropagation();
+    });
+    const addBtn = overlay.querySelector(".multi-insert-add-row");
+    addBtn?.addEventListener("click", addRow);
+    addBtn?.addEventListener("keydown", (e) => { if (e.key === "Enter") e.stopPropagation(); });
+    updateRemoveButtons();
 }
 
 // 예약변경 모달 — 수량/출고일/거래처를 한 번에 수정(2026-08-14, "수량변경"에서 확장).
@@ -70,7 +155,7 @@ export function showEditReservationModal(current, { showPrice = false, canRemark
             close(result);
         });
         overlay.querySelector(".confirm-no").addEventListener("click", () => close(null));
-        overlay.addEventListener("click", e => { if (e.target === overlay) close(null); });
+        wireModalOverlay(overlay, { onCancel: () => close(null), onSubmit: () => overlay.querySelector(".confirm-yes").click() });
     });
 }
 
@@ -121,7 +206,199 @@ export function showRegisterOutboundModal(current) {
             });
         });
         overlay.querySelector(".confirm-no").addEventListener("click", () => close(null));
-        overlay.addEventListener("click", e => { if (e.target === overlay) close(null); });
+        wireModalOverlay(overlay, { onCancel: () => close(null), onSubmit: () => overlay.querySelector(".confirm-yes").click() });
+    });
+}
+
+// 창고이동 모달 — 예약현황 행의 "이동" 버튼(2026-09-04, 관리자+8001 테스트 기능).
+// showRegisterOutboundModal과 동일한 골격 — 예약 수량 중 일부/전체(current.수량이
+// 입력 max/기본값)를 창고이동으로 등록한다. 담당자/거래처는 예약에 이미 있어서
+// 여기서 따로 안 받는다(백엔드가 예약에서 그대로 가져다 씀). 배차자="새벽"이면
+// 창고이동 등록 팝업과 동일하게 이동일자 선택란을 숨기고 다음날로 자동 처리—
+// 실제 값 계산은 저장 시 호출부(events.js)가 한다. 저장 누르면
+// {수량, 배차자, 이동일자, 이동창고} 객체로 resolve, 취소/바깥클릭이면 null.
+export function showMoveToWarehouseModal(current) {
+    return new Promise(resolve => {
+        const maxQty = Number(current.수량) || 0;
+        const tomorrow = new Date(Date.now() + 86400000);
+        const pad = n => String(n).padStart(2, "0");
+        const tomorrowStr = `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth() + 1)}-${pad(tomorrow.getDate())}`;
+        const overlay = document.createElement("div");
+        overlay.className = "confirm-overlay";
+        overlay.innerHTML =
+            `<div class="confirm-modal edit-reservation-modal">` +
+            `<p class="confirm-msg">창고이동 등록</p>` +
+            `<div class="edit-reservation-form">` +
+            `<label>수량<input type="number" class="move-res-qty" min="1" max="${maxQty}" value="${maxQty}"></label>` +
+            `<label>배차자${dispatcherSelect("move-res-dispatcher")}</label>` +
+            `<label class="move-res-date-field">이동일자<input type="date" class="move-res-date" value="${tomorrowStr}"></label>` +
+            `<label>이동창고${moveWarehouseSelect("move-res-warehouse")}</label>` +
+            `</div>` +
+            `<div class="confirm-btns">` +
+            `<button class="confirm-yes">등록</button>` +
+            `<button class="confirm-no">취소</button>` +
+            `</div></div>`;
+        document.body.appendChild(overlay);
+
+        overlay.querySelector(".move-res-dispatcher").addEventListener("change", (e) => {
+            overlay.querySelector(".move-res-date-field").style.display = e.target.value === "새벽" ? "none" : "";
+        });
+
+        const close = (result) => { overlay.remove(); resolve(result); };
+        overlay.querySelector(".confirm-yes").addEventListener("click", () => {
+            const qty = Number(overlay.querySelector(".move-res-qty").value);
+            if (!qty || qty < 1 || qty > maxQty) {
+                showError(`수량은 1~${maxQty} 사이여야 합니다`);
+                return;
+            }
+            const dispatcher = overlay.querySelector(".move-res-dispatcher").value;
+            const warehouse = overlay.querySelector(".move-res-warehouse").value;
+            if (!dispatcher || !warehouse) {
+                showError("배차자와 이동창고를 선택하세요");
+                return;
+            }
+            close({
+                수량: qty,
+                배차자: dispatcher,
+                이동일자: dispatcher === "새벽" ? "" : overlay.querySelector(".move-res-date").value,
+                이동창고: warehouse,
+            });
+        });
+        overlay.querySelector(".confirm-no").addEventListener("click", () => close(null));
+        wireModalOverlay(overlay, { onCancel: () => close(null), onSubmit: () => overlay.querySelector(".confirm-yes").click() });
+    });
+}
+
+// 타창고매출현황 "추가" 팝업(2026-09-04 재설계 — 표 안에 입력행을 띄우던 방식
+// 대신 팝업 + "+ 행 추가" 버튼으로 여러 건을 한 번에 입력). 재고 매칭 없이
+// create_outbound_manual로 바로 들어가므로 유통기한/상태는 안 받는다. 저장
+// 누르면 [{상품명, BL, 창고, 수량, 브랜드, 등급, ESTNO, 담당자, 거래처, 비고,
+// 출고일}, ...] 배열로 resolve(빈 행은 자동 제외), 취소/바깥클릭이면 null.
+export function showOutboundManualInsertModal() {
+    return new Promise(resolve => {
+        const rowFieldsHtml = () => `
+            <div class="edit-reservation-form">
+                <label class="mi-field-lg">품목<input type="text" class="mi-name" placeholder="상품명"></label>
+                <label class="mi-field-md">브랜드<input type="text" class="mi-brand"></label>
+                <label class="mi-field-xs">등급<input type="text" class="mi-grade"></label>
+                <label class="mi-field-sm">EST<input type="text" class="mi-estno"></label>
+                <label class="mi-field-xs">수량<input type="number" class="mi-qty" min="1" value="1"></label>
+                <label class="mi-field-lg">BL<input type="text" class="mi-bl" placeholder="BL"></label>
+                <label class="mi-field-sm">창고<input type="text" class="mi-wh" placeholder="창고"></label>
+                <label class="mi-field-md">담당자${employeeSelect("mi-manager")}</label>
+                <label class="mi-field-md">거래처<input type="text" class="mi-client"></label>
+                <label class="mi-field-lg">비고<input type="text" class="mi-remark"></label>
+                <label class="mi-field-md">출고일<input type="date" class="mi-date" title="비우면 오늘"></label>
+            </div>
+        `;
+        const overlay = document.createElement("div");
+        overlay.className = "confirm-overlay";
+        overlay.innerHTML =
+            `<div class="confirm-modal multi-insert-modal">` +
+            `<p class="confirm-msg">타창고매출현황 추가 — 타사 이체/출고분만 (재고 매칭 없이 바로 등록)</p>` +
+            `<div class="multi-insert-rows"><div class="multi-insert-row">${rowFieldsHtml()}<button type="button" class="multi-insert-remove-row" title="이 행 삭제" style="display:none">✕</button></div></div>` +
+            `<button type="button" class="multi-insert-add-row">+ 행 추가</button>` +
+            `<div class="confirm-btns">` +
+            `<button class="confirm-yes">저장</button>` +
+            `<button class="confirm-no">취소</button>` +
+            `</div></div>`;
+        document.body.appendChild(overlay);
+        _wireMultiRowInsert(overlay, rowFieldsHtml);
+
+        const close = (result) => { overlay.remove(); resolve(result); };
+        overlay.querySelector(".confirm-yes").addEventListener("click", () => {
+            const results = [];
+            for (const row of overlay.querySelectorAll(".multi-insert-row")) {
+                const val = sel => row.querySelector(sel)?.value.trim() ?? "";
+                const 상품명 = val(".mi-name"), BL = val(".mi-bl"), 창고 = val(".mi-wh");
+                const 수량 = Number(val(".mi-qty"));
+                if (!상품명 && !BL && !창고) continue;
+                if (!상품명 || !BL || !창고) { showError("품목/BL/창고는 필수입니다."); return; }
+                if (!Number.isInteger(수량) || 수량 <= 0) { showError("올바른 수량을 입력하세요."); return; }
+                if (looksLikeRealBl(BL)) { showError("타사 이체/출고분만 추가 가능합니다."); return; }
+                results.push({
+                    상품명, BL, 창고, 수량,
+                    브랜드: val(".mi-brand"), 등급: val(".mi-grade"), ESTNO: val(".mi-estno"),
+                    담당자: val(".mi-manager"), 거래처: val(".mi-client"),
+                    비고: val(".mi-remark"), 출고일: val(".mi-date"),
+                });
+            }
+            if (results.length === 0) { showError("최소 1건은 입력하세요."); return; }
+            close(results);
+        });
+        overlay.querySelector(".confirm-no").addEventListener("click", () => close(null));
+        wireModalOverlay(overlay, { onCancel: () => close(null), onSubmit: () => overlay.querySelector(".confirm-yes").click() });
+    });
+}
+
+// 창고이동 "추가" 팝업(2026-09-04, 관리자+8001 테스트 기능) — showOutboundManual
+// InsertModal과 동일한 골격이되 필드가 다르다(배차자/이동창고/실중량/매출처/
+// 수정사항/평중 추가, 상태/유통기한/출고일 없음 — 재고 매칭·예약 생성 없이
+// create_warehouse_move_manual로 바로 들어감). 이동일자는 입력칸 없이 호출부가
+// 현재 보고 있는 날짜 필터(없으면 오늘)로 채운다. 저장 누르면 행 배열로
+// resolve(빈 행은 자동 제외), 취소/바깥클릭이면 null.
+export function showMoveManualInsertModal() {
+    return new Promise(resolve => {
+        const rowFieldsHtml = () => `
+            <div class="edit-reservation-form">
+                <label class="mi-field-lg">품목<input type="text" class="mi-name" placeholder="상품명"></label>
+                <label class="mi-field-md">브랜드<input type="text" class="mi-brand"></label>
+                <label class="mi-field-xs">등급<input type="text" class="mi-grade"></label>
+                <label class="mi-field-sm">EST<input type="text" class="mi-estno"></label>
+                <label class="mi-field-xs">수량<input type="number" class="mi-qty" min="1" value="1"></label>
+                <label class="mi-field-lg">BL<input type="text" class="mi-bl" placeholder="BL"></label>
+                <label class="mi-field-sm">출고창고<input type="text" class="mi-wh" placeholder="창고"></label>
+                <label class="mi-field-md">배차자${dispatcherSelect("mi-dispatcher")}</label>
+                <label class="mi-field-md">이동창고${moveWarehouseSelect("mi-move-wh")}</label>
+                <label class="mi-field-xs">실중량<input type="number" step="0.01" min="0" class="mi-weight"></label>
+                <label class="mi-field-md">담당자${employeeSelect("mi-manager")}</label>
+                <label class="mi-field-md">매출처<input type="text" class="mi-client"></label>
+                <label class="mi-field-lg">수정사항<input type="text" class="mi-note"></label>
+                <label class="mi-field-xs">평중<input type="number" step="0.01" min="0" class="mi-avgweight"></label>
+                <label class="mi-field-lg">비고<input type="text" class="mi-remark"></label>
+            </div>
+        `;
+        const overlay = document.createElement("div");
+        overlay.className = "confirm-overlay";
+        overlay.innerHTML =
+            `<div class="confirm-modal multi-insert-modal">` +
+            `<p class="confirm-msg">창고이동 추가 — 타사 출고/기타 특이품분만 (재고 매칭 없이 바로 등록)</p>` +
+            `<div class="multi-insert-rows"><div class="multi-insert-row">${rowFieldsHtml()}<button type="button" class="multi-insert-remove-row" title="이 행 삭제" style="display:none">✕</button></div></div>` +
+            `<button type="button" class="multi-insert-add-row">+ 행 추가</button>` +
+            `<div class="confirm-btns">` +
+            `<button class="confirm-yes">저장</button>` +
+            `<button class="confirm-no">취소</button>` +
+            `</div></div>`;
+        document.body.appendChild(overlay);
+        _wireMultiRowInsert(overlay, rowFieldsHtml);
+
+        const close = (result) => { overlay.remove(); resolve(result); };
+        overlay.querySelector(".confirm-yes").addEventListener("click", () => {
+            const results = [];
+            for (const row of overlay.querySelectorAll(".multi-insert-row")) {
+                const val = sel => row.querySelector(sel)?.value.trim() ?? "";
+                const 상품명 = val(".mi-name"), BL = val(".mi-bl"), 창고 = val(".mi-wh");
+                const 수량 = Number(val(".mi-qty"));
+                if (!상품명 && !BL && !창고) continue;
+                if (!상품명 || !BL || !창고) { showError("품목/BL/출고창고는 필수입니다."); return; }
+                if (!Number.isInteger(수량) || 수량 <= 0) { showError("올바른 수량을 입력하세요."); return; }
+                if (looksLikeRealBl(BL)) { showError("타사 출고/기타 특이품분만 추가 가능합니다."); return; }
+                results.push({
+                    상품명, BL, 창고, 수량,
+                    브랜드: val(".mi-brand"), 등급: val(".mi-grade"), ESTNO: val(".mi-estno"),
+                    배차자: val(".mi-dispatcher"), 이동창고: val(".mi-move-wh"),
+                    실중량: val(".mi-weight") ? Number(val(".mi-weight")) : null,
+                    담당자: val(".mi-manager"), 매출처: val(".mi-client"),
+                    수정사항: val(".mi-note"),
+                    평중: val(".mi-avgweight") ? Number(val(".mi-avgweight")) : null,
+                    비고: val(".mi-remark"),
+                });
+            }
+            if (results.length === 0) { showError("최소 1건은 입력하세요."); return; }
+            close(results);
+        });
+        overlay.querySelector(".confirm-no").addEventListener("click", () => close(null));
+        wireModalOverlay(overlay, { onCancel: () => close(null), onSubmit: () => overlay.querySelector(".confirm-yes").click() });
     });
 }
 
@@ -153,6 +430,7 @@ export function showNoteModal(note, canEdit = true) {
                 `</div></div>`;
             overlay.querySelector(".confirm-edit")?.addEventListener("click", renderEdit);
             overlay.querySelector(".confirm-yes").addEventListener("click", () => close(null));
+            (overlay.querySelector(".confirm-edit") || overlay.querySelector(".confirm-yes")).focus();
         };
 
         const renderEdit = () => {
@@ -173,7 +451,7 @@ export function showNoteModal(note, canEdit = true) {
             overlay.querySelector(".confirm-no").addEventListener("click", () => close(null));
         };
 
-        overlay.addEventListener("click", e => { if (e.target === overlay) close(null); });
+        wireModalOverlay(overlay, { onCancel: () => close(null), onSubmit: () => overlay.querySelector(".confirm-yes").click() });
         renderView();
     });
 }
@@ -198,7 +476,9 @@ export function showCancelOutboundModal() {
         overlay.querySelector(".confirm-revert").addEventListener("click", () => close("revert"));
         overlay.querySelector(".confirm-delete").addEventListener("click", () => close("delete"));
         overlay.querySelector(".confirm-no").addEventListener("click", () => close(null));
-        overlay.addEventListener("click", e => { if (e.target === overlay) close(null); });
+        // 되돌리기/삭제/닫기 3개 중 하나를 고르는 팝업이라 애매한 기본 동작이
+        // 없음 — Enter로 저장하지 않고 Esc/드래그-안전 바깥클릭만 적용.
+        wireModalOverlay(overlay, { onCancel: () => close(null) });
     });
 }
 
@@ -221,7 +501,7 @@ export function showReservationDetailModal(reservations) {
 
         const close = () => { overlay.remove(); resolve(); };
         overlay.querySelector(".confirm-yes").addEventListener("click", close);
-        overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
+        wireModalOverlay(overlay, { onCancel: () => close(), onSubmit: () => overlay.querySelector(".confirm-yes").click() });
     });
 }
 
@@ -242,7 +522,7 @@ export function showAlertModal(msg) {
 
         const close = () => { overlay.remove(); resolve(); };
         overlay.querySelector(".confirm-yes").addEventListener("click", close);
-        overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
+        wireModalOverlay(overlay, { onCancel: () => close(), onSubmit: () => overlay.querySelector(".confirm-yes").click() });
     });
 }
 
@@ -274,7 +554,7 @@ export function showPriceExportModal() {
             });
         });
         overlay.querySelector(".confirm-no").addEventListener("click", () => close(null));
-        overlay.addEventListener("click", e => { if (e.target === overlay) close(null); });
+        wireModalOverlay(overlay, { onCancel: () => close(null), onSubmit: () => overlay.querySelector(".confirm-yes").click() });
     });
 }
 
@@ -313,7 +593,7 @@ export function showEditPriceModal(row) {
             close(result);
         });
         overlay.querySelector(".confirm-no").addEventListener("click", () => close(null));
-        overlay.addEventListener("click", e => { if (e.target === overlay) close(null); });
+        wireModalOverlay(overlay, { onCancel: () => close(null), onSubmit: () => overlay.querySelector(".confirm-yes").click() });
     });
 }
 
@@ -330,9 +610,10 @@ export function showConfirm(msg) {
             `</div></div>`;
         document.body.appendChild(overlay);
 
-        overlay.querySelector(".confirm-yes").addEventListener("click", () => { overlay.remove(); resolve(true); });
-        overlay.querySelector(".confirm-no").addEventListener("click", () => { overlay.remove(); resolve(false); });
-        overlay.addEventListener("click", e => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
+        const close = (result) => { overlay.remove(); resolve(result); };
+        overlay.querySelector(".confirm-yes").addEventListener("click", () => close(true));
+        overlay.querySelector(".confirm-no").addEventListener("click", () => close(false));
+        wireModalOverlay(overlay, { onCancel: () => close(false), onSubmit: () => overlay.querySelector(".confirm-yes").click() });
     });
 }
 
@@ -366,10 +647,18 @@ export function showBulkEditModal(title, cardsHtml, { onSave } = {}) {
             close();
         };
         overlay.querySelector(".bulk-modal-cancel-btn").addEventListener("click", cancelAndClear);
-        overlay.querySelector(".bulk-modal-save-btn").addEventListener("click", async (e) => {
+        const saveBtn = overlay.querySelector(".bulk-modal-save-btn");
+        saveBtn.addEventListener("click", async (e) => {
             e.target.disabled = true;
             if (onSave) await onSave(overlay);
             close();
+        });
+        // 바깥클릭(드래그-안전)/Esc는 close()(선택 유지, cancelAndClear의 체크
+        // 해제까지는 안 함 — 기존 바깥클릭 동작과 동일), Enter는 저장(2026-09-04
+        // "재고장 메인 수정/예약도 엔터로 저장" 요청 — 이제 모든 호출부 공통 적용).
+        wireModalOverlay(overlay, {
+            onCancel: close,
+            onSubmit: () => { if (!saveBtn.disabled) saveBtn.click(); },
         });
         // 카드별 "✕" — 팝업 열어둔 채로 그 상품만 이번 처리 대상에서 뺀다(2026-08-24).
         // 뒤에 깔린 표의 체크박스를 실제로 클릭해서(state.selectedItems.delete를
@@ -377,18 +666,15 @@ export function showBulkEditModal(title, cardsHtml, { onSave } = {}) {
         // 태워 상태 일관성을 유지한다 — 그래야 체크박스 표시/선택 카운트 등도 같이 맞음.
         overlay.addEventListener("click", (e) => {
             const removeBtn = e.target.closest(".bulk-edit-card-remove");
-            if (removeBtn) {
-                const id = removeBtn.dataset.id;
-                const checkbox = document.querySelector(`.row-check[data-id="${CSS.escape(id)}"]`);
-                if (checkbox?.checked) checkbox.click();
-                removeBtn.closest(".bulk-edit-card")?.remove();
-                const remaining = overlay.querySelectorAll(".bulk-edit-card[data-id]").length;
-                if (remaining === 0) { close(); return; }
-                const msg = overlay.querySelector(".confirm-msg");
-                if (msg) msg.textContent = msg.textContent.replace(/\d+(?=건\))/, remaining);
-                return;
-            }
-            if (e.target === overlay) close();
+            if (!removeBtn) return;
+            const id = removeBtn.dataset.id;
+            const checkbox = document.querySelector(`.row-check[data-id="${CSS.escape(id)}"]`);
+            if (checkbox?.checked) checkbox.click();
+            removeBtn.closest(".bulk-edit-card")?.remove();
+            const remaining = overlay.querySelectorAll(".bulk-edit-card[data-id]").length;
+            if (remaining === 0) { close(); return; }
+            const msg = overlay.querySelector(".confirm-msg");
+            if (msg) msg.textContent = msg.textContent.replace(/\d+(?=건\))/, remaining);
         });
     });
 }

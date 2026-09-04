@@ -6,10 +6,12 @@ import {
     apiReactivateReservation,
     apiUpdateReservation, apiToggleReservationRegister, apiToggleReservationStockRelease, apiRegisterOutboundFromReservation,
     apiGetReservationsByPk, apiGetAllReservations, apiGetYesterdayReservationQty,
-    apiGetAllOutbound, apiGetOrderSheet, apiCreateOutbound, apiUpdateOutbound, apiCancelOutbound, apiUseOutbound,
+    apiGetAllOutbound, apiGetOrderSheet, apiCreateOutbound, apiCreateOutboundManual, apiUpdateOutbound, apiCancelOutbound, apiUseOutbound,
     apiToggleOutboundComplete, apiToggleOutboundRegister, apiToggleOutboundStockRelease,
     apiToggleOutboundSlip, apiToggleOutboundDeliveryCancel,
     apiGetAllPrices, apiCreatePrice, apiUpdatePrice, apiDeletePrice,
+    apiGetAllWarehouseMoves, apiCreateWarehouseMove, apiCreateWarehouseMoveManual, apiUpdateWarehouseMove,
+    apiCreateWarehouseMoveFromReservation, apiDeleteWarehouseMove,
 } from "./api.js";
 
 // 예약 생성/취소/완료 — 실재고와 완전히 분리된 새 모델(2026-08-05).
@@ -60,6 +62,9 @@ export async function getOrderSheet() {
 }
 export async function createOutbound(product) {
     return apiCreateOutbound(product);
+}
+export async function createOutboundManual(product) {
+    return apiCreateOutboundManual(product);
 }
 export async function updateOutbound(id, fields) {
     return apiUpdateOutbound(id, fields);
@@ -133,4 +138,24 @@ export async function updatePrice(id, fields) {
 }
 export async function deletePrice(id) {
     return apiDeletePrice(id);
+}
+
+// 창고이동(warehouse_moves, 2026-09-04, 관리자+8001 테스트 기능)
+export async function getAllWarehouseMoves() {
+    return apiGetAllWarehouseMoves();
+}
+export async function createWarehouseMove(row) {
+    return apiCreateWarehouseMove(row);
+}
+export async function createWarehouseMoveManual(row) {
+    return apiCreateWarehouseMoveManual(row);
+}
+export async function deleteWarehouseMove(id) {
+    return apiDeleteWarehouseMove(id);
+}
+export async function updateWarehouseMove(id, fields) {
+    return apiUpdateWarehouseMove(id, fields);
+}
+export async function createWarehouseMoveFromReservation(recId, body) {
+    return apiCreateWarehouseMoveFromReservation(recId, body);
 }

@@ -693,8 +693,8 @@ th.sort-active {
 .rl-field-strong { font-weight: 700; color: #1e293b; }
 /* ── 툴바 액션 버튼 ── */
 .rollback-btn, .clear-btn, .all-delete-btn, .changes-tab-btn, .reservations-tab-btn,
-.sales-tab-btn, .price-tab-btn, .order-sheet-tab-btn,
-.insert-btn, .update-btn, .holding-btn, .main-download-btn {
+.sales-tab-btn, .price-tab-btn, .order-sheet-tab-btn, .moves-tab-btn,
+.insert-btn, .update-btn, .holding-btn, .move-btn, .main-download-btn {
     height: 42px;
     padding: 0 18px;
     border: none;
@@ -708,10 +708,10 @@ th.sort-active {
     flex-shrink: 0;
 }
 
-.insert-btn:active, .update-btn:active, .holding-btn:active,
+.insert-btn:active, .update-btn:active, .holding-btn:active, .move-btn:active,
 .rollback-btn:active, .all-delete-btn:active, .changes-tab-btn:active,
 .reservations-tab-btn:active, .sales-tab-btn:active, .price-tab-btn:active,
-.order-sheet-tab-btn:active {
+.order-sheet-tab-btn:active, .moves-tab-btn:active {
     transform: translateY(1px);
 }
 
@@ -760,6 +760,10 @@ th.sort-active {
 .order-sheet-tab-btn { background: #dbeafe; color: #1d4ed8; }
 .order-sheet-tab-btn:hover { background: #bfdbfe; }
 .order-sheet-tab-btn.active { background: #1d4ed8; color: #fff; }
+
+.moves-tab-btn { background: #ffedd5; color: #c2410c; }
+.moves-tab-btn:hover { background: #fed7aa; }
+.moves-tab-btn.active { background: #c2410c; color: #fff; }
 
 .main-download-btn { background: #dcfce7; color: #15803d; }
 .main-download-btn:hover { background: #bbf7d0; }
@@ -822,7 +826,7 @@ th.sort-active {
 /* ── 예약 현황 / 타창고매출현황 / 전략단가 / 발주장 탭(2026-08-18, sales.html·
    price.html에서 이관; 발주장은 2026-08-24 추가인데 이 규칙에서 빠져있어서
    overflow:auto가 안 걸리고 스크롤바가 안 생기던 문제를 2026-08-26에 수정) ── */
-.reservations-container, .sales-container, .price-container, .order-sheet-container {
+.reservations-container, .sales-container, .moves-container, .price-container, .order-sheet-container {
     flex: 1;
     overflow-y: auto;
     /* 액션 버튼이 3개(수량변경/사용완료/홀딩취소)로 늘어나면서 표가 컨테이너보다
@@ -868,7 +872,8 @@ th.sort-active {
    없음(2026-08-18, "필터 박스 너무 길다" 피드백). 타창고매출현황의 출고일
    필터도 동일(2026-08-19). */
 #reservations-date-filter.reservations-filter-select,
-#sales-date-filter.reservations-filter-select {
+#sales-date-filter.reservations-filter-select,
+#moves-date-filter.reservations-filter-select {
     width: 150px;
 }
 
@@ -931,6 +936,16 @@ th.sort-active {
    한 겹 더 감싸 특이도를 올려서 항상 이기게 함. */
 .reservations-table tr.sales-completed-row td { background: #fde047; }
 .reservation-card.sales-completed-row { background: #fde047; }
+
+/* 타창고매출현황 — 출고취소(되돌리기/삭제 둘 다, 2026-09-04) 표시. 삭제해도
+   물리적으로 안 지우고 취소선으로 남겨서 흔적을 유지한다. */
+.reservations-table tr.sales-cancelled-row td { background: #f3f4f6; color: #9ca3af; text-decoration: line-through; }
+.reservation-card.sales-cancelled-row { background: #f3f4f6; color: #9ca3af; text-decoration: line-through; }
+
+/* 창고이동 탭 — 취소 체크 시 빨간 배경 + 취소선, 처리 체크 시 핑크 배경(2026-09-04).
+   위 완료 행과 마찬가지로 짝수행 줄무늬를 이겨야 해서 .reservations-table로 특이도 확보. */
+.reservations-table tr.move-cancelled-row td { background: #fee2e2; color: #b91c1c; text-decoration: line-through; }
+.reservations-table tr.move-processed-row td { background: #fce7f3; }
 
 /* 타창고매출현황 — "수정중" 체크한 사람 기준 행 색(2026-08-25, 고정 매핑:
    전미림=핑크/김나미=골드/박채연=보라/임보연=하늘색). 짝수행 줄무늬를 이겨야
@@ -1141,7 +1156,7 @@ input[type="date"].price-edit-input {
     margin-top: 10px;
 }
 
-.edit-reservation-btn, .use-reservation-btn, .cancel-reservation-btn, .register-outbound-btn, .price-delete-btn, .save-outbound-insert-btn, .cancel-outbound-insert-btn {
+.edit-reservation-btn, .use-reservation-btn, .cancel-reservation-btn, .register-outbound-btn, .move-from-reservation-btn, .price-delete-btn {
     height: 28px;
     padding: 0 8px;
     border: none;
@@ -1154,16 +1169,26 @@ input[type="date"].price-edit-input {
 .edit-reservation-btn { background: #dbeafe; color: #1d4ed8; }
 .edit-reservation-btn:hover { background: #bfdbfe; }
 .qty-dropped { color: #b91c1c; font-weight: 700; }
+
+/* 창고이동 표 — 더블클릭으로 수정 가능한 칸(2026-09-04, 처음 도입 후 CSS를
+   못 챙겨서 그냥 일반 텍스트처럼 보였음)임을 밑줄+커서로 표시하고, 마우스
+   올리면 살짝 배경이 들어와 어떤 칸을 고칠 수 있는지 바로 알 수 있게 함. */
+.move-editable-cell {
+    cursor: pointer;
+    border-bottom: 1px dashed #cbd5e1;
+}
+.move-editable-cell:hover {
+    background: #fff7ed;
+    border-bottom-color: #c2410c;
+}
 .use-reservation-btn { background: #dcfce7; color: #15803d; }
 .use-reservation-btn:hover { background: #bbf7d0; }
 .cancel-reservation-btn { background: #fee2e2; color: #b91c1c; }
 .cancel-reservation-btn:hover { background: #fca5a5; }
-.save-outbound-insert-btn { background: #dcfce7; color: #15803d; }
-.save-outbound-insert-btn:hover { background: #bbf7d0; }
-.cancel-outbound-insert-btn { background: #fee2e2; color: #b91c1c; }
-.cancel-outbound-insert-btn:hover { background: #fca5a5; }
 .register-outbound-btn { background: #ede9fe; color: #6d28d9; }
 .register-outbound-btn:hover { background: #ddd6fe; }
+.move-from-reservation-btn { background: #ffedd5; color: #c2410c; }
+.move-from-reservation-btn:hover { background: #fed7aa; }
 .price-delete-btn { background: #fee2e2; color: #b91c1c; }
 .price-delete-btn:hover { background: #fca5a5; }
 
@@ -1239,6 +1264,14 @@ input[type="date"].price-edit-input {
 }
 .holding-btn:hover, .all-holding-btn:hover, .select-holding-btn:hover {
     background: #0284c7;
+}
+
+.move-btn {
+    background: #8b5cf6; color: #fff;
+    box-shadow: 0 2px 8px rgba(139,92,246,0.28);
+}
+.move-btn:hover {
+    background: #7c3aed;
 }
 
 .select-delete-btn { background: #fee2e2; color: #b91c1c; }
@@ -2013,7 +2046,7 @@ tr.insert-card .remove-insert-btn:hover {
        flex:1 1 calc(33.333% - 6px); height:44px;로 잡히므로 나머지 둘만 맞춤 —
        셋 다 여기서 다시 잡으면 cascade 순서상 뒤에 있는 그 규칙이 이겨서
        reservations-tab-btn만 높이가 달라진다. */
-    .sales-tab-btn, .price-tab-btn, .order-sheet-tab-btn {
+    .sales-tab-btn, .price-tab-btn, .order-sheet-tab-btn, .moves-tab-btn {
         flex: 1 1 calc(33.333% - 6px);
         height: 44px;
         font-size: 13px;
@@ -2066,7 +2099,7 @@ tr.insert-card .remove-insert-btn:hover {
     .main-download-btn { order: 9; }
 
     .rollback-btn, .clear-btn, .all-delete-btn, .changes-tab-btn, .reservations-tab-btn,
-    .insert-btn, .update-btn, .holding-btn, .main-download-btn {
+    .insert-btn, .update-btn, .holding-btn, .move-btn, .main-download-btn {
         flex: 1 1 calc(33.333% - 6px);
         height: 44px;
         font-size: 13px;
@@ -2561,6 +2594,35 @@ tr.insert-card .remove-insert-btn:hover {
 }
 .edit-reservation-form input:hover { border-color: #cbd5e1; }
 .edit-reservation-form input:focus { border-color: #0d9488; background: #fff; box-shadow: 0 0 0 3px rgba(13,148,136,0.15); }
+
+/* 타창고매출현황/창고이동 "추가" 팝업의 여러 행 입력(2026-09-04) — 행마다
+   테두리로 구분하고, 오른쪽에 삭제(✕) 버튼을 붙인다. */
+.multi-insert-modal { max-width: 900px; }
+.multi-insert-rows { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
+.multi-insert-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; background: #f8fafc;
+}
+.multi-insert-row .edit-reservation-form { flex: 1; margin-bottom: 0; }
+/* 열마다 실제 데이터 길이에 맞춰 입력칸 너비를 다르게(2026-09-04 사용자 지정 —
+   "각 열의 데이터 길이 감안해서") — 등급/수량/평중처럼 짧은 값은 좁게, 품목/BL/
+   비고/수정사항처럼 긴 값은 넓게. */
+.multi-insert-row .edit-reservation-form label.mi-field-xs { flex: 0 1 60px; min-width: 52px; max-width: 68px; }
+.multi-insert-row .edit-reservation-form label.mi-field-sm { flex: 0 1 84px; min-width: 76px; max-width: 96px; }
+.multi-insert-row .edit-reservation-form label.mi-field-md { flex: 1 1 110px; min-width: 100px; max-width: 130px; }
+.multi-insert-row .edit-reservation-form label.mi-field-lg { flex: 1.8 1 170px; min-width: 150px; max-width: 230px; }
+.multi-insert-remove-row {
+    flex: 0 0 auto; width: 28px; height: 28px; margin-top: 2px;
+    border: none; border-radius: 6px; background: #fee2e2; color: #b91c1c;
+    font-weight: 700; cursor: pointer;
+}
+.multi-insert-remove-row:hover { background: #fca5a5; }
+.multi-insert-add-row {
+    display: inline-flex; align-items: center; height: 34px; padding: 0 14px;
+    border: 1.5px dashed #94a3b8; border-radius: 8px; background: #fff; color: #475569;
+    font-size: 13px; font-weight: 700; cursor: pointer; margin-bottom: 20px;
+}
+.multi-insert-add-row:hover { border-color: #0d9488; color: #0d9488; }
 
 /* sales.html "추가" 입력행 — 행에 마우스 올리면(tbody tr:hover td 규칙) 배경이
    바뀌는데, 입력칸 자체는 흰 배경이라 안 보였음. 입력칸도 같이 바뀌게 함

@@ -252,7 +252,7 @@ def get_outbound_active_pks(conn) -> set:
     행도 재고 행과의 연결은 여전히 필요해서 — get_outbound_sum(수량 합계,
     가용재고 계산용, ACTIVE만 맞음)과 달리 수량과 무관하게 존재 여부만 본다."""
     with conn.cursor() as cur:
-        cur.execute("SELECT DISTINCT pk FROM outbound WHERE pk != '' AND status IN ('ACTIVE','COMPLETED')")
+        cur.execute("SELECT DISTINCT pk FROM outbound WHERE pk != '' AND status IN ('ACTIVE','COMPLETED','CANCEL')")
         return {row["pk"] for row in cur.fetchall()}
 
 
@@ -655,22 +655,34 @@ def use_reservation(conn, rec_id: str, use_qty: int) -> bool:
     return False
 
 
-def _apply_bigo_stock_release(cur, table: str, rec_id: str) -> None:
-    """비고 값 유무에 따라 수량내림을 맞춘다(2026-08-27, "비고란이 빈칸이
-    아니면 발동되게 해" 요청) — 비고를 바꾸는 경로가 여러 곳(추가/수정/
-    미리보기)이라 프론트 개별 호출에 의존하지 않고 여기 한 곳에서 공통
-    적용한다. 이미 원하는 상태면 아무것도 안 함(불필요한 토글 방지)."""
-    cur.execute(f"SELECT 수량, 원수량, 수량내림, 비고 FROM {table} WHERE id=%s", (rec_id,))
+def _set_qty_dropped(cur, table: str, rec_id: str, want_dropped: bool) -> None:
+    """수량내림 상태를 명시적으로 맞춘다(2026-09-04, _apply_bigo_stock_release에서
+    분리 — 창고이동 탭의 비고도 같은 내림 동작을 쓰는데, 그쪽은 "무엇을 내릴지"를
+    자기 행이 아니라 다른 행(연결된 예약)의 비고 여부로 판단해야 해서 want_dropped를
+    파라미터로 받는 버전이 필요했다). 이미 원하는 상태면 아무것도 안 함."""
+    cur.execute(f"SELECT 수량, 원수량, 수량내림 FROM {table} WHERE id=%s", (rec_id,))
     row = cur.fetchone()
     if not row:
         return
-    want_dropped = bool(str(row.get("비고") or "").strip())
     if want_dropped == bool(row.get("수량내림")):
         return
     if want_dropped:
         cur.execute(f"UPDATE {table} SET 원수량=수량, 수량=0, 수량내림=1 WHERE id=%s", (rec_id,))
     else:
         cur.execute(f"UPDATE {table} SET 수량=%s, 원수량=NULL, 수량내림=0 WHERE id=%s", (row["원수량"], rec_id))
+
+
+def _apply_bigo_stock_release(cur, table: str, rec_id: str) -> None:
+    """비고 값 유무에 따라 수량내림을 맞춘다(2026-08-27, "비고란이 빈칸이
+    아니면 발동되게 해" 요청) — 비고를 바꾸는 경로가 여러 곳(추가/수정/
+    미리보기)이라 프론트 개별 호출에 의존하지 않고 여기 한 곳에서 공통
+    적용한다."""
+    cur.execute(f"SELECT 비고 FROM {table} WHERE id=%s", (rec_id,))
+    row = cur.fetchone()
+    if not row:
+        return
+    want_dropped = bool(str(row.get("비고") or "").strip())
+    _set_qty_dropped(cur, table, rec_id, want_dropped)
 
 
 def update_reservation(conn, rec_id: str, updates: dict) -> bool:
@@ -866,7 +878,12 @@ def get_all_active_reservations(conn) -> list[dict]:
     초과된 상황(2026-08-13, MAEU270161050 오버부킹 발견)을 예약 현황 화면
     에서 바로 볼 수 있게 한다. 가용재고 = 실재고 − ACTIVE 예약 합계 − ACTIVE
     outbound 합계(둘 다 자기 자신 포함, pk 기준) — /api/inventory 및
-    create/update_reservation의 계산과 동일 원칙(2026-08-14)."""
+    create/update_reservation의 계산과 동일 원칙(2026-08-14).
+
+    상태/유통기한도 같이 내려준다(2026-09-04) — 예약취소 되돌리기(프론트
+    "reservation-cancelled" undo)가 취소 직전 이 목록의 스냅샷으로 create_
+    reservation을 다시 부르는데, create_reservation의 재고 매칭은 이 둘까지
+    정확히 일치해야 해서 없으면 매칭 실패로 되돌리기가 조용히 실패했었다."""
     result = []
     pairs = [("holding_records", "inventory"), ("azy_holding_records", "azy_inventory")]
     with conn.cursor() as cur:
@@ -874,14 +891,23 @@ def get_all_active_reservations(conn) -> list[dict]:
             cur.execute(
                 f"SELECT r.id, r.pk, r.수량, r.홀딩 AS 담당자, r.메모 AS 거래처, r.홀딩일자, r.출고일, "
                 f"r.전달사항, r.비고, "
-                f"i.상품명, i.브랜드, i.등급, i.ESTNO, i.BL, i.창고, i.재고, "
+                f"i.상품명, i.브랜드, i.등급, i.ESTNO, i.BL, i.창고, i.재고, i.상태, i.유통기한, "
                 f"i.재고 - COALESCE(agg.총예약, 0) - COALESCE(ob.총출고, 0) AS 가용재고 "
                 f"FROM {hr_table} r LEFT JOIN {inv_table} i ON r.pk = i.id "
                 f"LEFT JOIN (SELECT pk, CAST(SUM(수량) AS SIGNED) AS 총예약 FROM {hr_table} "
                 f"           WHERE status='ACTIVE' GROUP BY pk) agg ON r.pk = agg.pk "
                 f"LEFT JOIN (SELECT pk, CAST(SUM(수량) AS SIGNED) AS 총출고 FROM outbound "
                 f"           WHERE status='ACTIVE' GROUP BY pk) ob ON r.pk = ob.pk "
-                f"WHERE r.status='ACTIVE' ORDER BY r.홀딩일자 DESC"
+                # 창고이동 비고로 수량이 0까지 내려간 예약 중, 그 이동이 "처리"까지
+                # 체크된 건 더 이상 살아있는 예약이 아니라고 보고 숨긴다(2026-09-04
+                # 사용자 요청) — 비고만 입력되고 처리 전이면 계속 보여야 하므로
+                # 수량=0 단독이 아니라 반드시 m.처리=1까지 같이 확인.
+                # warehouse_moves가 holding_records/azy_holding_records와 콜레이션이
+                # 달라(테이블 생성 시점 차이) 그냥 비교하면 "Illegal mix of collations"
+                # 에러가 나서 명시적으로 맞춰준다.
+                f"LEFT JOIN warehouse_moves m ON m.예약id = r.id COLLATE utf8mb4_unicode_ci "
+                f"WHERE r.status='ACTIVE' AND NOT (r.수량 = 0 AND m.처리 = 1) "
+                f"ORDER BY r.홀딩일자 DESC"
             )
             result.extend(cur.fetchall())
     return result
@@ -966,6 +992,33 @@ def create_outbound(conn, product: dict) -> dict:
     return rec
 
 
+def create_outbound_manual(conn, product: dict) -> dict:
+    """타창고매출현황 "추가" 입력행 — 재고 매칭 없이 바로 outbound에 꽂는다
+    (2026-09-04 사용자 요청: "그냥 값을 추가할 때는 매칭을 시키지 말자"). 실재고와
+    연결되지 않는 타사 이체/출고분 전용이라 pk가 없고, 상품명/브랜드/창고를
+    outbound 자체 컬럼에 직접 저장해 pk-join 없이도 화면에 뜨게 한다(2026-09-04
+    outbound 테이블에 상품명/브랜드/창고 컬럼 추가). BL이 영문+숫자 조합(실제
+    크롤링 BL 형식)인지는 프론트에서 미리 막아서 여기서는 재검사하지 않는다."""
+    import uuid
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    new_id = uuid.uuid4().hex
+    now = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y.%m.%d %H:%M:%S")
+    출고일 = product.get("출고일") or _today_iso()
+    cur_cols = ("상품명", "브랜드", "등급", "ESTNO", "BL", "창고", "수량", "홀딩", "출고일", "메모", "비고", "홀딩일자", "status")
+    values = (
+        product.get("상품명"), product.get("브랜드", ""), product.get("등급", ""),
+        product.get("ESTNO", ""), product.get("BL", ""), product.get("창고", ""),
+        int(product.get("수량") or 0), product.get("담당자", ""), 출고일,
+        product.get("거래처", ""), product.get("비고") or None, now, "ACTIVE",
+    )
+    cols = ", ".join(f"`{c}`" for c in cur_cols)
+    placeholders = ", ".join(["%s"] * len(cur_cols))
+    with conn.cursor() as cur:
+        cur.execute(f"INSERT INTO outbound (id, {cols}) VALUES (%s, {placeholders})", (new_id, *values))
+    return {"id": new_id, "table": "outbound"}
+
+
 def register_outbound_from_reservation(conn, rec_id: str, qty: int, 출고일: str = "", 거래처: str = "") -> dict:
     """재고장(메인) 예약현황의 "출고등록" 버튼(2026-08-24 재설계) — outbound로
     실제로 옮기지 않는다. 예약 수량 중 일부/전체의 출고일자만 지정하는 동작이다
@@ -1037,7 +1090,7 @@ def _bulk_product_join(conn, pks: set) -> dict:
     with conn.cursor() as cur:
         for t in ("inventory", "azy_inventory"):
             cur.execute(
-                f"SELECT id, 상품명, 브랜드, 등급, ESTNO, BL, 창고, 재고 FROM {t} WHERE id IN ({placeholders})",
+                f"SELECT id, 상품명, 브랜드, 등급, ESTNO, BL, 창고, 재고, 상태, 유통기한 FROM {t} WHERE id IN ({placeholders})",
                 pks,
             )
             for row in cur.fetchall():
@@ -1068,7 +1121,7 @@ def _bulk_product_join(conn, pks: set) -> dict:
                 "상품명": snap.get("상품명"), "브랜드": snap.get("브랜드", ""),
                 "등급": snap.get("등급", ""), "ESTNO": snap.get("ESTNO", ""),
                 "BL": snap.get("BL", ""), "창고": snap.get("창고", ""),
-                "재고": 0,
+                "재고": 0, "상태": snap.get("상태", ""), "유통기한": snap.get("유통기한", ""),
             }
             table_of[pk] = None  # 가용재고 계산 불가 — 아래서 0 처리
 
@@ -1104,7 +1157,8 @@ def get_all_outbound(conn) -> list[dict]:
     없어서 _bulk_product_join()으로 관련 pk를 한 번에 조회한다(2026-09-02,
     N+1 제거). 가용재고 = 실재고 − ACTIVE 예약 합계 − ACTIVE outbound 합계
     (get_all_active_reservations와 동일 원칙, 2026-08-14). status=COMPLETED
-    (출고완료 토글)도 같이 내려준다 — CANCEL과 달리 화면에서 안 사라지고 회색으로 표시된다.
+    (출고완료 토글)/CANCEL(2026-09-04, 취소 — 되돌리기든 삭제든)도 같이
+    내려준다 — 둘 다 화면에서 안 사라지고 각각 회색/취소선으로 표시된다.
 
     미리보기(2026-08-24, _preview=True): 출고일이 잡혀있지만 아직 오늘이 안
     돼서 migrate_due_reservations_to_outbound()로 outbound에 안 넘어간 ACTIVE
@@ -1113,8 +1167,9 @@ def get_all_outbound(conn) -> list[dict]:
     판단하므로 여기서는 항상 같이 내려준다."""
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT id, pk, 수량, 원수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, status, 전달사항, 등록, 비고, 수량내림, 수정자, 전표, 배송취소 "
-            "FROM outbound WHERE status IN ('ACTIVE','COMPLETED') ORDER BY 홀딩일자 DESC"
+            "SELECT id, pk, 수량, 원수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, status, 전달사항, 등록, 비고, 수량내림, 수정자, 전표, 배송취소, "
+            "상품명, 브랜드, 창고, BL, ESTNO, 등급 "
+            "FROM outbound WHERE status IN ('ACTIVE','COMPLETED','CANCEL') ORDER BY 홀딩일자 DESC"
         )
         outbound_rows = cur.fetchall()
 
@@ -1306,15 +1361,16 @@ def update_outbound(conn, rec_id: str, updates: dict) -> bool:
 
 
 def cancel_outbound(conn, rec_id: str, delete: bool = False) -> bool:
-    """outbound 취소(2026-08-14 재설계, 2026-08-18 삭제 옵션 추가) — 기본은
-    예약으로 되돌린다(부분/전량 둘 다). 원래 예약이 일부만 떼어져 나온 거면
-    (register_outbound_from_reservation) 남아있는 그 예약에 수량을 합치고,
-    원래 예약이 통째로 옮겨진 거였거나("추가" 버튼으로 직접 만든 경우 포함)
-    합칠 대상이 없으면 새 ACTIVE 예약으로 부활시킨다(update_outbound의 출고일
-    변경 이동과 동일 패턴 — 물리 삭제 대신 항상 어딘가엔 살아있게 함).
-    delete=True면 예약으로 되돌리지 않고 outbound 행 자체를 지운다 — 사용자가
-    "출고취소" 팝업에서 아예 삭제를 선택한 경우(예약현황에 남기고 싶지 않은
-    잘못 입력된 건 등).
+    """outbound 취소(2026-08-14 재설계, 2026-08-18 삭제 옵션 추가, 2026-09-04
+    타창고매출현황에 취소선으로 남기도록 변경) — 기본은 예약으로 되돌린다(부분/
+    전량 둘 다). 원래 예약이 일부만 떼어져 나온 거면(register_outbound_from_
+    reservation) 남아있는 그 예약에 수량을 합치고, 원래 예약이 통째로 옮겨진
+    거였거나("추가" 버튼으로 직접 만든 경우 포함) 합칠 대상이 없으면 새 ACTIVE
+    예약으로 부활시킨다. delete=True면 예약으로 되돌리지 않고 그냥 소진 처리.
+    둘 다 outbound 행 자체는 물리 삭제하지 않고 status='CANCEL'로 남긴다 —
+    get_all_outbound가 CANCEL도 같이 내려주고, 프론트가 취소선으로 표시한다
+    (되돌리기든 삭제든 타창고매출현황에서 사라지지 않고 흔적이 남아야 한다는
+    사용자 요청).
 
     합칠 대상 찾기는 FK가 없어서 자연키로 한다: 같은 pk + 담당자(홀딩) +
     거래처(메모) + 홀딩일자를 가진 ACTIVE 예약 — register_outbound_from_
@@ -1326,7 +1382,7 @@ def cancel_outbound(conn, rec_id: str, delete: bool = False) -> bool:
         if not row:
             return False
         if delete:
-            cur.execute("DELETE FROM outbound WHERE id=%s", (rec_id,))
+            cur.execute("UPDATE outbound SET status='CANCEL' WHERE id=%s", (rec_id,))
             return True
         pk = row["pk"]
         inv_table = _inv_table_for_pk(cur, pk)
@@ -1342,7 +1398,7 @@ def cancel_outbound(conn, rec_id: str, delete: bool = False) -> bool:
         match = cur.fetchone()
         if match:
             cur.execute(f"UPDATE {hr_table} SET 수량=수량+%s WHERE id=%s", (row["수량"], match["id"]))
-            cur.execute("DELETE FROM outbound WHERE id=%s", (rec_id,))
+            cur.execute("UPDATE outbound SET status='CANCEL' WHERE id=%s", (rec_id,))
             return True
 
         # 출고일을 그대로 두면(outbound 행은 항상 출고일=오늘) 되살린 예약이
@@ -1357,7 +1413,7 @@ def cancel_outbound(conn, rec_id: str, delete: bool = False) -> bool:
             f"INSERT INTO {hr_table} ({cols}) VALUES ({placeholders})",
             [revived.get(c) for c in _RESERVATION_COLS],
         )
-        cur.execute("DELETE FROM outbound WHERE id=%s", (rec_id,))
+        cur.execute("UPDATE outbound SET status='CANCEL' WHERE id=%s", (rec_id,))
         return True
 
 
@@ -1574,4 +1630,407 @@ def update_price(conn, price_id: str, updates: dict) -> bool:
 def delete_price(conn, price_id: str) -> bool:
     with conn.cursor() as cur:
         cur.execute("DELETE FROM price WHERE id=%s", (price_id,))
+        return cur.rowcount > 0
+
+
+# =========================
+# 창고이동 탭(2026-09-04, 관리자+8001 테스트 기능) — 재고장에서 상품을 선택해
+# "이동" 버튼으로 등록하는 수동 기록. 등록과 동시에 이동 수량만큼 예약도 같이
+# 잡는다(2026-09-04 사용자 요청, warehouse_moves.예약id로 연결) — 가용재고가
+# 부족하면 create_reservation이 실패하고 그대로 이동 등록도 막는다. 총중량
+# (수량×평중)은 저장하지 않고 조회 시 프론트가 매번 계산.
+_MOVE_COLS = (
+    "재고", "배차자", "이동일자", "상품명", "브랜드", "등급", "ESTNO", "수량", "BL", "매입처",
+    "창고", "이동창고", "실중량", "담당자", "매출처", "수정사항", "평중", "비고",
+    "수량내림", "원수량", "처리", "취소", "예약id", "예약소유", "원본예약id", "등록자", "등록일",
+)
+
+def get_all_warehouse_moves(conn) -> list[dict]:
+    cols = ", ".join(f"`{c}`" for c in _MOVE_COLS)
+    with conn.cursor() as cur:
+        cur.execute(f"SELECT id, pk, {cols} FROM warehouse_moves ORDER BY 등록일 DESC")
+        return cur.fetchall()
+
+
+def _move_client_label(이동창고: str | None, 배차자: str | None, 매출처: str | None) -> str:
+    """예약/출고 상세 거래처 칸 표시(2026-09-04 사용자 지정) — 이동창고=곤지암이면
+    "곤지암 이고", 아니면(곤지암이 아닌 다른 이동창고) 배차자=새벽일 때만 "새벽 OO",
+    그 외엔 이동창고 이름 그대로. create_warehouse_move/create_warehouse_move_
+    from_reservation 둘 다 씀."""
+    이동창고 = 이동창고 or ""
+    배차자 = 배차자 or ""
+    if 이동창고 == "곤지암":
+        label = "곤지암 이고"
+    elif 배차자 == "새벽":
+        label = f"새벽 {이동창고}".strip()
+    else:
+        label = 이동창고
+    return f"{label} {매출처 or ''}".strip()
+
+
+def create_warehouse_move(conn, row: dict) -> dict:
+    """이동 등록 + 예약 동시 생성(2026-09-04). 재고 매칭(create_reservation)엔
+    상품명/브랜드/등급/ESTNO/BL/창고/상태/유통기한 7개가 정확히 일치해야 하므로
+    row에 상태/유통기한도 같이 넘어와야 한다(재고장 원본 행의 값 그대로).
+    예약이 실패(가용재고 부족 등)하면 ValueError가 그대로 올라가 이동 등록도
+    안 된다 — 호출부(API)가 400으로 변환."""
+    import uuid
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    row = dict(row)
+    row.setdefault("등록일", datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y.%m.%d %H:%M:%S"))
+    row.setdefault("재고", 0)
+    row.setdefault("처리", 0)
+    row.setdefault("취소", 0)
+    row.setdefault("수량내림", 0)
+
+    client = _move_client_label(row.get("이동창고"), row.get("배차자"), row.get("매출처"))
+    reservation = create_reservation(conn, {
+        "상품명": row.get("상품명"), "브랜드": row.get("브랜드", ""), "등급": row.get("등급", ""),
+        "ESTNO": row.get("ESTNO", ""), "BL": row.get("BL"), "창고": row.get("창고"),
+        "상태": row.get("상태", ""), "유통기한": row.get("유통기한", ""),
+        "수량": row.get("수량"), "거래처": client, "담당자": row.get("담당자", ""),
+        "출고일": row.get("이동일자", ""),
+    })
+    row["예약id"] = reservation["id"]
+    # 이 이동이 방금 새로 만든 예약이라 취소/수량변경이 그대로 예약에도 반영돼야
+    # 함(예약소유=1, 기본값). 예약현황에서 기존 예약을 연결만 하는 경우는
+    # create_warehouse_move_from_reservation이 0으로 따로 저장한다.
+    row["예약소유"] = 1
+
+    new_id = uuid.uuid4().hex
+    cols = ", ".join(f"`{c}`" for c in _MOVE_COLS)
+    placeholders = ", ".join(["%s"] * len(_MOVE_COLS))
+    with conn.cursor() as cur:
+        cur.execute(
+            f"INSERT INTO warehouse_moves (id, pk, {cols}) VALUES (%s, %s, {placeholders})",
+            [new_id, row.get("pk"), *[row.get(c) for c in _MOVE_COLS]],
+        )
+    return {"id": new_id, **{c: row.get(c) for c in _MOVE_COLS}}
+
+
+def create_warehouse_move_manual(conn, row: dict) -> dict:
+    """창고이동 "추가" 입력행(2026-09-04) — 재고 매칭도, 예약 생성도 하지 않고
+    바로 warehouse_moves에 꽂는다. 실재고에 없는 타사 출고/기타 특이품 전용이라
+    예약id/예약소유/원본예약id가 전부 비어있어 update_warehouse_move의 예약
+    연동 로직(취소/수량 cascade)이 자연히 스킵된다. BL이 영문+숫자 조합인지는
+    프론트에서 미리 막는다."""
+    import uuid
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    row = dict(row)
+    row.setdefault("등록일", datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y.%m.%d %H:%M:%S"))
+    row.setdefault("재고", 0)
+    row.setdefault("처리", 0)
+    row.setdefault("취소", 0)
+    row.setdefault("수량내림", 0)
+    row.setdefault("예약소유", 0)
+    row.setdefault("이동일자", _today_iso())
+
+    new_id = uuid.uuid4().hex
+    cols = ", ".join(f"`{c}`" for c in _MOVE_COLS)
+    placeholders = ", ".join(["%s"] * len(_MOVE_COLS))
+    with conn.cursor() as cur:
+        cur.execute(
+            f"INSERT INTO warehouse_moves (id, pk, {cols}) VALUES (%s, %s, {placeholders})",
+            [new_id, None, *[row.get(c) for c in _MOVE_COLS]],
+        )
+    return {"id": new_id, **{c: row.get(c) for c in _MOVE_COLS}}
+
+
+def delete_warehouse_move(conn, move_id: str) -> bool:
+    """창고이동 "추가"(재고 매칭 없이 바로 등록, create_warehouse_move_manual)
+    되돌리기 전용(2026-09-04) — 방금 만든 걸 취소가 아니라 아예 없었던 것으로
+    되돌려야 하므로 그냥 행을 지운다. 연결된 예약(예약id)이 있으면(다른 흐름이
+    이 함수를 재사용하게 될 경우를 대비) 그 예약도 같이 취소해 부작용 없이
+    완전히 되돌린다."""
+    with conn.cursor() as cur:
+        cur.execute("SELECT 예약id FROM warehouse_moves WHERE id=%s", (move_id,))
+        row = cur.fetchone()
+        if not row:
+            return False
+        rec_id = row.get("예약id")
+    if rec_id:
+        cancel_reservation(conn, rec_id)
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM warehouse_moves WHERE id=%s", (move_id,))
+        return cur.rowcount > 0
+
+
+def create_warehouse_move_from_reservation(conn, rec_id: str, qty: int, move_fields: dict) -> dict:
+    """예약현황의 "이동" 버튼(2026-09-04, 관리자+8001 테스트 기능) — 이미 있는
+    ACTIVE 예약의 수량 중 일부/전체를 창고이동으로 등록한다. create_warehouse_
+    move()와 달리 새 예약을 만들지 않는다: 전체 수량이면 그 예약을, 일부만이면
+    register_outbound_from_reservation과 동일한 방식으로 분리한 새 예약을 그대로
+    ACTIVE로 두고 warehouse_moves.예약id로 연결만 한다 — 예약소유=0으로 저장해서
+    update_warehouse_move의 취소/수량 동기화가 이 예약엔 손대지 않는다(예약은
+    이동 상태와 무관하게 그대로 ACTIVE 유지, 2026-09-04 사용자 확인).
+
+    move_fields: {배차자, 이동일자, 이동창고, 등록자} — 담당자/매출처/상품 정보는
+    예약(+조인된 재고 행)에서 그대로 가져온다(사용자 확인 — 새로 입력 안 받음)."""
+    import uuid
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    src_rec = src_table = src_inv = None
+    for hr_table, inv_table in (("holding_records", "inventory"), ("azy_holding_records", "azy_inventory")):
+        with conn.cursor() as cur:
+            cur.execute(f"SELECT * FROM {hr_table} WHERE id=%s AND status='ACTIVE' FOR UPDATE", (rec_id,))
+            row = cur.fetchone()
+            if not row:
+                continue
+            cur.execute(f"SELECT 상품명, 브랜드, 등급, ESTNO, BL, 창고, 평중 FROM {inv_table} WHERE id=%s", (row["pk"],))
+            inv = cur.fetchone()
+        src_rec, src_table, src_inv = row, hr_table, (inv or {})
+        break
+    if not src_rec:
+        raise ValueError("예약을 찾을 수 없거나 이미 종료됨")
+
+    remaining = int(src_rec["수량"] or 0)
+    if qty <= 0 or qty > remaining:
+        raise ValueError(f"이동 수량은 1~{remaining} 사이여야 합니다")
+
+    # 원본예약id — 분리(일부만 이동)했을 때만 채운다. 나중에 이동 수량을 늘리거나
+    # 줄이면 이 형제 예약(안 넘어간 나머지)에서 정확히 그만큼 떼오거나 돌려준다
+    # (2026-09-04 사용자 요청 — "7개로 늘리면 나머지가 3개로 줄어야").
+    sibling_id = None
+    if qty == remaining:
+        move_rec_id = rec_id
+    else:
+        new_rec_id = uuid.uuid4().hex
+        with conn.cursor() as cur:
+            new_row = dict(src_rec)
+            new_row["id"] = new_rec_id
+            new_row["수량"] = qty
+            cols = ", ".join(f"`{c}`" for c in _RESERVATION_COLS)
+            placeholders = ", ".join(["%s"] * len(_RESERVATION_COLS))
+            cur.execute(
+                f"INSERT INTO {src_table} ({cols}) VALUES ({placeholders})",
+                [new_row.get(c) for c in _RESERVATION_COLS],
+            )
+            cur.execute(f"UPDATE {src_table} SET 수량=수량-%s WHERE id=%s", (qty, rec_id))
+        move_rec_id = new_rec_id
+        sibling_id = rec_id
+
+    row = dict(move_fields)
+    row.update({
+        "pk": src_rec["pk"],
+        "상품명": src_inv.get("상품명"), "브랜드": src_inv.get("브랜드"), "등급": src_inv.get("등급"),
+        "ESTNO": src_inv.get("ESTNO"), "BL": src_inv.get("BL"), "창고": src_inv.get("창고"),
+        "평중": src_inv.get("평중"),
+        "수량": qty,
+        "담당자": src_rec.get("홀딩"), "매출처": src_rec.get("메모"),
+        "예약id": move_rec_id, "예약소유": 0, "원본예약id": sibling_id,
+    })
+    row.setdefault("등록일", datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y.%m.%d %H:%M:%S"))
+    row.setdefault("재고", 0)
+    row.setdefault("처리", 0)
+    row.setdefault("취소", 0)
+    row.setdefault("수량내림", 0)
+
+    new_id = uuid.uuid4().hex
+    cols = ", ".join(f"`{c}`" for c in _MOVE_COLS)
+    placeholders = ", ".join(["%s"] * len(_MOVE_COLS))
+    with conn.cursor() as cur:
+        cur.execute(
+            f"INSERT INTO warehouse_moves (id, pk, {cols}) VALUES (%s, %s, {placeholders})",
+            [new_id, row.get("pk"), *[row.get(c) for c in _MOVE_COLS]],
+        )
+    return {"id": new_id, **{c: row.get(c) for c in _MOVE_COLS}}
+
+
+def _rebalance_split_reservation(conn, sibling_id: str, delta: int) -> None:
+    """예약 분리 형제간 재분배(2026-09-04 사용자 요청) — "10개 중 5개 이동했다가
+    7개로 늘리면 안 넘어간 나머지 5개가 3개로 줄어야" 한다는 요청. 분리 전 총량은
+    이미 예약 생성 시점에 실재고로 검증됐으므로 늘어나는 쪽만큼 형제(원본 잔여)
+    예약에서 그대로 떼오면 되고 실재고 가용성을 다시 확인할 필요가 없다 —
+    delta>0(이동 쪽 증가)이면 형제에서 delta만큼 빼고, delta<0(이동 쪽 감소)이면
+    형제에 -delta만큼 돌려준다. 형제가 정확히 0이 되면 예약 취소, 음수가 되면
+    (형제보다 많이 가져가려 하면) ValueError로 막는다."""
+    if delta == 0:
+        return
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    for hr_table in ("holding_records", "azy_holding_records"):
+        with conn.cursor() as cur:
+            cur.execute(f"SELECT 수량 FROM {hr_table} WHERE id=%s AND status='ACTIVE' FOR UPDATE", (sibling_id,))
+            row = cur.fetchone()
+            if not row:
+                continue
+            new_qty = int(row["수량"] or 0) - delta
+            if new_qty < 0:
+                raise ValueError(f"남은 예약({row['수량']}개)보다 많이 이동으로 옮길 수 없습니다")
+            if new_qty == 0:
+                now = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")
+                cur.execute(f"UPDATE {hr_table} SET status='CANCEL', released_at=%s WHERE id=%s", (now, sibling_id))
+            else:
+                cur.execute(f"UPDATE {hr_table} SET 수량=%s WHERE id=%s", (new_qty, sibling_id))
+        return
+    raise ValueError("원본 예약을 찾을 수 없습니다")
+
+
+def _merge_split_reservation_into_sibling(conn, rec_id: str, sibling_id: str) -> None:
+    """이동 취소 시 분리된 예약을 형제(원본 잔여)로 다시 합친다 — "가족 상봉"
+    (2026-09-04 사용자 요청, "10개 중 5개 분리 이동 후 취소하면 5+5 두 건이 아니라
+    다시 하나로 합쳐져야"). 분리된 예약의 현재 수량만큼 형제에 더해주고, 분리된
+    예약 자체는 cancel_reservation으로 취소 처리(물리 삭제 대신 이력 보존)."""
+    qty = None
+    for hr_table in ("holding_records", "azy_holding_records"):
+        with conn.cursor() as cur:
+            cur.execute(f"SELECT 수량 FROM {hr_table} WHERE id=%s AND status='ACTIVE' FOR UPDATE", (rec_id,))
+            row = cur.fetchone()
+        if row:
+            qty = int(row["수량"] or 0)
+            break
+    if qty is None:
+        return  # 이미 취소돼 있으면 조용히 무시(중복 호출 방어)
+    for hr_table in ("holding_records", "azy_holding_records"):
+        with conn.cursor() as cur:
+            cur.execute(f"SELECT id FROM {hr_table} WHERE id=%s AND status='ACTIVE' FOR UPDATE", (sibling_id,))
+            found = cur.fetchone()
+            if found:
+                cur.execute(f"UPDATE {hr_table} SET 수량=수량+%s WHERE id=%s", (qty, sibling_id))
+        if found:
+            break
+    cancel_reservation(conn, rec_id)
+
+
+def _reactivate_split_reservation(conn, rec_id: str, sibling_id: str, qty: int) -> None:
+    """이동 취소 해제 시 형제에서 다시 qty만큼 떼어내 분리 예약을 되살린다
+    (2026-09-04, 위 합치기의 반대 방향 — 대칭 유지를 위해 같이 구현. 상봉했다가
+    다시 갈라서는 셈). 형제 수량이 부족하면 ValueError로 막는다."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    took = False
+    for hr_table in ("holding_records", "azy_holding_records"):
+        with conn.cursor() as cur:
+            cur.execute(f"SELECT 수량 FROM {hr_table} WHERE id=%s AND status='ACTIVE' FOR UPDATE", (sibling_id,))
+            row = cur.fetchone()
+            if not row:
+                continue
+            new_sibling_qty = int(row["수량"] or 0) - qty
+            if new_sibling_qty < 0:
+                raise ValueError(f"형제 예약 수량({row['수량']}개)보다 많이 되살릴 수 없습니다")
+            if new_sibling_qty == 0:
+                now = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")
+                cur.execute(f"UPDATE {hr_table} SET status='CANCEL', released_at=%s WHERE id=%s", (now, sibling_id))
+            else:
+                cur.execute(f"UPDATE {hr_table} SET 수량=%s WHERE id=%s", (new_sibling_qty, sibling_id))
+        took = True
+        break
+    if not took:
+        raise ValueError("형제 예약을 찾을 수 없어 되살릴 수 없습니다")
+
+    for hr_table in ("holding_records", "azy_holding_records"):
+        with conn.cursor() as cur:
+            cur.execute(f"SELECT id FROM {hr_table} WHERE id=%s AND status='CANCEL' FOR UPDATE", (rec_id,))
+            found = cur.fetchone()
+            if found:
+                cur.execute(f"UPDATE {hr_table} SET status='ACTIVE', released_at='', 수량=%s WHERE id=%s", (qty, rec_id))
+        if found:
+            return
+    raise ValueError("분리된 예약을 찾을 수 없습니다")
+
+
+def _reactivate_cancelled_reservation(conn, rec_id: str, qty: int) -> bool:
+    """창고이동 "취소" 체크를 해제하면 연결된 예약을 다시 살린다(2026-09-04 사용자
+    요청). 취소돼 있던 사이 그 재고가 다른 예약에 쓰였을 수 있어 create_reservation과
+    동일한 가용재고 검사를 다시 거친다 — 부족하면 ValueError로 막는다(되살리기
+    실패, 이동 쪽 취소 해제도 같이 무산됨)."""
+    for table, hr_table in (("inventory", "holding_records"), ("azy_inventory", "azy_holding_records")):
+        with conn.cursor() as cur:
+            cur.execute(f"SELECT pk FROM {hr_table} WHERE id=%s AND status='CANCEL' FOR UPDATE", (rec_id,))
+            rec = cur.fetchone()
+            if not rec:
+                continue
+            pk = rec["pk"]
+            cur.execute(f"SELECT 재고 FROM {table} WHERE id=%s OR pk=%s FOR UPDATE", (pk, pk))
+            src = cur.fetchone()
+            if not src:
+                raise ValueError("원본 재고를 찾을 수 없어 예약을 되살릴 수 없습니다")
+            cur.execute(
+                f"SELECT COALESCE(SUM(수량),0) AS total FROM {hr_table} WHERE pk=%s AND status='ACTIVE' FOR UPDATE",
+                (pk,),
+            )
+            active_sum = int(cur.fetchone()["total"] or 0)
+            cur.execute(
+                "SELECT COALESCE(SUM(수량),0) AS total FROM outbound WHERE pk=%s AND status='ACTIVE' FOR UPDATE",
+                (pk,),
+            )
+            outbound_sum = int(cur.fetchone()["total"] or 0)
+            available = (src["재고"] or 0) - active_sum - outbound_sum
+            if qty > available:
+                raise ValueError(f"가용재고 부족(가용 {available}, 필요 {qty}) — 예약을 되살릴 수 없습니다")
+            cur.execute(
+                f"UPDATE {hr_table} SET status='ACTIVE', released_at='', 수량=%s WHERE id=%s",
+                (qty, rec_id),
+            )
+            return True
+    return False
+
+
+def update_warehouse_move(conn, move_id: str, updates: dict) -> bool:
+    """처리/취소 체크박스 토글, 각 칸 인라인 수정(2026-09-04). 취소를 체크/해제하면
+    예약소유와 무관하게 연결된 예약(예약id)도 같이 취소/재생성한다. 수량을 바꾸면:
+    분리(일부만 이동, 원본예약id 있음)된 건은 형제(안 넘어간 나머지) 예약과
+    총량을 보존하며 재분배(2026-09-04 — "7개로 늘리면 나머지가 3개로 줄어야"
+    요청, _rebalance_split_reservation), 분리 없이 전량 이동된 건은 기존처럼
+    update_reservation의 가용재고 검사를 그대로 탄다. 비고에 값을 입력/삭제하면
+    타창고매출현황의 비고와 동일하게 이 이동 행 자체의 수량도 내리고(원수량
+    보존), 연결된 예약이 있으면 그 예약도 같이 내린다."""
+    fields = {k: v for k, v in updates.items() if k in _MOVE_COLS}
+    if not fields:
+        return False
+
+    need_move_row = "수량" in fields or "취소" in fields or "비고" in fields
+    move_row = None
+    if need_move_row:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 예약id, 예약소유, 수량, 원본예약id FROM warehouse_moves WHERE id=%s", (move_id,))
+            move_row = cur.fetchone()
+    rec_id = move_row["예약id"] if move_row else None
+
+    if rec_id:
+        sibling_id = (move_row or {}).get("원본예약id")
+        if "취소" in fields and fields["취소"]:
+            if sibling_id:
+                # 분리 이동 취소 = "가족 상봉"(2026-09-04): 형제로 다시 합친다.
+                _merge_split_reservation_into_sibling(conn, rec_id, sibling_id)
+            else:
+                cancel_reservation(conn, rec_id)
+        elif "취소" in fields and not fields["취소"]:
+            # 수량도 같이 바뀌는 경우는 없지만(체크박스 단독 토글) 방어적으로
+            # fields의 수량을 우선하고, 없으면 이동에 저장된 현재 수량을 쓴다.
+            qty = fields.get("수량", (move_row or {}).get("수량"))
+            if sibling_id:
+                _reactivate_split_reservation(conn, rec_id, sibling_id, int(qty or 0))
+            else:
+                _reactivate_cancelled_reservation(conn, rec_id, int(qty or 0))
+        elif "수량" in fields:
+            new_qty = int(fields["수량"])
+            if sibling_id:
+                old_qty = int(move_row.get("수량") or 0)
+                _rebalance_split_reservation(conn, sibling_id, new_qty - old_qty)
+                # 형제 재분배는 이미 총량 보존으로 검증됐으니 이 예약 자체는 재고
+                # 재검사 없이 수량만 그대로 맞춘다.
+                for hr_table in ("holding_records", "azy_holding_records"):
+                    with conn.cursor() as cur:
+                        cur.execute(f"UPDATE {hr_table} SET 수량=%s WHERE id=%s AND status='ACTIVE'", (new_qty, rec_id))
+                        if cur.rowcount:
+                            break
+            else:
+                update_reservation(conn, rec_id, {"수량": new_qty})
+
+    if "비고" in fields:
+        want_dropped = bool(str(fields["비고"] or "").strip())
+        with conn.cursor() as cur:
+            _set_qty_dropped(cur, "warehouse_moves", move_id, want_dropped)
+        if rec_id:
+            with conn.cursor() as cur:
+                _set_qty_dropped(cur, "holding_records", rec_id, want_dropped)
+                _set_qty_dropped(cur, "azy_holding_records", rec_id, want_dropped)
+
+    set_clause = ", ".join(f"`{k}`=%s" for k in fields)
+    with conn.cursor() as cur:
+        cur.execute(f"UPDATE warehouse_moves SET {set_clause} WHERE id=%s", (*fields.values(), move_id))
         return cur.rowcount > 0

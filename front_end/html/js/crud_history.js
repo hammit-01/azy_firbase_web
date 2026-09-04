@@ -1,10 +1,11 @@
 import {
-    updateItem, insertItem, moveHoldingToHistory, deleteItem as _deleteItem, cancelReservation,
+    updateItem, insertItem, deleteItem as _deleteItem, cancelReservation,
     createReservation, updateReservation, reactivateReservation, toggleReservationRegister,
     createOutbound, updateOutbound, cancelOutbound,
     toggleOutboundComplete, toggleOutboundRegister,
     toggleOutboundSlip, toggleOutboundDeliveryCancel,
     createPrice, updatePrice, deletePrice,
+    deleteWarehouseMove,
 } from "./firestoreService.js";
 import { showToast, showError } from "./ui.js";
 import { getStoredUser } from "./login.js";
@@ -41,18 +42,6 @@ function _buildFn(desc) {
         case "update":
             return async () => updateItem(desc.id, desc.prevData, desc.azy);
 
-        case "holding":
-            return async () => {
-                if (desc.wasDeleted && desc.originalData) {
-                    const { id: _id, updated_at: _ua, holdingTotal: _ht, holdingRecordId: _hri, ...restoreFields } = desc.originalData;
-                    await insertItem({ ...restoreFields, 재고: desc.originalQty }, desc.azy);
-                } else {
-                    await updateItem(desc.originalId, { 재고: desc.originalQty }, desc.azy);
-                }
-                await _deleteItem(desc.holdingId, desc.azy);
-                if (desc.holdingRecordId) await moveHoldingToHistory(desc.holdingRecordId, "취소", desc.azy);
-            };
-
         case "reservation":
             return async () => cancelReservation(desc.id);
 
@@ -67,20 +56,6 @@ function _buildFn(desc) {
 
         case "bulk-update":
             return async () => { for (const b of desc.backups) await updateItem(b.id, b.prevData, b.azy); };
-
-        case "bulk-holding":
-            return async () => {
-                for (const b of desc.backups) {
-                    if (b.wasDeleted && b.originalData) {
-                        const { id: _id, updated_at: _ua, holdingTotal: _ht, holdingRecordId: _hri, ...restoreFields } = b.originalData;
-                        await insertItem({ ...restoreFields, 재고: b.originalQty }, b.azy);
-                    } else {
-                        await updateItem(b.originalId, { 재고: b.originalQty }, b.azy);
-                    }
-                    await _deleteItem(b.holdingId, b.azy);
-                    if (b.holdingRecordId) await moveHoldingToHistory(b.holdingRecordId, "취소", b.azy);
-                }
-            };
 
         case "bulk-delete":
             return async () => { for (const d of desc.items) await insertItem(d.data, d.azy); };
@@ -144,6 +119,11 @@ function _buildFn(desc) {
         // 예약으로 되돌릴 대상 자체가 없음)
         case "outbound-created":
             return async () => cancelOutbound(desc.id, true);
+
+        // 창고이동 "추가"(재고 매칭 없이 바로 등록, 2026-09-04) 되돌리기 — 예약
+        // 연동이 없는 수동 추가라 그냥 방금 만든 행을 지운다.
+        case "warehouse-move-created":
+            return async () => deleteWarehouseMove(desc.id);
 
         // 예약 현황 탭(비sales) "사용완료" 되돌리기(2026-08-18) — use_reservation은
         // 전량 사용 시 수량은 안 건드리고 status만 COMPLETED로 바꾸므로(수량 필드는

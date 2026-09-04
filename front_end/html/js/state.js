@@ -26,6 +26,9 @@ export const state = {
     // (2026-08-25) — 사용자가 다른 열을 클릭하면 그 선택으로 바뀜.
     salesSortColumns: [{ key: "홀딩일자", dir: 2 }],
     filteredReservations: [], // 예약/출고 현황 탭 — 툴바 검색·필터 적용된 현재 표시 행(엑셀 다운로드용)
+    movesSearch: "", // 창고이동 탭 — 통합 검색어(2026-09-04, 관리자+8001 테스트 기능)
+    movesDateFilter: "", // 창고이동 탭 — 등록일 필터(YYYY-MM-DD, ""=전체, 2026-09-04)
+    filteredMoves: [], // 창고이동 탭 — 검색·날짜 필터 적용된 현재 표시 행(엑셀 다운로드용)
     priceSearch: "", // 전략단가 탭 — 통합 검색어
     priceCategoryFilter: "", // 전략단가 탭 — 분류 필터
     priceBrandFilter: "", // 전략단가 탭 — 브랜드 필터

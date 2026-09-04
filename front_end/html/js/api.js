@@ -210,10 +210,57 @@ export async function apiCreateOutbound(product) {
     });
 }
 
+export async function apiCreateOutboundManual(product) {
+    return apiFetch("/api/outbound/manual", {
+        method: "POST",
+        body: JSON.stringify(product),
+    });
+}
+
 export async function apiUpdateOutbound(id, fields) {
     return apiFetch(`/api/outbound/${encodeURIComponent(id)}/update`, {
         method: "POST",
         body: JSON.stringify(fields),
+    });
+}
+
+// ── 창고이동 탭(2026-09-04, 관리자+8001 테스트 기능) ──
+export async function apiGetAllWarehouseMoves() {
+    const r = await apiFetch("/api/warehouse_moves", {});
+    return r.data;
+}
+
+export async function apiCreateWarehouseMove(row) {
+    return apiFetch("/api/warehouse_moves", {
+        method: "POST",
+        body: JSON.stringify(row),
+    });
+}
+
+export async function apiCreateWarehouseMoveManual(row) {
+    return apiFetch("/api/warehouse_moves/manual", {
+        method: "POST",
+        body: JSON.stringify(row),
+    });
+}
+
+export async function apiDeleteWarehouseMove(id) {
+    return apiFetch(`/api/warehouse_moves/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+    });
+}
+
+export async function apiUpdateWarehouseMove(id, fields) {
+    return apiFetch(`/api/warehouse_moves/${encodeURIComponent(id)}/update`, {
+        method: "POST",
+        body: JSON.stringify(fields),
+    });
+}
+
+export async function apiCreateWarehouseMoveFromReservation(recId, body) {
+    return apiFetch(`/api/reservations/${encodeURIComponent(recId)}/move_to_warehouse`, {
+        method: "POST",
+        body: JSON.stringify(body),
     });
 }
 

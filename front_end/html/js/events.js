@@ -1,15 +1,15 @@
 import { state } from "./state.js";
-import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows, renderReservationsTab, renderSalesTab, renderPriceTab, renderOrderSheetTab, priceInsertRowHtml, PRICE_FIELDS, priceFieldClass, clientPrefix, parseUnitPrice, parseWeight, buildClientWithDetails, outboundInsertRowHtml, createUpdateCard, createHoldingCard } from "./table.js";
-import { renderSelectData, renderInsert, createInsertRow } from "./panel.js";
+import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows, renderReservationsTab, renderSalesTab, renderMovesTab, renderPriceTab, renderOrderSheetTab, priceInsertRowHtml, PRICE_FIELDS, priceFieldClass, clientPrefix, parseUnitPrice, parseWeight, buildClientWithDetails, todayISOStr, createUpdateCard, createHoldingCard, createMoveCard } from "./table.js";
+import { renderSelectData, renderInsert, createInsertRow, dispatcherSelect, moveWarehouseSelect, employeeAutocomplete } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
-import { getReservationsByPk, cancelReservation, useReservation, updateReservation, toggleReservationRegister, updateOutbound, cancelOutbound, createOutbound, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, toggleOutboundSlip, toggleOutboundDeliveryCancel, createPrice, updatePrice, deletePrice } from "./firestoreService.js";
+import { getReservationsByPk, cancelReservation, useReservation, updateReservation, toggleReservationRegister, updateOutbound, cancelOutbound, createOutbound, createOutboundManual, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, toggleOutboundSlip, toggleOutboundDeliveryCancel, createPrice, updatePrice, deletePrice, createWarehouseMove, createWarehouseMoveManual, updateWarehouseMove, createWarehouseMoveFromReservation } from "./firestoreService.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
 import { fetchAllData } from "./firebase.js";
-import { showToast, showError, showConfirm, showEditReservationModal, showRegisterOutboundModal, showNoteModal, showCancelOutboundModal, showAlertModal, showPriceExportModal, showEditPriceModal, showReservationDetailModal, showBulkEditModal } from "./ui.js";
-import { getStoredUser, applyRoleVisibility, hasPriceEditAccess } from "./login.js";
+import { showToast, showError, showConfirm, showEditReservationModal, showRegisterOutboundModal, showNoteModal, showCancelOutboundModal, showAlertModal, showPriceExportModal, showEditPriceModal, showReservationDetailModal, showBulkEditModal, showMoveToWarehouseModal, showOutboundManualInsertModal, showMoveManualInsertModal } from "./ui.js";
+import { getStoredUser, applyRoleVisibility, hasPriceEditAccess, isAdminTestFeatureEnabled } from "./login.js";
 import { apiLogActivity } from "./api.js";
 
 // 예약현황/타창고매출현황 액션(취소/완료/변경/토글 등) 이후 공용 새로고침(2026-08-19) —
@@ -41,8 +41,8 @@ function _logActivity(tableName, recordId, action, before, after, summary = "") 
 // 재고장 표와 배타적으로 토글되는 탭들(업데이트/예약현황/타창고매출현황/전략단가,
 // 2026-08-18) — 하나 열면 나머지는 다 닫힌다. 열릴 때만 render를 부르므로(이미
 // 열려있으면 콘텐츠 그대로 두고 숨기기만 함) 매번 다시 불러오지 않는다.
-const TAB_CONTAINERS = [".changes-container", ".reservations-container", ".sales-container", ".price-container", ".order-sheet-container"];
-const TAB_BUTTONS = [".changes-tab-btn", ".reservations-tab-btn", ".sales-tab-btn", ".price-tab-btn", ".order-sheet-tab-btn"];
+const TAB_CONTAINERS = [".changes-container", ".reservations-container", ".sales-container", ".moves-container", ".price-container", ".order-sheet-container"];
+const TAB_BUTTONS = [".changes-tab-btn", ".reservations-tab-btn", ".sales-tab-btn", ".moves-tab-btn", ".price-tab-btn", ".order-sheet-tab-btn"];
 
 // 탭별 컨테이너/렌더 함수 매핑(2026-08-25) — 새로고침해도 열려있던 탭을 그대로
 // 유지하기 위해 클릭 핸들러와 restoreLastTab() 둘 다 이 표를 같이 쓴다.
@@ -50,6 +50,7 @@ const TAB_SWITCH_MAP = {
     "changes-tab-btn": [".changes-container", () => renderChangesTab()],
     "reservations-tab-btn": [".reservations-container", () => renderReservationsTab()],
     "sales-tab-btn": [".sales-container", () => renderSalesTab()],
+    "moves-tab-btn": [".moves-container", () => renderMovesTab()],
     "price-tab-btn": [".price-container", () => renderPriceTab()],
     "order-sheet-tab-btn": [".order-sheet-container", () => renderOrderSheetTab()],
 };
@@ -392,6 +393,12 @@ export function bindEvents() {
 
     document.addEventListener("change", (e) => {
         if (e.target.classList.contains("row-check")) handleChange(e);
+        // 창고이동 등록 팝업 — 배차자="새벽"은 무조건 다음날 이동이라 이동일자
+        // 선택란을 숨기고, 그 외엔 보여준다(2026-09-04 사용자 지정, 기본값 내일).
+        if (e.target.classList.contains("move-dispatcher")) {
+            const dateField = e.target.closest(".bulk-edit-card")?.querySelector(".move-date-field");
+            if (dateField) dateField.style.display = e.target.value === "새벽" ? "none" : "";
+        }
         if (e.target.classList.contains("outbound-register-check")) {
             const id = e.target.dataset.id;
             const checkbox = e.target;
@@ -448,6 +455,24 @@ export function bindEvents() {
                     showError(err.message || "처리에 실패했습니다.");
                 });
         }
+        // 창고이동 탭(2026-09-04, 관리자+8001 테스트 기능) — 재고/처리/취소 체크박스는
+        // outbound-register-check와 동일한 낙관적 토글 패턴(실패 시 체크 되돌림).
+        // 재고 체크는 사용자 확인상 순수 표시용(2026-09-04)이라 재렌더 시 다른 행
+        // 색깔에 영향 없음 — 그냥 체크 상태만 저장.
+        if (e.target.classList.contains("move-select-check") || e.target.classList.contains("move-processed-check") || e.target.classList.contains("move-cancel-check")) {
+            const id = e.target.dataset.id;
+            const field = e.target.classList.contains("move-select-check") ? "재고"
+                : e.target.classList.contains("move-processed-check") ? "처리" : "취소";
+            const checkbox = e.target;
+            checkbox.disabled = true;
+            updateWarehouseMove(id, { [field]: checkbox.checked ? 1 : 0 })
+                .then(() => { renderMovesTab(); })
+                .catch((err) => {
+                    checkbox.checked = !checkbox.checked;
+                    showError(err.message || "처리에 실패했습니다.");
+                })
+                .finally(() => { checkbox.disabled = false; });
+        }
         if (e.target.id === "reservations-filter") {
             state.reservationsFilter = e.target.value;
             renderReservationsTab();
@@ -459,6 +484,10 @@ export function bindEvents() {
         if (e.target.id === "sales-date-filter") {
             state.salesDateFilter = e.target.value;
             renderSalesTab();
+        }
+        if (e.target.id === "moves-date-filter") {
+            state.movesDateFilter = e.target.value;
+            renderMovesTab(true);
         }
         if (e.target.id === "price-category-filter") {
             state.priceCategoryFilter = e.target.value;
@@ -510,15 +539,26 @@ export function bindEvents() {
         }
     });
 
+    // 한글 조합 중(IME composing) 렌더가 끼어들면 입력창 DOM이 통째로 새로 그려지며
+    // 조합 상태가 끊겨 "곤"이 "ㄱ ㅗ ㄴ"처럼 낱자로 분리돼 보이는 문제(2026-09-03) —
+    // 조합 중인 입력창 id는 여기 담아두고, 그 id로 예정된 렌더는 건너뛴다. 조합이
+    // 끝나면(compositionend) 뒤이어 오는 일반 input 이벤트가 정상적으로 새 타이머를
+    // 잡아 최종 값을 반영한다.
+    const composingIds = new Set();
+    document.addEventListener("compositionstart", (e) => { if (e.target.id) composingIds.add(e.target.id); });
+    document.addEventListener("compositionend", (e) => { if (e.target.id) composingIds.delete(e.target.id); });
+
     let priceSearchTimer = null;
     let reservationsSearchTimer = null;
     let salesSearchTimer = null;
+    let movesSearchTimer = null;
     let changesSearchTimer = null;
     let orderSheetSearchTimer = null;
     document.addEventListener("input", (e) => {
         if (e.target.id === "price-search") {
             clearTimeout(priceSearchTimer);
             priceSearchTimer = setTimeout(() => {
+                if (composingIds.has("price-search")) return;
                 state.priceSearch = e.target.value;
                 renderPriceTab();
             }, 200);
@@ -526,20 +566,31 @@ export function bindEvents() {
         if (e.target.id === "reservations-search") {
             clearTimeout(reservationsSearchTimer);
             reservationsSearchTimer = setTimeout(() => {
+                if (composingIds.has("reservations-search")) return;
                 state.reservationsSearch = e.target.value;
-                renderReservationsTab();
+                renderReservationsTab(true);
             }, 200);
         }
         if (e.target.id === "sales-search") {
             clearTimeout(salesSearchTimer);
             salesSearchTimer = setTimeout(() => {
+                if (composingIds.has("sales-search")) return;
                 state.salesSearch = e.target.value;
-                renderSalesTab();
+                renderSalesTab(true);
+            }, 200);
+        }
+        if (e.target.id === "moves-search") {
+            clearTimeout(movesSearchTimer);
+            movesSearchTimer = setTimeout(() => {
+                if (composingIds.has("moves-search")) return;
+                state.movesSearch = e.target.value;
+                renderMovesTab(true);
             }, 200);
         }
         if (e.target.id === "changes-search") {
             clearTimeout(changesSearchTimer);
             changesSearchTimer = setTimeout(() => {
+                if (composingIds.has("changes-search")) return;
                 state.changesSearch = e.target.value;
                 renderChangesTab();
             }, 200);
@@ -547,6 +598,7 @@ export function bindEvents() {
         if (e.target.id === "order-sheet-search") {
             clearTimeout(orderSheetSearchTimer);
             orderSheetSearchTimer = setTimeout(() => {
+                if (composingIds.has("order-sheet-search")) return;
                 state.orderSheetSearch = e.target.value;
                 renderOrderSheetTab();
             }, 200);
@@ -611,6 +663,64 @@ export function bindEvents() {
             input.addEventListener("keydown", (ke) => {
                 if (ke.key === "Enter") { ke.preventDefault(); input.blur(); }
                 if (ke.key === "Escape") { ke.preventDefault(); finish(false); }
+            });
+            return;
+        }
+
+        // 창고이동 탭(2026-09-04, 관리자+8001 테스트 기능) — 출고증/배차자/수량/
+        // 이동창고/실중량/담당자/매출처/수정사항/비고는 이동 등록 팝업 없이 이
+        // 표에서 바로 수정한다(사용자 지정). 텍스트/숫자 칸은 sales-remark-cell과
+        // 동일한 더블클릭→input 패턴, 배차자/이동창고/담당자는 고정 목록·직원
+        // 목록이라 더블클릭→select로 — data-field/data-type으로 구분해서 공용
+        // 핸들러 하나로 처리.
+        const moveCell = e.target.closest(".move-editable-cell");
+        if (moveCell) {
+            if (moveCell.querySelector("input, select")) return;
+            const id = moveCell.dataset.id;
+            const field = moveCell.dataset.field;
+            const type = moveCell.dataset.type || "text";
+            const original = moveCell.dataset.value || "";
+            const isSelect = type.startsWith("select-");
+
+            const finish = async (save, newValue) => {
+                if (save && newValue !== original) {
+                    try {
+                        await updateWarehouseMove(id, { [field]: type === "number" ? (newValue === "" ? null : Number(newValue)) : newValue });
+                        showToast("✓ 저장됨");
+                    } catch (err) {
+                        showError(err.message || "저장에 실패했습니다.");
+                    }
+                }
+                renderMovesTab();
+            };
+
+            if (isSelect) {
+                const selectHtml = type === "select-dispatcher" ? dispatcherSelect("move-cell-input", "", original)
+                    : moveWarehouseSelect("move-cell-input", "", original);
+                moveCell.innerHTML = selectHtml;
+                const select = moveCell.querySelector("select");
+                select.focus();
+                let done = false;
+                select.addEventListener("change", () => { if (!done) { done = true; finish(true, select.value); } });
+                select.addEventListener("blur", () => { if (!done) { done = true; finish(false); } });
+                return;
+            }
+
+            // 담당자 — 타이핑하면 맞는 이름이 뜨고 방향키로 고를 수 있게 datalist
+            // 붙은 입력창으로(2026-09-04 사용자 요청). 저장 흐름은 아래 일반 텍스트
+            // 칸과 동일(blur/Enter 저장, Escape 취소).
+            const isAutocomplete = type === "autocomplete-employee";
+            moveCell.innerHTML = isAutocomplete
+                ? employeeAutocomplete("move-cell-input", "", original)
+                : `<input type="${type}" ${type === "number" ? "step=\"0.01\"" : ""} class="move-cell-input" value="${original.replace(/"/g, "&quot;")}">`;
+            const input = moveCell.querySelector("input");
+            input.focus();
+            input.select();
+            let done = false;
+            input.addEventListener("blur", () => { if (!done) { done = true; finish(true, input.value.trim()); } });
+            input.addEventListener("keydown", (ke) => {
+                if (ke.key === "Enter") { ke.preventDefault(); input.blur(); }
+                if (ke.key === "Escape") { ke.preventDefault(); if (!done) { done = true; finish(false); } }
             });
             return;
         }
@@ -941,12 +1051,49 @@ async function handleClick(e) {
         return;
     }
 
-    // 추가 버튼 — 타창고매출현황 탭에서는 팝업 대신 엑셀처럼 표 맨 위에 입력행을
-    // 띄운다(2026-08-14). 이미 떠 있으면 토글로 닫는다.
+    // 추가 버튼 — 타창고매출현황 탭에서는 팝업으로 재고 매칭 없이 바로 추가한다
+    // (2026-09-04 재설계 — 표 안에 입력행을 띄우던 방식 대신 팝업 + "+ 행 추가"
+    // 버튼으로 여러 건을 한 번에 입력). 여러 건 중 일부만 실패해도 나머진 계속
+    // 등록하고 마지막에 성공/실패 건수를 같이 보여준다.
     if (e.target.classList.contains("insert-btn") && document.querySelector(".sales-container")?.style.display === "") {
-        const body = document.getElementById("outbound-insert-rows");
-        if (!body) return;
-        body.innerHTML = body.children.length > 0 ? "" : outboundInsertRowHtml();
+        const rows = await showOutboundManualInsertModal();
+        if (!rows) return;
+        let ok = 0, fail = 0;
+        for (const fields of rows) {
+            try {
+                const res = await createOutboundManual(fields);
+                if (res?.id) {
+                    pushUndo({ type: "outbound-created", id: res.id });
+                    _logActivity("outbound", res.id, "삽입", null, fields, `${fields.상품명} ${fields.수량}개 출고 추가`);
+                    ok++;
+                }
+            } catch (err) { fail++; }
+        }
+        showToast(fail ? `✓ ${ok}건 추가됨, ${fail}건 실패` : `✓ ${ok}건 추가됨`, fail && !ok ? "error" : "success");
+        renderSalesTab();
+        return;
+    }
+
+    // 추가 버튼 — 창고이동 탭도 타창고매출현황과 동일하게 팝업 + "+ 행 추가"로
+    // 재고 매칭/예약 생성 없이 바로 추가한다(2026-09-04).
+    if (e.target.classList.contains("insert-btn") && document.querySelector(".moves-container")?.style.display === "") {
+        const rows = await showMoveManualInsertModal();
+        if (!rows) return;
+        let ok = 0, fail = 0;
+        const 이동일자 = state.movesDateFilter || todayISOStr();
+        const 등록자 = getStoredUser()?.이름 || "";
+        for (const fields of rows) {
+            try {
+                const res = await createWarehouseMoveManual({ ...fields, 이동일자, 등록자 });
+                if (res?.id) {
+                    pushUndo({ type: "warehouse-move-created", id: res.id });
+                    _logActivity("warehouse_move", res.id, "삽입", null, fields, `${fields.상품명} ${fields.수량}개 창고이동 추가`);
+                    ok++;
+                }
+            } catch (err) { fail++; }
+        }
+        showToast(fail ? `✓ ${ok}건 추가됨, ${fail}건 실패` : `✓ ${ok}건 추가됨`, fail && !ok ? "error" : "success");
+        renderMovesTab();
         return;
     }
 
@@ -978,40 +1125,6 @@ async function handleClick(e) {
     // 전략단가 입력행 — 취소
     if (e.target.classList.contains("cancel-price-insert-btn")) {
         document.getElementById("price-insert-rows").innerHTML = "";
-        return;
-    }
-
-    // sales.html 입력행 — 저장(→ outbound 생성). 출고일 비우면 서버가 오늘로
-    // 채우고, 출고일에 따라 outbound/예약 테이블 중 맞는 곳으로 들어간다.
-    if (e.target.classList.contains("save-outbound-insert-btn")) {
-        const row = e.target.closest("tr");
-        const val = sel => row.querySelector(sel)?.value.trim() ?? "";
-        const 상품명 = val(".ob-in-name"), BL = val(".ob-in-bl"), 창고 = val(".ob-in-wh");
-        const 수량 = Number(val(".ob-in-qty"));
-        if (!상품명 || !BL || !창고) { showError("상품명/BL/창고는 필수입니다."); return; }
-        if (!Number.isInteger(수량) || 수량 <= 0) { showError("올바른 수량을 입력하세요."); return; }
-        try {
-            const newFields = {
-                상품명, BL, 창고, 수량,
-                브랜드: val(".ob-in-brand"), 등급: val(".ob-in-grade"), ESTNO: val(".ob-in-estno"),
-                담당자: val(".ob-in-manager"), 출고일: val(".ob-in-date"),
-                거래처: buildClientWithDetails(val(".ob-in-client"), val(".ob-in-price"), val(".ob-in-weight")),
-                비고: val(".ob-in-remark"),
-            };
-            const res = await createOutbound(newFields);
-            if (res?.id) pushUndo({ type: "outbound-created", id: res.id });
-            if (res?.id) _logActivity("outbound", res.id, "삽입", null, newFields, `${상품명} ${수량}개 출고 추가`);
-            showToast("✓ 추가됨");
-            renderSalesTab();
-        } catch (err) {
-            showError(err.message || "추가에 실패했습니다.");
-        }
-        return;
-    }
-
-    // sales.html 입력행 — 취소(입력행만 지움)
-    if (e.target.classList.contains("cancel-outbound-insert-btn")) {
-        document.getElementById("outbound-insert-rows").innerHTML = "";
         return;
     }
 
@@ -1139,12 +1252,75 @@ async function handleClick(e) {
             return;
     }
 
+    // 이동 버튼(2026-09-04, 관리자+8001 테스트 기능) — 선택한 행을 수량/배차자/
+    // 이동창고/담당자/매출처만 입력받아 warehouse_moves에 기록한다(2026-09-04
+    // 사용자 지정: 이 5개 외 나머지는 창고이동 탭에서 직접 수정). 평중만 예외로
+    // 재고장의 item.평중을 그대로 자동 반영(사용자 입력 아님). 실재고 차감/예약과는
+    // 무관 — 창고이동 탭에서 조회용으로만 쌓인다(시트 연동/자동예약은 나중 이야기).
+    if (e.target.classList.contains("move-btn")) {
+        if (!isAdminTestFeatureEnabled()) return;
+        if (state.selectedItems.size === 0) { showError("이동할 상품을 선택하세요."); return; }
+        const ids = [...state.selectedItems.keys()];
+        const items = ids.map(id => state.allData.find(v => v.id === id)).filter(Boolean);
+        const rowsHtml = items.map(createMoveCard).join("");
+        showBulkEditModal(`선택 상품 창고이동 (${items.length}건)`, rowsHtml, {
+            onSave: async (overlay) => {
+                const rows = overlay.querySelectorAll(".bulk-edit-card[data-id]");
+                const user = getStoredUser();
+                let successCount = 0, failCount = 0;
+                for (const row of rows) {
+                    const id = row.dataset.id;
+                    const item = items.find(v => v.id === id);
+                    const qty = Number(row.querySelector(".move-qty")?.value);
+                    if (!item || !qty || qty <= 0) { failCount++; continue; }
+                    const dispatcher = row.querySelector(".move-dispatcher")?.value || "";
+                    // 배차자="새벽"은 무조건 다음날 이동이라 화면에 이동일자 선택란이
+                    // 숨겨져 있음 — 그 경우 입력값 대신 다음날짜를 직접 계산해서 쓴다
+                    // (2026-09-04 사용자 지정). 그 외엔 선택란에 입력된 값(기본 내일) 그대로.
+                    const moveDate = dispatcher === "새벽"
+                        ? new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+                        : row.querySelector(".move-date")?.value || "";
+                    try {
+                        await createWarehouseMove({
+                            pk: item.id,
+                            상품명: item.상품명, 브랜드: item.브랜드, 등급: item.등급, ESTNO: item.ESTNO,
+                            BL: item.BL, 창고: item.창고,
+                            // 이동 수량만큼 예약도 같이 잡을 때(2026-09-04) 재고 매칭에
+                            // 필요한 나머지 2개 — create_reservation이 상품명~창고까지 6개에
+                            // 이 둘까지 정확히 일치해야 재고 행을 정확히 1건 찾는다.
+                            상태: item.상태 || "", 유통기한: item.유통기한 || "",
+                            수량: qty,
+                            배차자: dispatcher,
+                            이동일자: moveDate,
+                            이동창고: row.querySelector(".move-warehouse")?.value || "",
+                            담당자: row.querySelector(".move-manager")?.value || "",
+                            매출처: row.querySelector(".move-client")?.value?.trim() || "",
+                            평중: item.평중 || null,
+                            등록자: user?.이름 || "",
+                        });
+                        successCount++;
+                    } catch (err) {
+                        failCount++;
+                    }
+                }
+                state.selectedItems.clear();
+                state.crudData = null;
+                reportBulkResult("창고이동 등록", successCount, failCount);
+                renderTable();
+                renderSelectData();
+                renderMovesTab();
+            },
+        });
+        return;
+    }
+
     // 업데이트/예약현황/타창고매출현황/전략단가 탭 — 재고장 표와 서로 배타적으로
     // 토글(2026-08-18, sales.html·price.html을 별도 페이지 대신 탭으로 통합하면서
     // 탭 개수가 2→4로 늘어 페어별 토글 대신 공용 switchTab으로 정리).
     if (e.target.classList.contains("changes-tab-btn")) { switchTab("changes-tab-btn", ".changes-container", renderChangesTab); return; }
     if (e.target.classList.contains("reservations-tab-btn")) { switchTab("reservations-tab-btn", ".reservations-container", renderReservationsTab); return; }
     if (e.target.classList.contains("sales-tab-btn")) { switchTab("sales-tab-btn", ".sales-container", renderSalesTab); return; }
+    if (e.target.classList.contains("moves-tab-btn")) { switchTab("moves-tab-btn", ".moves-container", renderMovesTab); return; }
     if (e.target.classList.contains("price-tab-btn")) { switchTab("price-tab-btn", ".price-container", renderPriceTab); return; }
     if (e.target.classList.contains("order-sheet-tab-btn")) { switchTab("order-sheet-tab-btn", ".order-sheet-container", renderOrderSheetTab); return; }
 
@@ -1159,6 +1335,13 @@ async function handleClick(e) {
     if (e.target.classList.contains("sales-date-filter-clear")) {
         state.salesDateFilter = "";
         renderSalesTab();
+        return;
+    }
+
+    // 창고이동 탭 — 등록일 필터 해제(2026-09-04)
+    if (e.target.classList.contains("moves-date-filter-clear")) {
+        state.movesDateFilter = "";
+        renderMovesTab(true);
         return;
     }
 
@@ -1303,10 +1486,14 @@ async function handleClick(e) {
         // 되돌리기용 스냅샷 — 취소 직전에 미리 떠 있는 행 데이터에서 떼어둔다
         // (취소 후엔 목록에서 사라져서 다시 조회해도 못 찾음).
         const snap = state.filteredReservations.find(row => row.id === id);
+        // 상태/유통기한도 같이 챙겨야 되돌리기(createReservation 재호출)의 재고
+        // 매칭이 성공한다(2026-09-04) — 둘 중 하나라도 실재고와 다르면 매칭
+        // 0건/여러 건으로 되돌리기가 조용히 실패했었다.
         const product = snap ? {
             상품명: snap.상품명, 브랜드: snap.브랜드, 등급: snap.등급, ESTNO: snap.ESTNO,
             BL: snap.BL, 창고: snap.창고, 수량: snap.수량, 거래처: snap.거래처,
             담당자: snap.담당자, 출고일: snap.출고일,
+            상태: snap.상태 ?? "", 유통기한: snap.유통기한 ?? "",
         } : null;
         try {
             if (isOutbound) await cancelOutbound(id, deleteIt); else await cancelReservation(id);
@@ -1355,6 +1542,31 @@ async function handleClick(e) {
         return;
     }
 
+    // 예약현황 "이동" 버튼(2026-09-04, 관리자+8001 테스트 기능) — 예약 수량 중
+    // 일부/전체를 창고이동으로 등록. 담당자/거래처는 예약 값 그대로 서버가
+    // 채우므로 여기선 수량/배차자/이동일자/이동창고만 받는다.
+    if (e.target.classList.contains("move-from-reservation-btn")) {
+        const id = e.target.dataset.id;
+        const maxQty = Number(e.target.dataset.qty || 0);
+        const result = await showMoveToWarehouseModal({ 수량: maxQty });
+        if (!result) return;
+        // 배차자="새벽"은 무조건 다음날 이동(2026-09-04 사용자 재확인) — 모달은
+        // 이동일자를 빈 값으로 넘기므로(선택란 자체가 숨겨짐) 여기서 계산해서 채운다.
+        // 재고장 "이동" 버튼(move-btn) 핸들러와 동일한 계산.
+        if (result.배차자 === "새벽") {
+            result.이동일자 = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+        }
+        try {
+            await createWarehouseMoveFromReservation(id, { ...result, 등록자: getStoredUser()?.이름 || "" });
+            showToast("✓ 창고이동 등록됨");
+            renderReservationsTab();
+            renderMovesTab();
+        } catch (err) {
+            showError(err.message || "창고이동 등록에 실패했습니다.");
+        }
+        return;
+    }
+
     // 예약/출고 현황 — 전달사항 보기/수정(2026-08-14, "!" 버튼).
     if (e.target.classList.contains("reservation-note-btn")) {
         const id = e.target.dataset.id;
@@ -1386,6 +1598,24 @@ async function handleClick(e) {
         const salesOpen = document.querySelector(".sales-container")?.style.display === "";
         const priceOpen = document.querySelector(".price-container")?.style.display === "";
         const changesOpen = document.querySelector(".changes-container")?.style.display === "";
+        const movesOpen = document.querySelector(".moves-container")?.style.display === "";
+
+        if (movesOpen) {
+            const headers = ["재고", "비고", "배차자", "품목", "브랜드", "등급", "EST", "수량", "BL/매입처", "출고창고", "이동창고", "실중량", "담당자", "매출처", "수정사항", "평중", "총중량", "처리", "취소"];
+            const rows = state.filteredMoves.map(r => {
+                const 평중 = Number(r.평중) || 0;
+                const 총중량 = 평중 ? Math.round((Number(r.수량) || 0) * 평중 * 100) / 100 : "";
+                const qty = r.수량내림 && r.원수량 ? r.원수량 : r.수량;
+                const remark = r.수량내림 && r.비고 ? r.비고 : (r.비고 || "");
+                return [
+                    r.재고 ? "✓" : "", remark, r.배차자, r.상품명, r.브랜드, r.등급, r.ESTNO,
+                    qty, r.BL || r.매입처, r.창고, r.이동창고, r.실중량, r.담당자,
+                    r.매출처, r.수정사항, r.평중, 총중량, r.처리 ? "✓" : "", r.취소 ? "✓" : "",
+                ];
+            });
+            await exportTable("창고이동", headers, rows);
+            return;
+        }
 
         if (changesOpen) {
             const headers = ["구분", "상품명", "브랜드", "등급", "ESTNO", "어제재고", "오늘재고", "BL", "창고"];
@@ -1729,9 +1959,11 @@ async function handleClick(e) {
         state.selectedItems.clear();
         state.crudData = null;
         await fetchAllData();
+        renderChangesTab();
         await refreshReservationViews();
         await renderPriceTab();
         await renderOrderSheetTab();
+        await renderMovesTab();
         return;
     }
 

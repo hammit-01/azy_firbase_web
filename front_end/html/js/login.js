@@ -62,6 +62,7 @@ const LOGIN_ONLY_SELECTORS = [".reservations-tab-btn", ".order-sheet-tab-btn"];
 function _currentTabName() {
     if (document.querySelector(".reservations-container")?.style.display === "") return "reservations";
     if (document.querySelector(".sales-container")?.style.display === "") return "sales";
+    if (document.querySelector(".moves-container")?.style.display === "") return "moves";
     if (document.querySelector(".price-container")?.style.display === "") return "price";
     if (document.querySelector(".order-sheet-container")?.style.display === "") return "order-sheet";
     if (document.querySelector(".changes-container")?.style.display === "") return "changes";
@@ -69,6 +70,12 @@ function _currentTabName() {
 }
 
 export function applyRoleVisibility(role) {
+    // 창고이동(2026-09-04) — 관리자+8001 롤아웃 게이트. role뿐 아니라 포트도 봐야
+    // 해서 EDITOR_ONLY_SELECTORS/LOGIN_ONLY_SELECTORS 목록에 안 넣고 따로 처리.
+    const movesEnabled = isAdminTestFeatureEnabled();
+    const movesTabBtn = document.querySelector(".moves-tab-btn");
+    if (movesTabBtn) movesTabBtn.style.display = movesEnabled ? "" : "none";
+
     const hideEditorOnly = !hasEditorAccess(role);
     EDITOR_ONLY_SELECTORS.forEach(sel => {
         const el = document.querySelector(sel);
@@ -88,6 +95,7 @@ export function applyRoleVisibility(role) {
     const insertBtn = document.querySelector(".insert-btn");
     const updateBtn = document.querySelector(".update-btn");
     const holdingBtn = document.querySelector(".holding-btn");
+    const moveBtn = document.querySelector(".move-btn");
     const clearBtn = document.querySelector(".clear-btn");
     const allDeleteBtn = document.querySelector(".all-delete-btn");
     const rollbackBtn = document.querySelector(".rollback-btn");
@@ -96,6 +104,7 @@ export function applyRoleVisibility(role) {
     if (insertBtn) insertBtn.style.display = (tab !== "reservations" && tab !== "changes" && canAddOnTab) ? "" : "none";
     if (updateBtn) updateBtn.style.display = (mainOnly && isEditor) ? "" : "none";
     if (holdingBtn) holdingBtn.style.display = (mainOnly && !!role) ? "" : "none";
+    if (moveBtn) moveBtn.style.display = (mainOnly && movesEnabled) ? "" : "none";
     // 전체취소/전체삭제 — 타창고매출현황/전략단가/예약현황(나의예약)/업데이트에서는
     // 숨김, 재고장 탭에서만 노출(2026-08-20). 전체삭제는 기존처럼 편집자만.
     if (clearBtn) clearBtn.style.display = mainOnly ? "" : "none";

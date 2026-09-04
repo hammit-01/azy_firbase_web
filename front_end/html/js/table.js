@@ -1,8 +1,8 @@
 import { state } from "./state.js";
 import { dom } from "./dom.js";
-import { employeeSelect, stateSelect } from "./panel.js";
-import { getStoredUser, hasEditorAccess, hasPriceEditAccess } from "./login.js";
-import { getAllReservations, getAllOutbound, getAllPrices, getOrderSheet, getYesterdayReservationQty } from "./firestoreService.js";
+import { employeeSelect, stateSelect, dispatcherSelect, moveWarehouseSelect, employeeAutocomplete } from "./panel.js";
+import { getStoredUser, hasEditorAccess, hasPriceEditAccess, hasAdminAccess, isAdminTestFeatureEnabled } from "./login.js";
+import { getAllReservations, getAllOutbound, getAllPrices, getOrderSheet, getYesterdayReservationQty, getAllWarehouseMoves } from "./firestoreService.js";
 
 // 영문 브랜드를 한글 표기로 쳐도 검색되게 하는 별칭 테이블(2026-08-14).
 // key: 한글 표기, value: 실제 데이터의 영문 브랜드값 — 데이터에 실제로 존재하는
@@ -77,6 +77,7 @@ const WH_DISPLAY_NAME = {
     "신우냉장": "신우",
     "효성냉장": "효성",
     "희창냉장": "희창",
+    "CH": "시에이치",
 };
 
 function dueDateTag(dateStr, limitDate) {
@@ -369,6 +370,40 @@ export function createHoldingCard(item) {
                 <label>평중<input type="number" step="0.01" class="hold-weight cell-input" data-id="${id}" value="${safeValue(item.평중)}"></label>
                 <label>거래처<input type="text" class="hold-client cell-input" data-id="${id}" placeholder="거래처명"></label>
                 <label>단가<input type="number" class="hold-price cell-input" data-id="${id}" placeholder="단가"></label>
+            </div>
+        </div>
+    `;
+}
+
+// 창고이동 탭(2026-09-04, 관리자+8001 테스트 기능) — createHoldingCard와 동일한
+// bulk-edit-card 틀 재사용. "이동" 버튼에서는 수량/배차자/이동일자/이동창고/담당자/
+// 매출처를 받는다(2026-09-04 사용자 지정) — 재고 체크/출고증/실중량/수정사항/비고는
+// 창고이동 탭 표에서 직접 입력·수정. 평중은 예외로 재고장 item.평중을 저장 시점에
+// 그대로 자동 반영(입력칸 없음) — 총중량은 저장 안 하고 표에서 매번 수량×평중 계산.
+// 배차자="새벽"은 무조건 다음날 이동이라 이동일자 선택란을 숨기고(사용자 지정),
+// events.js가 배차자 select change를 감지해 .move-date-field를 보이거나 숨긴다.
+export function createMoveCard(item) {
+    const id = item.id;
+    return `
+        <div class="bulk-edit-card" data-id="${id}">
+            <div class="bulk-edit-card-head">
+                <span class="bulk-edit-card-tag">${whTag(item.창고)}</span>
+                <span class="bulk-edit-card-title">${safeValue(item.상품명) || "(상품명 없음)"}</span>
+                <span class="bulk-edit-card-sub">${[item.브랜드, item.등급, item.ESTNO].filter(safeValue).join(" · ")}</span>
+                <button type="button" class="bulk-edit-card-remove" data-id="${id}" title="이 상품 취소">✕</button>
+            </div>
+            <div class="bulk-edit-card-meta">
+                <span>재고 <b>${safeValue(item.재고)}</b></span>
+                <span>가용 <b>${availableCell(item.가용재고)}</b></span>
+                <span class="bulk-edit-card-bl">${safeValue(item.BL)}</span>
+            </div>
+            <div class="bulk-edit-grid">
+                <label>수량<input type="number" class="move-qty cell-input" data-id="${id}" placeholder="수량" value="${safeValue(item.재고)}"></label>
+                <label>배차자${dispatcherSelect("move-dispatcher", id)}</label>
+                <label class="move-date-field" data-id="${id}">이동일자<input type="date" class="move-date cell-input" data-id="${id}" value="${tomorrowISOStr()}"></label>
+                <label>이동창고${moveWarehouseSelect("move-warehouse", id)}</label>
+                <label>담당자${employeeAutocomplete("move-manager", id)}</label>
+                <label>매출처<input type="text" class="move-client cell-input" data-id="${id}" placeholder="매출처"></label>
             </div>
         </div>
     `;
@@ -1099,6 +1134,9 @@ function reservationCardHtml(r, isSalesPage = false) {
         : "";
     const clientDisplay = clientPrefix(r.거래처);
     const completed = isSalesPage && r.status === "COMPLETED";
+    // 취소(되돌리기/삭제 둘 다, 2026-09-04) — outbound 행을 물리 삭제하지 않고
+    // status=CANCEL로 남겨서 타창고매출현황에서 취소선으로 계속 보이게 한다.
+    const cancelled = isSalesPage && r.status === "CANCEL";
     const isPreview = isSalesPage && !!r._preview;
     // 출고일이 오늘 또는 내일인 행은 완료/내림/등록완료까지 전부 허용(2026-08-24) —
     // 그보다 먼 미래는 변경/취소만. 내림/완료는 실제 outbound 행에만 뜻이 있어서
@@ -1107,7 +1145,7 @@ function reservationCardHtml(r, isSalesPage = false) {
     // "수정중"(등록)은 holding_records/azy_holding_records에도 같은 컬럼이 있어
     // preview 행도 지원(2026-08-26, registerCheckboxHtml의 data-preview로 저장
     // 대상 테이블을 구분해 이벤트 핸들러가 갈라 처리).
-    const limitedActions = isSalesPage && !completed
+    const limitedActions = isSalesPage && !completed && !cancelled
         && safeValue(r.출고일) !== todayISOStr() && safeValue(r.출고일) !== tomorrowISOStr();
     // 다음날짜(내일) 출고예정 건은 취소 버튼 자체를 없앰(2026-08-24) — 변경으로
     // 출고일/수량 조정은 계속 가능하지만 아예 취소는 못 하게.
@@ -1116,12 +1154,12 @@ function reservationCardHtml(r, isSalesPage = false) {
     // "체크박스를 체크한 사람" 기준(2026-08-25 재수정) — 로그인한 사람 기준으로
     // 했던 게 잘못이었음. r.수정자는 체크 당시 서버가 기록해둔 이름이라 누가
     // 보든 항상 같은 색으로 보인다.
-    const managerColorClass = (isSalesPage && !completed && r.등록) ? managerRowColorClass(r.수정자) : "";
+    const managerColorClass = (isSalesPage && !completed && !cancelled && r.등록) ? managerRowColorClass(r.수정자) : "";
     return `
-        <div class="mobile-card reservation-card${completed ? " sales-completed-row" : managerColorClass ? ` ${managerColorClass}` : ""}" data-reservation-id="${r.id}">
+        <div class="mobile-card reservation-card${cancelled ? " sales-cancelled-row" : completed ? " sales-completed-row" : managerColorClass ? ` ${managerColorClass}` : ""}" data-reservation-id="${r.id}">
             <div class="mc-header">
                 ${noteBtn(r, isSalesPage && !isPreview, access.canEditNote)}
-                ${!limitedActions && isSalesPage && access.canOthers ? `<label class="mc-register-label">${registerCheckboxHtml(r, access.canOthers)} 수정중</label>` : ""}
+                ${!limitedActions && !cancelled && isSalesPage && access.canOthers ? `<label class="mc-register-label">${registerCheckboxHtml(r, access.canOthers)} 수정중</label>` : ""}
                 <span class="mc-name">${safeValue(r.상품명)}</span>
                 ${whTag(r.창고)}
             </div>
@@ -1147,10 +1185,10 @@ function reservationCardHtml(r, isSalesPage = false) {
                 ${safeValue(r.BL) ? `<div class="mc-row mc-full"><span class="mc-label">BL</span>${safeValue(r.BL)}</div>` : ""}
             </div>
             <div class="reservation-card-actions">
-                ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">변경</button>`}
-                ${!limitedActions && !isPreview && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
-                ${completed || !access.canCancel || isTomorrow ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">취소</button>`}
-                ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
+                ${completed || cancelled || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">변경</button>`}
+                ${!limitedActions && !cancelled && !isPreview && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
+                ${completed || cancelled || !access.canCancel || isTomorrow ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">취소</button>`}
+                ${isSalesPage || cancelled || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
             </div>
         </div>
     `;
@@ -1160,6 +1198,9 @@ function reservationRowHtml(r, isSalesPage = false) {
     const unitPrice = parseUnitPrice(r.거래처);
     const weight = parseWeight(r.거래처);
     const completed = isSalesPage && r.status === "COMPLETED";
+    // 취소(되돌리기/삭제 둘 다, 2026-09-04) — outbound 행을 물리 삭제하지 않고
+    // status=CANCEL로 남겨서 타창고매출현황에서 취소선으로 계속 보이게 한다.
+    const cancelled = isSalesPage && r.status === "CANCEL";
     // 미리보기(2026-08-24 전체 공개) — 출고일은 잡혔지만 아직 오늘이 안
     // 돼서 outbound로 안 넘어간 ACTIVE 예약. get_all_outbound()가 이 행들도
     // 같이 내려주는데(_preview:true), 실제 outbound 행이 아니라서 완료/내림/
@@ -1170,13 +1211,13 @@ function reservationRowHtml(r, isSalesPage = false) {
     // 그보다 먼 미래는 변경/취소만 남긴다. isPreview 행은 아직 outbound로 안 넘어간
     // ACTIVE 예약이라 완료/내림/등록완료를 걸면 없는 id를 건드리게 되므로 날짜와
     // 무관하게 각 버튼에서 !isPreview로 별도 차단.
-    const limitedActions = isSalesPage && !completed
+    const limitedActions = isSalesPage && !completed && !cancelled
         && safeValue(r.출고일) !== todayISOStr() && safeValue(r.출고일) !== tomorrowISOStr();
     // 다음날짜(내일) 출고예정 건은 취소 버튼 자체를 없앰(2026-08-24) — 변경으로
     // 출고일/수량 조정은 계속 가능하지만 아예 취소는 못 하게.
     const isTomorrow = isSalesPage && safeValue(r.출고일) === tomorrowISOStr();
     const access = isSalesPage ? salesAccess(r) : { canEdit: true, canOthers: true, canCancel: true, canEditNote: true };
-    const canInlineEdit = isSalesPage && !completed && !isPreview && access.canEdit;
+    const canInlineEdit = isSalesPage && !completed && !cancelled && !isPreview && access.canEdit;
     const rawClient = attrEscape(r.거래처);
     // "내림"(2026-08-24)으로 수량이 0이 된 행은 원수량을 그대로(빨간색으로만
     // 구분) 보여준다 — 실제 DB 수량은 0이라 가용재고 계산엔 안 잡히지만,
@@ -1211,13 +1252,13 @@ function reservationRowHtml(r, isSalesPage = false) {
     // "체크박스를 체크한 사람" 기준(2026-08-25 재수정) — 로그인한 사람 기준으로
     // 했던 게 잘못이었음. r.수정자는 체크 당시 서버가 기록해둔 이름이라 누가
     // 보든 항상 같은 색으로 보인다.
-    const managerColorClass = (isSalesPage && !completed && r.등록) ? managerRowColorClass(r.수정자) : "";
-    const rowClass = completed ? "sales-completed-row" : managerColorClass;
+    const managerColorClass = (isSalesPage && !completed && !cancelled && r.등록) ? managerRowColorClass(r.수정자) : "";
+    const rowClass = cancelled ? "sales-cancelled-row" : completed ? "sales-completed-row" : managerColorClass;
     return `
         <tr data-reservation-id="${r.id}"${rowClass ? ` class="${rowClass}"` : ""}>
             <td class="reservation-note-cell">${noteBtn(r, isSalesPage && !isPreview, access.canEditNote)}</td>
-            ${isSalesPage ? `<td class="${access.canEditRemark ? "sales-remark-cell" : ""}" data-id="${r.id}" data-remark="${attrEscape(r.비고)}" data-preview="${isPreview ? "1" : ""}" title="${access.canEditRemark ? "더블클릭해서 수정" : ""}">${safeValue(r.비고)}</td>` : ""}
-            ${isSalesPage ? `<td class="reservation-register-cell">${limitedActions ? "" : registerCheckboxHtml(r, access.canOthers)}</td>` : ""}
+            ${isSalesPage ? `<td class="${access.canEditRemark ? "sales-remark-cell" : ""}" data-id="${r.id}" data-remark="${attrEscape(r.비고)}" data-preview="${isPreview ? "1" : ""}" title="${access.canEditRemark ? "더블클릭해서 수정" : ""}">${r.수량내림 && r.비고 ? `<span class="qty-dropped">${safeValue(r.비고)}</span>` : safeValue(r.비고)}</td>` : ""}
+            ${isSalesPage ? `<td class="reservation-register-cell">${limitedActions || cancelled ? "" : registerCheckboxHtml(r, access.canOthers)}</td>` : ""}
             <td>${safeValue(r.담당자) || "(미지정)"}</td>
             <td>${safeValue(r.상품명)}</td>
             <td>${safeValue(r.브랜드)}</td>
@@ -1236,50 +1277,17 @@ function reservationRowHtml(r, isSalesPage = false) {
             <td>${monthDayOnly(r.출고일)}</td>
             <td class="reservation-row-actions-cell">
                 <div class="reservation-row-actions">
-                    ${completed || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">변경</button>`}
-                        ${!limitedActions && !isPreview && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
-                    ${completed || !access.canCancel || isTomorrow ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">취소</button>`}
-                    ${isSalesPage || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
+                    ${completed || cancelled || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">변경</button>`}
+                        ${!limitedActions && !cancelled && !isPreview && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
+                    ${completed || cancelled || !access.canCancel || isTomorrow ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">취소</button>`}
+                    ${isSalesPage || cancelled || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
+                    ${isSalesPage || !access.canOthers || !isAdminTestFeatureEnabled() ? "" : `<button class="move-from-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">이동</button>`}
                 </div>
             </td>
         </tr>
     `;
 }
 
-// sales.html "추가" 버튼 — 팝업 대신 엑셀처럼 표 맨 위에 입력행을 띄운다(2026-08-14).
-// 열 순서는 reservationsHead(true)와 동일해야 함: 비고,등록완료,담당자,상품명,브랜드,
-// 등급,ESTNO,수량,BL,창고,거래처,단가,중량,총금액,출고일,액션(2026-08-19 비고를 "!"
-// 옆으로 이동, 2026-08-24 실재고/가용재고 열 제거, 수량을 BL/EST 사이로 이동).
-// 총금액은 아직 어떤 재고인지 확정 전이라 입력칸 없이 빈칸으로 두고, 등록완료도
-// 신규 입력행 단계에선 아직 창고가 정해지지 않아 빈칸.
-export function outboundInsertRowHtml() {
-    return `
-        <tr class="outbound-insert-row">
-            <td></td>
-            <td><input type="text" class="ob-in-remark cell-input" placeholder="비고"></td>
-            <td></td>
-            <td>${employeeSelect("ob-in-manager")}</td>
-            <td><input type="text" class="ob-in-name cell-input" placeholder="상품명"></td>
-            <td><input type="text" class="ob-in-brand cell-input" placeholder="브랜드"></td>
-            <td><input type="text" class="ob-in-grade cell-input" placeholder="등급"></td>
-            <td><input type="text" class="ob-in-estno cell-input" placeholder="ESTNO"></td>
-            <td><input type="number" class="ob-in-qty cell-input" min="1" value="1"></td>
-            <td><input type="text" class="ob-in-bl cell-input" placeholder="BL"></td>
-            <td><input type="text" class="ob-in-wh cell-input" placeholder="창고"></td>
-            <td><input type="text" class="ob-in-client cell-input" placeholder="거래처명"></td>
-            <td><input type="number" class="ob-in-price cell-input" min="0" placeholder="단가"></td>
-            <td><input type="number" step="0.01" min="0" class="ob-in-weight cell-input" placeholder="중량"></td>
-            <td></td>
-            <td><input type="date" class="ob-in-date cell-input" title="비우면 오늘"></td>
-            <td class="reservation-row-actions-cell">
-                <div class="reservation-row-actions">
-                    <button class="save-outbound-insert-btn">저장</button>
-                    <button class="cancel-outbound-insert-btn">취소</button>
-                </div>
-            </td>
-        </tr>
-    `;
-}
 
 // 열 너비는 실제 값 길이 기준(2026-08-14) — BL이 13~20자로 가장 길고, 등급/수량/
 // 실재고/가용재고는 짧은 숫자·코드라 좁게 잡음. 공통 열(담당자~거래처)은 두 모드에서
@@ -1367,7 +1375,7 @@ function reservationsHead(isSalesPage = false, sortColumns = []) {
 // 고정으로 보여준다 — 사용자가 조정할 필터가 아니라 이 탭의 고정 조건이라 담당자
 // 드롭다운/출고일 선택기 UI 자체를 안 띄운다. 출고일은 <input type="date"> 값과
 // 같은 "YYYY-MM-DD" 형식으로 저장되므로 그 형식으로 오늘 날짜를 만든다.
-function todayISOStr() {
+export function todayISOStr() {
     const d = new Date();
     const pad = n => String(n).padStart(2, "0");
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -1475,7 +1483,14 @@ function reservationFilterControlsHtml({ idPrefix, rows, search, warehouse, bran
     `;
 }
 
-export async function renderReservationsTab() {
+// 검색창 입력마다 매번 서버를 재조회하면(원래 코드) 네트워크 왕복 도중에도 사용자는
+// 계속 입력을 이어가는데, 응답이 온 뒤 innerHTML을 통째로 새로 그리면서 그 사이
+// 입력분이 옛 state.reservationsSearch 기준 값으로 덮여 사라진다("입력이 밀려요"
+// 버그, 2026-09-03). 데이터 자체는 검색으로 안 바뀌므로 마지막 조회 결과를 캐시해두고
+// 검색/필터/정렬 재렌더는 재조회 없이 이 캐시만 다시 필터링하게 한다.
+let _reservationsRowsCache = null;
+
+export async function renderReservationsTab(useCache = false) {
     const container = document.querySelector(".reservations-container");
     const listEl = document.getElementById("reservations-list");
     if (!container || !listEl || container.style.display === "none") return;
@@ -1483,20 +1498,25 @@ export async function renderReservationsTab() {
     const user = getStoredUser();
     const isEditor = hasEditorAccess(user?.권한);
 
-    let rows = [];
-    try {
-        rows = await getAllReservations();
-    } catch (e) {
-        listEl.innerHTML = `<p class="reservations-empty">예약 현황을 불러오지 못했습니다.</p>`;
-        return;
-    }
+    let rows;
+    if (useCache && _reservationsRowsCache) {
+        rows = _reservationsRowsCache;
+    } else {
+        try {
+            rows = await getAllReservations();
+        } catch (e) {
+            listEl.innerHTML = `<p class="reservations-empty">예약 현황을 불러오지 못했습니다.</p>`;
+            return;
+        }
 
-    // 어제예약(2026-08-31) — 실패해도 예약현황 자체는 계속 보여야 하니 조용히 무시
-    try {
-        const yesterdayQty = await getYesterdayReservationQty();
-        rows.forEach(r => { r.어제예약 = yesterdayQty[r.id]; });
-    } catch (e) {
-        console.warn("[API] 어제예약 조회 실패:", e.message);
+        // 어제예약(2026-08-31) — 실패해도 예약현황 자체는 계속 보여야 하니 조용히 무시
+        try {
+            const yesterdayQty = await getYesterdayReservationQty();
+            rows.forEach(r => { r.어제예약 = yesterdayQty[r.id]; });
+        } catch (e) {
+            console.warn("[API] 어제예약 조회 실패:", e.message);
+        }
+        _reservationsRowsCache = rows;
     }
 
     if (!isEditor) {
@@ -1584,23 +1604,32 @@ export async function renderReservationsTab() {
 // 출고일이 오늘인 outbound만 고정으로 보여준다. renderReservationsTab()과 컴포넌트를
 // 공유하지만 데이터 소스(outbound API)와 레이아웃(그룹핑 없는 플랫 표 + "추가"
 // 입력행)이 달라서 별도 함수로 둔다.
-export async function renderSalesTab() {
+// renderReservationsTab()의 _reservationsRowsCache와 동일한 이유(2026-09-03,
+// "입력이 밀려요" 버그) — 검색 재렌더는 재조회 없이 캐시를 재사용한다.
+let _salesRowsCache = null;
+
+export async function renderSalesTab(useCache = false) {
     const container = document.querySelector(".sales-container");
     const listEl = document.getElementById("sales-list");
     if (!container || !listEl || container.style.display === "none") return;
 
-    let rows = [];
-    try {
-        // outbound(타창고매출현황)는 예약과 완전히 분리된 별도 저장소(2026-08-14) —
-        // 이 탭은 예약 API가 아니라 outbound API만 쓴다. 서버가 조회 시점에
-        // 출고일=오늘인 예약을 outbound로 옮긴 뒤 내려주므로, 서버가 이미 오늘
-        // 것만 담고 있어 별도 날짜 필터가 원래는 필요 없지만, 하루가 지나도록
-        // 수정 안 된 outbound 잔여물이 계속 보이는 걸 막기 위해 클라이언트에서도
-        // 한 번 더 오늘 날짜로 걸러준다.
-        rows = await getAllOutbound();
-    } catch (e) {
-        listEl.innerHTML = `<p class="reservations-empty">출고 현황을 불러오지 못했습니다.</p>`;
-        return;
+    let rows;
+    if (useCache && _salesRowsCache) {
+        rows = _salesRowsCache;
+    } else {
+        try {
+            // outbound(타창고매출현황)는 예약과 완전히 분리된 별도 저장소(2026-08-14) —
+            // 이 탭은 예약 API가 아니라 outbound API만 쓴다. 서버가 조회 시점에
+            // 출고일=오늘인 예약을 outbound로 옮긴 뒤 내려주므로, 서버가 이미 오늘
+            // 것만 담고 있어 별도 날짜 필터가 원래는 필요 없지만, 하루가 지나도록
+            // 수정 안 된 outbound 잔여물이 계속 보이는 걸 막기 위해 클라이언트에서도
+            // 한 번 더 오늘 날짜로 걸러준다.
+            rows = await getAllOutbound();
+        } catch (e) {
+            listEl.innerHTML = `<p class="reservations-empty">출고 현황을 불러오지 못했습니다.</p>`;
+            return;
+        }
+        _salesRowsCache = rows;
     }
 
     // 담당자 제갈준 출고건은 타창고매출현황에서 숨김(2026-08-25) — 예약현황/
@@ -1633,12 +1662,13 @@ export async function renderSalesTab() {
     rows = applyReservationSort(rows, state.salesSortColumns);
     const searchHadFocus = document.activeElement?.id === "sales-search";
 
-    // 출고완료(status=COMPLETED) 행은 맨 뒤로 보내고 회색 배경 — 그 안에서는
-    // 열 정렬(또는 원래 순서) 그대로 유지(2026-08-14, DB status 토글로 새로고침해도
-    // 유지됨. Array.sort는 안정 정렬이라 위에서 적용한 열 정렬 순서가 완료/미완료
-    // 그룹 내부에서 보존됨, 2026-08-25).
+    // 출고완료(status=COMPLETED)는 맨 뒤로, 취소(status=CANCEL, 2026-09-04)는
+    // 그보다 더 뒤로 — 그 안에서는 열 정렬(또는 원래 순서) 그대로 유지(2026-08-14,
+    // DB status 토글로 새로고침해도 유지됨. Array.sort는 안정 정렬이라 위에서
+    // 적용한 열 정렬 순서가 각 그룹 내부에서 보존됨, 2026-08-25).
+    const statusRank = (s) => s === "CANCEL" ? 2 : s === "COMPLETED" ? 1 : 0;
     rows = [...rows].sort((a, b) =>
-        Number(a.status === "COMPLETED") - Number(b.status === "COMPLETED")
+        statusRank(a.status) - statusRank(b.status)
     );
     state.filteredReservations = rows;
     const dateFilterHtml = `
@@ -1656,7 +1686,6 @@ export async function renderSalesTab() {
         ${dateFilterHtml}
         <table class="reservations-table">
             ${reservationsHead(true, state.salesSortColumns)}
-            <tbody id="outbound-insert-rows"></tbody>
             <tbody>${rows.map(r => reservationRowHtml(r, true)).join("")}</tbody>
         </table>
         ${emptyMsg}
@@ -1664,6 +1693,141 @@ export async function renderSalesTab() {
     `;
     if (searchHadFocus) {
         const input = document.getElementById("sales-search");
+        if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+    }
+}
+
+// =========================
+// 창고이동 탭(2026-09-04, 관리자+8001 테스트 기능) — 재고장에서 "이동" 버튼으로
+// 등록한 이동 기록(warehouse_moves) 조회 전용. 실재고/예약과 무관한 별도 저장소라
+// 예약현황/타창고매출현황의 담당자 그룹핑·정렬 컴포넌트를 억지로 재사용하지 않고
+// 검색만 있는 단순한 표로 둔다. 검색 재렌더가 매번 서버를 재조회하면
+// renderReservationsTab에서 겪었던 "입력이 밀려요" 버그가 재현되므로 동일하게
+// 마지막 조회 결과를 캐시해 재사용한다.
+let _movesRowsCache = null;
+const MOVE_SEARCHABLE_KEYS = ["상품명", "브랜드", "등급", "ESTNO", "BL", "매입처", "창고", "이동창고", "배차자", "담당자", "매출처", "수정사항", "비고"];
+
+// 열 순서는 사용자 지정(2026-09-04): 재고(선택)/비고(구 출고증)/배차자/품목/브랜드/
+// 등급/EST/수량/BL·매입처/출고창고/이동창고/실중량/담당자/매출처/수정사항/평중/
+// 총중량/처리/취소. 상품명→품목, ESTNO→EST, 창고→출고창고는 화면 표시 라벨만
+// 바꾼 것(DB 컬럼명은 그대로).
+function moveRowHtml(r) {
+    const 평중 = Number(r.평중) || 0;
+    const 총중량 = 평중 ? Math.round((Number(r.수량) || 0) * 평중 * 100) / 100 : "";
+    // 취소가 처리보다 우선(둘 다 체크됐으면 빨간 취소 표시로) — sales-completed-row가
+    // 담당자 색보다 우선하는 기존 규칙과 동일한 원칙.
+    const rowClass = r.취소 ? "move-cancelled-row" : r.처리 ? "move-processed-row" : "";
+    // 비고/배차자/수량/이동창고/실중량/담당자/매출처/수정사항은 이동 등록 팝업
+    // 없이 이 표에서 바로 입력·수정(2026-09-04 사용자 지정) — 텍스트/숫자는
+    // sales-remark-cell과 동일한 더블클릭→input 패턴, 배차자/이동창고/담당자는
+    // 고정 목록/직원 목록이라 더블클릭→select로. data-field/data-type으로 구분해서
+    // events.js가 공용 핸들러 하나로 처리.
+    const editableCell = (field, value, type = "text") =>
+        `<td class="move-editable-cell" data-id="${r.id}" data-field="${field}" data-type="${type}" data-value="${attrEscape(value)}" title="더블클릭해서 수정">${safeValue(value)}</td>`;
+    // 비고에 값이 들어가면 수량내림(타창고매출현황과 동일 규칙, 2026-09-04) —
+    // 수량 칸은 원수량을 빨갛게, 비고 칸도 값 자체를 빨갛고 굵게 보여준다.
+    const dropped = !!r.수량내림;
+    const qtyDisplay = dropped && r.원수량 ? `<span class="qty-dropped">${safeValue(r.원수량)}</span>` : safeValue(r.수량);
+    const remarkDisplay = dropped && r.비고 ? `<span class="qty-dropped">${safeValue(r.비고)}</span>` : safeValue(r.비고);
+    return `
+        <tr data-id="${r.id}"${rowClass ? ` class="${rowClass}"` : ""}>
+            <td><input type="checkbox" class="move-select-check" data-id="${r.id}" ${r.재고 ? "checked" : ""}></td>
+            <td class="move-editable-cell" data-id="${r.id}" data-field="비고" data-type="text" data-value="${attrEscape(r.비고)}" title="더블클릭해서 수정 — 값을 입력하면 수량이 자동으로 내려갑니다">${remarkDisplay}</td>
+            ${editableCell("배차자", r.배차자, "select-dispatcher")}
+            <td>${safeValue(r.상품명)}</td>
+            <td>${safeValue(r.브랜드)}</td>
+            <td>${safeValue(r.등급)}</td>
+            <td>${safeValue(r.ESTNO)}</td>
+            <td class="move-editable-cell" data-id="${r.id}" data-field="수량" data-type="number" data-value="${attrEscape(r.수량)}" title="더블클릭해서 수정">${qtyDisplay}</td>
+            <td>${safeValue(r.BL) || safeValue(r.매입처)}</td>
+            <td>${whTag(r.창고)}</td>
+            ${editableCell("이동창고", r.이동창고, "select-warehouse")}
+            ${editableCell("실중량", r.실중량, "number")}
+            ${editableCell("담당자", r.담당자, "autocomplete-employee")}
+            ${editableCell("매출처", r.매출처)}
+            ${editableCell("수정사항", r.수정사항)}
+            <td>${safeValue(r.평중)}</td>
+            <td>${safeValue(총중량)}</td>
+            <td><input type="checkbox" class="move-processed-check" data-id="${r.id}" ${r.처리 ? "checked" : ""}></td>
+            <td><input type="checkbox" class="move-cancel-check" data-id="${r.id}" ${r.취소 ? "checked" : ""}></td>
+        </tr>
+    `;
+}
+
+export async function renderMovesTab(useCache = false) {
+    const container = document.querySelector(".moves-container");
+    const listEl = document.getElementById("moves-list");
+    if (!container || !listEl || container.style.display === "none") return;
+
+    let rows;
+    if (useCache && _movesRowsCache) {
+        rows = _movesRowsCache;
+    } else {
+        try {
+            rows = await getAllWarehouseMoves();
+        } catch (e) {
+            listEl.innerHTML = `<p class="reservations-empty">창고이동 내역을 불러오지 못했습니다.</p>`;
+            return;
+        }
+        _movesRowsCache = rows;
+    }
+
+    // "이동 날짜별로 보기" 필터(2026-09-04) — 실제 이동 예정일(이동일자) 기준.
+    // 안 고르면 타창고매출현황과 동일하게 오늘로 기본 고정(2026-09-04 사용자 지정).
+    const movesDate = state.movesDateFilter || todayISOStr();
+    let filtered = rows.filter(r => r.이동일자 === movesDate);
+    const kw = cleanText(state.movesSearch || "").toLowerCase();
+    filtered = kw
+        ? filtered.filter(r => MOVE_SEARCHABLE_KEYS.some(k => cleanText(r[k] ?? "").toLowerCase().includes(kw)))
+        : filtered;
+    state.filteredMoves = filtered; // 엑셀 다운로드가 지금 화면에 보이는 행 그대로 내려받게(2026-09-04)
+    const searchHadFocus = document.activeElement?.id === "moves-search";
+
+    const dateFilterHtml = `
+        <label for="moves-date-filter">이동일자</label>
+        <input type="date" id="moves-date-filter" class="reservations-filter-select" value="${movesDate}">
+        ${state.movesDateFilter ? `<button type="button" class="moves-date-filter-clear" title="오늘로 초기화">✕</button>` : ""}
+    `;
+
+    const emptyMsg = filtered.length ? "" : `<p class="reservations-empty">${movesDate} 이동 예정 내역이 없습니다.</p>`;
+    listEl.innerHTML = `
+        <div class="reservations-filter-bar">
+            <input type="text" id="moves-search" class="search-input" placeholder="검색(품목/브랜드/BL/매입처/창고/이동창고/배차자/담당자/매출처/수정사항/비고)" value="${attrEscape(state.movesSearch || "")}">
+            ${dateFilterHtml}
+        </div>
+        <table class="reservations-table move-table">
+            <colgroup>
+                <col style="width:3%">  <!--재고-->
+                <col style="width:6%">  <!--비고(구 출고증)-->
+                <col style="width:6%">  <!--배차자-->
+                <col style="width:6%">  <!--품목-->
+                <col style="width:5%">  <!--브랜드-->
+                <col style="width:3%">  <!--등급-->
+                <col style="width:4%">  <!--EST-->
+                <col style="width:3%">  <!--수량-->
+                <col style="width:15%"> <!--BL/매입처-->
+                <col style="width:5%">  <!--출고창고-->
+                <col style="width:5%">  <!--이동창고-->
+                <col style="width:4%">  <!--실중량-->
+                <col style="width:5%">  <!--담당자-->
+                <col style="width:6%">  <!--매출처-->
+                <col style="width:6%">  <!--수정사항-->
+                <col style="width:4%">  <!--평중-->
+                <col style="width:4%">  <!--총중량-->
+                <col style="width:3%">  <!--처리-->
+                <col style="width:3%">  <!--취소-->
+            </colgroup>
+            <thead><tr>
+                <th>재고</th><th>비고</th><th>배차자</th><th>품목</th><th>브랜드</th><th>등급</th><th>EST</th>
+                <th>수량</th><th>BL/매입처</th><th>출고창고</th><th>이동창고</th><th>실중량</th><th>담당자</th>
+                <th>매출처</th><th>수정사항</th><th>평중</th><th>총중량</th><th>처리</th><th>취소</th>
+            </tr></thead>
+            <tbody>${filtered.map(moveRowHtml).join("")}</tbody>
+        </table>
+        ${emptyMsg}
+    `;
+    if (searchHadFocus) {
+        const input = document.getElementById("moves-search");
         if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
     }
 }
