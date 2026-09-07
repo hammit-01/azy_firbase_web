@@ -268,6 +268,10 @@ export async function apiCancelOutbound(id, deleteIt = false) {
     return apiFetch(`/api/outbound/${encodeURIComponent(id)}/cancel?delete=${deleteIt}`, { method: "POST" });
 }
 
+export async function apiReactivateOutbound(id) {
+    return apiFetch(`/api/outbound/${encodeURIComponent(id)}/reactivate`, { method: "POST" });
+}
+
 export async function apiUseOutbound(id, qty) {
     return apiFetch(`/api/outbound/${encodeURIComponent(id)}/use`, {
         method: "POST",

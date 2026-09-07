@@ -20,7 +20,7 @@ from pipeline.mysql_db import (
     get_active_reservations_by_pk, get_all_active_reservations,
     migrate_due_reservations_to_outbound, get_all_outbound, get_order_sheet_rows, create_outbound,
     create_outbound_manual,
-    update_outbound, cancel_outbound, use_outbound, toggle_outbound_complete,
+    update_outbound, cancel_outbound, reactivate_outbound, use_outbound, toggle_outbound_complete,
     toggle_outbound_register, toggle_outbound_stock_release,
     toggle_outbound_slip, toggle_outbound_delivery_cancel,
     register_outbound_from_reservation, _today_iso,
@@ -628,6 +628,18 @@ def cancel_outbound_endpoint(rec_id: str, delete: bool = False):
             raise HTTPException(400, str(e))
     if not ok:
         raise HTTPException(404, "항목을 찾을 수 없거나 이미 종료됨")
+    return {"ok": True}
+
+
+@app.post("/api/outbound/{rec_id}/reactivate")
+def reactivate_outbound_endpoint(rec_id: str):
+    with get_conn() as conn:
+        try:
+            ok = reactivate_outbound(conn, rec_id)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    if not ok:
+        raise HTTPException(404, "항목을 찾을 수 없거나 취소 상태가 아닙니다")
     return {"ok": True}
 
 

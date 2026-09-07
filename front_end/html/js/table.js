@@ -1186,6 +1186,7 @@ function reservationCardHtml(r, isSalesPage = false) {
                 ${completed || cancelled || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">변경</button>`}
                 ${!limitedActions && !cancelled && !isPreview && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
                 ${completed || cancelled || !access.canCancel || isTomorrow ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">취소</button>`}
+                ${cancelled && access.canCancel ? `<button class="reactivate-outbound-btn" data-id="${r.id}">취소 해제</button>` : ""}
                 ${isSalesPage || cancelled || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
             </div>
         </div>
@@ -1278,6 +1279,7 @@ function reservationRowHtml(r, isSalesPage = false) {
                     ${completed || cancelled || !access.canEdit ? "" : `<button class="edit-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-release="${attrEscape(r.출고일)}" data-client="${attrEscape(r.거래처)}" data-remark="${attrEscape(r.비고)}" data-can-remark="${access.canEditRemark ? "1" : ""}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">변경</button>`}
                         ${!limitedActions && !cancelled && !isPreview && access.canOthers ? `<button class="use-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}" data-sales="${isSalesPage ? "1" : ""}">${isSalesPage ? "완료" : "사용"}</button>` : ""}
                     ${completed || cancelled || !access.canCancel || isTomorrow ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">취소</button>`}
+                    ${cancelled && access.canCancel ? `<button class="reactivate-outbound-btn" data-id="${r.id}">취소 해제</button>` : ""}
                     ${isSalesPage || cancelled || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
                     ${isSalesPage || !access.canOthers || !hasWarehouseMovesAccess() ? "" : `<button class="move-from-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">이동</button>`}
                 </div>

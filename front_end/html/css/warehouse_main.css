@@ -1156,7 +1156,7 @@ input[type="date"].price-edit-input {
     margin-top: 10px;
 }
 
-.edit-reservation-btn, .use-reservation-btn, .cancel-reservation-btn, .register-outbound-btn, .move-from-reservation-btn, .price-delete-btn {
+.edit-reservation-btn, .use-reservation-btn, .cancel-reservation-btn, .register-outbound-btn, .move-from-reservation-btn, .reactivate-outbound-btn, .price-delete-btn {
     height: 28px;
     padding: 0 8px;
     border: none;
@@ -1189,6 +1189,8 @@ input[type="date"].price-edit-input {
 .register-outbound-btn:hover { background: #ddd6fe; }
 .move-from-reservation-btn { background: #ffedd5; color: #c2410c; }
 .move-from-reservation-btn:hover { background: #fed7aa; }
+.reactivate-outbound-btn { background: #ccfbf1; color: #0f766e; }
+.reactivate-outbound-btn:hover { background: #99f6e4; }
 .price-delete-btn { background: #fee2e2; color: #b91c1c; }
 .price-delete-btn:hover { background: #fca5a5; }
 

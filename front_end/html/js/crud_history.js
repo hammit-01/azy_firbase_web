@@ -120,6 +120,11 @@ function _buildFn(desc) {
         case "outbound-created":
             return async () => cancelOutbound(desc.id, true);
 
+        // 타창고매출현황 "취소 해제"(2026-09-07) 되돌리기 — 다시 취소(삭제
+        // 방식)로 되돌려서 원래의 CANCEL 상태로 복원.
+        case "outbound-reactivated":
+            return async () => cancelOutbound(desc.id, true);
+
         // 창고이동 "추가"(재고 매칭 없이 바로 등록, 2026-09-04) 되돌리기 — 예약
         // 연동이 없는 수동 추가라 그냥 방금 만든 행을 지운다.
         case "warehouse-move-created":

@@ -1417,6 +1417,44 @@ def cancel_outbound(conn, rec_id: str, delete: bool = False) -> bool:
         return True
 
 
+def reactivate_outbound(conn, rec_id: str) -> bool:
+    """타창고매출현황 "취소 해제"(2026-09-07 사용자 요청 — 창고이동 탭의 취소
+    체크 해제와 동일한 개념). status=CANCEL인 행을 다시 ACTIVE로 되살린다.
+    취소돼 있던 사이 그 재고가 다른 예약/출고에 쓰였을 수 있어
+    _reactivate_cancelled_reservation과 동일하게 가용재고를 다시 검사한다 —
+    부족하면 ValueError. pk가 없는(재고 매칭 없이 수동 추가된) 행은 애초에
+    실재고를 깎는 게 아니라서 검사 없이 바로 되살린다."""
+    with conn.cursor() as cur:
+        cur.execute("SELECT * FROM outbound WHERE id=%s AND status='CANCEL' FOR UPDATE", (rec_id,))
+        row = cur.fetchone()
+        if not row:
+            return False
+        pk = row.get("pk")
+        qty = int(row["수량"] or 0)
+        if pk:
+            inv_table = _inv_table_for_pk(cur, pk)
+            if inv_table:
+                hr_table = "holding_records" if inv_table == "inventory" else "azy_holding_records"
+                cur.execute(f"SELECT 재고 FROM {inv_table} WHERE id=%s OR pk=%s FOR UPDATE", (pk, pk))
+                src = cur.fetchone()
+                stock = int((src or {}).get("재고") or 0)
+                cur.execute(
+                    f"SELECT COALESCE(SUM(수량),0) AS total FROM {hr_table} WHERE pk=%s AND status='ACTIVE' FOR UPDATE",
+                    (pk,),
+                )
+                active_sum = int(cur.fetchone()["total"] or 0)
+                cur.execute(
+                    "SELECT COALESCE(SUM(수량),0) AS total FROM outbound WHERE pk=%s AND status='ACTIVE' AND id!=%s FOR UPDATE",
+                    (pk, rec_id),
+                )
+                outbound_sum = int(cur.fetchone()["total"] or 0)
+                available = stock - active_sum - outbound_sum
+                if qty > available:
+                    raise ValueError(f"가용재고 부족(가용 {available}, 필요 {qty}) — 취소를 되돌릴 수 없습니다")
+        cur.execute("UPDATE outbound SET status='ACTIVE' WHERE id=%s", (rec_id,))
+        return True
+
+
 def toggle_outbound_complete(conn, rec_id: str) -> str:
     """타창고매출현황 "출고완료" 버튼 토글(2026-08-14) — status를 ACTIVE↔COMPLETED로
     뒤집는다. CANCEL(출고취소)과 달리 COMPLETED여도 get_all_outbound에는 계속

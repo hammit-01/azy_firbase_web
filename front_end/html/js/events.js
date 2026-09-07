@@ -3,7 +3,7 @@ import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, 
 import { renderSelectData, dispatcherSelect, moveWarehouseSelect, employeeAutocomplete } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
-import { getReservationsByPk, cancelReservation, useReservation, updateReservation, toggleReservationRegister, updateOutbound, cancelOutbound, createOutbound, createOutboundManual, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, toggleOutboundSlip, toggleOutboundDeliveryCancel, createPrice, updatePrice, deletePrice, createWarehouseMove, createWarehouseMoveManual, updateWarehouseMove, createWarehouseMoveFromReservation } from "./firestoreService.js";
+import { getReservationsByPk, cancelReservation, useReservation, updateReservation, toggleReservationRegister, updateOutbound, cancelOutbound, reactivateOutbound, createOutbound, createOutboundManual, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, toggleOutboundSlip, toggleOutboundDeliveryCancel, createPrice, updatePrice, deletePrice, createWarehouseMove, createWarehouseMoveManual, updateWarehouseMove, createWarehouseMoveFromReservation } from "./firestoreService.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
@@ -1512,6 +1512,23 @@ async function handleClick(e) {
             fetchAllData();
         } catch (err) {
             showError(err.message || "취소에 실패했습니다.");
+        }
+        return;
+    }
+
+    // 타창고매출현황 "취소 해제"(2026-09-07 사용자 요청 — 창고이동 탭 취소
+    // 체크 해제와 동일한 개념). 되돌리기용 undo는 다시 취소(삭제 방식)로.
+    if (e.target.classList.contains("reactivate-outbound-btn")) {
+        const id = e.target.dataset.id;
+        try {
+            await reactivateOutbound(id);
+            pushUndo({ type: "outbound-reactivated", id });
+            _logActivity("outbound", id, "취소해제", null, null, "출고취소 되돌림");
+            showToast("✓ 취소 해제됨");
+            refreshReservationViews();
+            fetchAllData();
+        } catch (err) {
+            showError(err.message || "취소 해제에 실패했습니다.");
         }
         return;
     }
