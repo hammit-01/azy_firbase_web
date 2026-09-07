@@ -524,10 +524,13 @@ def create_reservation(conn, product: dict) -> dict:
     이 락에서 순서가 정해지고, 뒤에 도는 쪽은 앞쪽이 커밋한 예약까지 반영된 합계로
     다시 계산되므로 중복 예약이 불가능하다).
 
-    재고 매칭 기준은 상품명/브랜드/등급/ESTNO/BL/창고/상태 7개 전부 일치(2026-08-21,
-    상태 추가) — 정확히 1건이어야 예약 가능.
+    재고 매칭 기준은 상품명/브랜드/등급/ESTNO/BL/창고/상태/유통기한/평중 9개
+    전부 일치(2026-08-21 상태 추가, 2026-08-28 유통기한 추가, 2026-09-07
+    평중 추가 — 같은 BL/ESTNO/창고/상태/유통기한인데 평중만 다른 별도 로트가
+    공존해 매칭이 2건 이상 걸리던 EGLV602500023056 사례로 발견) — 정확히
+    1건이어야 예약 가능.
 
-    product: {상품명, 브랜드, 등급, ESTNO, BL, 창고, 상태, 수량, 거래처, 담당자}
+    product: {상품명, 브랜드, 등급, ESTNO, BL, 창고, 상태, 유통기한, 평중, 수량, 거래처, 담당자}
     실패 시 ValueError(사유) — 호출부(API)가 400으로 변환해서 응답.
     """
     import uuid
@@ -545,14 +548,15 @@ def create_reservation(conn, product: dict) -> dict:
         # 상태는 DB에 NULL로 들어있는 행이 많아서(대부분의 "정상" 재고) 그냥
         # 상태=%s로 비교하면 NULL=''가 항상 거짓이라 매칭이 통째로 깨진다
         # (2026-08-21 실측, "재고 매칭 0건" 오류) — COALESCE로 NULL을 빈 문자열
-        # 취급해서 프론트의 dataState 기본값("")과 맞춘다.
+        # 취급해서 프론트의 dataState 기본값("")과 맞춘다. 평중도 NULL 대비
+        # COALESCE(2026-09-07).
         cur.execute(
             f"SELECT id, pk, 재고, stock_version FROM {table} WHERE 상품명=%s AND 브랜드=%s "
             f"AND 등급=%s AND ESTNO=%s AND BL=%s AND 창고=%s AND COALESCE(상태, '')=%s "
-            f"AND COALESCE(유통기한, '')=%s AND 수집일 != '' FOR UPDATE",
+            f"AND COALESCE(유통기한, '')=%s AND COALESCE(평중, 0)=%s AND 수집일 != '' FOR UPDATE",
             (product["상품명"], product.get("브랜드", ""), product.get("등급", ""),
              product.get("ESTNO", ""), product["BL"], product["창고"], product.get("상태", ""),
-             product.get("유통기한", "")),
+             product.get("유통기한", ""), product.get("평중") or 0),
         )
         matches = cur.fetchall()
         if len(matches) != 1:
@@ -883,7 +887,12 @@ def get_all_active_reservations(conn) -> list[dict]:
     상태/유통기한도 같이 내려준다(2026-09-04) — 예약취소 되돌리기(프론트
     "reservation-cancelled" undo)가 취소 직전 이 목록의 스냅샷으로 create_
     reservation을 다시 부르는데, create_reservation의 재고 매칭은 이 둘까지
-    정확히 일치해야 해서 없으면 매칭 실패로 되돌리기가 조용히 실패했었다."""
+    정확히 일치해야 해서 없으면 매칭 실패로 되돌리기가 조용히 실패했었다.
+
+    평중도 같이 내려준다(2026-09-07) — create_reservation의 재고 매칭에
+    평중이 추가되면서(같은 BL/ESTNO/창고/상태/유통기한인데 평중만 다른
+    별도 로트가 공존하는 EGLV602500023056 사례로 발견) 이것도 없으면 위와
+    같은 이유로 되돌리기가 실패한다."""
     result = []
     pairs = [("holding_records", "inventory"), ("azy_holding_records", "azy_inventory")]
     with conn.cursor() as cur:
@@ -891,7 +900,7 @@ def get_all_active_reservations(conn) -> list[dict]:
             cur.execute(
                 f"SELECT r.id, r.pk, r.수량, r.홀딩 AS 담당자, r.메모 AS 거래처, r.홀딩일자, r.출고일, "
                 f"r.전달사항, r.비고, "
-                f"i.상품명, i.브랜드, i.등급, i.ESTNO, i.BL, i.창고, i.재고, i.상태, i.유통기한, "
+                f"i.상품명, i.브랜드, i.등급, i.ESTNO, i.BL, i.창고, i.재고, i.상태, i.유통기한, i.평중, "
                 f"i.재고 - COALESCE(agg.총예약, 0) - COALESCE(ob.총출고, 0) AS 가용재고 "
                 f"FROM {hr_table} r LEFT JOIN {inv_table} i ON r.pk = i.id "
                 f"LEFT JOIN (SELECT pk, CAST(SUM(수량) AS SIGNED) AS 총예약 FROM {hr_table} "
@@ -1090,7 +1099,7 @@ def _bulk_product_join(conn, pks: set) -> dict:
     with conn.cursor() as cur:
         for t in ("inventory", "azy_inventory"):
             cur.execute(
-                f"SELECT id, 상품명, 브랜드, 등급, ESTNO, BL, 창고, 재고, 상태, 유통기한 FROM {t} WHERE id IN ({placeholders})",
+                f"SELECT id, 상품명, 브랜드, 등급, ESTNO, BL, 창고, 재고, 상태, 유통기한, 평중 FROM {t} WHERE id IN ({placeholders})",
                 pks,
             )
             for row in cur.fetchall():
@@ -1122,6 +1131,7 @@ def _bulk_product_join(conn, pks: set) -> dict:
                 "등급": snap.get("등급", ""), "ESTNO": snap.get("ESTNO", ""),
                 "BL": snap.get("BL", ""), "창고": snap.get("창고", ""),
                 "재고": 0, "상태": snap.get("상태", ""), "유통기한": snap.get("유통기한", ""),
+                "평중": snap.get("평중", 0),
             }
             table_of[pk] = None  # 가용재고 계산 불가 — 아래서 0 처리
 

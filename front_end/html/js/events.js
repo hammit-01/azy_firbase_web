@@ -1496,7 +1496,7 @@ async function handleClick(e) {
             상품명: snap.상품명, 브랜드: snap.브랜드, 등급: snap.등급, ESTNO: snap.ESTNO,
             BL: snap.BL, 창고: snap.창고, 수량: snap.수량, 거래처: snap.거래처,
             담당자: snap.담당자, 출고일: snap.출고일,
-            상태: snap.상태 ?? "", 유통기한: snap.유통기한 ?? "",
+            상태: snap.상태 ?? "", 유통기한: snap.유통기한 ?? "", 평중: snap.평중 ?? 0,
         } : null;
         try {
             if (isOutbound) await cancelOutbound(id, deleteIt); else await cancelReservation(id);

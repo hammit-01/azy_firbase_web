@@ -52,6 +52,10 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "", w
             창고:   item.warehouse,
             상태:   item.dataState || "",
             유통기한: item.dueDate || "",
+            // 재고 매칭 조건에 평중 추가(2026-09-07) — 예약 폼의 weight 입력은
+            // 사용자가 고칠 수 있는 표시용 값이라 매칭에는 안 쓰고, 선택된 그
+            // 재고 행 자체의 평중(item.weight)을 그대로 보낸다.
+            평중:   Number(item.weight) || 0,
             수량:   holdQty,
             거래처: memo || item.memo || "",
             담당자: note?.trim() || "",
