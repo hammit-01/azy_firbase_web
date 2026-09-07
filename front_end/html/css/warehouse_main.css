@@ -534,7 +534,6 @@ th.sort-active {
 /* 액션 버튼 줄(추가/수정/예약 등)만 오른쪽 끝에 붙임(2026-08-06) */
 .toolbar-row-actions {
     justify-content: flex-end;
-    width: 540px;
 }
 
 /* 예약 현황/업데이트/엑셀 다운로드 3개는 남는 폭을 나눠 가지며 줄 너비에 맞게 늘어남 */
