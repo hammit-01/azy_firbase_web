@@ -1376,6 +1376,7 @@ def cancel_outbound(conn, rec_id: str, delete: bool = False) -> bool:
     거래처(메모) + 홀딩일자를 가진 ACTIVE 예약 — register_outbound_from_
     reservation이 원본 행을 그대로 복사해서 만들기 때문에(거래처를 새로
     지정하지 않았다면) 이 조합이 같으면 같은 원본에서 나온 걸로 본다."""
+    import uuid
     with conn.cursor() as cur:
         cur.execute("SELECT * FROM outbound WHERE id=%s AND status='ACTIVE' FOR UPDATE", (rec_id,))
         row = cur.fetchone()
@@ -1405,7 +1406,16 @@ def cancel_outbound(conn, rec_id: str, delete: bool = False) -> bool:
         # 다음 /api/outbound 조회 때 migrate_due_reservations_to_outbound에
         # 바로 다시 걸려서 outbound로 튕겨 돌아간다 — 취소가 취소가 안 되는
         # 꼴이라 출고일을 비워서 예약 단계로 확실히 내려놓는다.
+        #
+        # id는 반드시 새로 발급한다(2026-09-07 장애 수정) — outbound 행은
+        # status='CANCEL'로 영구 보존되는데(2026-09-04 취소선 표시 변경) 예전
+        # 코드가 그 id를 그대로 재사용해서 되살렸다. 되살린 예약이 나중에
+        # 다시 출고일=오늘이 되면 migrate_due_reservations_to_outbound가 같은
+        # id로 outbound에 INSERT하려다 PRIMARY KEY 충돌로 타창고매출현황
+        # 전체가 500 에러로 죽었다(실제 장애, id 076023be...). outbound.id는
+        # 그 행의 평생 고유키라 절대 재사용하면 안 된다.
         revived = dict(row)
+        revived["id"] = uuid.uuid4().hex
         revived["출고일"] = ""
         cols = ", ".join(f"`{c}`" for c in _RESERVATION_COLS)
         placeholders = ", ".join(["%s"] * len(_RESERVATION_COLS))
