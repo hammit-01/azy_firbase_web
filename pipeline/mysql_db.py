@@ -1241,6 +1241,7 @@ def update_outbound(conn, rec_id: str, updates: dict) -> bool:
     조정 시 보고된 문제). 늘리는 쪽은 매칭 예약의 남은 수량을 넘을 수 없다 —
     예약보다 많이 출고할 순 없다는 규칙이라 register_outbound_from_reservation
     과 동일하게 여기서도 막는다(2026-08-18, 예약 초과 출고 방지 요청)."""
+    import uuid
     new_qty = updates.get("수량")
     if new_qty is not None and new_qty <= 0:
         raise ValueError("수량은 1 이상이어야 합니다")
@@ -1346,7 +1347,14 @@ def update_outbound(conn, rec_id: str, updates: dict) -> bool:
                 if match:
                     cur.execute(f"UPDATE {hr_table} SET 수량=수량+%s WHERE id=%s", (give_back, match["id"]))
                 else:
+                    # id는 반드시 새로 발급한다(2026-09-07 장애와 동일한 패턴) — 이
+                    # outbound 행(rec_id)은 수량만 줄어들 뿐 그대로 살아있는데, 여기서
+                    # row["id"](=rec_id)를 그대로 쓰면 outbound와 holding_records에
+                    # 같은 id가 동시에 ACTIVE로 존재하게 돼 나중에 이 예약 출고일이
+                    # 다시 오늘이 될 때 migrate_due_reservations_to_outbound가 PRIMARY
+                    # KEY 충돌로 타창고매출현황 전체를 죽인다.
                     revived = dict(row)
+                    revived["id"] = uuid.uuid4().hex
                     revived["수량"] = give_back
                     revived["출고일"] = ""
                     cols = ", ".join(f"`{c}`" for c in _RESERVATION_COLS)
