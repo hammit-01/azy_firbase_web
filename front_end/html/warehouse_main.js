@@ -1,4 +1,4 @@
-import { initFirebase, subscribeData, loadEmployees } from "./js/firebase.js";
+import { initFirebase, subscribeData, loadEmployees, loadClients } from "./js/firebase.js";
 import { initDOM } from "./js/dom.js";
 import { bindEvents, restoreLastTab } from "./js/events.js";
 import { initLogin } from "./js/login.js";
@@ -18,7 +18,8 @@ window.addEventListener("DOMContentLoaded", async () => {
     // 새로고침해도 열려있던 탭 유지(2026-08-25)
     restoreLastTab();
 
-    // 직원 목록 + Firestore 동시 시작 (병렬)
+    // 직원 목록 + 발주장 거래처 목록 + Firestore 동시 시작 (병렬)
     loadEmployees();
+    loadClients();
     subscribeData();
 });

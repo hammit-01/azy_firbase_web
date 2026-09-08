@@ -35,6 +35,31 @@ export function driverAutocomplete(cls, dataId = "", currentVal = "") {
             <datalist id="${listId}">${opts}</datalist>`;
 }
 
+// login.js가 이미 panel.js를 import하므로(renderSelectData) 여기서 login.js를
+// 다시 import하면 순환참조 — localStorage를 직접 읽어 로그인한 사용자의
+// 부서만 로컬로 복제([[feedback-admin-8001-gating]]과 동일한 우회).
+function _currentUserDept() {
+    try {
+        return JSON.parse(localStorage.getItem("azy_login_user") || "{}")?.부서 || "";
+    } catch {
+        return "";
+    }
+}
+
+// 발주장 "거래처"(2026-09-08) — employeeAutocomplete와 동일한 datalist
+// 패턴이되 후보를 client 테이블에서 로그인한 사용자의 부서에 속한 거래처만
+// 뽑는다(사용자 요청). 리스트에 없는 값도 자유 입력 가능.
+export function clientAutocomplete(cls, dataId = "", currentVal = "") {
+    const listId = `client-datalist-${dataId || Math.random().toString(36).slice(2)}`;
+    const dept = _currentUserDept();
+    const names = [...new Set(state.clients.filter(c => c["부서"] === dept).map(c => c["거래처명"]))]
+        .sort((a, b) => a.localeCompare(b, "ko"));
+    const opts = names.map(n => `<option value="${n}">`).join("");
+    const id = dataId ? `data-id="${dataId}"` : "";
+    return `<input type="text" list="${listId}" class="${cls} input-box" ${id} value="${currentVal}" placeholder="거래처 입력" autocomplete="off">
+            <datalist id="${listId}">${opts}</datalist>`;
+}
+
 // show-state 필터와 동일한 어휘 — 추가/수정 폼에서 상태를 직접 고를 때도 같은 옵션을 씀
 const STATE_OPTIONS = [
     ["없음", "없음"],

@@ -5,6 +5,7 @@ export const state = {
     yesterdayById: new Map(), // 업데이트 탭 비교 기준 — 어제 마감 스냅샷(id → row)
     filteredData: [],
     employees: [],      // 사원 목록
+    clients: [],        // 발주장 "거래처" 자동완성용 client 테이블 목록(2026-09-08, {거래처명, 부서})
     selectedItems: new Map(),
     flashIds: new Set(),
     crudData: null,

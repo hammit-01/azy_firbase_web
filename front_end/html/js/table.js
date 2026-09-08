@@ -2039,15 +2039,29 @@ export async function renderPriceTab() {
 // 노출되는 체크박스(과거엔 특판팀 전용이었지만 담당자/부서 개념이 없어지며
 // 그 게이팅도 같이 제거).
 // =========================
+// 배송 기사 이름마다 거래처 칸 배경색을 다르게(2026-09-08 사용자 요청) —
+// 이름 문자열을 해시해서 고정된 파스텔 색을 골라 매번 같은 이름은 같은
+// 색으로 보이게(랜덤이 아니라 재렌더돼도 안 흔들림).
+function _driverBgColor(name) {
+    if (!name) return "";
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return `hsl(${Math.abs(hash) % 360}, 65%, 90%)`;
+}
+
 function orderSheetRowHtml(r) {
-    const editableCell = (field, value, type = "text") =>
-        `<td class="order-sheet-editable-cell" data-id="${r.id}" data-field="${field}" data-type="${type}" data-value="${attrEscape(value)}" title="더블클릭해서 수정">${safeValue(value)}</td>`;
+    const editableCell = (field, value, type = "text", style = "") =>
+        `<td class="order-sheet-editable-cell" data-id="${r.id}" data-field="${field}" data-type="${type}" data-value="${attrEscape(value)}" title="더블클릭해서 수정"${style ? ` style="${style}"` : ""}>${safeValue(value)}</td>`;
     const checkbox = (field) =>
         `<td><input type="checkbox" class="order-sheet-checkbox" data-id="${r.id}" data-field="${field}" ${r[field] ? "checked" : ""}></td>`;
+    // 전표 체크 시 행 배경색으로 눈에 띄게, 취소 체크 시 행 전체 텍스트를
+    // 빨간색으로(2026-09-08 사용자 요청) — 취소가 전표보다 우선(다른 탭의
+    // "취소가 처리보다 우선" 규칙과 동일한 원칙).
+    const rowClass = r.배송취소 ? "order-sheet-cancelled-row" : r.전표 ? "order-sheet-slip-row" : "";
     return `
-        <tr data-reservation-id="${r.id}">
+        <tr data-reservation-id="${r.id}"${rowClass ? ` class="${rowClass}"` : ""}>
             ${editableCell("순서", r.순서)}
-            ${editableCell("거래처", r.거래처)}
+            ${editableCell("거래처", r.거래처, "autocomplete-client", `background:${_driverBgColor(r.배송)}`)}
             ${checkbox("출고")}
             ${checkbox("계근")}
             ${checkbox("상치")}

@@ -18,7 +18,7 @@ from pipeline.mysql_db import (
     create_reservation, cancel_reservation, complete_reservation, use_reservation,
     reactivate_reservation, update_reservation, toggle_reservation_register, toggle_reservation_stock_release,
     get_active_reservations_by_pk, get_all_active_reservations,
-    migrate_due_reservations_to_outbound, get_all_outbound, get_order_sheet_rows, create_sale, update_sale, delete_sale, create_outbound,
+    migrate_due_reservations_to_outbound, get_all_outbound, get_order_sheet_rows, create_sale, update_sale, delete_sale, get_all_clients, create_outbound,
     create_outbound_manual,
     update_outbound, cancel_outbound, reactivate_outbound, use_outbound, toggle_outbound_complete,
     toggle_outbound_register, toggle_outbound_stock_release,
@@ -556,6 +556,13 @@ def list_outbound():
     with get_conn() as conn:
         migrate_due_reservations_to_outbound(conn)
         rows = get_all_outbound(conn)
+    return {"data": rows}
+
+
+@app.get("/api/clients")
+def list_clients():
+    with get_conn() as conn:
+        rows = get_all_clients(conn)
     return {"data": rows}
 
 

@@ -1265,6 +1265,15 @@ def update_sale(conn, sale_id: str, updates: dict) -> bool:
         return cur.rowcount > 0
 
 
+def get_all_clients(conn) -> list[dict]:
+    """발주장 "거래처" 자동완성(2026-09-08) — client 테이블(담당자=employees.id,
+    거래처명)에 employees.부서를 조인해서 반환. 프론트가 로그인한 사용자의
+    부서로 필터링해서 자기 부서 거래처만 자동완성 후보로 보여준다."""
+    with conn.cursor() as cur:
+        cur.execute("SELECT c.거래처명, e.부서 FROM client c JOIN employees e ON e.id = c.담당자")
+        return cur.fetchall()
+
+
 def delete_sale(conn, sale_id: str) -> dict | None:
     """발주장 CRUD(2026-09-08) — 행 삭제. undo 복원용으로 삭제 전 행을 반환."""
     with conn.cursor() as cur:

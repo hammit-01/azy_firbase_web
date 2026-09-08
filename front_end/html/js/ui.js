@@ -1,5 +1,5 @@
 import { PRICE_FIELDS, reservationListItemsHtml } from "./table.js";
-import { dispatcherSelect, moveWarehouseSelect, employeeSelect, stateSelect, driverAutocomplete } from "./panel.js";
+import { dispatcherSelect, moveWarehouseSelect, employeeSelect, stateSelect, driverAutocomplete, clientAutocomplete } from "./panel.js";
 
 // BL이 영문+숫자 조합이면(실제 크롤링 BL 형식) 재고 매칭 없이 바로 추가하는
 // "추가" 팝업 대상이 아니다(2026-09-04 사용자 지정: 매칭 없이 그냥 추가하는
@@ -398,7 +398,7 @@ export function showOrderSheetInsertModal() {
         const rowFieldsHtml = () => `
             <div class="edit-reservation-form">
                 <label class="mi-field-xs">순서<input type="text" class="mi-order"></label>
-                <label class="mi-field-md">거래처<input type="text" class="mi-client"></label>
+                <label class="mi-field-md">거래처${clientAutocomplete("mi-client")}</label>
                 <label class="mi-field-lg">품목<input type="text" class="mi-name" placeholder="상품명"></label>
                 <label class="mi-field-md">브랜드<input type="text" class="mi-brand"></label>
                 <label class="mi-field-xs">등급<input type="text" class="mi-grade"></label>

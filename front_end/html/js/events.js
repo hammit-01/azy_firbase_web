@@ -1,6 +1,6 @@
 import { state } from "./state.js";
 import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows, renderReservationsTab, renderSalesTab, renderMovesTab, renderPriceTab, renderOrderSheetTab, priceInsertRowHtml, PRICE_FIELDS, priceFieldClass, clientPrefix, parseUnitPrice, parseWeight, buildClientWithDetails, todayISOStr, createUpdateCard, createHoldingCard, createMoveCard } from "./table.js";
-import { renderSelectData, dispatcherSelect, moveWarehouseSelect, employeeAutocomplete, driverAutocomplete } from "./panel.js";
+import { renderSelectData, dispatcherSelect, moveWarehouseSelect, employeeAutocomplete, driverAutocomplete, clientAutocomplete } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
 import { getReservationsByPk, cancelReservation, useReservation, updateReservation, toggleReservationRegister, updateOutbound, cancelOutbound, reactivateOutbound, createOutbound, createOutboundManual, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, createOrderSheetRow, updateOrderSheetRow, deleteOrderSheetRow, createPrice, updatePrice, deletePrice, createWarehouseMove, createWarehouseMoveManual, updateWarehouseMove, createWarehouseMoveFromReservation } from "./firestoreService.js";
@@ -719,8 +719,6 @@ export function bindEvents() {
             const field = orderSheetCell.dataset.field;
             const type = orderSheetCell.dataset.type || "text";
             const original = orderSheetCell.dataset.value || "";
-            const isAutocomplete = type === "autocomplete-driver";
-
             const finish = async (save, newValue) => {
                 if (save && newValue !== original) {
                     try {
@@ -733,8 +731,8 @@ export function bindEvents() {
                 renderOrderSheetTab();
             };
 
-            orderSheetCell.innerHTML = isAutocomplete
-                ? driverAutocomplete("order-sheet-cell-input", "", original)
+            orderSheetCell.innerHTML = type === "autocomplete-driver" ? driverAutocomplete("order-sheet-cell-input", "", original)
+                : type === "autocomplete-client" ? clientAutocomplete("order-sheet-cell-input", "", original)
                 : `<input type="${type}" ${type === "number" ? "step=\"0.01\"" : ""} class="order-sheet-cell-input" value="${original.replace(/"/g, "&quot;")}">`;
             const input = orderSheetCell.querySelector("input");
             input.focus();

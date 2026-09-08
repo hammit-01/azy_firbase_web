@@ -44,6 +44,11 @@ export async function fetchEmployees() {
     return r.data;
 }
 
+export async function fetchClients() {
+    const r = await apiFetch("/api/clients");
+    return r.data;
+}
+
 export async function fetchMovingInventory() {
     const r = await apiFetch("/api/moving_inventory");
     return r.data;

@@ -946,6 +946,12 @@ th.sort-active {
 .reservations-table tr.move-cancelled-row td { background: #fee2e2; color: #b91c1c; text-decoration: line-through; }
 .reservations-table tr.move-processed-row td { background: #fce7f3; }
 
+/* 발주장 탭 — 전표 체크 시 배경색으로 가독성, 취소 체크 시 텍스트만 빨간색
+   (2026-09-08 사용자 요청). 취소가 전표보다 우선(둘 다 체크되면 취소 표시).
+   짝수행 줄무늬를 이겨야 해서 .reservations-table로 특이도 확보. */
+.reservations-table tr.order-sheet-slip-row td { background: #dcfce7; }
+.reservations-table tr.order-sheet-cancelled-row td { color: #dc2626; }
+
 /* 타창고매출현황 — "수정중" 체크한 사람 기준 행 색(2026-08-25, 고정 매핑:
    전미림=핑크/김나미=골드/박채연=보라/임보연=하늘색). 짝수행 줄무늬를 이겨야
    해서 위 규칙과 동일하게 .reservations-table로 특이도를 올림.

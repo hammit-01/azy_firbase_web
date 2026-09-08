@@ -2,7 +2,7 @@
 import { state } from "./state.js";
 import { renderTable, renderWarehouseOptions, renderBrandOptions, renderProductNameOptions } from "./table.js";
 import { renderSelectData } from "./panel.js";
-import { fetchAllInventory, fetchEmployees, fetchMovingInventory, fetchYesterdayInventory } from "./api.js";
+import { fetchAllInventory, fetchEmployees, fetchClients, fetchMovingInventory, fetchYesterdayInventory } from "./api.js";
 
 const POLL_INTERVAL_MS = 5 * 1000; // 5초(2026-09-02, 사용자 요청 — 더 빠르게)
 
@@ -14,6 +14,12 @@ export async function initFirebase() {
 export async function loadEmployees() {
     const rows = await fetchEmployees();
     state.employees = rows.sort((a, b) => a["이름"].localeCompare(b["이름"], "ko"));
+}
+
+// 발주장 "거래처" 자동완성(2026-09-08) — client 테이블(부서 조인) 전체를 한 번
+// 불러와 두고 clientAutocomplete가 로그인한 사용자의 부서로 필터링한다.
+export async function loadClients() {
+    state.clients = await fetchClients();
 }
 
 export async function subscribeData() {
