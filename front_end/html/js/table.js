@@ -2121,19 +2121,29 @@ export async function renderOrderSheetTab() {
     rows = rows.filter(r => safeValue(r.출고일) === todayISOStr());
 
     // 검색/창고/브랜드 필터 — 예약현황·타창고매출현황과 동일 방식(2026-08-26).
-    // 담당자 개념이 없어져(2026-09-08) 담당자 필터는 뺀다.
+    // 담당자 개념이 없어져(2026-09-08) 담당자 필터는 빼고 대신 배송(기사)
+    // 필터를 추가(사용자 요청) — 옵션 목록은 다른 필터와 마찬가지로 필터
+    // 적용 전 rows 기준.
     const filterControlsHtml = reservationFilterControlsHtml({
         idPrefix: "order-sheet", rows,
         search: state.orderSheetSearch, warehouse: state.orderSheetWarehouseFilter, brand: state.orderSheetBrandFilter,
     });
+    const drivers = [...new Set(rows.map(r => r.배송).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"));
+    const driverFilterHtml = `
+        <select id="order-sheet-driver-filter" class="reservations-filter-select">
+            <option value="">배송 전체</option>
+            ${drivers.map(d => `<option value="${d}" ${d === state.orderSheetDriverFilter ? "selected" : ""}>${d}</option>`).join("")}
+        </select>
+    `;
     rows = filterReservationRowsByState(rows, state.orderSheetSearch, state.orderSheetWarehouseFilter, state.orderSheetBrandFilter, "");
+    if (state.orderSheetDriverFilter) rows = rows.filter(r => r.배송 === state.orderSheetDriverFilter);
     rows = sortOrderSheetRows(rows);
     const searchHadFocus = document.activeElement?.id === "order-sheet-search";
 
     const empty = rows.length ? "" : `<p class="reservations-empty">오늘 발주 항목이 없습니다.</p>`;
     const rowsHtml = rows.map(r => orderSheetRowHtml(r)).join("");
     listEl.innerHTML = `
-        <div class="reservations-filter-bar">${filterControlsHtml}</div>
+        <div class="reservations-filter-bar">${filterControlsHtml}${driverFilterHtml}</div>
         <table class="reservations-table order-sheet-table">
             <colgroup>
                 <col style="width:4%">  <!--순서-->

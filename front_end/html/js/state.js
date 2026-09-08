@@ -40,5 +40,5 @@ export const state = {
     orderSheetSearch: "", // 발주장 탭 — 통합 검색어(2026-08-26)
     orderSheetWarehouseFilter: "", // 발주장 탭 — 창고 필터
     orderSheetBrandFilter: "", // 발주장 탭 — 브랜드 필터
-    orderSheetManagerFilter: "", // 발주장 탭 — 담당자 필터
+    orderSheetDriverFilter: "", // 발주장 탭 — 배송(기사) 필터(2026-09-08, 담당자 필터에서 교체)
 };

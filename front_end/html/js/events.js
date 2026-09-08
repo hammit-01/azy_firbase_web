@@ -213,6 +213,60 @@ async function exportTable(filenamePrefix, headers, rows) {
     else downloadCsv(filenamePrefix, headers, rows);
 }
 
+// 발주장 탭(2026-09-08) — orderSheetRowHtml(table.js)의 편집 가능 칸 순서와
+// 반드시 일치해야 함(Tab 이동 순서 계산용). 체크박스 칸(출고/계근/상치/전표/
+// 배송취소)은 이 더블클릭 편집 대상이 아니라서 빠져있다.
+const ORDER_SHEET_EDITABLE_FIELDS = ["순서", "거래처", "상품명", "브랜드", "등급", "ESTNO", "수량", "단가", "BL", "창고", "비고", "배송", "메모"];
+
+function focusOrderSheetCell(id, field) {
+    const cell = document.querySelector(`.order-sheet-editable-cell[data-id="${id}"][data-field="${field}"]`);
+    if (cell) startOrderSheetCellEdit(cell);
+}
+
+// 발주장 탭 셀 편집 시작 — 더블클릭과 Tab 이동(2026-09-08, 사용자 요청: "행
+// 더블클릭해서 tab 키 누르면 옆 열로 이동") 둘 다에서 재사용.
+function startOrderSheetCellEdit(cell) {
+    if (!cell || cell.querySelector("input")) return;
+    const id = cell.dataset.id;
+    const field = cell.dataset.field;
+    const type = cell.dataset.type || "text";
+    const original = cell.dataset.value || "";
+    let done = false;
+
+    const finish = async (save, newValue, moveToField) => {
+        if (done) return;
+        done = true;
+        if (save && newValue !== original) {
+            try {
+                await updateOrderSheetRow(id, { [field]: type === "number" ? (newValue === "" ? null : Number(newValue)) : newValue });
+                showToast("✓ 저장됨");
+            } catch (err) {
+                showError(err.message || "저장에 실패했습니다.");
+            }
+        }
+        await renderOrderSheetTab();
+        if (moveToField) focusOrderSheetCell(id, moveToField);
+    };
+
+    cell.innerHTML = type === "autocomplete-driver" ? driverAutocomplete("order-sheet-cell-input", "", original)
+        : type === "autocomplete-client" ? clientAutocomplete("order-sheet-cell-input", "", original)
+        : `<input type="${type}" ${type === "number" ? "step=\"0.01\"" : ""} class="order-sheet-cell-input" value="${original.replace(/"/g, "&quot;")}">`;
+    const input = cell.querySelector("input");
+    input.focus();
+    input.select();
+    input.addEventListener("blur", () => finish(true, input.value.trim()));
+    input.addEventListener("keydown", (ke) => {
+        if (ke.key === "Enter") { ke.preventDefault(); input.blur(); }
+        if (ke.key === "Escape") { ke.preventDefault(); finish(false); }
+        if (ke.key === "Tab") {
+            ke.preventDefault();
+            const idx = ORDER_SHEET_EDITABLE_FIELDS.indexOf(field);
+            const nextField = ORDER_SHEET_EDITABLE_FIELDS[idx + (ke.shiftKey ? -1 : 1)];
+            finish(true, input.value.trim(), nextField);
+        }
+    });
+}
+
 export function bindEvents() {
 
     // 날짜 입력창(<input type="date">)은 기본적으로 달력 아이콘을 눌러야만 날짜
@@ -510,8 +564,8 @@ export function bindEvents() {
             state.orderSheetBrandFilter = e.target.value;
             renderOrderSheetTab();
         }
-        if (e.target.id === "order-sheet-manager-filter") {
-            state.orderSheetManagerFilter = e.target.value;
+        if (e.target.id === "order-sheet-driver-filter") {
+            state.orderSheetDriverFilter = e.target.value;
             renderOrderSheetTab();
         }
         if (e.target.id === "changes-warehouse-filter") {
@@ -712,37 +766,10 @@ export function bindEvents() {
 
         // 발주장 탭(2026-09-08, outbound와 분리된 독립 sales 테이블) — 모든 칸을
         // move-editable-cell과 동일한 더블클릭→input 패턴으로 직접 수정.
+        // Tab으로 옆 칸까지 이동 가능(startOrderSheetCellEdit, 사용자 요청).
         const orderSheetCell = e.target.closest(".order-sheet-editable-cell");
         if (orderSheetCell) {
-            if (orderSheetCell.querySelector("input")) return;
-            const id = orderSheetCell.dataset.id;
-            const field = orderSheetCell.dataset.field;
-            const type = orderSheetCell.dataset.type || "text";
-            const original = orderSheetCell.dataset.value || "";
-            const finish = async (save, newValue) => {
-                if (save && newValue !== original) {
-                    try {
-                        await updateOrderSheetRow(id, { [field]: type === "number" ? (newValue === "" ? null : Number(newValue)) : newValue });
-                        showToast("✓ 저장됨");
-                    } catch (err) {
-                        showError(err.message || "저장에 실패했습니다.");
-                    }
-                }
-                renderOrderSheetTab();
-            };
-
-            orderSheetCell.innerHTML = type === "autocomplete-driver" ? driverAutocomplete("order-sheet-cell-input", "", original)
-                : type === "autocomplete-client" ? clientAutocomplete("order-sheet-cell-input", "", original)
-                : `<input type="${type}" ${type === "number" ? "step=\"0.01\"" : ""} class="order-sheet-cell-input" value="${original.replace(/"/g, "&quot;")}">`;
-            const input = orderSheetCell.querySelector("input");
-            input.focus();
-            input.select();
-            let done = false;
-            input.addEventListener("blur", () => { if (!done) { done = true; finish(true, input.value.trim()); } });
-            input.addEventListener("keydown", (ke) => {
-                if (ke.key === "Enter") { ke.preventDefault(); input.blur(); }
-                if (ke.key === "Escape") { ke.preventDefault(); if (!done) { done = true; finish(false); } }
-            });
+            startOrderSheetCellEdit(orderSheetCell);
             return;
         }
 
