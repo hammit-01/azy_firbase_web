@@ -952,6 +952,11 @@ th.sort-active {
 .reservations-table tr.order-sheet-slip-row td { background: #dcfce7; }
 .reservations-table tr.order-sheet-cancelled-row td { color: #dc2626; }
 
+/* 발주장 탭 — 행 순서를 마우스로 드래그해서 바꾸는 손잡이(2026-09-08).
+   드래그 중인 행은 반투명하게 표시해서 어느 행을 옮기는 중인지 눈에 띄게. */
+.order-sheet-drag-handle { cursor: grab; text-align: center; color: #9ca3af; user-select: none; }
+.order-sheet-tbody tr.order-sheet-dragging { opacity: 0.4; }
+
 /* 타창고매출현황 — "수정중" 체크한 사람 기준 행 색(2026-08-25, 고정 매핑:
    전미림=핑크/김나미=골드/박채연=보라/임보연=하늘색). 짝수행 줄무늬를 이겨야
    해서 위 규칙과 동일하게 .reservations-table로 특이도를 올림.

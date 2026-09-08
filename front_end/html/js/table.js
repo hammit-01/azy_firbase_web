@@ -2033,11 +2033,13 @@ export async function renderPriceTab() {
 // 발주장 탭(2026-08-24) — 부서별_발주장.md 아티팩트를 실제 탭으로 옮긴 것.
 // 2026-09-08부터 outbound와 완전히 분리된 독립 sales 테이블에서 읽고 이
 // 탭에서 직접 CRUD한다(재고/예약 매칭과 무관한 순수 수기 기록장). 같은 날
-// 담당자 개념 자체를 없애고(사용자 요청) 사용자가 직접 입력하는 "순서"
-// 필드로 정렬한다. 셀은 move-editable-cell과 동일한 더블클릭→input 패턴,
-// 행 끝의 삭제 버튼으로 행 자체를 지운다. 출고/계근/상치/전표/취소는 항상
-// 노출되는 체크박스(과거엔 특판팀 전용이었지만 담당자/부서 개념이 없어지며
-// 그 게이팅도 같이 제거).
+// 담당자 개념 자체를 없애고(사용자 요청) 셀은 move-editable-cell과 동일한
+// 더블클릭→input 패턴, 행 끝의 삭제 버튼으로 행 자체를 지운다. 출고/계근/
+// 상치/전표/취소는 항상 노출되는 체크박스(과거엔 특판팀 전용이었지만
+// 담당자/부서 개념이 없어지며 그 게이팅도 같이 제거).
+// "순서" 칸은 사용자가 자유롭게 입력하는 텍스트일 뿐 실제 행 순서와는 무관
+// (2026-09-08 사용자 지정) — 실제 순서는 맨 앞 손잡이(⠿)를 마우스로 끌어서
+// 바꾸고, 화면엔 안 보이는 정렬순서(정수, sales 테이블 컬럼)로 서버에 저장.
 // =========================
 // 배송 기사 이름마다 거래처 칸 배경색을 다르게(2026-09-08 사용자 요청) —
 // 이름 문자열을 해시해서 고정된 파스텔 색을 골라 매번 같은 이름은 같은
@@ -2060,6 +2062,7 @@ function orderSheetRowHtml(r) {
     const rowClass = r.배송취소 ? "order-sheet-cancelled-row" : r.전표 ? "order-sheet-slip-row" : "";
     return `
         <tr data-reservation-id="${r.id}"${rowClass ? ` class="${rowClass}"` : ""}>
+            <td class="order-sheet-drag-handle" draggable="true" title="드래그해서 순서 변경">⠿</td>
             ${editableCell("순서", r.순서)}
             ${editableCell("거래처", r.거래처, "autocomplete-client", `background:${_driverBgColor(r.배송)}`)}
             ${checkbox("출고")}
@@ -2083,23 +2086,10 @@ function orderSheetRowHtml(r) {
     `;
 }
 
-// 순서(사용자가 직접 입력하는 정렬용 번호, 2026-09-08) 기준 정렬 — 숫자면
-// 숫자로, 아니면 문자열로 비교. 빈 값은 맨 뒤로.
-function _orderSheetSortKey(v) {
-    const s = String(v ?? "").trim();
-    if (!s) return null;
-    const n = Number(s);
-    return Number.isNaN(n) ? s : n;
-}
+// 정렬순서(마우스 드래그로 바뀌는 정수, 2026-09-08) 기준 정렬 — "순서"
+// 텍스트 칸은 자유 입력이라 정렬과 무관(사용자 지정).
 function sortOrderSheetRows(rows) {
-    return [...rows].sort((a, b) => {
-        const av = _orderSheetSortKey(a.순서), bv = _orderSheetSortKey(b.순서);
-        if (av === null && bv === null) return 0;
-        if (av === null) return 1;
-        if (bv === null) return -1;
-        if (typeof av === "number" && typeof bv === "number") return av - bv;
-        return String(av).localeCompare(String(bv), "ko");
-    });
+    return [...rows].sort((a, b) => (a.정렬순서 ?? 0) - (b.정렬순서 ?? 0));
 }
 
 export async function renderOrderSheetTab() {
@@ -2146,6 +2136,7 @@ export async function renderOrderSheetTab() {
         <div class="reservations-filter-bar">${filterControlsHtml}${driverFilterHtml}</div>
         <table class="reservations-table order-sheet-table">
             <colgroup>
+                <col style="width:2%">  <!--드래그 손잡이-->
                 <col style="width:4%">  <!--순서-->
                 <col style="width:7%">  <!--거래처-->
                 <col style="width:4%">  <!--출고-->
@@ -2168,11 +2159,11 @@ export async function renderOrderSheetTab() {
             </colgroup>
             <thead>
                 <tr>
-                    <th>순서</th><th>거래처</th><th>출고</th><th>계근</th><th>상치</th><th>품목</th><th>브랜드</th><th>등급</th><th>EST</th>
+                    <th></th><th>순서</th><th>거래처</th><th>출고</th><th>계근</th><th>상치</th><th>품목</th><th>브랜드</th><th>등급</th><th>EST</th>
                     <th>박스</th><th>단가</th><th>BL/매입처</th><th>창고</th><th>비고</th><th>배송</th><th>전표</th><th>취소</th><th>메모</th><th></th>
                 </tr>
             </thead>
-            <tbody>${rowsHtml}</tbody>
+            <tbody class="order-sheet-tbody">${rowsHtml}</tbody>
         </table>
         ${empty}
     `;

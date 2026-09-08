@@ -229,6 +229,13 @@ export async function apiDeleteOrderSheetRow(id) {
     });
 }
 
+export async function apiReorderOrderSheet(ids) {
+    return apiFetch("/api/order_sheet/reorder", {
+        method: "POST",
+        body: JSON.stringify({ ids }),
+    });
+}
+
 export async function apiCreateOutbound(product) {
     return apiFetch("/api/outbound", {
         method: "POST",

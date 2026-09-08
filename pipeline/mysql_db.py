@@ -1219,8 +1219,9 @@ def get_order_sheet_rows(conn) -> list[dict]:
     """발주장(2026-08-24) — 2026-09-08부터 outbound가 아니라 독립된 sales
     테이블에서 직접 읽는다(사용자 요청: 발주장을 출고/재고 매칭과 완전히
     분리된 별도 수기 기록장으로 만듦). 담당자/부서 개념은 2026-09-08에 완전히
-    빠지고 사용자가 직접 입력하는 "순서" 필드로 정렬한다(프론트에서 처리).
-    거래처/단가는 더 이상 한 칸에 섞어 파싱하지 않고 단가가 자체 컬럼."""
+    빠짐. "순서" 컬럼은 사용자가 자유롭게 입력하는 텍스트일 뿐 실제 정렬과는
+    무관(2026-09-08 사용자 지정) — 실제 행 순서는 마우스 드래그로 바꾸는
+    "정렬순서"(정수, 화면엔 안 보임)로 관리하고 프론트에서 그 값으로 정렬."""
     with conn.cursor() as cur:
         cur.execute("SELECT * FROM sales")
         return cur.fetchall()
@@ -1230,7 +1231,8 @@ def create_sale(conn, fields: dict) -> str:
     """발주장 CRUD(2026-09-08) — sales 테이블에 새 행 추가. 재고/예약 매칭이
     전혀 없는 순수 수기 기록이라 outbound의 create_outbound_manual과 달리
     pk/status 같은 필드가 아예 없다. 출고/계근/상치/전표/배송취소 체크박스는
-    생성 시점엔 항상 기본값(0)이라 여기 포함하지 않는다."""
+    생성 시점엔 항상 기본값(0)이라 여기 포함하지 않는다. 새 행은 정렬순서
+    맨 뒤(현재 최댓값+1)에 붙는다."""
     import uuid
     new_id = uuid.uuid4().hex
     values = tuple(
@@ -1243,13 +1245,19 @@ def create_sale(conn, fields: dict) -> str:
     cols = ", ".join(f"`{c}`" for c in _SALES_COLS)
     placeholders = ", ".join(["%s"] * len(_SALES_COLS))
     with conn.cursor() as cur:
-        cur.execute(f"INSERT INTO sales (id, {cols}, 출고일) VALUES (%s, {placeholders}, %s)", (new_id, *values, 출고일))
+        cur.execute("SELECT COALESCE(MAX(정렬순서), -1) + 1 AS next FROM sales")
+        정렬순서 = cur.fetchone()["next"]
+        cur.execute(
+            f"INSERT INTO sales (id, {cols}, 출고일, 정렬순서) VALUES (%s, {placeholders}, %s, %s)",
+            (new_id, *values, 출고일, 정렬순서),
+        )
     return new_id
 
 
 def update_sale(conn, sale_id: str, updates: dict) -> bool:
     """발주장 CRUD(2026-09-08) — 부분 수정. _SALES_COLS + 출고/계근/상치/전표/
-    배송취소 체크박스 + 출고일만 허용(그 외 키는 조용히 무시)."""
+    배송취소 체크박스 + 출고일만 허용(그 외 키는 조용히 무시). 정렬순서는
+    reorder_sales로만 바뀐다(여러 행을 한 번에 다시 매겨야 해서)."""
     allowed = set(_SALES_COLS) | set(_SALES_CHECKBOXES) | {"출고일"}
     set_cols, params = [], []
     for k, v in updates.items():
@@ -1263,6 +1271,15 @@ def update_sale(conn, sale_id: str, updates: dict) -> bool:
     with conn.cursor() as cur:
         cur.execute(f"UPDATE sales SET {', '.join(set_cols)} WHERE id=%s", params)
         return cur.rowcount > 0
+
+
+def reorder_sales(conn, ordered_ids: list[str]) -> None:
+    """발주장 행 마우스 드래그 순서 변경(2026-09-08 사용자 요청) — 화면에 보이던
+    행들의 새 순서를 그대로 받아 0부터 정렬순서를 다시 매긴다. 필터링돼서
+    화면에 안 보이던 다른 행들의 정렬순서는 건드리지 않는다."""
+    with conn.cursor() as cur:
+        for i, sale_id in enumerate(ordered_ids):
+            cur.execute("UPDATE sales SET 정렬순서=%s WHERE id=%s", (i, sale_id))
 
 
 def get_all_clients(conn) -> list[dict]:

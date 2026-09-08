@@ -3,7 +3,7 @@ import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, 
 import { renderSelectData, dispatcherSelect, moveWarehouseSelect, employeeAutocomplete, driverAutocomplete, clientAutocomplete } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
-import { getReservationsByPk, cancelReservation, useReservation, updateReservation, toggleReservationRegister, updateOutbound, cancelOutbound, reactivateOutbound, createOutbound, createOutboundManual, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, createOrderSheetRow, updateOrderSheetRow, deleteOrderSheetRow, createPrice, updatePrice, deletePrice, createWarehouseMove, createWarehouseMoveManual, updateWarehouseMove, createWarehouseMoveFromReservation } from "./firestoreService.js";
+import { getReservationsByPk, cancelReservation, useReservation, updateReservation, toggleReservationRegister, updateOutbound, cancelOutbound, reactivateOutbound, createOutbound, createOutboundManual, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, createOrderSheetRow, updateOrderSheetRow, deleteOrderSheetRow, reorderOrderSheet, createPrice, updatePrice, deletePrice, createWarehouseMove, createWarehouseMoveManual, updateWarehouseMove, createWarehouseMoveFromReservation } from "./firestoreService.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
@@ -990,6 +990,46 @@ export function bindEvents() {
         }
 
         window.getSelection()?.removeAllRanges();
+    });
+
+    // 발주장 탭(2026-09-08 사용자 요청: "행을 마우스 움직여서 행 순서 변경") —
+    // 맨 앞 손잡이(⠿)를 드래그해서 순서를 바꾼다. "순서" 텍스트 칸은 자유
+    // 입력이라 실제 순서와 무관, 화면에 안 보이는 정렬순서(서버)로 저장.
+    // dragover에서 실시간으로 DOM 순서를 옮기고 dragend에서 최종 tbody
+    // 순서를 그대로 서버에 반영.
+    document.addEventListener("dragstart", (e) => {
+        const handle = e.target.closest(".order-sheet-drag-handle");
+        if (!handle) return;
+        const row = handle.closest("tr");
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", row.dataset.reservationId);
+        row.classList.add("order-sheet-dragging");
+    });
+
+    document.addEventListener("dragover", (e) => {
+        const dragging = document.querySelector(".order-sheet-dragging");
+        if (!dragging) return;
+        const row = e.target.closest(".order-sheet-tbody tr");
+        if (!row || row === dragging) return;
+        e.preventDefault();
+        const rect = row.getBoundingClientRect();
+        const before = (e.clientY - rect.top) < rect.height / 2;
+        row.parentNode.insertBefore(dragging, before ? row : row.nextSibling);
+    });
+
+    document.addEventListener("dragend", async (e) => {
+        const row = e.target.closest(".order-sheet-dragging");
+        if (!row) return;
+        row.classList.remove("order-sheet-dragging");
+        const tbody = row.closest(".order-sheet-tbody");
+        if (!tbody) return;
+        const ids = [...tbody.querySelectorAll("tr")].map(tr => tr.dataset.reservationId);
+        try {
+            await reorderOrderSheet(ids);
+        } catch (err) {
+            showError(err.message || "순서 저장에 실패했습니다.");
+            renderOrderSheetTab();
+        }
     });
 
 }

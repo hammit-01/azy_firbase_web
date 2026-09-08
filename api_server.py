@@ -18,7 +18,7 @@ from pipeline.mysql_db import (
     create_reservation, cancel_reservation, complete_reservation, use_reservation,
     reactivate_reservation, update_reservation, toggle_reservation_register, toggle_reservation_stock_release,
     get_active_reservations_by_pk, get_all_active_reservations,
-    migrate_due_reservations_to_outbound, get_all_outbound, get_order_sheet_rows, create_sale, update_sale, delete_sale, get_all_clients, create_outbound,
+    migrate_due_reservations_to_outbound, get_all_outbound, get_order_sheet_rows, create_sale, update_sale, delete_sale, reorder_sales, get_all_clients, create_outbound,
     create_outbound_manual,
     update_outbound, cancel_outbound, reactivate_outbound, use_outbound, toggle_outbound_complete,
     toggle_outbound_register, toggle_outbound_stock_release,
@@ -639,6 +639,16 @@ def delete_order_sheet_row(sale_id: str):
     if not row:
         raise HTTPException(404, "항목을 찾을 수 없습니다")
     return {"ok": True, "deleted": row}
+
+
+class ReorderOrderSheetBody(BaseModel):
+    ids: list[str]
+
+@app.post("/api/order_sheet/reorder")
+def reorder_order_sheet(body: ReorderOrderSheetBody):
+    with get_conn() as conn:
+        reorder_sales(conn, body.ids)
+    return {"ok": True}
 
 
 @app.post("/api/outbound")
