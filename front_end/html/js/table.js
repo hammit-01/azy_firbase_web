@@ -2138,22 +2138,22 @@ export async function renderOrderSheetTab() {
             <colgroup>
                 <col style="width:2%">  <!--드래그 손잡이-->
                 <col style="width:4%">  <!--순서-->
-                <col style="width:7%">  <!--거래처-->
-                <col style="width:4%">  <!--출고-->
-                <col style="width:4%">  <!--계근-->
-                <col style="width:4%">  <!--상치-->
-                <col style="width:11%"> <!--품목-->
+                <col style="width:8%">  <!--거래처-->
+                <col style="width:3%">  <!--출고-->
+                <col style="width:3%">  <!--계근-->
+                <col style="width:3%">  <!--상치-->
+                <col style="width:12%"> <!--품목-->
                 <col style="width:7%">  <!--브랜드-->
                 <col style="width:5%">  <!--등급-->
                 <col style="width:5%">  <!--EST-->
                 <col style="width:5%">  <!--박스-->
                 <col style="width:6%">  <!--단가-->
-                <col style="width:11%"> <!--BL-->
+                <col style="width:12%"> <!--BL-->
                 <col style="width:6%">  <!--창고-->
                 <col style="width:6%">  <!--비고-->
                 <col style="width:7%">  <!--배송-->
-                <col style="width:4%">  <!--전표-->
-                <col style="width:4%">  <!--취소-->
+                <col style="width:3%">  <!--전표-->
+                <col style="width:3%">  <!--취소-->
                 <col style="width:6%">  <!--메모-->
                 <col style="width:4%">  <!--삭제-->
             </colgroup>
