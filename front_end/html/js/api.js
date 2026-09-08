@@ -198,9 +198,38 @@ export async function apiGetAllOutbound() {
     return r.data;
 }
 
+// ── 발주장(2026-09-08부터 outbound와 분리된 독립 sales 테이블) ──
 export async function apiGetOrderSheet() {
     const r = await apiFetch("/api/order_sheet", {});
     return r.data;
+}
+
+export async function apiCreateOrderSheetRow(fields) {
+    return apiFetch("/api/order_sheet", {
+        method: "POST",
+        body: JSON.stringify(fields),
+    });
+}
+
+export async function apiUpdateOrderSheetRow(id, fields) {
+    return apiFetch(`/api/order_sheet/${encodeURIComponent(id)}/update`, {
+        method: "POST",
+        body: JSON.stringify(fields),
+    });
+}
+
+export async function apiDeleteOrderSheetRow(id) {
+    return apiFetch(`/api/order_sheet/${encodeURIComponent(id)}/delete`, {
+        method: "POST",
+    });
+}
+
+export async function apiToggleOrderSheetSlip(id) {
+    return apiFetch(`/api/order_sheet/${encodeURIComponent(id)}/toggle_slip`, { method: "POST" });
+}
+
+export async function apiToggleOrderSheetDeliveryCancel(id) {
+    return apiFetch(`/api/order_sheet/${encodeURIComponent(id)}/toggle_delivery_cancel`, { method: "POST" });
 }
 
 export async function apiCreateOutbound(product) {
@@ -294,13 +323,6 @@ export async function apiToggleOutboundStockRelease(id) {
     return apiFetch(`/api/outbound/${encodeURIComponent(id)}/toggle_stock_release`, { method: "POST" });
 }
 
-export async function apiToggleOutboundSlip(id) {
-    return apiFetch(`/api/outbound/${encodeURIComponent(id)}/toggle_slip`, { method: "POST" });
-}
-
-export async function apiToggleOutboundDeliveryCancel(id) {
-    return apiFetch(`/api/outbound/${encodeURIComponent(id)}/toggle_delivery_cancel`, { method: "POST" });
-}
 
 // ── 전략단가(price, 2026-08-19) ────────────────────────────────
 export async function apiGetAllPrices() {

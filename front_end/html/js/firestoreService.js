@@ -6,9 +6,10 @@ import {
     apiReactivateReservation,
     apiUpdateReservation, apiToggleReservationRegister, apiToggleReservationStockRelease, apiRegisterOutboundFromReservation,
     apiGetReservationsByPk, apiGetAllReservations, apiGetYesterdayReservationQty,
-    apiGetAllOutbound, apiGetOrderSheet, apiCreateOutbound, apiCreateOutboundManual, apiUpdateOutbound, apiCancelOutbound, apiReactivateOutbound, apiUseOutbound,
+    apiGetAllOutbound, apiGetOrderSheet, apiCreateOrderSheetRow, apiUpdateOrderSheetRow, apiDeleteOrderSheetRow,
+    apiToggleOrderSheetSlip, apiToggleOrderSheetDeliveryCancel,
+    apiCreateOutbound, apiCreateOutboundManual, apiUpdateOutbound, apiCancelOutbound, apiReactivateOutbound, apiUseOutbound,
     apiToggleOutboundComplete, apiToggleOutboundRegister, apiToggleOutboundStockRelease,
-    apiToggleOutboundSlip, apiToggleOutboundDeliveryCancel,
     apiGetAllPrices, apiCreatePrice, apiUpdatePrice, apiDeletePrice,
     apiGetAllWarehouseMoves, apiCreateWarehouseMove, apiCreateWarehouseMoveManual, apiUpdateWarehouseMove,
     apiCreateWarehouseMoveFromReservation, apiDeleteWarehouseMove,
@@ -60,6 +61,21 @@ export async function getAllOutbound() {
 export async function getOrderSheet() {
     return apiGetOrderSheet();
 }
+export async function createOrderSheetRow(fields) {
+    return apiCreateOrderSheetRow(fields);
+}
+export async function updateOrderSheetRow(id, fields) {
+    return apiUpdateOrderSheetRow(id, fields);
+}
+export async function deleteOrderSheetRow(id) {
+    return apiDeleteOrderSheetRow(id);
+}
+export async function toggleOrderSheetSlip(id) {
+    return apiToggleOrderSheetSlip(id);
+}
+export async function toggleOrderSheetDeliveryCancel(id) {
+    return apiToggleOrderSheetDeliveryCancel(id);
+}
 export async function createOutbound(product) {
     return apiCreateOutbound(product);
 }
@@ -86,12 +102,6 @@ export async function toggleOutboundRegister(id, managerName = "") {
 }
 export async function toggleOutboundStockRelease(id) {
     return apiToggleOutboundStockRelease(id);
-}
-export async function toggleOutboundSlip(id) {
-    return apiToggleOutboundSlip(id);
-}
-export async function toggleOutboundDeliveryCancel(id) {
-    return apiToggleOutboundDeliveryCancel(id);
 }
 
 // 추가

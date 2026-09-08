@@ -18,7 +18,8 @@ from pipeline.mysql_db import (
     create_reservation, cancel_reservation, complete_reservation, use_reservation,
     reactivate_reservation, update_reservation, toggle_reservation_register, toggle_reservation_stock_release,
     get_active_reservations_by_pk, get_all_active_reservations,
-    migrate_due_reservations_to_outbound, get_all_outbound, get_order_sheet_rows, create_outbound,
+    migrate_due_reservations_to_outbound, get_all_outbound, get_order_sheet_rows, create_sale, update_sale, delete_sale,
+    toggle_sale_slip, toggle_sale_delivery_cancel, create_outbound,
     create_outbound_manual,
     update_outbound, cancel_outbound, reactivate_outbound, use_outbound, toggle_outbound_complete,
     toggle_outbound_register, toggle_outbound_stock_release,
@@ -562,9 +563,89 @@ def list_outbound():
 @app.get("/api/order_sheet")
 def list_order_sheet():
     with get_conn() as conn:
-        migrate_due_reservations_to_outbound(conn)
         rows = get_order_sheet_rows(conn)
     return {"data": rows}
+
+
+class OrderSheetBody(BaseModel):
+    """발주장(2026-09-08부터 outbound와 분리된 독립 sales 테이블) — 재고/예약
+    매칭이 전혀 없는 순수 수기 입력이라 pk/상태/유통기한이 없다."""
+    담당자: str = ""
+    거래처: str = ""
+    상품명: str = ""
+    브랜드: str = ""
+    등급: str = ""
+    ESTNO: str = ""
+    수량: int = 0
+    BL: str = ""
+    창고: str = ""
+    비고: str = ""
+    전달사항: str = ""
+    출고일: str = ""
+
+@app.post("/api/order_sheet")
+def create_order_sheet_row(body: OrderSheetBody):
+    fields = body.dict()
+    if not fields.get("출고일"):
+        fields["출고일"] = _today_iso()
+    with get_conn() as conn:
+        new_id = create_sale(conn, fields)
+    return {"id": new_id}
+
+
+class UpdateOrderSheetBody(BaseModel):
+    담당자: str | None = None
+    거래처: str | None = None
+    상품명: str | None = None
+    브랜드: str | None = None
+    등급: str | None = None
+    ESTNO: str | None = None
+    수량: int | None = None
+    BL: str | None = None
+    창고: str | None = None
+    비고: str | None = None
+    전달사항: str | None = None
+    출고일: str | None = None
+    전표: bool | None = None
+    배송취소: bool | None = None
+
+@app.post("/api/order_sheet/{sale_id}/update")
+def update_order_sheet_row(sale_id: str, body: UpdateOrderSheetBody):
+    updates = body.dict(exclude_unset=True)
+    with get_conn() as conn:
+        ok = update_sale(conn, sale_id, updates)
+    if not ok:
+        raise HTTPException(404, "항목을 찾을 수 없습니다")
+    return {"ok": True}
+
+
+@app.post("/api/order_sheet/{sale_id}/delete")
+def delete_order_sheet_row(sale_id: str):
+    with get_conn() as conn:
+        row = delete_sale(conn, sale_id)
+    if not row:
+        raise HTTPException(404, "항목을 찾을 수 없습니다")
+    return {"ok": True, "deleted": row}
+
+
+@app.post("/api/order_sheet/{sale_id}/toggle_slip")
+def toggle_order_sheet_slip_endpoint(sale_id: str):
+    with get_conn() as conn:
+        try:
+            slip = toggle_sale_slip(conn, sale_id)
+        except ValueError as e:
+            raise HTTPException(404, str(e))
+    return {"전표": slip}
+
+
+@app.post("/api/order_sheet/{sale_id}/toggle_delivery_cancel")
+def toggle_order_sheet_delivery_cancel_endpoint(sale_id: str):
+    with get_conn() as conn:
+        try:
+            cancelled = toggle_sale_delivery_cancel(conn, sale_id)
+        except ValueError as e:
+            raise HTTPException(404, str(e))
+    return {"배송취소": cancelled}
 
 
 @app.post("/api/outbound")

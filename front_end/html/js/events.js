@@ -3,12 +3,12 @@ import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, 
 import { renderSelectData, dispatcherSelect, moveWarehouseSelect, employeeAutocomplete } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
-import { getReservationsByPk, cancelReservation, useReservation, updateReservation, toggleReservationRegister, updateOutbound, cancelOutbound, reactivateOutbound, createOutbound, createOutboundManual, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, toggleOutboundSlip, toggleOutboundDeliveryCancel, createPrice, updatePrice, deletePrice, createWarehouseMove, createWarehouseMoveManual, updateWarehouseMove, createWarehouseMoveFromReservation } from "./firestoreService.js";
+import { getReservationsByPk, cancelReservation, useReservation, updateReservation, toggleReservationRegister, updateOutbound, cancelOutbound, reactivateOutbound, createOutbound, createOutboundManual, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, createOrderSheetRow, updateOrderSheetRow, deleteOrderSheetRow, toggleOrderSheetSlip, toggleOrderSheetDeliveryCancel, createPrice, updatePrice, deletePrice, createWarehouseMove, createWarehouseMoveManual, updateWarehouseMove, createWarehouseMoveFromReservation } from "./firestoreService.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
 import { fetchAllData } from "./firebase.js";
-import { showToast, showError, showConfirm, showEditReservationModal, showRegisterOutboundModal, showNoteModal, showCancelOutboundModal, showAlertModal, showPriceExportModal, showEditPriceModal, showReservationDetailModal, showBulkEditModal, showMoveToWarehouseModal, showOutboundManualInsertModal, showMoveManualInsertModal, showInventoryInsertModal } from "./ui.js";
+import { showToast, showError, showConfirm, showEditReservationModal, showRegisterOutboundModal, showNoteModal, showCancelOutboundModal, showAlertModal, showPriceExportModal, showEditPriceModal, showReservationDetailModal, showBulkEditModal, showMoveToWarehouseModal, showOutboundManualInsertModal, showMoveManualInsertModal, showInventoryInsertModal, showOrderSheetInsertModal } from "./ui.js";
 import { getStoredUser, applyRoleVisibility, hasPriceEditAccess, hasWarehouseMovesAccess } from "./login.js";
 import { apiLogActivity } from "./api.js";
 
@@ -430,9 +430,9 @@ export function bindEvents() {
             const id = e.target.dataset.id;
             const checkbox = e.target;
             checkbox.disabled = true;
-            toggleOutboundSlip(id)
+            toggleOrderSheetSlip(id)
                 .then(() => {
-                    pushUndo({ type: "outbound-toggle-slip", id });
+                    pushUndo({ type: "order-sheet-toggle-slip", id });
                     renderOrderSheetTab();
                 })
                 .catch((err) => {
@@ -445,9 +445,9 @@ export function bindEvents() {
             const id = e.target.dataset.id;
             const checkbox = e.target;
             checkbox.disabled = true;
-            toggleOutboundDeliveryCancel(id)
+            toggleOrderSheetDeliveryCancel(id)
                 .then(() => {
-                    pushUndo({ type: "outbound-toggle-delivery-cancel", id });
+                    pushUndo({ type: "order-sheet-toggle-delivery-cancel", id });
                     renderOrderSheetTab();
                 })
                 .catch((err) => {
@@ -715,6 +715,44 @@ export function bindEvents() {
                 ? employeeAutocomplete("move-cell-input", "", original)
                 : `<input type="${type}" ${type === "number" ? "step=\"0.01\"" : ""} class="move-cell-input" value="${original.replace(/"/g, "&quot;")}">`;
             const input = moveCell.querySelector("input");
+            input.focus();
+            input.select();
+            let done = false;
+            input.addEventListener("blur", () => { if (!done) { done = true; finish(true, input.value.trim()); } });
+            input.addEventListener("keydown", (ke) => {
+                if (ke.key === "Enter") { ke.preventDefault(); input.blur(); }
+                if (ke.key === "Escape") { ke.preventDefault(); if (!done) { done = true; finish(false); } }
+            });
+            return;
+        }
+
+        // 발주장 탭(2026-09-08, outbound와 분리된 독립 sales 테이블) — 모든 칸을
+        // move-editable-cell과 동일한 더블클릭→input 패턴으로 직접 수정.
+        const orderSheetCell = e.target.closest(".order-sheet-editable-cell");
+        if (orderSheetCell) {
+            if (orderSheetCell.querySelector("input")) return;
+            const id = orderSheetCell.dataset.id;
+            const field = orderSheetCell.dataset.field;
+            const type = orderSheetCell.dataset.type || "text";
+            const original = orderSheetCell.dataset.value || "";
+            const isAutocomplete = type === "autocomplete-employee";
+
+            const finish = async (save, newValue) => {
+                if (save && newValue !== original) {
+                    try {
+                        await updateOrderSheetRow(id, { [field]: type === "number" ? (newValue === "" ? null : Number(newValue)) : newValue });
+                        showToast("✓ 저장됨");
+                    } catch (err) {
+                        showError(err.message || "저장에 실패했습니다.");
+                    }
+                }
+                renderOrderSheetTab();
+            };
+
+            orderSheetCell.innerHTML = isAutocomplete
+                ? employeeAutocomplete("order-sheet-cell-input", "", original)
+                : `<input type="${type}" ${type === "number" ? "step=\"0.01\"" : ""} class="order-sheet-cell-input" value="${original.replace(/"/g, "&quot;")}">`;
+            const input = orderSheetCell.querySelector("input");
             input.focus();
             input.select();
             let done = false;
@@ -1095,6 +1133,42 @@ async function handleClick(e) {
         }
         showToast(fail ? `✓ ${ok}건 추가됨, ${fail}건 실패` : `✓ ${ok}건 추가됨`, fail && !ok ? "error" : "success");
         renderMovesTab();
+        return;
+    }
+
+    // 발주장 "+ 추가"(2026-09-08, outbound와 분리된 독립 sales 테이블) — 팝업 +
+    // "+ 행 추가"로 재고 매칭 없이 sales 테이블에 바로 추가.
+    if (e.target.classList.contains("order-sheet-add-btn")) {
+        const rows = await showOrderSheetInsertModal();
+        if (!rows) return;
+        let ok = 0, fail = 0;
+        for (const fields of rows) {
+            try {
+                const res = await createOrderSheetRow(fields);
+                if (res?.id) {
+                    pushUndo({ type: "order-sheet-insert", id: res.id });
+                    ok++;
+                }
+            } catch (err) { fail++; }
+        }
+        showToast(fail ? `✓ ${ok}건 추가됨, ${fail}건 실패` : `✓ ${ok}건 추가됨`, fail && !ok ? "error" : "success");
+        renderOrderSheetTab();
+        return;
+    }
+
+    // 발주장 행 삭제(2026-09-08)
+    if (e.target.classList.contains("order-sheet-delete-btn")) {
+        const id = e.target.dataset.id;
+        const ok = await showConfirm("이 발주 항목을 삭제할까요?");
+        if (!ok) return;
+        try {
+            const res = await deleteOrderSheetRow(id);
+            pushUndo({ type: "order-sheet-delete", restoreData: res.deleted });
+            showToast("✓ 삭제됨");
+            renderOrderSheetTab();
+        } catch (err) {
+            showError(err.message || "삭제에 실패했습니다.");
+        }
         return;
     }
 

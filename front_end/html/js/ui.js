@@ -389,6 +389,66 @@ export function showOutboundManualInsertModal() {
     });
 }
 
+// 발주장 "추가" 팝업(2026-09-08, outbound와 분리된 독립 sales 테이블) —
+// showOutboundManualInsertModal과 같은 골격이지만 재고 매칭이 전혀 없는
+// 순수 수기 기록이라 looksLikeRealBl 같은 BL 형식 제한이 없고 전달사항
+// 필드가 추가된다.
+export function showOrderSheetInsertModal() {
+    return new Promise(resolve => {
+        const rowFieldsHtml = () => `
+            <div class="edit-reservation-form">
+                <label class="mi-field-md">담당자${employeeSelect("mi-manager")}</label>
+                <label class="mi-field-md">거래처<input type="text" class="mi-client"></label>
+                <label class="mi-field-lg">품목<input type="text" class="mi-name" placeholder="상품명"></label>
+                <label class="mi-field-md">브랜드<input type="text" class="mi-brand"></label>
+                <label class="mi-field-xs">등급<input type="text" class="mi-grade"></label>
+                <label class="mi-field-sm">EST<input type="text" class="mi-estno"></label>
+                <label class="mi-field-xs">수량<input type="number" class="mi-qty" min="1" value="1"></label>
+                <label class="mi-field-lg">BL<input type="text" class="mi-bl" placeholder="BL"></label>
+                <label class="mi-field-sm">창고<input type="text" class="mi-wh" placeholder="창고"></label>
+                <label class="mi-field-lg">비고<input type="text" class="mi-remark"></label>
+                <label class="mi-field-lg">전달사항<input type="text" class="mi-note"></label>
+                <label class="mi-field-md">출고일<input type="date" class="mi-date" title="비우면 오늘"></label>
+            </div>
+        `;
+        const overlay = document.createElement("div");
+        overlay.className = "confirm-overlay";
+        overlay.innerHTML =
+            `<div class="confirm-modal multi-insert-modal">` +
+            `<p class="confirm-msg">발주장 추가</p>` +
+            `<div class="multi-insert-rows"><div class="multi-insert-row">${rowFieldsHtml()}<button type="button" class="multi-insert-remove-row" title="이 행 삭제" style="display:none">✕</button></div></div>` +
+            `<button type="button" class="multi-insert-add-row">+ 행 추가</button>` +
+            `<div class="confirm-btns">` +
+            `<button class="confirm-yes">저장</button>` +
+            `<button class="confirm-no">취소</button>` +
+            `</div></div>`;
+        document.body.appendChild(overlay);
+        _wireMultiRowInsert(overlay, rowFieldsHtml);
+
+        const close = (result) => { overlay.remove(); resolve(result); };
+        overlay.querySelector(".confirm-yes").addEventListener("click", () => {
+            const results = [];
+            for (const row of overlay.querySelectorAll(".multi-insert-row")) {
+                const val = sel => row.querySelector(sel)?.value.trim() ?? "";
+                const 상품명 = val(".mi-name"), 수량 = Number(val(".mi-qty"));
+                if (!상품명 && !val(".mi-bl") && !val(".mi-wh")) continue;
+                if (!상품명) { showError("품목은 필수입니다."); return; }
+                if (!Number.isInteger(수량) || 수량 <= 0) { showError("올바른 수량을 입력하세요."); return; }
+                results.push({
+                    담당자: val(".mi-manager"), 거래처: val(".mi-client"),
+                    상품명, 브랜드: val(".mi-brand"), 등급: val(".mi-grade"), ESTNO: val(".mi-estno"),
+                    수량, BL: val(".mi-bl"), 창고: val(".mi-wh"),
+                    비고: val(".mi-remark"), 전달사항: val(".mi-note"), 출고일: val(".mi-date"),
+                });
+            }
+            if (results.length === 0) { showError("최소 1건은 입력하세요."); return; }
+            close(results);
+        });
+        overlay.querySelector(".confirm-no").addEventListener("click", () => close(null));
+        wireModalOverlay(overlay, { onCancel: () => close(null), onSubmit: () => overlay.querySelector(".confirm-yes").click() });
+    });
+}
+
 // 창고이동 "추가" 팝업(2026-09-04, 관리자+8001 테스트 기능) — showOutboundManual
 // InsertModal과 동일한 골격이되 필드가 다르다(배차자/이동창고/실중량/매출처/
 // 수정사항/평중 추가, 상태/유통기한/출고일 없음 — 재고 매칭·예약 생성 없이
