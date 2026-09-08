@@ -73,7 +73,7 @@ const WH_CLASS = {
 
 // 창고명 화면 표시 축약(2026-08-31) — 데이터/필터링은 원래 창고명 그대로 쓰고
 // 화면에 찍히는 글자만 짧게 보여준다.
-const WH_DISPLAY_NAME = {
+export const WH_DISPLAY_NAME = {
     "신우냉장": "신우",
     "효성냉장": "효성",
     "희창냉장": "희창",

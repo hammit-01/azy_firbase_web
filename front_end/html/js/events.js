@@ -1,5 +1,5 @@
 import { state } from "./state.js";
-import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows, renderReservationsTab, renderSalesTab, renderMovesTab, renderPriceTab, renderOrderSheetTab, priceInsertRowHtml, PRICE_FIELDS, priceFieldClass, clientPrefix, parseUnitPrice, parseWeight, buildClientWithDetails, todayISOStr, createUpdateCard, createHoldingCard, createMoveCard } from "./table.js";
+import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows, renderReservationsTab, renderSalesTab, renderMovesTab, renderPriceTab, renderOrderSheetTab, priceInsertRowHtml, PRICE_FIELDS, priceFieldClass, clientPrefix, parseUnitPrice, parseWeight, buildClientWithDetails, todayISOStr, createUpdateCard, createHoldingCard, createMoveCard, WH_DISPLAY_NAME } from "./table.js";
 import { renderSelectData, dispatcherSelect, moveWarehouseSelect, employeeAutocomplete, driverAutocomplete, clientAutocomplete } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
@@ -1738,6 +1738,10 @@ async function handleClick(e) {
     // 이 헤더 버튼 하나로 통합). 모바일에서는 exportTable이 같은 헤더/행 데이터를
     // CSV 대신 표 이미지로 내려받는다(양식은 엑셀과 동일, 파일 형식만 이미지).
     if (e.target.classList.contains("main-download-btn")) {
+        // 창고명 화면 표시 축약(WH_DISPLAY_NAME, table.js)이 엑셀/이미지 다운로드엔
+        // 반영 안 돼서 CH 같은 원본 코드가 그대로 나가던 문제(2026-09-08 사용자
+        // 리포트) — 다운로드용 행을 만들 때도 동일하게 치환.
+        const whName = (w) => WH_DISPLAY_NAME[w] ?? w;
         const reservationsOpen = document.querySelector(".reservations-container")?.style.display === "";
         const salesOpen = document.querySelector(".sales-container")?.style.display === "";
         const priceOpen = document.querySelector(".price-container")?.style.display === "";
@@ -1753,7 +1757,7 @@ async function handleClick(e) {
                 const remark = r.수량내림 && r.비고 ? r.비고 : (r.비고 || "");
                 return [
                     r.재고 ? "✓" : "", remark, r.배차자, r.상품명, r.브랜드, r.등급, r.ESTNO,
-                    qty, r.BL || r.매입처, r.창고, r.이동창고, r.실중량, r.담당자,
+                    qty, r.BL || r.매입처, whName(r.창고), whName(r.이동창고), r.실중량, r.담당자,
                     r.매출처, r.수정사항, r.평중, 총중량, r.처리 ? "✓" : "", r.취소 ? "✓" : "",
                 ];
             });
@@ -1766,7 +1770,7 @@ async function handleClick(e) {
             const rows = getChangesTabRows().map(item => [
                 item.changed_fields === "__NEW__" ? "신규" : "변경",
                 item.상품명, item.브랜드, item.등급, item.ESTNO,
-                item._prevQty, item.재고, item.BL, item.창고,
+                item._prevQty, item.재고, item.BL, whName(item.창고),
             ]);
             await exportTable("업데이트", headers, rows);
             return;
@@ -1799,7 +1803,7 @@ async function handleClick(e) {
                     // 찍힘 — 화면 표시(qtyDisplay)와 동일하게 원수량으로 대체(2026-08-25).
                     const qty = r.수량내림 && r.원수량 ? r.원수량 : r.수량;
                     return [
-                        r.담당자 || "", r.상품명, r.브랜드, r.등급, r.ESTNO, r.BL, r.창고, qty,
+                        r.담당자 || "", r.상품명, r.브랜드, r.등급, r.ESTNO, r.BL, whName(r.창고), qty,
                         clientPrefix(r.거래처), r.비고 || "", unitPrice ?? "", weight ?? "",
                         total, r.출고일, r.status === "COMPLETED" ? "출고완료" : "",
                     ];
@@ -1808,7 +1812,7 @@ async function handleClick(e) {
             } else {
                 const headers = ["담당자", "상품명", "브랜드", "등급", "ESTNO", "BL", "창고", "수량", "실재고", "가용재고", "거래처", "단가", "예약일", "출고일"];
                 const rows = state.filteredReservations.map(r => [
-                    r.담당자 || "", r.상품명, r.브랜드, r.등급, r.ESTNO, r.BL, r.창고, r.수량,
+                    r.담당자 || "", r.상품명, r.브랜드, r.등급, r.ESTNO, r.BL, whName(r.창고), r.수량,
                     r.재고, r.가용재고 ?? "", clientPrefix(r.거래처), parseUnitPrice(r.거래처) ?? "", r.홀딩일자, r.출고일,
                 ]);
                 await exportTable("예약현황", headers, rows);
@@ -1819,7 +1823,7 @@ async function handleClick(e) {
         const headers = ["상품명", "브랜드", "등급", "ESTNO", "재고", "예약", "가용", "BL", "창고", "유통기한", "평중", "비고"];
         const rows = state.filteredData.map(item => [
             item.상품명, item.브랜드, item.등급, item.ESTNO, item.재고,
-            item.예약수량 || "", item.가용재고 ?? "", item.BL, item.창고,
+            item.예약수량 || "", item.가용재고 ?? "", item.BL, whName(item.창고),
             item.유통기한, item.평중, item.메모,
         ]);
         await exportTable("재고", headers, rows);
