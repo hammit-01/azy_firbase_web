@@ -2031,10 +2031,10 @@ export async function renderPriceTab() {
 
 // =========================
 // 발주장 탭(2026-08-24) — 부서별_발주장.md 아티팩트를 실제 탭으로 옮긴 것.
-// 로그인한 사용자의 부서(employees.부서, get_order_sheet_rows가 담당자 이름으로
-// 붙여줌) 것만 클라이언트에서 걸러 보여준다. 읽기 전용(수정/취소는 예약현황·
-// 타창고매출현황 탭에서) — 단, 특판팀은 배송란(전표/취소 체크박스, 2026-08-26)
-// 예외로 이 탭에서 바로 체크 가능(실제 출고/재고 로직과는 무관한 서류상 표시).
+// 부서 필터는 2026-09-08 제거 — 이제 전 부서 발주 항목을 다 보여줌. 읽기
+// 전용(수정/취소는 예약현황·타창고매출현황 탭에서) — 단, 특판팀은 배송란
+// (전표/취소 체크박스, 2026-08-26) 예외로 이 탭에서 바로 체크 가능(실제
+// 출고/재고 로직과는 무관한 서류상 표시).
 // =========================
 function orderSheetRowHtml(r, isNewGroup, showDeliveryCols) {
     const qty = r.수량내림 && r.원수량
@@ -2076,8 +2076,8 @@ export async function renderOrderSheetTab() {
         return;
     }
 
+    // 부서 필터 제거(2026-09-08 사용자 요청) — 이제 전 부서 발주 항목을 다 보여줌.
     const myDept = getStoredUser()?.부서;
-    rows = rows.filter(r => myDept && r.부서 === myDept);
     // 출고일이 오늘인 것만(2026-08-26 사용자 요청) — 지난 날짜/미래 예정 건은
     // 발주장에서 안 보이고 예약현황·타창고매출현황에서 계속 확인 가능.
     rows = rows.filter(r => safeValue(r.출고일) === todayISOStr());
@@ -2085,7 +2085,7 @@ export async function renderOrderSheetTab() {
     const showDeliveryCols = myDept === "특판팀";
 
     // 검색/창고/브랜드/담당자 필터 — 예약현황·타창고매출현황과 동일 방식
-    // (2026-08-26). 옵션 목록은 필터 적용 전(부서로만 걸러진) rows 기준.
+    // (2026-08-26). 옵션 목록은 필터 적용 전(오늘 출고일로만 걸러진) rows 기준.
     const filterControlsHtml = reservationFilterControlsHtml({
         idPrefix: "order-sheet", rows,
         search: state.orderSheetSearch, warehouse: state.orderSheetWarehouseFilter, brand: state.orderSheetBrandFilter,
@@ -2097,7 +2097,7 @@ export async function renderOrderSheetTab() {
     );
     const searchHadFocus = document.activeElement?.id === "order-sheet-search";
 
-    const empty = rows.length ? "" : `<p class="reservations-empty">${myDept ? `${myDept} 발주 항목이 없습니다.` : "소속 부서 정보가 없습니다."}</p>`;
+    const empty = rows.length ? "" : `<p class="reservations-empty">오늘 발주 항목이 없습니다.</p>`;
     // 출고일 → 담당자 순 정렬인데 담당자 칸이 아예 안 보여서 어느 행이 누구
     // 것인지 구분이 안 되던 문제(2026-08-26, "가독성 떨어진다" 피드백) — 담당자
     // 열 추가 + 담당자가 바뀌는 지점마다 굵은 구분선을 넣어 묶음이 눈에 띄게.
