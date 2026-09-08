@@ -23,6 +23,18 @@ export function employeeAutocomplete(cls, dataId = "", currentVal = "") {
             <datalist id="${listId}">${opts}</datalist>`;
 }
 
+// 발주장 "배송"(2026-09-08) — employeeAutocomplete와 동일한 datalist 패턴이되
+// 직급이 "기사"인 사람만 후보로 뜬다. datalist는 목록을 강제하지 않아 리스트에
+// 없는 값도 그대로 입력 가능(사용자 요청: "예외적으로 리스트 외 데이터도 쓸 수
+// 있게").
+export function driverAutocomplete(cls, dataId = "", currentVal = "") {
+    const listId = `driver-datalist-${dataId || Math.random().toString(36).slice(2)}`;
+    const opts = state.employees.filter(e => e["직급"] === "기사").map(e => `<option value="${e["이름"]}">`).join("");
+    const id = dataId ? `data-id="${dataId}"` : "";
+    return `<input type="text" list="${listId}" class="${cls} input-box" ${id} value="${currentVal}" placeholder="배송 기사 입력" autocomplete="off">
+            <datalist id="${listId}">${opts}</datalist>`;
+}
+
 // show-state 필터와 동일한 어휘 — 추가/수정 폼에서 상태를 직접 고를 때도 같은 옵션을 씀
 const STATE_OPTIONS = [
     ["없음", "없음"],

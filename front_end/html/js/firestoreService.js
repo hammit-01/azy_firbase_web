@@ -7,7 +7,6 @@ import {
     apiUpdateReservation, apiToggleReservationRegister, apiToggleReservationStockRelease, apiRegisterOutboundFromReservation,
     apiGetReservationsByPk, apiGetAllReservations, apiGetYesterdayReservationQty,
     apiGetAllOutbound, apiGetOrderSheet, apiCreateOrderSheetRow, apiUpdateOrderSheetRow, apiDeleteOrderSheetRow,
-    apiToggleOrderSheetSlip, apiToggleOrderSheetDeliveryCancel,
     apiCreateOutbound, apiCreateOutboundManual, apiUpdateOutbound, apiCancelOutbound, apiReactivateOutbound, apiUseOutbound,
     apiToggleOutboundComplete, apiToggleOutboundRegister, apiToggleOutboundStockRelease,
     apiGetAllPrices, apiCreatePrice, apiUpdatePrice, apiDeletePrice,
@@ -69,12 +68,6 @@ export async function updateOrderSheetRow(id, fields) {
 }
 export async function deleteOrderSheetRow(id) {
     return apiDeleteOrderSheetRow(id);
-}
-export async function toggleOrderSheetSlip(id) {
-    return apiToggleOrderSheetSlip(id);
-}
-export async function toggleOrderSheetDeliveryCancel(id) {
-    return apiToggleOrderSheetDeliveryCancel(id);
 }
 export async function createOutbound(product) {
     return apiCreateOutbound(product);

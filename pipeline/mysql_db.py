@@ -1210,53 +1210,53 @@ def get_all_outbound(conn) -> list[dict]:
     return result
 
 
-_SALES_COLS = ("담당자", "거래처", "상품명", "브랜드", "등급", "ESTNO", "수량", "BL", "창고", "비고", "전달사항", "출고일")
+_SALES_COLS = ("순서", "거래처", "상품명", "브랜드", "등급", "ESTNO", "수량", "단가", "BL", "창고", "비고", "배송", "메모")
+_SALES_CHECKBOXES = ("출고", "계근", "상치", "전표", "배송취소")
+_SALES_NUMERIC = ("수량", "단가")
 
 
 def get_order_sheet_rows(conn) -> list[dict]:
-    """부서별 발주장(2026-08-24) — 2026-09-08부터 outbound가 아니라 독립된
-    sales 테이블에서 직접 읽는다(사용자 요청: 발주장을 출고/재고 매칭과 완전히
-    분리된 별도 수기 기록장으로 만듦). 거래처/단가 분리 파싱(clientPrefix/
-    parseUnitPrice)은 타창고매출현황과 동일하게 프론트에서 처리 — 여기서
-    중복 구현하지 않음. 부서는 담당자(이름) 기준으로 employees에서 붙인다."""
+    """발주장(2026-08-24) — 2026-09-08부터 outbound가 아니라 독립된 sales
+    테이블에서 직접 읽는다(사용자 요청: 발주장을 출고/재고 매칭과 완전히
+    분리된 별도 수기 기록장으로 만듦). 담당자/부서 개념은 2026-09-08에 완전히
+    빠지고 사용자가 직접 입력하는 "순서" 필드로 정렬한다(프론트에서 처리).
+    거래처/단가는 더 이상 한 칸에 섞어 파싱하지 않고 단가가 자체 컬럼."""
     with conn.cursor() as cur:
-        cur.execute("SELECT * FROM sales ORDER BY 출고일 DESC")
-        rows = cur.fetchall()
-        cur.execute("SELECT 이름, 부서 FROM employees")
-        dept_by_name = {r["이름"]: r["부서"] for r in cur.fetchall()}
-    for r in rows:
-        manager = r.get("담당자") or ""
-        r["부서"] = dept_by_name.get(manager) or ("소매" if manager == "소매" else "미배정")
-    return rows
+        cur.execute("SELECT * FROM sales")
+        return cur.fetchall()
 
 
 def create_sale(conn, fields: dict) -> str:
     """발주장 CRUD(2026-09-08) — sales 테이블에 새 행 추가. 재고/예약 매칭이
     전혀 없는 순수 수기 기록이라 outbound의 create_outbound_manual과 달리
-    pk/status 같은 필드가 아예 없다."""
+    pk/status 같은 필드가 아예 없다. 출고/계근/상치/전표/배송취소 체크박스는
+    생성 시점엔 항상 기본값(0)이라 여기 포함하지 않는다."""
     import uuid
     new_id = uuid.uuid4().hex
     values = tuple(
-        int(fields.get(c) or 0) if c == "수량" else (fields.get(c) or "")
+        int(fields.get(c) or 0) if c in _SALES_NUMERIC else (fields.get(c) or "")
         for c in _SALES_COLS
     )
+    # 출고일은 화면엔 안 보이지만(2026-09-08, 오늘 것만 걸러 보여주는 필터
+    # 용도로 내부적으로만 유지) 안 주면 오늘로 기본값.
+    출고일 = fields.get("출고일") or _today_iso()
     cols = ", ".join(f"`{c}`" for c in _SALES_COLS)
     placeholders = ", ".join(["%s"] * len(_SALES_COLS))
     with conn.cursor() as cur:
-        cur.execute(f"INSERT INTO sales (id, {cols}) VALUES (%s, {placeholders})", (new_id, *values))
+        cur.execute(f"INSERT INTO sales (id, {cols}, 출고일) VALUES (%s, {placeholders}, %s)", (new_id, *values, 출고일))
     return new_id
 
 
 def update_sale(conn, sale_id: str, updates: dict) -> bool:
-    """발주장 CRUD(2026-09-08) — 부분 수정. _SALES_COLS + 전표/배송취소
-    체크박스만 허용(그 외 키는 조용히 무시)."""
-    allowed = set(_SALES_COLS) | {"전표", "배송취소"}
+    """발주장 CRUD(2026-09-08) — 부분 수정. _SALES_COLS + 출고/계근/상치/전표/
+    배송취소 체크박스 + 출고일만 허용(그 외 키는 조용히 무시)."""
+    allowed = set(_SALES_COLS) | set(_SALES_CHECKBOXES) | {"출고일"}
     set_cols, params = [], []
     for k, v in updates.items():
         if k not in allowed:
             continue
         set_cols.append(f"`{k}`=%s")
-        params.append(int(v or 0) if k in ("수량", "전표", "배송취소") else v)
+        params.append(int(v or 0) if k in _SALES_NUMERIC or k in _SALES_CHECKBOXES else v)
     if not set_cols:
         return False
     params.append(sale_id)
@@ -1274,35 +1274,6 @@ def delete_sale(conn, sale_id: str) -> dict | None:
             return None
         cur.execute("DELETE FROM sales WHERE id=%s", (sale_id,))
         return row
-
-
-def toggle_sale_slip(conn, sale_id: str) -> bool:
-    """발주장(특판팀 전용, 2026-08-26; 2026-09-08 sales 테이블로 이전) "전표"
-    체크박스 토글 — 배송 전표를 발행했는지만 표시하는 서류상 체크. 반환값은
-    바뀐 뒤의 값. status 컬럼이 없는 독립 테이블이라 outbound의
-    toggle_outbound_slip과 달리 상태 조건 없이 존재 여부만 확인한다."""
-    with conn.cursor() as cur:
-        cur.execute("SELECT 전표 FROM sales WHERE id=%s FOR UPDATE", (sale_id,))
-        row = cur.fetchone()
-        if not row:
-            raise ValueError("항목을 찾을 수 없습니다")
-        new_value = 0 if row["전표"] else 1
-        cur.execute("UPDATE sales SET 전표=%s WHERE id=%s", (new_value, sale_id))
-        return bool(new_value)
-
-
-def toggle_sale_delivery_cancel(conn, sale_id: str) -> bool:
-    """발주장(특판팀 전용, 2026-08-26; 2026-09-08 sales 테이블로 이전) "취소"
-    체크박스 토글 — 배송 취소 여부를 표시하는 서류상 체크. 반환값은 바뀐
-    뒤의 값."""
-    with conn.cursor() as cur:
-        cur.execute("SELECT 배송취소 FROM sales WHERE id=%s FOR UPDATE", (sale_id,))
-        row = cur.fetchone()
-        if not row:
-            raise ValueError("항목을 찾을 수 없습니다")
-        new_value = 0 if row["배송취소"] else 1
-        cur.execute("UPDATE sales SET 배송취소=%s WHERE id=%s", (new_value, sale_id))
-        return bool(new_value)
 
 
 def _inv_table_for_pk(cur, pk: str):

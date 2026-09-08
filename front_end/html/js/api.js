@@ -224,14 +224,6 @@ export async function apiDeleteOrderSheetRow(id) {
     });
 }
 
-export async function apiToggleOrderSheetSlip(id) {
-    return apiFetch(`/api/order_sheet/${encodeURIComponent(id)}/toggle_slip`, { method: "POST" });
-}
-
-export async function apiToggleOrderSheetDeliveryCancel(id) {
-    return apiFetch(`/api/order_sheet/${encodeURIComponent(id)}/toggle_delivery_cancel`, { method: "POST" });
-}
-
 export async function apiCreateOutbound(product) {
     return apiFetch("/api/outbound", {
         method: "POST",

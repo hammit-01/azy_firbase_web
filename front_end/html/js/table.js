@@ -2031,40 +2031,61 @@ export async function renderPriceTab() {
 
 // =========================
 // 발주장 탭(2026-08-24) — 부서별_발주장.md 아티팩트를 실제 탭으로 옮긴 것.
-// 부서 필터는 2026-09-08 제거 — 이제 전 부서 발주 항목을 다 보여줌.
 // 2026-09-08부터 outbound와 완전히 분리된 독립 sales 테이블에서 읽고 이
-// 탭에서 직접 CRUD한다(재고/예약 매칭과 무관한 순수 수기 기록장) — 셀은
-// move-editable-cell과 동일한 더블클릭→input/select 패턴, 행 끝의 삭제
-// 버튼으로 행 자체를 지운다. 전표/취소 체크박스(2026-08-26)는 그대로 유지.
+// 탭에서 직접 CRUD한다(재고/예약 매칭과 무관한 순수 수기 기록장). 같은 날
+// 담당자 개념 자체를 없애고(사용자 요청) 사용자가 직접 입력하는 "순서"
+// 필드로 정렬한다. 셀은 move-editable-cell과 동일한 더블클릭→input 패턴,
+// 행 끝의 삭제 버튼으로 행 자체를 지운다. 출고/계근/상치/전표/취소는 항상
+// 노출되는 체크박스(과거엔 특판팀 전용이었지만 담당자/부서 개념이 없어지며
+// 그 게이팅도 같이 제거).
 // =========================
-function orderSheetRowHtml(r, isNewGroup, showDeliveryCols) {
-    const qty = r.수량내림 && r.원수량
-        ? `<span class="qty-dropped">${safeValue(r.원수량)}</span>`
-        : safeValue(r.수량);
-    const deliveryCols = showDeliveryCols ? `
-            <td><input type="checkbox" class="order-sheet-slip-check" data-id="${r.id}" ${r.전표 ? "checked" : ""}></td>
-            <td><input type="checkbox" class="order-sheet-cancel-check" data-id="${r.id}" ${r.배송취소 ? "checked" : ""}></td>
-    ` : "";
+function orderSheetRowHtml(r) {
     const editableCell = (field, value, type = "text") =>
         `<td class="order-sheet-editable-cell" data-id="${r.id}" data-field="${field}" data-type="${type}" data-value="${attrEscape(value)}" title="더블클릭해서 수정">${safeValue(value)}</td>`;
+    const checkbox = (field) =>
+        `<td><input type="checkbox" class="order-sheet-checkbox" data-id="${r.id}" data-field="${field}" ${r[field] ? "checked" : ""}></td>`;
     return `
-        <tr data-reservation-id="${r.id}"${isNewGroup ? ' class="order-sheet-group-start"' : ""}>
-            ${editableCell("담당자", r.담당자, "autocomplete-employee")}
+        <tr data-reservation-id="${r.id}">
+            ${editableCell("순서", r.순서)}
             ${editableCell("거래처", r.거래처)}
+            ${checkbox("출고")}
+            ${checkbox("계근")}
+            ${checkbox("상치")}
             ${editableCell("상품명", r.상품명)}
             ${editableCell("브랜드", r.브랜드)}
             ${editableCell("등급", r.등급)}
             ${editableCell("ESTNO", r.ESTNO)}
-            <td class="order-sheet-editable-cell" data-id="${r.id}" data-field="수량" data-type="number" data-value="${attrEscape(r.수량)}" title="더블클릭해서 수정">${qty}</td>
-            <td>${formatUnitPrice(parseUnitPrice(r.거래처))}</td>
+            ${editableCell("수량", r.수량, "number")}
+            ${editableCell("단가", r.단가, "number")}
             ${editableCell("BL", r.BL)}
             ${editableCell("창고", r.창고)}
             ${editableCell("비고", r.비고)}
-            ${editableCell("전달사항", r.전달사항)}
-            ${editableCell("출고일", r.출고일, "date")}${deliveryCols}
+            ${editableCell("배송", r.배송, "autocomplete-driver")}
+            ${checkbox("전표")}
+            ${checkbox("배송취소")}
+            ${editableCell("메모", r.메모)}
             <td><button type="button" class="order-sheet-delete-btn" data-id="${r.id}" title="행 삭제">✕</button></td>
         </tr>
     `;
+}
+
+// 순서(사용자가 직접 입력하는 정렬용 번호, 2026-09-08) 기준 정렬 — 숫자면
+// 숫자로, 아니면 문자열로 비교. 빈 값은 맨 뒤로.
+function _orderSheetSortKey(v) {
+    const s = String(v ?? "").trim();
+    if (!s) return null;
+    const n = Number(s);
+    return Number.isNaN(n) ? s : n;
+}
+function sortOrderSheetRows(rows) {
+    return [...rows].sort((a, b) => {
+        const av = _orderSheetSortKey(a.순서), bv = _orderSheetSortKey(b.순서);
+        if (av === null && bv === null) return 0;
+        if (av === null) return 1;
+        if (bv === null) return -1;
+        if (typeof av === "number" && typeof bv === "number") return av - bv;
+        return String(av).localeCompare(String(bv), "ko");
+    });
 }
 
 export async function renderOrderSheetTab() {
@@ -2080,58 +2101,51 @@ export async function renderOrderSheetTab() {
         return;
     }
 
-    // 부서 필터 제거(2026-09-08 사용자 요청) — 이제 전 부서 발주 항목을 다 보여줌.
-    const myDept = getStoredUser()?.부서;
     // 출고일이 오늘인 것만(2026-08-26 사용자 요청) — 지난 날짜/미래 예정 건은
-    // 발주장에서 안 보이고 예약현황·타창고매출현황에서 계속 확인 가능.
+    // 발주장에서 안 보이고 예약현황·타창고매출현황에서 계속 확인 가능. 출고일
+    // 자체는 2026-09-08부터 화면에 컬럼으로 노출하지 않고 내부 필터링에만 씀.
     rows = rows.filter(r => safeValue(r.출고일) === todayISOStr());
-    // 배송란(전표/취소 체크박스, 2026-08-26) — 특판팀 발주장에서만 노출.
-    const showDeliveryCols = myDept === "특판팀";
 
-    // 검색/창고/브랜드/담당자 필터 — 예약현황·타창고매출현황과 동일 방식
-    // (2026-08-26). 옵션 목록은 필터 적용 전(오늘 출고일로만 걸러진) rows 기준.
+    // 검색/창고/브랜드 필터 — 예약현황·타창고매출현황과 동일 방식(2026-08-26).
+    // 담당자 개념이 없어져(2026-09-08) 담당자 필터는 뺀다.
     const filterControlsHtml = reservationFilterControlsHtml({
         idPrefix: "order-sheet", rows,
         search: state.orderSheetSearch, warehouse: state.orderSheetWarehouseFilter, brand: state.orderSheetBrandFilter,
-        manager: state.orderSheetManagerFilter, showManagerFilter: true,
     });
-    rows = filterReservationRowsByState(rows, state.orderSheetSearch, state.orderSheetWarehouseFilter, state.orderSheetBrandFilter, state.orderSheetManagerFilter);
-    rows = [...rows].sort((a, b) =>
-        String(a.출고일 || "9999").localeCompare(String(b.출고일 || "9999")) || String(a.담당자 || "").localeCompare(String(b.담당자 || ""), "ko")
-    );
+    rows = filterReservationRowsByState(rows, state.orderSheetSearch, state.orderSheetWarehouseFilter, state.orderSheetBrandFilter, "");
+    rows = sortOrderSheetRows(rows);
     const searchHadFocus = document.activeElement?.id === "order-sheet-search";
 
     const empty = rows.length ? "" : `<p class="reservations-empty">오늘 발주 항목이 없습니다.</p>`;
-    // 출고일 → 담당자 순 정렬인데 담당자 칸이 아예 안 보여서 어느 행이 누구
-    // 것인지 구분이 안 되던 문제(2026-08-26, "가독성 떨어진다" 피드백) — 담당자
-    // 열 추가 + 담당자가 바뀌는 지점마다 굵은 구분선을 넣어 묶음이 눈에 띄게.
-    const rowsHtml = rows.map((r, i) => orderSheetRowHtml(r, i === 0 || r.담당자 !== rows[i - 1].담당자, showDeliveryCols)).join("");
+    const rowsHtml = rows.map(r => orderSheetRowHtml(r)).join("");
     listEl.innerHTML = `
-        <div class="reservations-filter-bar">${filterControlsHtml}<button type="button" class="order-sheet-add-btn">+ 추가</button></div>
+        <div class="reservations-filter-bar">${filterControlsHtml}</div>
         <table class="reservations-table order-sheet-table">
             <colgroup>
-                <col style="width:7%">  <!--담당자-->
+                <col style="width:4%">  <!--순서-->
                 <col style="width:7%">  <!--거래처-->
-                <col style="width:12%"> <!--품목-->
+                <col style="width:4%">  <!--출고-->
+                <col style="width:4%">  <!--계근-->
+                <col style="width:4%">  <!--상치-->
+                <col style="width:11%"> <!--품목-->
                 <col style="width:7%">  <!--브랜드-->
                 <col style="width:5%">  <!--등급-->
                 <col style="width:5%">  <!--EST-->
                 <col style="width:5%">  <!--박스-->
                 <col style="width:6%">  <!--단가-->
-                <col style="width:12%"> <!--BL-->
-                <col style="width:7%">  <!--창고-->
-                <col style="width:7%">  <!--비고-->
-                <col style="width:9%">  <!--전달사항-->
-                <col style="width:6%">  <!--출고일-->
-                ${showDeliveryCols ? `
-                <col style="width:5%">  <!--전표-->
-                <col style="width:5%">  <!--취소-->` : ""}
+                <col style="width:11%"> <!--BL-->
+                <col style="width:6%">  <!--창고-->
+                <col style="width:6%">  <!--비고-->
+                <col style="width:7%">  <!--배송-->
+                <col style="width:4%">  <!--전표-->
+                <col style="width:4%">  <!--취소-->
+                <col style="width:6%">  <!--메모-->
                 <col style="width:4%">  <!--삭제-->
             </colgroup>
             <thead>
                 <tr>
-                    <th>담당자</th><th>거래처</th><th>품목</th><th>브랜드</th><th>등급</th><th>EST</th>
-                    <th>박스</th><th>단가</th><th>BL</th><th>창고</th><th>비고</th><th>전달사항</th><th>출고일</th>${showDeliveryCols ? `<th>전표</th><th>취소</th>` : ""}<th></th>
+                    <th>순서</th><th>거래처</th><th>출고</th><th>계근</th><th>상치</th><th>품목</th><th>브랜드</th><th>등급</th><th>EST</th>
+                    <th>박스</th><th>단가</th><th>BL/매입처</th><th>창고</th><th>비고</th><th>배송</th><th>전표</th><th>취소</th><th>메모</th><th></th>
                 </tr>
             </thead>
             <tbody>${rowsHtml}</tbody>

@@ -1,9 +1,9 @@
 import { state } from "./state.js";
 import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows, renderReservationsTab, renderSalesTab, renderMovesTab, renderPriceTab, renderOrderSheetTab, priceInsertRowHtml, PRICE_FIELDS, priceFieldClass, clientPrefix, parseUnitPrice, parseWeight, buildClientWithDetails, todayISOStr, createUpdateCard, createHoldingCard, createMoveCard } from "./table.js";
-import { renderSelectData, dispatcherSelect, moveWarehouseSelect, employeeAutocomplete } from "./panel.js";
+import { renderSelectData, dispatcherSelect, moveWarehouseSelect, employeeAutocomplete, driverAutocomplete } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
 import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
-import { getReservationsByPk, cancelReservation, useReservation, updateReservation, toggleReservationRegister, updateOutbound, cancelOutbound, reactivateOutbound, createOutbound, createOutboundManual, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, createOrderSheetRow, updateOrderSheetRow, deleteOrderSheetRow, toggleOrderSheetSlip, toggleOrderSheetDeliveryCancel, createPrice, updatePrice, deletePrice, createWarehouseMove, createWarehouseMoveManual, updateWarehouseMove, createWarehouseMoveFromReservation } from "./firestoreService.js";
+import { getReservationsByPk, cancelReservation, useReservation, updateReservation, toggleReservationRegister, updateOutbound, cancelOutbound, reactivateOutbound, createOutbound, createOutboundManual, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, createOrderSheetRow, updateOrderSheetRow, deleteOrderSheetRow, createPrice, updatePrice, deletePrice, createWarehouseMove, createWarehouseMoveManual, updateWarehouseMove, createWarehouseMoveFromReservation } from "./firestoreService.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
@@ -423,38 +423,22 @@ export function bindEvents() {
                     showError(err.message || "처리에 실패했습니다.");
                 });
         }
-        // 발주장(특판팀 전용) 배송란 — 전표/취소 체크박스(2026-08-26). 실제
-        // 출고/재고 로직과 무관한 서류상 표시라 outbound-register-check와 달리
-        // activity_log는 안 남기고 되돌리기만 지원.
-        if (e.target.classList.contains("order-sheet-slip-check")) {
+        // 발주장 체크박스 — 출고/계근/상치/전표/취소(2026-08-26, 2026-09-08
+        // sales 테이블로 이전하며 담당자/부서 게이팅 제거, 항상 노출). 실제
+        // 출고/재고 로직과 무관한 서류상 표시라 move-select-check 등과 동일하게
+        // 체크된 그대로 값을 저장(토글 왕복 없이)하고 activity_log는 안 남긴다.
+        if (e.target.classList.contains("order-sheet-checkbox")) {
             const id = e.target.dataset.id;
+            const field = e.target.dataset.field;
             const checkbox = e.target;
             checkbox.disabled = true;
-            toggleOrderSheetSlip(id)
-                .then(() => {
-                    pushUndo({ type: "order-sheet-toggle-slip", id });
-                    renderOrderSheetTab();
-                })
+            updateOrderSheetRow(id, { [field]: checkbox.checked ? 1 : 0 })
+                .then(() => { renderOrderSheetTab(); })
                 .catch((err) => {
                     checkbox.checked = !checkbox.checked;
-                    checkbox.disabled = false;
                     showError(err.message || "처리에 실패했습니다.");
-                });
-        }
-        if (e.target.classList.contains("order-sheet-cancel-check")) {
-            const id = e.target.dataset.id;
-            const checkbox = e.target;
-            checkbox.disabled = true;
-            toggleOrderSheetDeliveryCancel(id)
-                .then(() => {
-                    pushUndo({ type: "order-sheet-toggle-delivery-cancel", id });
-                    renderOrderSheetTab();
                 })
-                .catch((err) => {
-                    checkbox.checked = !checkbox.checked;
-                    checkbox.disabled = false;
-                    showError(err.message || "처리에 실패했습니다.");
-                });
+                .finally(() => { checkbox.disabled = false; });
         }
         // 창고이동 탭(2026-09-04, 관리자+8001 테스트 기능) — 재고/처리/취소 체크박스는
         // outbound-register-check와 동일한 낙관적 토글 패턴(실패 시 체크 되돌림).
@@ -735,7 +719,7 @@ export function bindEvents() {
             const field = orderSheetCell.dataset.field;
             const type = orderSheetCell.dataset.type || "text";
             const original = orderSheetCell.dataset.value || "";
-            const isAutocomplete = type === "autocomplete-employee";
+            const isAutocomplete = type === "autocomplete-driver";
 
             const finish = async (save, newValue) => {
                 if (save && newValue !== original) {
@@ -750,7 +734,7 @@ export function bindEvents() {
             };
 
             orderSheetCell.innerHTML = isAutocomplete
-                ? employeeAutocomplete("order-sheet-cell-input", "", original)
+                ? driverAutocomplete("order-sheet-cell-input", "", original)
                 : `<input type="${type}" ${type === "number" ? "step=\"0.01\"" : ""} class="order-sheet-cell-input" value="${original.replace(/"/g, "&quot;")}">`;
             const input = orderSheetCell.querySelector("input");
             input.focus();
@@ -1136,9 +1120,10 @@ async function handleClick(e) {
         return;
     }
 
-    // 발주장 "+ 추가"(2026-09-08, outbound와 분리된 독립 sales 테이블) — 팝업 +
-    // "+ 행 추가"로 재고 매칭 없이 sales 테이블에 바로 추가.
-    if (e.target.classList.contains("order-sheet-add-btn")) {
+    // 추가 버튼 — 발주장 탭도 기존 공용 "추가" 버튼(.insert-btn) 재활용
+    // (2026-09-08, outbound와 분리된 독립 sales 테이블) — 팝업 + "+ 행 추가"로
+    // 재고 매칭 없이 sales 테이블에 바로 추가.
+    if (e.target.classList.contains("insert-btn") && document.querySelector(".order-sheet-container")?.style.display === "") {
         const rows = await showOrderSheetInsertModal();
         if (!rows) return;
         let ok = 0, fail = 0;

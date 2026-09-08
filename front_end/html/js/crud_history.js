@@ -4,7 +4,6 @@ import {
     createOutbound, updateOutbound, cancelOutbound,
     toggleOutboundComplete, toggleOutboundRegister,
     createOrderSheetRow, deleteOrderSheetRow,
-    toggleOrderSheetSlip, toggleOrderSheetDeliveryCancel,
     createPrice, updatePrice, deletePrice,
     deleteWarehouseMove,
 } from "./firestoreService.js";
@@ -107,14 +106,6 @@ function _buildFn(desc) {
         // 토글이라 한 번 더 누르면 원상복구.
         case "reservation-toggle-register":
             return async () => toggleReservationRegister(desc.id, getStoredUser()?.이름 || "");
-
-        // 발주장(특판팀) 배송란 전표/취소 체크박스 — 대칭 토글이라 한 번 더
-        // 누르면 그대로 원상복구(2026-08-26; 2026-09-08 sales 테이블로 이전).
-        case "order-sheet-toggle-slip":
-            return async () => toggleOrderSheetSlip(desc.id);
-
-        case "order-sheet-toggle-delivery-cancel":
-            return async () => toggleOrderSheetDeliveryCancel(desc.id);
 
         // 발주장 CRUD(2026-09-08, outbound와 분리된 독립 sales 테이블) — 추가/
         // 삭제 되돌리기는 다른 테이블과 동일한 표준 패턴. 개별 셀 수정은

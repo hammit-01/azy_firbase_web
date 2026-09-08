@@ -1,5 +1,5 @@
 import { PRICE_FIELDS, reservationListItemsHtml } from "./table.js";
-import { dispatcherSelect, moveWarehouseSelect, employeeSelect, stateSelect } from "./panel.js";
+import { dispatcherSelect, moveWarehouseSelect, employeeSelect, stateSelect, driverAutocomplete } from "./panel.js";
 
 // BL이 영문+숫자 조합이면(실제 크롤링 BL 형식) 재고 매칭 없이 바로 추가하는
 // "추가" 팝업 대상이 아니다(2026-09-04 사용자 지정: 매칭 없이 그냥 추가하는
@@ -397,17 +397,19 @@ export function showOrderSheetInsertModal() {
     return new Promise(resolve => {
         const rowFieldsHtml = () => `
             <div class="edit-reservation-form">
-                <label class="mi-field-md">담당자${employeeSelect("mi-manager")}</label>
+                <label class="mi-field-xs">순서<input type="text" class="mi-order"></label>
                 <label class="mi-field-md">거래처<input type="text" class="mi-client"></label>
                 <label class="mi-field-lg">품목<input type="text" class="mi-name" placeholder="상품명"></label>
                 <label class="mi-field-md">브랜드<input type="text" class="mi-brand"></label>
                 <label class="mi-field-xs">등급<input type="text" class="mi-grade"></label>
                 <label class="mi-field-sm">EST<input type="text" class="mi-estno"></label>
                 <label class="mi-field-xs">수량<input type="number" class="mi-qty" min="1" value="1"></label>
-                <label class="mi-field-lg">BL<input type="text" class="mi-bl" placeholder="BL"></label>
+                <label class="mi-field-sm">단가<input type="number" class="mi-price" min="0"></label>
+                <label class="mi-field-lg">BL/매입처<input type="text" class="mi-bl" placeholder="BL"></label>
                 <label class="mi-field-sm">창고<input type="text" class="mi-wh" placeholder="창고"></label>
                 <label class="mi-field-lg">비고<input type="text" class="mi-remark"></label>
-                <label class="mi-field-lg">전달사항<input type="text" class="mi-note"></label>
+                <label class="mi-field-md">배송${driverAutocomplete("mi-driver")}</label>
+                <label class="mi-field-lg">메모<input type="text" class="mi-memo"></label>
                 <label class="mi-field-md">출고일<input type="date" class="mi-date" title="비우면 오늘"></label>
             </div>
         `;
@@ -435,10 +437,10 @@ export function showOrderSheetInsertModal() {
                 if (!상품명) { showError("품목은 필수입니다."); return; }
                 if (!Number.isInteger(수량) || 수량 <= 0) { showError("올바른 수량을 입력하세요."); return; }
                 results.push({
-                    담당자: val(".mi-manager"), 거래처: val(".mi-client"),
+                    순서: val(".mi-order"), 거래처: val(".mi-client"),
                     상품명, 브랜드: val(".mi-brand"), 등급: val(".mi-grade"), ESTNO: val(".mi-estno"),
-                    수량, BL: val(".mi-bl"), 창고: val(".mi-wh"),
-                    비고: val(".mi-remark"), 전달사항: val(".mi-note"), 출고일: val(".mi-date"),
+                    수량, 단가: Number(val(".mi-price")) || 0, BL: val(".mi-bl"), 창고: val(".mi-wh"),
+                    비고: val(".mi-remark"), 배송: val(".mi-driver"), 메모: val(".mi-memo"), 출고일: val(".mi-date"),
                 });
             }
             if (results.length === 0) { showError("최소 1건은 입력하세요."); return; }
