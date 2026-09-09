@@ -213,39 +213,126 @@ async function exportTable(filenamePrefix, headers, rows) {
     else downloadCsv(filenamePrefix, headers, rows);
 }
 
-// 발주장 탭(2026-09-08) — orderSheetRowHtml(table.js)의 편집 가능 칸 순서와
-// 반드시 일치해야 함(Tab 이동 순서 계산용). 체크박스 칸(출고/계근/상치/전표/
-// 배송취소)은 이 더블클릭 편집 대상이 아니라서 빠져있다.
+// =========================
+// 발주장 탭 — 구글시트 스타일 편집(2026-09-09 사용자 요청).
+// orderSheetRowHtml(table.js)의 편집 가능 칸 순서와 반드시 일치해야 함(Tab/
+// 화살표 이동, 붙여넣기 열 계산 전부 이 배열 기준). 체크박스 칸(출고/계근/
+// 상치/전표/배송취소)은 이 목록 대상이 아니다.
+// =========================
 const ORDER_SHEET_EDITABLE_FIELDS = ["순서", "거래처", "상품명", "브랜드", "등급", "ESTNO", "수량", "단가", "BL", "창고", "비고", "배송", "메모"];
+
+// Tab으로 이동하는 동안은 서버에 저장하지 않고 이 버퍼에만 쌓아뒀다가, Enter나
+// 다른 칸/행으로 완전히 벗어날 때(그 칸의 blur) 한 번에 저장한다(사용자 요청 —
+// "tab으로 이동할때 저장하지 않고 엔터 눌러야 저장되게"). 버퍼는 항상 한 행
+// 것만 들고 있음 — Tab이 행을 넘어가지 않기 때문에 안전.
+let orderSheetPendingEdits = null; // { id, fields }
+// 저장 중(flush)에는 새 편집을 시작하지 못하게 막아서, 리렌더로 옛 DOM이
+// 통째로 바뀌는 동안 다른 칸을 건드리다 생기는 경쟁 상태를 피한다.
+let orderSheetFlushing = false;
+// 클릭으로 선택된(꼭 편집 중은 아닌) 칸 — 화살표 이동/Ctrl+D/Ctrl+C·V/채우기
+// 핸들이 전부 이 값을 기준으로 동작한다.
+let orderSheetSelectedCell = null; // { id, field }
+// 채우기 핸들을 마우스로 끄는 중일 때만 값이 들어있다.
+let orderSheetFillDrag = null; // { id, field, type, value }
+
+function stageOrderSheetEdit(id, field, type, value) {
+    if (!orderSheetPendingEdits || orderSheetPendingEdits.id !== id) {
+        orderSheetPendingEdits = { id, fields: {} };
+    }
+    orderSheetPendingEdits.fields[field] = type === "number" ? (value === "" ? null : Number(value)) : value;
+}
+
+async function flushOrderSheetEdits() {
+    if (!orderSheetPendingEdits || Object.keys(orderSheetPendingEdits.fields).length === 0) {
+        orderSheetPendingEdits = null;
+        return;
+    }
+    const { id, fields } = orderSheetPendingEdits;
+    orderSheetPendingEdits = null;
+    orderSheetFlushing = true;
+    try {
+        await updateOrderSheetRow(id, fields);
+        showToast("✓ 저장됨");
+    } catch (err) {
+        showError(err.message || "저장에 실패했습니다.");
+    } finally {
+        orderSheetFlushing = false;
+    }
+    await renderOrderSheetTab();
+    reapplyOrderSheetSelection();
+}
+
+function clearOrderSheetSelectionUI() {
+    document.querySelectorAll(".order-sheet-cell-selected").forEach(el => {
+        el.classList.remove("order-sheet-cell-selected");
+        el.querySelector(".order-sheet-fill-handle")?.remove();
+    });
+}
+
+function selectOrderSheetCell(cell) {
+    if (!cell) return;
+    clearOrderSheetSelectionUI();
+    orderSheetSelectedCell = { id: cell.dataset.id, field: cell.dataset.field };
+    cell.classList.add("order-sheet-cell-selected");
+    const handle = document.createElement("span");
+    handle.className = "order-sheet-fill-handle";
+    cell.appendChild(handle);
+    cell.focus();
+}
+
+// 리렌더(저장/채우기/붙여넣기 뒤)로 DOM이 통째로 바뀐 뒤에도 선택 표시가
+// 남아있게 다시 찾아서 적용.
+function reapplyOrderSheetSelection() {
+    if (!orderSheetSelectedCell) return;
+    const cell = document.querySelector(
+        `.order-sheet-editable-cell[data-id="${orderSheetSelectedCell.id}"][data-field="${orderSheetSelectedCell.field}"]`
+    );
+    if (cell) selectOrderSheetCell(cell);
+    else orderSheetSelectedCell = null;
+}
 
 function focusOrderSheetCell(id, field) {
     const cell = document.querySelector(`.order-sheet-editable-cell[data-id="${id}"][data-field="${field}"]`);
     if (cell) startOrderSheetCellEdit(cell);
 }
 
-// 발주장 탭 셀 편집 시작 — 더블클릭과 Tab 이동(2026-09-08, 사용자 요청: "행
-// 더블클릭해서 tab 키 누르면 옆 열로 이동") 둘 다에서 재사용.
+// 발주장 탭 셀 편집 시작 — 더블클릭과 Tab 이동 둘 다에서 재사용. Tab은
+// 로컬로만 값을 갱신하고 다음 칸으로 넘어가며(서버 호출 없음), Enter/Escape/
+// 다른 곳으로 벗어남(blur)에서만 그 행의 보류 중인 수정사항을 한 번에 저장.
 function startOrderSheetCellEdit(cell) {
-    if (!cell || cell.querySelector("input")) return;
+    if (!cell || cell.querySelector("input") || orderSheetFlushing) return;
+    clearOrderSheetSelectionUI();
     const id = cell.dataset.id;
     const field = cell.dataset.field;
     const type = cell.dataset.type || "text";
     const original = cell.dataset.value || "";
-    let done = false;
+    let settled = false;
 
-    const finish = async (save, newValue, moveToField) => {
-        if (done) return;
-        done = true;
-        if (save && newValue !== original) {
-            try {
-                await updateOrderSheetRow(id, { [field]: type === "number" ? (newValue === "" ? null : Number(newValue)) : newValue });
-                showToast("✓ 저장됨");
-            } catch (err) {
-                showError(err.message || "저장에 실패했습니다.");
-            }
-        }
-        await renderOrderSheetTab();
+    const readValue = () => cell.querySelector("input")?.value.trim() ?? original;
+    const exitToDisplay = (value) => { cell.dataset.value = value; cell.textContent = value; };
+
+    const moveTab = (moveToField) => {
+        if (settled) return;
+        settled = true;
+        const value = readValue();
+        if (value !== original) stageOrderSheetEdit(id, field, type, value);
+        exitToDisplay(value !== original ? value : original);
         if (moveToField) focusOrderSheetCell(id, moveToField);
+    };
+
+    const commit = async () => {
+        if (settled) return;
+        settled = true;
+        const value = readValue();
+        if (value !== original) stageOrderSheetEdit(id, field, type, value);
+        exitToDisplay(value !== original ? value : original);
+        await flushOrderSheetEdits();
+    };
+
+    const cancel = () => {
+        if (settled) return;
+        settled = true;
+        exitToDisplay(original);
     };
 
     cell.innerHTML = type === "autocomplete-driver" ? driverAutocomplete("order-sheet-cell-input", "", original)
@@ -254,17 +341,98 @@ function startOrderSheetCellEdit(cell) {
     const input = cell.querySelector("input");
     input.focus();
     input.select();
-    input.addEventListener("blur", () => finish(true, input.value.trim()));
+    input.addEventListener("blur", commit);
     input.addEventListener("keydown", (ke) => {
         if (ke.key === "Enter") { ke.preventDefault(); input.blur(); }
-        if (ke.key === "Escape") { ke.preventDefault(); finish(false); }
+        if (ke.key === "Escape") { ke.preventDefault(); cancel(); }
         if (ke.key === "Tab") {
             ke.preventDefault();
             const idx = ORDER_SHEET_EDITABLE_FIELDS.indexOf(field);
-            const nextField = ORDER_SHEET_EDITABLE_FIELDS[idx + (ke.shiftKey ? -1 : 1)];
-            finish(true, input.value.trim(), nextField);
+            moveTab(ORDER_SHEET_EDITABLE_FIELDS[idx + (ke.shiftKey ? -1 : 1)]);
         }
     });
+}
+
+// 화살표 키로 선택 칸 이동(편집 중이 아닐 때만) — 체크박스 칸은 이 목록에
+// 없어서 자연히 건너뛴다.
+function moveOrderSheetSelection(cell, dCol, dRow) {
+    const tr = cell.closest("tr");
+    if (!tr) return;
+    let target = null;
+    if (dRow !== 0) {
+        const targetTr = dRow > 0 ? tr.nextElementSibling : tr.previousElementSibling;
+        target = targetTr?.querySelector(`.order-sheet-editable-cell[data-field="${cell.dataset.field}"]`);
+    } else {
+        const idx = ORDER_SHEET_EDITABLE_FIELDS.indexOf(cell.dataset.field);
+        const nextField = ORDER_SHEET_EDITABLE_FIELDS[idx + dCol];
+        if (nextField) target = tr.querySelector(`.order-sheet-editable-cell[data-field="${nextField}"]`);
+    }
+    if (target) selectOrderSheetCell(target);
+}
+
+// Ctrl+D — 선택된 칸에 바로 위 행의 같은 칸 값을 채운다.
+async function applyOrderSheetFillDown(cell) {
+    const prevTr = cell.closest("tr")?.previousElementSibling;
+    if (!prevTr) { showError("위쪽에 채울 행이 없습니다."); return; }
+    const field = cell.dataset.field;
+    const prevCell = prevTr.querySelector(`.order-sheet-editable-cell[data-field="${field}"]`);
+    if (!prevCell) return;
+    const value = prevCell.dataset.value || "";
+    try {
+        await updateOrderSheetRow(cell.dataset.id, { [field]: cell.dataset.type === "number" ? (value === "" ? null : Number(value)) : value });
+        showToast("✓ 채워짐");
+    } catch (err) {
+        showError(err.message || "채우기에 실패했습니다.");
+        return;
+    }
+    await renderOrderSheetTab();
+    reapplyOrderSheetSelection();
+}
+
+// 진짜 엑셀에서 여러 칸을 복사해 그대로 붙여넣으면 탭(열)/줄바꿈(행) 기준으로
+// 파싱해서 채운다(2026-09-09 사용자 요청). 기존 행보다 아래로 넘치는 만큼은
+// 새 행을 자동 추가(맨 뒤에 붙음 — 중간 삽입까지는 지원하지 않음).
+async function applyOrderSheetPaste(startCell, text) {
+    const lines = text.replace(/\r/g, "").split("\n");
+    if (lines.length > 1 && lines[lines.length - 1] === "") lines.pop();
+    const grid = lines.map(line => line.split("\t"));
+
+    const tbody = document.querySelector(".order-sheet-tbody");
+    if (!tbody) return;
+    const rowEls = [...tbody.querySelectorAll("tr")];
+    const startRowIdx = rowEls.findIndex(tr => tr.dataset.reservationId === startCell.dataset.id);
+    const startFieldIdx = ORDER_SHEET_EDITABLE_FIELDS.indexOf(startCell.dataset.field);
+    if (startRowIdx === -1 || startFieldIdx === -1) return;
+
+    const existingUpdates = new Map();
+    const newRowsFields = [];
+    grid.forEach((cols, r) => {
+        const targetRowIdx = startRowIdx + r;
+        cols.forEach((val, c) => {
+            const targetFieldIdx = startFieldIdx + c;
+            if (targetFieldIdx >= ORDER_SHEET_EDITABLE_FIELDS.length) return;
+            const field = ORDER_SHEET_EDITABLE_FIELDS[targetFieldIdx];
+            if (targetRowIdx < rowEls.length) {
+                const id = rowEls[targetRowIdx].dataset.reservationId;
+                if (!existingUpdates.has(id)) existingUpdates.set(id, {});
+                existingUpdates.get(id)[field] = val;
+            } else {
+                const newIdx = targetRowIdx - rowEls.length;
+                if (!newRowsFields[newIdx]) newRowsFields[newIdx] = {};
+                newRowsFields[newIdx][field] = val;
+            }
+        });
+    });
+
+    try {
+        for (const [id, fields] of existingUpdates) await updateOrderSheetRow(id, fields);
+        for (const fields of newRowsFields) if (fields) await createOrderSheetRow(fields);
+        showToast("✓ 붙여넣기 완료");
+    } catch (err) {
+        showError(err.message || "붙여넣기에 실패했습니다.");
+    }
+    await renderOrderSheetTab();
+    reapplyOrderSheetSelection();
 }
 
 export function bindEvents() {
@@ -1032,6 +1200,117 @@ export function bindEvents() {
         }
     });
 
+    // 발주장 탭 — 칸 클릭으로 선택(구글시트처럼, 2026-09-09). 손잡이 클릭은
+    // 드래그(위)와 별개로 다중 행 선택 토글 — HTML5 드래그가 실제로 일어나면
+    // 브라우저가 click을 안 쏴줘서 둘이 서로 안 부딪힌다.
+    document.addEventListener("click", (e) => {
+        const handle = e.target.closest(".order-sheet-drag-handle");
+        if (handle) {
+            const id = handle.closest("tr")?.dataset.reservationId;
+            if (!id) return;
+            if (state.orderSheetSelectedRows.has(id)) state.orderSheetSelectedRows.delete(id);
+            else state.orderSheetSelectedRows.add(id);
+            renderOrderSheetTab();
+            return;
+        }
+        const cell = e.target.closest(".order-sheet-editable-cell");
+        if (cell) {
+            if (!cell.querySelector("input")) selectOrderSheetCell(cell);
+            return;
+        }
+        if (!e.target.closest(".order-sheet-table")) {
+            clearOrderSheetSelectionUI();
+            orderSheetSelectedCell = null;
+        }
+    });
+
+    // 발주장 탭 — 선택된 칸에서 화살표 이동/Ctrl+D/Enter로 편집 시작
+    // (2026-09-09). 실제로 편집 중(입력창이 떠 있음)이면 손대지 않고 입력창
+    // 기본 동작(커서 이동 등)에 맡긴다.
+    document.addEventListener("keydown", (e) => {
+        if (!orderSheetSelectedCell) return;
+        const cell = document.querySelector(
+            `.order-sheet-editable-cell[data-id="${orderSheetSelectedCell.id}"][data-field="${orderSheetSelectedCell.field}"]`
+        );
+        if (!cell || cell.querySelector("input") || document.activeElement !== cell) return;
+
+        if (e.ctrlKey && e.key.toLowerCase() === "d") {
+            e.preventDefault();
+            applyOrderSheetFillDown(cell);
+            return;
+        }
+        if (e.key === "Enter") {
+            e.preventDefault();
+            startOrderSheetCellEdit(cell);
+            return;
+        }
+        const dirs = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
+        if (dirs[e.key]) {
+            e.preventDefault();
+            moveOrderSheetSelection(cell, ...dirs[e.key]);
+        }
+    });
+
+    // 발주장 탭 — Ctrl+C/Ctrl+V를 네이티브 copy/paste 이벤트로 가로채서 진짜
+    // 시스템 클립보드와 주고받는다(2026-09-09) — 실제 엑셀과 복사/붙여넣기가
+    // 통하게 하려는 목적. 편집 중(입력창 있음)이면 입력창의 기본 복사/붙여넣기
+    // 동작을 그대로 둔다.
+    document.addEventListener("copy", (e) => {
+        if (!orderSheetSelectedCell) return;
+        const cell = document.querySelector(
+            `.order-sheet-editable-cell[data-id="${orderSheetSelectedCell.id}"][data-field="${orderSheetSelectedCell.field}"]`
+        );
+        if (!cell || cell.querySelector("input") || document.activeElement !== cell) return;
+        e.clipboardData.setData("text/plain", cell.dataset.value || "");
+        e.preventDefault();
+    });
+
+    document.addEventListener("paste", (e) => {
+        if (!orderSheetSelectedCell) return;
+        const cell = document.querySelector(
+            `.order-sheet-editable-cell[data-id="${orderSheetSelectedCell.id}"][data-field="${orderSheetSelectedCell.field}"]`
+        );
+        if (!cell || cell.querySelector("input") || document.activeElement !== cell) return;
+        e.preventDefault();
+        applyOrderSheetPaste(cell, e.clipboardData.getData("text/plain"));
+    });
+
+    // 발주장 탭 — 채우기 핸들 드래그(2026-09-09). 선택된 칸의 오른쪽 아래
+    // 작은 손잡이를 눌러 위/아래로 끌면 그 칸 값이 지나간 행들에 그대로
+    // 복사된다(엑셀/구글시트와 동일).
+    document.addEventListener("mousedown", (e) => {
+        const handle = e.target.closest(".order-sheet-fill-handle");
+        if (!handle) return;
+        const cell = handle.closest(".order-sheet-editable-cell");
+        if (!cell) return;
+        e.preventDefault();
+        orderSheetFillDrag = { id: cell.dataset.id, field: cell.dataset.field, type: cell.dataset.type, value: cell.dataset.value || "" };
+    });
+
+    document.addEventListener("mouseup", async (e) => {
+        if (!orderSheetFillDrag) return;
+        const drag = orderSheetFillDrag;
+        orderSheetFillDrag = null;
+        const targetRow = e.target.closest(".order-sheet-tbody tr");
+        if (!targetRow) return;
+        const rowEls = [...document.querySelectorAll(".order-sheet-tbody tr")];
+        const sourceIdx = rowEls.findIndex(tr => tr.dataset.reservationId === drag.id);
+        const targetIdx = rowEls.indexOf(targetRow);
+        if (sourceIdx === -1 || targetIdx === -1 || sourceIdx === targetIdx) return;
+        const [from, to] = sourceIdx < targetIdx ? [sourceIdx + 1, targetIdx] : [targetIdx, sourceIdx - 1];
+        const targetIds = rowEls.slice(from, to + 1).map(tr => tr.dataset.reservationId);
+        if (targetIds.length === 0) return;
+        const value = drag.type === "number" ? (drag.value === "" ? null : Number(drag.value)) : drag.value;
+        try {
+            for (const id of targetIds) await updateOrderSheetRow(id, { [drag.field]: value });
+            showToast(`✓ ${targetIds.length}개 행에 채워짐`);
+        } catch (err) {
+            showError(err.message || "채우기에 실패했습니다.");
+        }
+        await renderOrderSheetTab();
+        reapplyOrderSheetSelection();
+    });
+
 }
 
 function renderAll() {
@@ -1219,6 +1498,27 @@ async function handleClick(e) {
         } catch (err) {
             showError(err.message || "삭제에 실패했습니다.");
         }
+        return;
+    }
+
+    // 발주장 행 여러 개 일괄 삭제(2026-09-09) — 손잡이 클릭으로 선택한 행들.
+    if (e.target.classList.contains("order-sheet-bulk-delete-btn")) {
+        const ids = [...state.orderSheetSelectedRows];
+        const ok = await showConfirm(`선택한 ${ids.length}개 행을 삭제할까요?`);
+        if (!ok) return;
+        let count = 0;
+        for (const id of ids) {
+            try {
+                const res = await deleteOrderSheetRow(id);
+                if (res?.deleted) {
+                    pushUndo({ type: "order-sheet-delete", restoreData: res.deleted });
+                    count++;
+                }
+            } catch (err) { /* 일부 실패해도 나머지는 계속 삭제 */ }
+        }
+        state.orderSheetSelectedRows.clear();
+        showToast(`✓ ${count}건 삭제됨`);
+        renderOrderSheetTab();
         return;
     }
 

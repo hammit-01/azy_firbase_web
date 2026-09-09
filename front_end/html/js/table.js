@@ -2053,16 +2053,20 @@ function _driverBgColor(name) {
 
 function orderSheetRowHtml(r) {
     const editableCell = (field, value, type = "text", style = "") =>
-        `<td class="order-sheet-editable-cell" data-id="${r.id}" data-field="${field}" data-type="${type}" data-value="${attrEscape(value)}" title="더블클릭해서 수정"${style ? ` style="${style}"` : ""}>${safeValue(value)}</td>`;
+        `<td class="order-sheet-editable-cell" tabindex="-1" data-id="${r.id}" data-field="${field}" data-type="${type}" data-value="${attrEscape(value)}" title="더블클릭해서 수정"${style ? ` style="${style}"` : ""}>${safeValue(value)}</td>`;
     const checkbox = (field) =>
         `<td><input type="checkbox" class="order-sheet-checkbox" data-id="${r.id}" data-field="${field}" ${r[field] ? "checked" : ""}></td>`;
     // 전표 체크 시 행 배경색으로 눈에 띄게, 취소 체크 시 행 전체 텍스트를
     // 빨간색으로(2026-09-08 사용자 요청) — 취소가 전표보다 우선(다른 탭의
-    // "취소가 처리보다 우선" 규칙과 동일한 원칙).
-    const rowClass = r.배송취소 ? "order-sheet-cancelled-row" : r.전표 ? "order-sheet-slip-row" : "";
+    // "취소가 처리보다 우선" 규칙과 동일한 원칙). 손잡이 클릭으로 다중 선택한
+    // 행은 파란 배경(2026-09-09, 일괄 삭제용).
+    const rowClasses = [
+        r.배송취소 ? "order-sheet-cancelled-row" : r.전표 ? "order-sheet-slip-row" : "",
+        state.orderSheetSelectedRows.has(r.id) ? "order-sheet-row-selected" : "",
+    ].filter(Boolean).join(" ");
     return `
-        <tr data-reservation-id="${r.id}"${rowClass ? ` class="${rowClass}"` : ""}>
-            <td class="order-sheet-drag-handle" draggable="true" title="드래그해서 순서 변경">⠿</td>
+        <tr data-reservation-id="${r.id}"${rowClasses ? ` class="${rowClasses}"` : ""}>
+            <td class="order-sheet-drag-handle" draggable="true" title="드래그해서 순서 변경(클릭하면 선택)">⠿</td>
             ${editableCell("순서", r.순서)}
             ${editableCell("거래처", r.거래처, "autocomplete-client", `background:${_driverBgColor(r.배송)}`)}
             ${checkbox("출고")}
@@ -2130,10 +2134,20 @@ export async function renderOrderSheetTab() {
     rows = sortOrderSheetRows(rows);
     const searchHadFocus = document.activeElement?.id === "order-sheet-search";
 
+    // 화면에서 사라진(삭제되거나 필터링된) 행은 선택에서도 같이 빼서 일괄
+    // 삭제 버튼 숫자가 실제와 안 맞는 일이 없게(2026-09-09).
+    const visibleIds = new Set(rows.map(r => r.id));
+    for (const id of [...state.orderSheetSelectedRows]) {
+        if (!visibleIds.has(id)) state.orderSheetSelectedRows.delete(id);
+    }
+    const bulkDeleteHtml = state.orderSheetSelectedRows.size > 0
+        ? `<button type="button" class="order-sheet-bulk-delete-btn">선택 삭제 (${state.orderSheetSelectedRows.size})</button>`
+        : "";
+
     const empty = rows.length ? "" : `<p class="reservations-empty">오늘 발주 항목이 없습니다.</p>`;
     const rowsHtml = rows.map(r => orderSheetRowHtml(r)).join("");
     listEl.innerHTML = `
-        <div class="reservations-filter-bar">${filterControlsHtml}${driverFilterHtml}</div>
+        <div class="reservations-filter-bar">${filterControlsHtml}${driverFilterHtml}${bulkDeleteHtml}</div>
         <table class="reservations-table order-sheet-table">
             <colgroup>
                 <col style="width:2%">  <!--드래그 손잡이-->

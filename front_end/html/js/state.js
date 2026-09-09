@@ -41,4 +41,5 @@ export const state = {
     orderSheetWarehouseFilter: "", // 발주장 탭 — 창고 필터
     orderSheetBrandFilter: "", // 발주장 탭 — 브랜드 필터
     orderSheetDriverFilter: "", // 발주장 탭 — 배송(기사) 필터(2026-09-08, 담당자 필터에서 교체)
+    orderSheetSelectedRows: new Set(), // 발주장 탭 — 손잡이 클릭으로 다중 선택한 행(일괄 삭제용, 2026-09-09)
 };

@@ -957,6 +957,21 @@ th.sort-active {
 .order-sheet-drag-handle { cursor: grab; text-align: center; color: #9ca3af; user-select: none; }
 .order-sheet-tbody tr.order-sheet-dragging { opacity: 0.4; }
 
+/* 발주장 탭 — 구글시트 스타일 칸 선택/채우기 핸들(2026-09-09). position:relative는
+   채우기 핸들(절대 위치)이 이 칸 기준으로 붙게 하려는 것 — 선택 안 된 칸에도
+   항상 걸어둬도 시각적으로는 아무 차이 없음. */
+.order-sheet-editable-cell { position: relative; }
+.order-sheet-editable-cell:focus { outline: none; }
+.order-sheet-editable-cell.order-sheet-cell-selected { outline: 2px solid #2563eb; outline-offset: -2px; }
+.order-sheet-fill-handle { position: absolute; right: -1px; bottom: -1px; width: 7px; height: 7px; background: #2563eb; cursor: crosshair; }
+
+/* 발주장 탭 — 손잡이 클릭으로 다중 선택한 행(일괄 삭제용, 2026-09-09).
+   짝수행 줄무늬를 이겨야 해서 .reservations-table로 특이도 확보. */
+.reservations-table tr.order-sheet-row-selected td { background: #dbeafe; }
+
+.order-sheet-bulk-delete-btn { background: #fee2e2; color: #b91c1c; border: none; border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+.order-sheet-bulk-delete-btn:hover { background: #fecaca; }
+
 /* 타창고매출현황 — "수정중" 체크한 사람 기준 행 색(2026-08-25, 고정 매핑:
    전미림=핑크/김나미=골드/박채연=보라/임보연=하늘색). 짝수행 줄무늬를 이겨야
    해서 위 규칙과 동일하게 .reservations-table로 특이도를 올림.
