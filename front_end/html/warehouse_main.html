@@ -20,6 +20,44 @@
         <!-- ── 고정 헤더 (툴바 + 패널) ── -->
         <div class="sticky-header">
         <div class="toolbar">
+            <div class="toolbar-login">
+                <button class="login-btn">
+                    <span class="login-icon">👤</span>
+                    <span class="login-btn-text">로그인</span>
+                </button>
+
+                <div class="login-popover">
+                    <div class="login-form">
+                        <label class="login-field">
+                            <span class="login-label">아이디</span>
+                            <input type="text" id="loginIdInput" class="login-input" placeholder="아이디(사번)" autocomplete="username">
+                        </label>
+                        <label class="login-field">
+                            <span class="login-label">비밀번호</span>
+                            <input type="password" id="loginPwInput" class="login-input" placeholder="비밀번호" autocomplete="current-password" maxlength="4">
+                        </label>
+                        <div class="login-error"></div>
+                        <button class="login-submit-btn">로그인</button>
+                    </div>
+                    <div class="login-profile" style="display:none">
+                        <div class="login-profile-name"></div>
+                        <div class="login-profile-role"></div>
+                        <button class="logout-btn">로그아웃</button>
+                    </div>
+                </div>
+
+                <span class="table_size_updated"></span>
+                <div id="bulk-action-bar" class="bulk-action-bar"></div>
+            </div>
+        </div>
+        </div><!-- /.sticky-header -->
+
+        <button id="toggle-sticky-header-btn" class="toggle-sticky-header-btn" title="상단 고정 영역 숨기기/보이기">▲</button>
+        <button id="toggle-desktop-view-btn" class="toggle-desktop-view-btn" title="PC 화면으로 보기">PC</button>
+
+        <!-- ── 테이블 ── -->
+        <div class="table-container">
+        <div class="left-panel">
             <div class="toolbar-section">
                 <div class="toolbar-left">
                     <a href="/warehouse_main.html" class="logo-link" title="메인으로">
@@ -65,36 +103,7 @@
                     </div>
                 </div>
             </div>
-            <div class="toolbar-login">
-                <button class="login-btn">
-                    <span class="login-icon">👤</span>
-                    <span class="login-btn-text">로그인</span>
-                </button>
-
-                <div class="login-popover">
-                    <div class="login-form">
-                        <label class="login-field">
-                            <span class="login-label">아이디</span>
-                            <input type="text" id="loginIdInput" class="login-input" placeholder="아이디(사번)" autocomplete="username">
-                        </label>
-                        <label class="login-field">
-                            <span class="login-label">비밀번호</span>
-                            <input type="password" id="loginPwInput" class="login-input" placeholder="비밀번호" autocomplete="current-password" maxlength="4">
-                        </label>
-                        <div class="login-error"></div>
-                        <button class="login-submit-btn">로그인</button>
-                    </div>
-                    <div class="login-profile" style="display:none">
-                        <div class="login-profile-name"></div>
-                        <div class="login-profile-role"></div>
-                        <button class="logout-btn">로그아웃</button>
-                    </div>
-                </div>
-
-                <span class="table_size_updated"></span>
-                <div id="bulk-action-bar" class="bulk-action-bar"></div>
-
-                <div class="toolbar-row toolbar-row-actions">
+            <div class="toolbar-row toolbar-row-actions">
                     <!-- CRUD 버튼 -->
                     <button class="insert-btn">추가</button>
                     <button class="update-btn">수정</button>
@@ -109,17 +118,8 @@
                     <button class="all-delete-btn">전체 삭제</button>
                     <button class="main-download-btn">엑셀 다운로드</button>
                 </div>
-            </div>
-        </div>
-        </div><!-- /.sticky-header -->
-
-        <button id="toggle-sticky-header-btn" class="toggle-sticky-header-btn" title="상단 고정 영역 숨기기/보이기">▲</button>
-        <button id="toggle-desktop-view-btn" class="toggle-desktop-view-btn" title="PC 화면으로 보기">PC</button>
-
-        <!-- ── 테이블 ── -->
-        <div class="table-container">
-        <div class="left-panel">
             <div id="mobile-list" class="mobile-list"></div>
+            
             <div class="table-wrap">
                 <table>
                     <!-- 각 열 너비는 실제 값 길이 기준으로 배분(2026-08-13, 90% 배율 기준 확인).

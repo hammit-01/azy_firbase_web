@@ -571,6 +571,18 @@ def reset_changes_log():
         log.error(f"changes_log 초기화 실패: {e}")
 
 
+def run_drive_backup():
+    """매시간 정각 — 재고장/예약현황/타창고매출현황/단가표를 엑셀로 이동식 디스크(D:)에 백업
+    (같은 파일명 덮어쓰기, 2026-09-09 사용자 요청 — Google Drive API가 계속 막혀서 로컬 백업으로 전환)."""
+    log.info("백업 시작")
+    try:
+        from pipeline.backup_drive import run_backup
+        run_backup()
+        log.info("백업 완료")
+    except Exception as e:
+        log.error(f"백업 실패: {e}", exc_info=True)
+
+
 def _in_operating_hours(dt: datetime) -> bool:
     if dt.weekday() >= 5:  # 토(5), 일(6) 제외
         return False
@@ -646,6 +658,16 @@ def main():
         run_daily_snapshot,
         CronTrigger(hour="19", minute="10", day_of_week="mon-fri", timezone="Asia/Seoul"),
         id="daily_snapshot",
+    )
+
+    # 매시간 정각 — 재고장/예약현황/타창고매출현황/단가표 Drive 백업(2026-09-09)
+    scheduler.add_job(
+        run_drive_backup,
+        CronTrigger(minute=0, timezone="Asia/Seoul"),
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=300,
+        id="drive_backup",
     )
 
     def _shutdown(signum, frame):
