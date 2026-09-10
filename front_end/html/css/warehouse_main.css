@@ -3,6 +3,8 @@ html {
 }
 
 body {
+    margin: 0;
+    padding: 30px;
     font-family: "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo",
                  "Malgun Gothic", "맑은 고딕", sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -30,8 +32,9 @@ h1 {
 
 .container {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     gap: 10px;
+    padding: 20px 30px;
     box-sizing: border-box;
     height: 100%;
 }
@@ -40,6 +43,8 @@ h1 {
     flex-shrink: 0;
     z-index: 100;
     background: #eef1f5;
+    margin: -20px -30px 0;
+    padding: 20px 30px 0;
     box-sizing: border-box;
 }
 .sticky-header.is-hidden {
@@ -237,21 +242,20 @@ th.sort-active {
 /* 3열 grid: 로고(왼쪽) / 필터·검색 / 로그인+버튼들 — 셋 다 auto라 각자 내용 폭만큼만
    차지(2026-08-06) */
 .toolbar {
+    display: grid;
+    grid-template-columns: 1fr auto;
     /* center가 아니라 start — 전체 처리 바가 나타나 .toolbar-login 높이가 늘어나도
        .toolbar-section 기준선이 밀리지 않게(2026-08-06, 바 생기면 로그인/업데이트일자가
        위로 튀던 문제) */
-    display: flex;
-    grid-template-columns: 1fr auto;
     align-items: start;
     gap: 16px;
-    padding: 20px 20px;
+    padding: 20px 50px;
     background: #ffffff;
     border-radius: 14px;
     box-shadow: 0 4px 18px rgba(15, 23, 42, 0.07);
     box-sizing: border-box;
-    width: 150px;
-    flex-direction: column;
-    flex-wrap: wrap;
+    width: 100%;
+    align-items: end;
 }
 
 /* 로고 칸(1번째)과 필터·검색 칸(2번째)을 하나의 클래스로 묶고, 위치로 구분(2026-08-06) */
@@ -276,7 +280,7 @@ th.sort-active {
     position: relative;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-end;
     gap: 6px;
     justify-self: end;
 }
@@ -529,7 +533,7 @@ th.sort-active {
 
 /* 액션 버튼 줄(추가/수정/예약 등)만 오른쪽 끝에 붙임(2026-08-06) */
 .toolbar-row-actions {
-    justify-content: center;
+    justify-content: flex-end;
 }
 
 /* 예약 현황/업데이트/엑셀 다운로드 3개는 남는 폭을 나눠 가지며 줄 너비에 맞게 늘어남 */
@@ -1634,7 +1638,6 @@ tr.insert-card td:first-child {
 .toolbar-center {
     display: flex;
     gap: 10px;
-    flex-direction: column;
 }
 
 .note-modal-input {
