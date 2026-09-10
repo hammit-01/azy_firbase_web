@@ -517,6 +517,34 @@ export function bindEvents() {
         });
     }
 
+    // PC 툴바 개편(검색창/액션버튼을 table-container로 이동)이 모바일 grid CSS
+    // (.toolbar 하나로 flatten하는 방식)와 구조가 안 맞아서, 모바일에서는 이 요소들을
+    // JS로 예전처럼 sticky 툴바 안에 되돌려 넣는다 — PC는 새 레이아웃, 모바일은
+    // 기존 그대로 유지(2026-09-10 요청). 뷰포트가 바뀔 때마다(리사이즈, PC 강제보기
+    // 토글) 다시 계산해야 해서 함수로 분리.
+    const responsiveMQ        = window.matchMedia("(max-width: 768px)");
+    const toolbarLeftEl       = document.querySelector(".table-container > .toolbar-left");
+    const toolbarRightEl      = document.querySelector(".table-container > .toolbar-right");
+    const tableSizeEl         = document.querySelector(".table_size");
+    const toolbarRowActionsEl = document.querySelector(".toolbar-row-actions");
+    const leftPanelEl         = document.querySelector(".table-container > .left-panel");
+    const stickyToolbarEl     = document.querySelector(".sticky-header .toolbar");
+
+    function applyResponsiveToolbarLayout() {
+        if (!toolbarLeftEl || !toolbarRightEl || !tableSizeEl || !toolbarRowActionsEl || !stickyToolbarEl) return;
+        if (responsiveMQ.matches) {
+            stickyToolbarEl.appendChild(tableSizeEl);
+            stickyToolbarEl.appendChild(toolbarRowActionsEl);
+            stickyToolbarEl.appendChild(toolbarRightEl);
+        } else {
+            toolbarLeftEl.appendChild(tableSizeEl);
+            toolbarLeftEl.appendChild(toolbarRowActionsEl);
+            toolbarLeftEl.parentElement.insertBefore(toolbarRightEl, leftPanelEl || null);
+        }
+    }
+    applyResponsiveToolbarLayout();
+    responsiveMQ.addEventListener("change", applyResponsiveToolbarLayout);
+
     // 모바일에서 "PC" 버튼으로 데스크톱 화면 강제 보기 — 뷰포트 메타를 넓게 바꿔서
     // 모바일 미디어쿼리 자체가 안 걸리게 만드는 방식(실제 "데스크톱 사이트 요청"과 동일 원리).
     // 선택 상태는 새로고침해도 유지되게 저장.
@@ -542,6 +570,7 @@ export function bindEvents() {
             toggleDesktopViewBtn.textContent = forced ? "모바일" : "PC";
             toggleDesktopViewBtn.title = forced ? "모바일 화면으로 보기" : "PC 화면으로 보기";
             updateDownloadBtnLabel();
+            applyResponsiveToolbarLayout();
         };
         applyForceDesktop(localStorage.getItem(FORCE_DESKTOP_KEY) === "1");
         toggleDesktopViewBtn.addEventListener("click", () => {

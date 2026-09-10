@@ -167,7 +167,7 @@ export function initLogin() {
     });
 
     document.addEventListener("click", (e) => {
-        if (e.target.closest(".toolbar-login")) return;
+        if (e.target.closest(".login-btn, .login-popover")) return;
         closePopover();
     });
 
