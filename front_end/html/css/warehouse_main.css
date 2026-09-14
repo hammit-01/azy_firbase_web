@@ -578,6 +578,8 @@ th.sort-active {
     display: block;
     height: fit-content;
     font-weight: 500;
+    font-size: 12px;
+    white-space: pre-line;
 }
 
 /* 행 체크 시 뜨는 "총 N행, M박스 선택" — 테이블의 selected-row 초록과 동일 색 */

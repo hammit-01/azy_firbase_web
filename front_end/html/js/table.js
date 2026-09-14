@@ -568,7 +568,7 @@ export function renderTableSize(count, size, mean) {
     if (timestamps.length) {
         const latest = new Date(Math.max(...timestamps));
         const pad = n => String(n).padStart(2, "0");
-        lastUpdatedText = `${latest.getFullYear()}-${pad(latest.getMonth() + 1)}-${pad(latest.getDate())} ${pad(latest.getHours())}:${pad(latest.getMinutes())} 기준`;
+        lastUpdatedText = `${latest.getFullYear()}-${pad(latest.getMonth() + 1)}-${pad(latest.getDate())}\n${pad(latest.getHours())}:${pad(latest.getMinutes())} 기준`;
     }
 
     mainEl.textContent = `총 ${count} 행\n총 ${size} 박스`;
