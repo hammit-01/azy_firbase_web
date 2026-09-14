@@ -164,6 +164,11 @@ function cleanText(value) {
         .trim();
 }
 
+// 검색어를 공백/쉼표로 나눠 여러 키워드로 만든다 - 모든 탭 검색창 공통(2026-09-14).
+function splitSearchKeywords(raw) {
+    return cleanText(raw || "").toLowerCase().split(/[\s,]+/).filter(Boolean);
+}
+
 // =========================
 // 모바일 카드 뷰
 // =========================
@@ -618,10 +623,7 @@ export function renderTable() {
     // 검색1·검색2 두 칸을 하나로 통합하며 다중 키워드 지원으로 대체) —
     // "퇴니스 삼겹" 또는 "퇴니스, 3p, 삼겹"처럼 입력한 단어가 각각 어느 필드에든
     // 들어있으면 되고, 입력한 단어 전부가 (어느 필드에서든) 매치돼야 통과.
-    const keywords = cleanText(dom.searchInput.value)
-        .toLowerCase()
-        .split(/[\s,]+/)
-        .filter(Boolean);
+    const keywords = splitSearchKeywords(dom.searchInput.value);
 
     // =========================
     // 검색 필터
@@ -945,10 +947,10 @@ export function renderChangesTab() {
         idPrefix: "changes", rows: results.map(r => r.item),
         search: state.changesSearch, warehouse: state.changesWarehouseFilter, brand: state.changesBrandFilter,
     });
-    const kw = cleanText(state.changesSearch || "").toLowerCase();
+    const changesKws = splitSearchKeywords(state.changesSearch);
     const CHANGES_SEARCHABLE_KEYS = ["상품명", "브랜드", "등급", "ESTNO", "BL", "창고"];
     let filtered = results;
-    if (kw) filtered = filtered.filter(({ item }) => CHANGES_SEARCHABLE_KEYS.some(k => cleanText(item[k]).toLowerCase().includes(kw)));
+    if (changesKws.length) filtered = filtered.filter(({ item }) => changesKws.every(kw => CHANGES_SEARCHABLE_KEYS.some(k => cleanText(item[k]).toLowerCase().includes(kw))));
     if (state.changesWarehouseFilter) filtered = filtered.filter(({ item }) => item.창고 === state.changesWarehouseFilter);
     if (state.changesBrandFilter) filtered = filtered.filter(({ item }) => item.브랜드 === state.changesBrandFilter);
     const searchHadFocus = document.activeElement?.id === "changes-search";
@@ -1407,9 +1409,9 @@ function matchesReservationKeyword(r, kw) {
 // manager는 타창고매출현황 전용(2026-08-25) — 예약현황은 이미 자체 담당자
 // 그룹핑 드롭다운(state.reservationsFilter)이 따로 있어서 안 씀.
 function filterReservationRowsByState(rows, search, warehouse, brand, manager) {
-    const kw = cleanText(search || "").toLowerCase();
+    const kws = splitSearchKeywords(search);
     let data = rows;
-    if (kw) data = data.filter(r => matchesReservationKeyword(r, kw));
+    if (kws.length) data = data.filter(r => kws.every(kw => matchesReservationKeyword(r, kw)));
     if (warehouse) data = data.filter(r => r.창고 === warehouse);
     if (brand) data = data.filter(r => r.브랜드 === brand);
     if (manager) data = data.filter(r => r.담당자 === manager);
@@ -1478,7 +1480,7 @@ function reservationFilterControlsHtml({ idPrefix, rows, search, warehouse, bran
     `;
 }
 
-// 검색창 입력마다 매번 서버를 재조회하면(원래 코드) 네트워크 왕복 도중에도 사용자는
+// 검색어를 공백/쉼표로 나눠 여러 키워드로 만든다 - 모든 탭 검색창 공통(2026-09-14).
 // 계속 입력을 이어가는데, 응답이 온 뒤 innerHTML을 통째로 새로 그리면서 그 사이
 // 입력분이 옛 state.reservationsSearch 기준 값으로 덮여 사라진다("입력이 밀려요"
 // 버그, 2026-09-03). 데이터 자체는 검색으로 안 바뀌므로 마지막 조회 결과를 캐시해두고
@@ -1771,9 +1773,9 @@ export async function renderMovesTab(useCache = false) {
     // 안 고르면 타창고매출현황과 동일하게 오늘로 기본 고정(2026-09-04 사용자 지정).
     const movesDate = state.movesDateFilter || todayISOStr();
     let filtered = rows.filter(r => r.이동일자 === movesDate);
-    const kw = cleanText(state.movesSearch || "").toLowerCase();
-    filtered = kw
-        ? filtered.filter(r => MOVE_SEARCHABLE_KEYS.some(k => cleanText(r[k] ?? "").toLowerCase().includes(kw)))
+    const movesKws = splitSearchKeywords(state.movesSearch);
+    filtered = movesKws.length
+        ? filtered.filter(r => movesKws.every(kw => MOVE_SEARCHABLE_KEYS.some(k => cleanText(r[k] ?? "").toLowerCase().includes(kw))))
         : filtered;
     state.filteredMoves = filtered; // 엑셀 다운로드가 지금 화면에 보이는 행 그대로 내려받게(2026-09-04)
     const searchHadFocus = document.activeElement?.id === "moves-search";
@@ -1959,10 +1961,10 @@ export function priceInsertRowHtml() {
 const PRICE_SEARCHABLE_KEYS = ["분류", "브랜드", "품목", "등급/포장", "EST", "창고/비고"];
 
 function filterPriceRows(rows) {
-    const kw = cleanText(state.priceSearch || "").toLowerCase();
+    const priceKws = splitSearchKeywords(state.priceSearch);
     let data = rows;
-    if (kw) {
-        data = data.filter(r => PRICE_SEARCHABLE_KEYS.some(k => cleanText(r[k]).toLowerCase().includes(kw)));
+    if (priceKws.length) {
+        data = data.filter(r => priceKws.every(kw => PRICE_SEARCHABLE_KEYS.some(k => cleanText(r[k]).toLowerCase().includes(kw))));
     }
     if (state.priceCategoryFilter) data = data.filter(r => r.분류 === state.priceCategoryFilter);
     if (state.priceBrandFilter) data = data.filter(r => r.브랜드 === state.priceBrandFilter);

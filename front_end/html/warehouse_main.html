@@ -79,7 +79,6 @@
                     <button class="holding-btn">예약</button>
                     <button class="move-btn" style="display:none">이동</button>
 
-
                     <!-- 유틸 버튼 -->
                     <button class="rollback-btn">되돌리기</button>
                     <button class="clear-btn" data-action="clear-selection">전체 취소</button>
@@ -96,9 +95,6 @@
                         <option value="">브랜드</option>
                         <!-- 실제 옵션은 현재 데이터 기준으로 js/table.js의 renderBrandOptions()가 가나다순으로 채움 -->
                     </select>
-                    <input id="searchInput" class="search-input" placeholder="검색(띄어쓰기/쉼표로 여러 단어)">
-                </div>
-                <div class="toolbar-row">
                     <select class="show-warehouse filter-sel">
                         <option value="">창고</option>
                         <!-- 실제 옵션은 현재 크롤링된 데이터 기준으로 js/table.js의 renderWarehouseOptions()가 가나다순으로 채움 -->
@@ -112,6 +108,7 @@
                         <option value="특이품">특이품</option>
                         <option value="null">null(정보누락)</option>
                     </select>
+                    <input id="searchInput" class="search-input" placeholder="검색(띄어쓰기/쉼표로 여러 단어)">
                 </div>
             </div>
             <div class="left-panel">

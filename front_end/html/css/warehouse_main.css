@@ -38,7 +38,6 @@ h1 {
     flex-shrink: 0;
     z-index: 100;
     box-sizing: border-box;
-    width: min-content;
 }
 .sticky-header.is-hidden {
     display: none;
@@ -135,6 +134,7 @@ body.force-desktop-view .toggle-desktop-view-btn {
 .left-panel {
     width: 100%;
     box-sizing: border-box;
+    margin-top: 10px;
 }
 
 /* 선택 패널 */
@@ -163,7 +163,6 @@ body.force-desktop-view .toggle-desktop-view-btn {
 table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed;
 }
 
 th {
@@ -216,7 +215,7 @@ tbody tr:hover td {
 
 
 thead {
-    background: linear-gradient(180deg, #a0e600 0%, #8fce00 100%);
+    background: #475569;
     color: #ffffff;
     position: sticky;
     top: 0;
@@ -808,7 +807,6 @@ th.sort-active {
     padding: 10px 8px;
     text-align: center;
     font-size: 13px;
-    color: #64748b;
     border-bottom: 2px solid #e2e8f0;
     white-space: nowrap;
 }
@@ -921,7 +919,6 @@ th.sort-active {
     padding: 10px 8px;
     text-align: left;
     font-size: 13px;
-    color: #64748b;
     border-bottom: 2px solid #e2e8f0;
     white-space: nowrap;
 }
@@ -1986,11 +1983,6 @@ tr.insert-card .remove-insert-btn:hover {
         display: flex;
         flex-direction: column;
         width: 100%;
-    }
-
-    .sticky-header {
-        margin: -4px -4px 0;
-        padding: 4px 4px 0;
     }
 
     /* ── 툴바 ── */
