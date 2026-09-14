@@ -1350,6 +1350,18 @@ export function bindEvents() {
         }
     });
 
+    // 일반(구 사원) 전용 — Ctrl+숫자패드 '+'로 선택한 행 예약 팝업 바로 열기
+    // (2026-09-14 요청). 실제 .holding-btn을 그대로 클릭시켜서 선택 없음 등
+    // 기존 검증 로직을 그대로 재사용 — 버튼이 안 보이는 탭(재고장 아님)이면 무시.
+    document.addEventListener("keydown", (e) => {
+        if (!e.ctrlKey || e.code !== "NumpadAdd") return;
+        if (getStoredUser()?.권한 !== "일반") return;
+        const btn = document.querySelector(".holding-btn");
+        if (!btn || btn.offsetParent === null) return;
+        e.preventDefault();
+        btn.click();
+    });
+
     // 발주장 탭 — Ctrl+C/Ctrl+V를 네이티브 copy/paste 이벤트로 가로채서 진짜
     // 시스템 클립보드와 주고받는다(2026-09-09) — 실제 엑셀과 복사/붙여넣기가
     // 통하게 하려는 목적. 편집 중(입력창 있음)이면 입력창의 기본 복사/붙여넣기
