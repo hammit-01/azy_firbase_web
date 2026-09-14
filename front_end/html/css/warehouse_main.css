@@ -271,6 +271,10 @@ th.sort-active {
 }
 
 /* 로고 칸(1번째)과 필터·검색 칸(2번째)을 하나의 클래스로 묶고, 위치로 구분(2026-08-06) */
+/* .table-container가 스크롤 컨테이너(overflow-y:auto)라 position:sticky의 기준이
+   여기가 된다 — 표(.left-panel)를 내려도 이 두 줄은 붙어있게(2026-09-14 요청).
+   toolbar-right의 top은 toolbar-left 실측 높이(66px)만큼 밀어서 겹치지 않게 함 —
+   toolbar-left 내용(제목)이 커져서 높이가 바뀌면 이 값도 같이 조정 필요. */
 .toolbar-left {
     display: flex;
     gap: 10px;
@@ -280,6 +284,10 @@ th.sort-active {
     justify-content: space-between;
     /* .toolbar를 start로 바꾼 뒤(전체 처리 바 튐 방지) 로고/제목이 위로 붙어버려서
        이 칸만 다시 세로 중앙으로 — 이 칸 자체는 높이가 안 바뀌니 튐 문제와 무관(2026-08-06) */
+    position: sticky;
+    top: 0;
+    z-index: 60;
+    background: #fff;
 }
 
 .toolbar-right {
@@ -288,6 +296,10 @@ th.sort-active {
     gap: 3px;
     flex-wrap: wrap;
     padding: 10px;
+    position: sticky;
+    top: 66px;
+    z-index: 60;
+    background: #fff;
 }
 /* 
 .toolbar-login {
