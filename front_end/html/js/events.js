@@ -1741,7 +1741,6 @@ async function handleClick(e) {
                     for (const row of rows) {
                         const id = row.dataset.id;
                         const item = state.selectedItems.get(id);
-                        const holdWeight = row.querySelector(".hold-weight")?.value;
                         // 거래처/단가를 입력 시점에 따로 받아서(2026-08-24) "거래처명 단가원"
                         // 형태로 합쳐 저장 — 예약현황/타창고매출현황 둘 다 이 문자열을
                         // clientPrefix/parseUnitPrice로 다시 갈라 거래처·단가 열에 보여준다.
@@ -1757,7 +1756,6 @@ async function handleClick(e) {
                             row.querySelector(".hold-releaseDate")?.value,
                             note,
                             combinedClient,
-                            holdWeight !== "" ? holdWeight : null,
                             true
                         );
                         if (result) backups.push(result); else failCount++;
@@ -2291,7 +2289,6 @@ async function handleClick(e) {
         const id = e.target.dataset.id;
         const item = state.selectedItems.get(id);
         const qty    = document.querySelector(`.hold-qty[data-id="${id}"]`)?.value;
-        const weight = document.querySelector(`.hold-weight[data-id="${id}"]`)?.value;
         const date   = document.querySelector(`.hold-releaseDate[data-id="${id}"]`)?.value;
         const note   = document.querySelector(`.hold-note[data-id="${id}"]`)?.value;
         const memo   = document.querySelector(`.hold-memo[data-id="${id}"]`)?.value || "";
@@ -2299,7 +2296,7 @@ async function handleClick(e) {
         // fetchAllData가 holdingData 내부에서 실행되기 전에 선택 해제 → 체크박스 즉시 해제
         state.selectedItems.delete(id);
 
-        const result = await holdingData(item, Number(qty), date, note, memo, weight !== "" ? weight : null);
+        const result = await holdingData(item, Number(qty), date, note, memo);
         if (!result) { state.selectedItems.set(id, item); return; }
 
         // 예약은 새 행을 안 만들고 원본 행의 예약/가용 숫자만 바뀌므로, 원본 행 자체를 깜빡인다
@@ -2371,14 +2368,12 @@ async function handleClick(e) {
         for (const row of rows) {
             const id = row.dataset.id;
             const item = state.selectedItems.get(id);
-            const holdWeight = row.querySelector(".hold-weight")?.value;
             const result = await holdingData(
                 item,
                 Number(row.querySelector(".hold-qty")?.value),
                 row.querySelector(".hold-releaseDate")?.value,
                 row.querySelector(".hold-note")?.value,
                 row.querySelector(".hold-memo")?.value || "",
-                holdWeight !== "" ? holdWeight : null,
                 true  // noUndo — 전체 undo는 아래 pushUndo(bulk-holding)로 처리
             );
             if (result) backups.push(result);

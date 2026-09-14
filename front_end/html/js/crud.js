@@ -30,9 +30,7 @@ function _rawId(item) {
 }
 
 // 실재고/예약 분리 재설계(2026-08-05) — 예약은 소스 재고(item)를 전혀 건드리지 않는다.
-// weight 인자는 옛 모델(홀딩 전용 행에 평중을 따로 저장)의 흔적으로, 새 모델에선 예약이
-// 별도 행을 만들지 않아 의미가 없어져 받기만 하고 안 쓴다(호출부 시그니처 유지 목적).
-export async function holdingData(item, holdQty, releaseDate, note, memo = "", weight = null, noUndo = false) {
+export async function holdingData(item, holdQty, releaseDate, note, memo = "", noUndo = false) {
 
     if (!holdQty || holdQty <= 0) {
         showError("예약 수량을 1 이상 입력해주세요.");
@@ -52,9 +50,9 @@ export async function holdingData(item, holdQty, releaseDate, note, memo = "", w
             창고:   item.warehouse,
             상태:   item.dataState || "",
             유통기한: item.dueDate || "",
-            // 재고 매칭 조건에 평중 추가(2026-09-07) — 예약 폼의 weight 입력은
-            // 사용자가 고칠 수 있는 표시용 값이라 매칭에는 안 쓰고, 선택된 그
-            // 재고 행 자체의 평중(item.weight)을 그대로 보낸다.
+            // 재고 매칭 조건에 평중 추가(2026-09-07) — 예약 폼에서 평중을 입력받지
+            // 않으므로(2026-09-14) 선택된 그 재고 행 자체의 평중(item.weight)을
+            // 그대로 보낸다.
             평중:   Number(item.weight) || 0,
             수량:   holdQty,
             거래처: memo || item.memo || "",

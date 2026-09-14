@@ -301,7 +301,7 @@ export function createHoldingInsertRow(item) {
             <td class="holding-inherited" data-label="예약">${Number(item.예약수량) > 0 ? safeValue(item.예약수량) : ""}</td>
             <td class="holding-inherited" data-label="가용">${availableCell(item.가용재고)}</td>
             <td class="holding-inherited" data-label="유통기한">${safeValue(item.유통기한)}</td>
-            <td data-label="평중"><input type="number" step="0.01" class="hold-weight cell-input" data-id="${id}" value="${safeValue(item.평중)}"></td>
+            <td></td>
             <td data-label="비고">
                 <div class="insert-row-memo-cell">
                     <input type="text" class="hold-memo cell-input" data-id="${id}" placeholder="비고">
@@ -372,7 +372,6 @@ export function createHoldingCard(item) {
                 <label>담당자${assigneeField}</label>
                 <label>출고일자<input type="date" class="hold-releaseDate cell-input" data-id="${id}"></label>
                 <label>수량<input type="number" class="hold-qty cell-input" data-id="${id}" placeholder="수량"></label>
-                <label>평중<input type="number" step="0.01" class="hold-weight cell-input" data-id="${id}" value="${safeValue(item.평중)}"></label>
                 <label>거래처<input type="text" class="hold-client cell-input" data-id="${id}" placeholder="거래처명"></label>
                 <label>단가<input type="number" class="hold-price cell-input" data-id="${id}" placeholder="단가"></label>
             </div>
