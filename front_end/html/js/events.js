@@ -724,6 +724,11 @@ export function bindEvents() {
 
     document.addEventListener("change", (e) => {
         if (e.target.classList.contains("row-check")) handleChange(e);
+        // 상태 선택 select — 값이 바뀔 때마다 data-state를 갱신해서 CSS가 선택된
+        // 상태의 배지 색으로 select 자체를 물들임(2026-09-14 디자인 개선).
+        if (e.target.classList.contains("state-select")) {
+            e.target.dataset.state = e.target.value;
+        }
         // 창고이동 등록 팝업 — 배차자="새벽"은 무조건 다음날 이동이라 이동일자
         // 선택란을 숨기고, 그 외엔 보여준다(2026-09-04 사용자 지정, 기본값 내일).
         if (e.target.classList.contains("move-dispatcher")) {

@@ -76,7 +76,9 @@ export function stateSelect(cls, currentVal = "없음", dataId = "") {
         .map(([value, label]) => `<option value="${value}" ${value === currentVal ? "selected" : ""}>${label}</option>`)
         .join("");
     const id = dataId ? `data-id="${dataId}"` : "";
-    return `<select class="${cls} cell-input" ${id}>${opts}</select>`;
+    // data-state로 현재 선택값을 색 스타일 기준으로 노출(2026-09-14, 상태별 배지 색과
+    // 통일된 디자인 요청) — events.js의 위임 change 리스너가 값 바뀔 때마다 갱신.
+    return `<select class="${cls} cell-input state-select" data-state="${currentVal}" ${id}>${opts}</select>`;
 }
 
 // 창고이동 탭(2026-09-04, 관리자+8001 테스트 기능) — 배차자/이동창고 둘 다 회사에서
