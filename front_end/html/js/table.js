@@ -614,18 +614,17 @@ export function renderTable() {
 
     let data = [...state.allData];
 
-    const keyword =
-        cleanText(
-            dom.searchInput.value
-        ).toLowerCase();
-
-    const keyword2 =
-        cleanText(
-            dom.searchInput2?.value || ""
-        ).toLowerCase();
+    // 공백/쉼표로 여러 단어를 구분해 입력하면 전부 AND로 매칭(2026-09-14,
+    // 검색1·검색2 두 칸을 하나로 통합하며 다중 키워드 지원으로 대체) —
+    // "퇴니스 삼겹" 또는 "퇴니스, 3p, 삼겹"처럼 입력한 단어가 각각 어느 필드에든
+    // 들어있으면 되고, 입력한 단어 전부가 (어느 필드에서든) 매치돼야 통과.
+    const keywords = cleanText(dom.searchInput.value)
+        .toLowerCase()
+        .split(/[\s,]+/)
+        .filter(Boolean);
 
     // =========================
-    // 검색 필터 (검색1 · 검색2 둘 다 만족해야 함 — AND)
+    // 검색 필터
     // =========================
     // id/pk 등 내부 식별자는 생성 당시 상품명이 그대로 박혀있어서(수정해도 안 바뀜)
     // 검색 대상에 포함하면 이미 이름 바꾼 상품이 옛날 이름으로도 검색되는 문제가 생김 —
@@ -653,12 +652,8 @@ export function renderTable() {
             );
         });
 
-    if (keyword) {
-        data = data.filter(item => matchesKeyword(item, keyword));
-    }
-
-    if (keyword2) {
-        data = data.filter(item => matchesKeyword(item, keyword2));
+    if (keywords.length) {
+        data = data.filter(item => keywords.every(kw => matchesKeyword(item, kw)));
     }
 
     const warehouse =

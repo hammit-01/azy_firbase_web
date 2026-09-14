@@ -1,6 +1,5 @@
 export const dom = {
     searchInput: null,
-    searchInput2: null,
     searchField: null,
     sortField: null,
     sortOrder: null,
@@ -12,7 +11,6 @@ export const dom = {
 
 export function initDOM() {
     dom.searchInput = document.getElementById("searchInput");
-    dom.searchInput2 = document.getElementById("searchInput2");
     dom.searchField = document.getElementById("searchField");
     dom.sortField = document.getElementById("sortField");
     dom.sortOrder = document.getElementById("sortOrder");
