@@ -59,9 +59,13 @@
             <button class="main-download-btn">엑셀 다운로드</button>
             <span class="table_size_updated"></span>
             <div class="pipeline-status-banner" style="display:none" title="관리자 전용 — 파이프라인 잡별 마지막 실행"></div>
+            <button id="mobile-filter-toggle" class="mobile-filter-toggle" type="button">
+                필터<span class="mobile-filter-badge" style="display:none">0</span>
+            </button>
         </div>
 
         </div><!-- /.sticky-header -->
+        <div id="mobile-filter-backdrop" class="mobile-filter-backdrop"></div>
 
         <button id="toggle-sticky-header-btn" class="toggle-sticky-header-btn" title="상단 고정 영역 숨기기/보이기">▲</button>
         <button id="toggle-desktop-view-btn" class="toggle-desktop-view-btn" title="PC 화면으로 보기">PC</button>
@@ -86,6 +90,10 @@
                 </div>
             </div>
             <div class="toolbar-right">
+                <div class="mobile-filter-sheet-header">
+                    <span>필터</span>
+                    <button id="mobile-filter-close" type="button" class="mobile-filter-close">닫기</button>
+                </div>
                 <div class="toolbar-row">
                     <select class="show-product-name filter-sel">
                         <option value="">상품명</option>

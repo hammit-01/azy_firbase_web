@@ -107,6 +107,14 @@ body.force-desktop-view .toggle-desktop-view-btn {
     color: #fff;
 }
 
+/* 모바일 전용 필터 바텀시트 토글/배경/시트헤더 — 데스크톱에서는 항상 숨김,
+   모바일 미디어쿼리 안에서만 켠다(2026-09-14, 필터 4개를 시트로 접기). */
+.mobile-filter-toggle,
+.mobile-filter-backdrop,
+.mobile-filter-sheet-header {
+    display: none;
+}
+
 .table-container {
     flex: 1;
     overflow-y: auto;
@@ -1970,6 +1978,9 @@ tr.insert-card .remove-insert-btn:hover {
     body {
         margin: 0;
         padding: 8px;
+        /* 하단 고정 액션바(.toolbar-row-actions)가 화면에 항상 떠 있어서 마지막
+           표 행이 가려지지 않게 여유를 둠(2026-09-14) */
+        padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
         overflow-x: hidden;
         -webkit-text-size-adjust: 100%;
     }
@@ -1994,6 +2005,11 @@ tr.insert-card .remove-insert-btn:hover {
        grid-column/row를 쓰는 죽은 코드, 사라진 #searchInput2 규칙 등 — "중구난방"
        원인). grid-template-areas로 자식마다 자리를 명시해서 순서/생략에
        흔들리지 않게 다시 짬. */
+    /* 액션버튼(예약/이동/되돌리기/전체취소)과 필터 4종은 더 이상 이 grid 안에 없음 —
+       각각 하단 고정바/바텀시트로 빠져서(position:fixed) 자체 레이아웃을 가진다.
+       검색창과 필터 열기 버튼만 sticky 헤더에 남아 한 줄을 이룬다(2026-09-14,
+       "모바일 필터를 항상 펼쳐두지 말고 시트로 접자" 요청 — 참고: 모바일 필터
+       UX는 얇은 검색바 + 필터 아이콘 + 바텀시트가 정석 패턴). */
     .toolbar {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -2002,8 +2018,7 @@ tr.insert-card .remove-insert-btn:hover {
             "login    updated"
             "size     download"
             "pipeline pipeline"
-            "actions  actions"
-            "filters  filters";
+            "search   filterbtn";
         align-items: center;
         column-gap: 12px;
         row-gap: 8px;
@@ -2017,8 +2032,8 @@ tr.insert-card .remove-insert-btn:hover {
     .table_size      { grid-area: size; justify-self: start; }
     .main-download-btn { grid-area: download; justify-self: end; }
     .pipeline-status-banner { grid-area: pipeline; flex-wrap: wrap; }
-    .toolbar-row-actions { grid-area: actions; }
-    .toolbar-right   { grid-area: filters; }
+    #searchInput     { grid-area: search; }
+    .mobile-filter-toggle { grid-area: filterbtn; }
 
     .table_size_weight { display: none; }
 
@@ -2064,8 +2079,83 @@ tr.insert-card .remove-insert-btn:hover {
         white-space: nowrap;
     }
 
-    /* 검색/필터 한 줄(상품명·브랜드·창고·상태 + 검색) — 셀렉트는 2개씩, 검색창은
-       단독 줄로 자연스럽게 줄바꿈 */
+    .search-input {
+        font-size: 14px;
+        height: 40px;
+    }
+
+    .tb-sep {
+        display: none;
+    }
+
+    /* 필터 열기 버튼 — 활성 필터 개수를 배지로 표시(events.js가 change 때마다 갱신) */
+    .mobile-filter-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-self: end;
+        height: 40px;
+        padding: 0 14px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: #fff;
+        font-size: 14px;
+        font-weight: 600;
+        color: #334155;
+    }
+    .mobile-filter-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 18px;
+        height: 18px;
+        margin-left: 4px;
+        padding: 0 4px;
+        border-radius: 9px;
+        background: #16a34a;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    /* 상품명/브랜드/창고/상태 4개 셀렉트 — 필터 버튼을 눌러야 열리는 바텀시트로.
+       화면 밖(translateY(100%))에 대기하다 .open이 붙으면 슬라이드 업. */
+    .toolbar-right {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1001;
+        background: #fff;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -4px 16px rgba(0,0,0,.15);
+        padding: 4px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+        max-height: 70vh;
+        overflow-y: auto;
+        transform: translateY(100%);
+        transition: transform .25s ease;
+    }
+    .toolbar-right.open {
+        transform: translateY(0);
+    }
+
+    .mobile-filter-sheet-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 0;
+        font-size: 15px;
+        font-weight: 700;
+        border-bottom: 1px solid #e2e8f0;
+        margin-bottom: 10px;
+    }
+    .mobile-filter-close {
+        border: none;
+        background: none;
+        color: #64748b;
+        font-size: 13px;
+        padding: 4px 8px;
+    }
+
     .toolbar-right .toolbar-row {
         display: flex;
         flex-wrap: wrap;
@@ -2079,24 +2169,42 @@ tr.insert-card .remove-insert-btn:hover {
         height: 40px;
     }
 
-    .search-input {
-        flex: 1 1 100%;
-        min-width: 0;
-        font-size: 14px;
-        height: 40px;
+    /* 검색창이 sticky 헤더로 빠져나가서 이 줄엔 이제 4개 셀렉트만 남음 —
+       검색창 자체 스타일은 위 .search-input 규칙(font-size/height)만으로 충분 */
+
+    .mobile-filter-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        background: rgba(15, 23, 42, .4);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .25s ease;
+    }
+    .mobile-filter-backdrop.open {
+        opacity: 1;
+        pointer-events: auto;
     }
 
-    .tb-sep {
-        display: none;
-    }
-
-    /* 액션 버튼 줄(예약/되돌리기/전체취소 — 추가·수정·전체삭제는 모바일에서 숨김) */
+    /* 액션 버튼 줄(예약/이동/되돌리기/전체취소 — 추가·수정·전체삭제는 모바일에서 숨김) —
+       스크롤 중에도 항상 엄지 닿는 위치에 있도록 화면 하단 고정바로(2026-09-14,
+       모바일 액션바는 상단보다 하단 고정이 표준 패턴). 겹치는 만큼 body 하단에
+       여백을 준다(아래 body 규칙). */
     .toolbar-row-actions {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 900;
         display: flex;
         flex-wrap: wrap;
         width: 100%;
-        justify-content: flex-start;
+        justify-content: center;
         gap: 6px;
+        padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+        background: #fff;
+        box-shadow: 0 -2px 10px rgba(0,0,0,.1);
     }
 
     .rollback-btn, .clear-btn, .all-delete-btn, .changes-tab-btn, .reservations-tab-btn,

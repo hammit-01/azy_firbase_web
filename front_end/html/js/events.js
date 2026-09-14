@@ -562,11 +562,16 @@ export function bindEvents() {
     // 기존 그대로 유지(2026-09-10 요청). 뷰포트가 바뀔 때마다(리사이즈, PC 강제보기
     // 토글) 다시 계산해야 해서 함수로 분리.
     // table_size는 이미 sticky 툴바 안에 고정 배치돼 있어서(2026-09-14 개편) 더 이상
-    // 이 함수가 손댈 필요 없음 — toolbar-right/toolbar-row-actions만 대상.
+    // 이 함수가 손댈 필요 없음 — toolbar-right/toolbar-row-actions는 모바일에서
+    // position:fixed(바텀시트/하단 액션바)라 실제 DOM 부모는 안 중요하지만, 데스크톱
+    // 복귀 시 원래 자리로 되돌리기 위해 계속 옮겨둔다. 검색창(#searchInput)만 예외 —
+    // 모바일에서는 시트 밖 sticky 헤더에 얇게 남겨두는 표준 패턴이라 별도로 옮긴다.
     const responsiveMQ        = window.matchMedia("(max-width: 768px)");
     const toolbarLeftEl       = document.querySelector(".table-container > .toolbar-left");
     const toolbarRightEl      = document.querySelector(".table-container > .toolbar-right");
     const toolbarRowActionsEl = document.querySelector(".toolbar-row-actions");
+    const searchInputEl       = document.getElementById("searchInput");
+    const searchRowEl         = searchInputEl?.closest(".toolbar-row") || null; // 검색창의 원래(데스크톱) 자리
     const leftPanelEl         = document.querySelector(".table-container > .left-panel");
     const stickyToolbarEl     = document.querySelector(".sticky-header .toolbar");
 
@@ -575,13 +580,41 @@ export function bindEvents() {
         if (responsiveMQ.matches) {
             stickyToolbarEl.appendChild(toolbarRowActionsEl);
             stickyToolbarEl.appendChild(toolbarRightEl);
+            if (searchInputEl) stickyToolbarEl.appendChild(searchInputEl);
         } else {
             toolbarLeftEl.appendChild(toolbarRowActionsEl);
             toolbarLeftEl.parentElement.insertBefore(toolbarRightEl, leftPanelEl || null);
+            if (searchInputEl && searchRowEl) searchRowEl.appendChild(searchInputEl);
         }
     }
     applyResponsiveToolbarLayout();
     responsiveMQ.addEventListener("change", applyResponsiveToolbarLayout);
+
+    // 모바일 필터 바텀시트 — 열기/닫기/배경 클릭 닫기 + 활성 필터 개수 배지(2026-09-14).
+    const filterToggleBtn = document.getElementById("mobile-filter-toggle");
+    const filterCloseBtn  = document.getElementById("mobile-filter-close");
+    const filterBackdrop  = document.getElementById("mobile-filter-backdrop");
+    const filterBadge     = document.querySelector(".mobile-filter-badge");
+    const FILTER_SELECT_SELECTORS = [".show-product-name", ".show-brand", ".show-warehouse", ".show-state"];
+
+    function openFilterSheet() {
+        toolbarRightEl?.classList.add("open");
+        filterBackdrop?.classList.add("open");
+    }
+    function closeFilterSheet() {
+        toolbarRightEl?.classList.remove("open");
+        filterBackdrop?.classList.remove("open");
+    }
+    function updateFilterBadge() {
+        if (!filterBadge) return;
+        const activeCount = FILTER_SELECT_SELECTORS.filter(sel => document.querySelector(sel)?.value).length;
+        filterBadge.textContent = String(activeCount);
+        filterBadge.style.display = activeCount ? "" : "none";
+    }
+    filterToggleBtn?.addEventListener("click", openFilterSheet);
+    filterCloseBtn?.addEventListener("click", closeFilterSheet);
+    filterBackdrop?.addEventListener("click", closeFilterSheet);
+    updateFilterBadge();
 
     // 모바일에서 "PC" 버튼으로 데스크톱 화면 강제 보기 — 뷰포트 메타를 넓게 바꿔서
     // 모바일 미디어쿼리 자체가 안 걸리게 만드는 방식(실제 "데스크톱 사이트 요청"과 동일 원리).
@@ -672,6 +705,7 @@ export function bindEvents() {
         document.querySelector(`.${cls}`)?.addEventListener("change", () => {
             clearTimeout(filterTimer);
             filterTimer = setTimeout(refreshFilteredViews, 100);
+            updateFilterBadge();
         });
     });
 
