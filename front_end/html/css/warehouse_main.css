@@ -165,7 +165,7 @@ body.force-desktop-view .toggle-desktop-view-btn {
 
 .table-wrap {
     width: 100%;
-    overflow-x: clip;
+    overflow-x: auto;
     background: #fff;
     border-radius: 12px;
 }
@@ -221,6 +221,49 @@ tbody tr:nth-child(even) td {
 tbody tr:hover td {
     background: #e4f7c1 !important;
     transition: background 0.12s ease;
+}
+
+/* 열 고정(선택/상품명) — 표를 가로로 스크롤해도 이 두 칸은 왼쪽에 그대로 붙어있게
+   (2026-09-14 요청). left는 각 칸의 colgroup % 너비를 그대로 반영(1번째 0%,
+   2번째는 1번째 너비인 5%만큼 밀어서 안 겹치게).
+   고정 칸은 그 뒤 칸들이 밑으로 지나가므로 배경이 투명하면 겹쳐 보인다 — 홀수행
+   기본색/짝수행 줄무늬/hover/선택된 행 색을 전부 명시적으로 다시 지정해서
+   스크롤 중에도 해당 행 색과 항상 일치하게 함(기본 td 규칙에 얹혀가는 상속에
+   기대지 않음 — sticky 칸에서 배경이 안 먹던 문제 방지). */
+.table-wrap td:nth-child(1),
+.table-wrap th:nth-child(1) {
+    position: sticky;
+    left: 0;
+    z-index: 40;
+    background: #fff;
+}
+.table-wrap td:nth-child(2),
+.table-wrap th:nth-child(2) {
+    position: sticky;
+    left: 5%;
+    z-index: 40;
+    background: #fff;
+}
+.table-wrap thead th:nth-child(1),
+.table-wrap thead th:nth-child(2) {
+    z-index: 55;
+    background: #475569;
+}
+.table-wrap tbody tr:nth-child(even) td:nth-child(1),
+.table-wrap tbody tr:nth-child(even) td:nth-child(2) {
+    background: #f6fbea;
+}
+.table-wrap tbody tr:hover td:nth-child(1),
+.table-wrap tbody tr:hover td:nth-child(2) {
+    background: #e4f7c1 !important;
+}
+.table-wrap tbody tr.selected-row td:nth-child(1),
+.table-wrap tbody tr.selected-row td:nth-child(2) {
+    background: #d4f7a0 !important;
+}
+.table-wrap tbody tr.flash-row td:nth-child(1),
+.table-wrap tbody tr.flash-row td:nth-child(2) {
+    background: #d3f5c4 !important;
 }
 
 
