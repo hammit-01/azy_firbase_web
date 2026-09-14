@@ -562,22 +562,21 @@ export function bindEvents() {
     // JS로 예전처럼 sticky 툴바 안에 되돌려 넣는다 — PC는 새 레이아웃, 모바일은
     // 기존 그대로 유지(2026-09-10 요청). 뷰포트가 바뀔 때마다(리사이즈, PC 강제보기
     // 토글) 다시 계산해야 해서 함수로 분리.
+    // table_size는 이미 sticky 툴바 안에 고정 배치돼 있어서(2026-09-14 개편) 더 이상
+    // 이 함수가 손댈 필요 없음 — toolbar-right/toolbar-row-actions만 대상.
     const responsiveMQ        = window.matchMedia("(max-width: 768px)");
     const toolbarLeftEl       = document.querySelector(".table-container > .toolbar-left");
     const toolbarRightEl      = document.querySelector(".table-container > .toolbar-right");
-    const tableSizeEl         = document.querySelector(".table_size");
     const toolbarRowActionsEl = document.querySelector(".toolbar-row-actions");
     const leftPanelEl         = document.querySelector(".table-container > .left-panel");
     const stickyToolbarEl     = document.querySelector(".sticky-header .toolbar");
 
     function applyResponsiveToolbarLayout() {
-        if (!toolbarLeftEl || !toolbarRightEl || !tableSizeEl || !toolbarRowActionsEl || !stickyToolbarEl) return;
+        if (!toolbarLeftEl || !toolbarRightEl || !toolbarRowActionsEl || !stickyToolbarEl) return;
         if (responsiveMQ.matches) {
-            stickyToolbarEl.appendChild(tableSizeEl);
             stickyToolbarEl.appendChild(toolbarRowActionsEl);
             stickyToolbarEl.appendChild(toolbarRightEl);
         } else {
-            toolbarLeftEl.appendChild(tableSizeEl);
             toolbarLeftEl.appendChild(toolbarRowActionsEl);
             toolbarLeftEl.parentElement.insertBefore(toolbarRightEl, leftPanelEl || null);
         }

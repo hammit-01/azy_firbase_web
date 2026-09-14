@@ -44,6 +44,13 @@ h1 {
     display: none;
 }
 
+.toolbar-row toolbar-row-logo {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
 /* 상단 고정 영역(툴바+패널) 숨기기 토글 — 숨긴 상태에서도 다시 켤 수 있게
    .sticky-header 바깥에 항상 떠 있는 작은 버튼으로 둠 (2026-08-13) */
 .toggle-sticky-header-btn {
@@ -261,6 +268,7 @@ th.sort-active {
     flex-direction: row;
     align-items: center;
     padding: 10px;
+    justify-content: space-between;
     /* .toolbar를 start로 바꾼 뒤(전체 처리 바 튐 방지) 로고/제목이 위로 붙어버려서
        이 칸만 다시 세로 중앙으로 — 이 칸 자체는 높이가 안 바뀌니 튐 문제와 무관(2026-08-06) */
 }
@@ -483,6 +491,8 @@ th.sort-active {
     background: #f1f5f9;
     padding: 4px 12px;
     border-radius: 20px;
+    white-space: pre-line;
+    line-height: 1.4;
 }
 
 .table_size_main::before {

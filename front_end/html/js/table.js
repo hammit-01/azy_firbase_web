@@ -567,7 +567,7 @@ export function renderTableSize(count, size, mean) {
         lastUpdatedText = `${latest.getFullYear()}-${pad(latest.getMonth() + 1)}-${pad(latest.getDate())} ${pad(latest.getHours())}:${pad(latest.getMinutes())} 기준`;
     }
 
-    mainEl.textContent = `총 ${count} 행 / 총 ${size} 박스`;
+    mainEl.textContent = `총 ${count} 행\n총 ${size} 박스`;
     weightEl.textContent = `총 중량 ${mean.toFixed(2)} KG`;
     updatedEl.textContent = lastUpdatedText;
     updatedEl.style.display = lastUpdatedText ? "" : "none";
