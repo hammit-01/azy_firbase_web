@@ -2045,7 +2045,7 @@ tr.insert-card .remove-insert-btn:hover {
         grid-template-areas:
             "tabs     tabs"
             "login    updated"
-            "size     download"
+            "size     size"
             "pipeline pipeline"
             "search   filterbtn";
         align-items: center;
@@ -2055,12 +2055,14 @@ tr.insert-card .remove-insert-btn:hover {
         margin: 0 0 6px 0;
     }
 
-    .toolbar-section { grid-area: tabs; min-width: 0; }
+    .table_size_top { display: none; }
+    .toolbar-section { grid-area: tabs; min-width: 0; display: block;}
     .login-btn       { grid-area: login; justify-self: start; }
     .table_size_updated { grid-area: updated; justify-self: end; font-size: 11px; color: #64748b; }
     .table_size      { grid-area: size; justify-self: start; }
-    .main-download-btn { grid-area: download; justify-self: end; }
-    .pipeline-status-banner { grid-area: pipeline; flex-wrap: wrap; }
+    /* .main-download-btn(엑셀/이미지 다운로드)은 이제 JS가 하단 액션바
+       (.toolbar-row-actions)로 옮겨서 여기 grid-area 지정 불필요(2026-09-14) */
+    .pipeline-status-banner, .job-stale, .toolbar-left { display: none; }
     #searchInput     { grid-area: search; }
     .mobile-filter-toggle { grid-area: filterbtn; }
 

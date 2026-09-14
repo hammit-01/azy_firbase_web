@@ -574,6 +574,8 @@ export function bindEvents() {
     const searchRowEl         = searchInputEl?.closest(".toolbar-row") || null; // 검색창의 원래(데스크톱) 자리
     const leftPanelEl         = document.querySelector(".table-container > .left-panel");
     const stickyToolbarEl     = document.querySelector(".sticky-header .toolbar");
+    const mainDownloadBtnEl   = document.querySelector(".main-download-btn"); // 모바일에서 하단 액션바로 합류(2026-09-14)
+    const mainDownloadNextEl  = mainDownloadBtnEl?.nextElementSibling || null; // 데스크톱 원래 자리(순서 중요 — .toolbar가 flex-column)
 
     function applyResponsiveToolbarLayout() {
         if (!toolbarLeftEl || !toolbarRightEl || !toolbarRowActionsEl || !stickyToolbarEl) return;
@@ -581,10 +583,12 @@ export function bindEvents() {
             stickyToolbarEl.appendChild(toolbarRowActionsEl);
             stickyToolbarEl.appendChild(toolbarRightEl);
             if (searchInputEl) stickyToolbarEl.appendChild(searchInputEl);
+            if (mainDownloadBtnEl) toolbarRowActionsEl.appendChild(mainDownloadBtnEl);
         } else {
             toolbarLeftEl.appendChild(toolbarRowActionsEl);
             toolbarLeftEl.parentElement.insertBefore(toolbarRightEl, leftPanelEl || null);
             if (searchInputEl && searchRowEl) searchRowEl.appendChild(searchInputEl);
+            if (mainDownloadBtnEl) stickyToolbarEl.insertBefore(mainDownloadBtnEl, mainDownloadNextEl);
         }
     }
     applyResponsiveToolbarLayout();
