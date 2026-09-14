@@ -279,8 +279,8 @@ export function createUpdateRow(item) {
 export function createHoldingInsertRow(item) {
     const id = item.id;
     const user = getStoredUser();
-    // 사원은 자기 이름으로 자동 고정, 담당자 선택 UI 자체를 안 보여줌 (편집자는 기존처럼 선택 가능)
-    const assigneeField = user?.권한 === "사원"
+    // 일반(구 사원)은 자기 이름으로 자동 고정, 담당자 선택 UI 자체를 안 보여줌 (편집자는 기존처럼 선택 가능)
+    const assigneeField = user?.권한 === "일반"
         ? `<input type="hidden" class="hold-note" data-id="${id}" value="${user.이름}">`
         : employeeSelect("hold-note", id, "");
     return `
@@ -351,7 +351,7 @@ export function createUpdateCard(item) {
 export function createHoldingCard(item) {
     const id = item.id;
     const user = getStoredUser();
-    const assigneeField = user?.권한 === "사원"
+    const assigneeField = user?.권한 === "일반"
         ? `<input type="hidden" class="hold-note" data-id="${id}" value="${user.이름}">`
         : employeeSelect("hold-note", id, "");
     return `
