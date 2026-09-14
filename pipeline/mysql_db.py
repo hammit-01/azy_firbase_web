@@ -2177,3 +2177,25 @@ def update_warehouse_move(conn, move_id: str, updates: dict) -> bool:
     with conn.cursor() as cur:
         cur.execute(f"UPDATE warehouse_moves SET {set_clause} WHERE id=%s", (*fields.values(), move_id))
         return cur.rowcount > 0
+
+
+# ── 파이프라인 하트비트(2026-09-14) ──────────────────────────────
+# 스케줄러 잡이 켜져만 있고 실제로 안 돌아도 아무도 못 알아채던 사고(2026-08-10
+# 작업이 비활성화된 채 5주 방치) 재발 방지용 — 잡마다 성공/실패 시각을 남겨서
+# 관리자 화면에 "마지막 크롤: n분 전" 배너로 보여준다.
+def record_pipeline_status(job: str, result: str) -> None:
+    """자체적으로 커넥션을 열어 기록 — 실패해도 파이프라인 본 동작에 영향
+    주면 안 되므로 호출부에서 항상 try/except로 감싼다."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO pipeline_status (job, last_run, result) VALUES (%s, NOW(), %s) "
+                "ON DUPLICATE KEY UPDATE last_run=NOW(), result=%s",
+                (job, result, result),
+            )
+
+
+def get_pipeline_status(conn) -> list[dict]:
+    with conn.cursor() as cur:
+        cur.execute("SELECT job, last_run, result FROM pipeline_status ORDER BY job")
+        return cur.fetchall()

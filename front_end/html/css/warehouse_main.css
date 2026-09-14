@@ -3,13 +3,9 @@ html {
 }
 
 body {
-    margin: 0;
-    padding: 30px;
-    font-family: "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo",
-                 "Malgun Gothic", "맑은 고딕", sans-serif;
+    font-family: "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background: #eef1f5;
     height: 100%;
     box-sizing: border-box;
     overflow: hidden;
@@ -32,9 +28,8 @@ h1 {
 
 .container {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 10px;
-    padding: 20px 30px;
     box-sizing: border-box;
     height: 100%;
 }
@@ -42,10 +37,8 @@ h1 {
 .sticky-header {
     flex-shrink: 0;
     z-index: 100;
-    background: #eef1f5;
-    margin: -20px -30px 0;
-    padding: 20px 30px 0;
     box-sizing: border-box;
+    width: min-content;
 }
 .sticky-header.is-hidden {
     display: none;
@@ -113,6 +106,7 @@ body.force-desktop-view .toggle-desktop-view-btn {
     min-height: 0;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 transparent;
+    gap: 3px;
 }
 .table-container::-webkit-scrollbar {
     width: 10px;
@@ -242,20 +236,22 @@ th.sort-active {
 /* 3열 grid: 로고(왼쪽) / 필터·검색 / 로그인+버튼들 — 셋 다 auto라 각자 내용 폭만큼만
    차지(2026-08-06) */
 .toolbar {
-    display: grid;
-    grid-template-columns: 1fr auto;
     /* center가 아니라 start — 전체 처리 바가 나타나 .toolbar-login 높이가 늘어나도
        .toolbar-section 기준선이 밀리지 않게(2026-08-06, 바 생기면 로그인/업데이트일자가
        위로 튀던 문제) */
-    align-items: start;
+    display: flex;
     gap: 16px;
-    padding: 20px 50px;
+    padding: 20px 20px;
     background: #ffffff;
     border-radius: 14px;
     box-shadow: 0 4px 18px rgba(15, 23, 42, 0.07);
     box-sizing: border-box;
     width: 100%;
-    align-items: end;
+    height: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    flex-direction: column;
+    align-items: center;
 }
 
 /* 로고 칸(1번째)과 필터·검색 칸(2번째)을 하나의 클래스로 묶고, 위치로 구분(2026-08-06) */
@@ -264,6 +260,7 @@ th.sort-active {
     gap: 10px;
     flex-direction: row;
     align-items: center;
+    padding: 10px;
     /* .toolbar를 start로 바꾼 뒤(전체 처리 바 튐 방지) 로고/제목이 위로 붙어버려서
        이 칸만 다시 세로 중앙으로 — 이 칸 자체는 높이가 안 바뀌니 튐 문제와 무관(2026-08-06) */
 }
@@ -272,18 +269,20 @@ th.sort-active {
     display: flex;
     flex-direction: column;
     gap: 3px;
-    justify-self: end;
     flex-wrap: wrap;
+    padding: 10px;
 }
-
+/* 
 .toolbar-login {
     position: relative;
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
     gap: 6px;
     justify-self: end;
-}
+    flex-wrap: wrap;
+    width: 100%;
+    align-items: center;
+} */
 
 .toolbar-login .table_size_updated {
     font-size: 12px;
@@ -328,13 +327,11 @@ th.sort-active {
 /* 로그인 버튼 클릭 시 뜨는 팝오버 — 버튼과 같은 톤(회색 보더 + 초록 포커스)으로 통일 */
 .login-popover {
     position: absolute;
-    top: calc(100% + 10px);
-    right: 0;
     width: 230px;
     padding: 18px;
     background: #fff;
     border-radius: 16px;
-    box-shadow: 0 14px 34px rgba(15,23,42,0.16), 0 2px 8px rgba(15,23,42,0.06);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.16), 0 2px 8px rgba(15, 23, 42, 0.06);
     opacity: 0;
     transform: translateY(-6px);
     pointer-events: none;
@@ -345,7 +342,7 @@ th.sort-active {
 
 .login-popover.open {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate(220px, -20px);
     pointer-events: auto;
 }
 
@@ -454,8 +451,8 @@ th.sort-active {
 .toolbar-section {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    justify-content: space-between;
+    flex-wrap: wrap;
+    height: fit-content;
 }
 
 /* 행수·중량 / 박스수 / 선택요약 / 업데이트일자 — 한 줄씩 세로로 쌓음
@@ -502,9 +499,8 @@ th.sort-active {
 
 .table_size_updated {
     display: block;
-    font-size: 24px;
+    height: fit-content;
     font-weight: 500;
-    color: #94a3b8;
 }
 
 /* 행 체크 시 뜨는 "총 N행, M박스 선택" — 테이블의 selected-row 초록과 동일 색 */
@@ -538,7 +534,7 @@ th.sort-active {
 
 /* 예약 현황/업데이트/엑셀 다운로드 3개는 남는 폭을 나눠 가지며 줄 너비에 맞게 늘어남 */
 .toolbar-row-actions .reservations-tab-btn,
-.toolbar-row-actions .changes-tab-btn,
+.toolbar-row-actions .changes-tab-btn, .main-tab-btn,
 .toolbar-row-actions .main-download-btn {
     flex: 1;
 }
@@ -693,7 +689,7 @@ th.sort-active {
 /* ── 툴바 액션 버튼 ── */
 .rollback-btn, .clear-btn, .all-delete-btn, .changes-tab-btn, .reservations-tab-btn,
 .sales-tab-btn, .price-tab-btn, .order-sheet-tab-btn, .moves-tab-btn,
-.insert-btn, .update-btn, .holding-btn, .move-btn, .main-download-btn {
+.insert-btn, .update-btn, .holding-btn, .move-btn, .main-download-btn, .main-tab-btn {
     height: 42px;
     padding: 0 18px;
     border: none;
@@ -739,6 +735,10 @@ th.sort-active {
 
 .all-delete-btn { background: #fee2e2; color: #b91c1c; }
 .all-delete-btn:hover { background: #fca5a5; }
+
+.main-tab-btn { background: #ffe0fc; color: #a33090; }
+.main-tab-btn:hover { background: #fec7fb; }
+.main-tab-btn.active { background: #e546cb; color: #fff; }
 
 .changes-tab-btn { background: #e0e7ff; color: #3730a3; }
 .changes-tab-btn:hover { background: #c7d2fe; }
@@ -1638,6 +1638,9 @@ tr.insert-card td:first-child {
 .toolbar-center {
     display: flex;
     gap: 10px;
+    flex-direction: column;
+    flex-wrap: wrap;
+    align-items: center;
 }
 
 .note-modal-input {
@@ -1967,8 +1970,12 @@ tr.insert-card .remove-insert-btn:hover {
     }
 
     .container {
-        padding: 4px;
-        gap: 8px;
+        height: auto;
+        padding: 5px;
+        gap: 3px;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
     }
 
     .sticky-header {
@@ -2073,7 +2080,7 @@ tr.insert-card .remove-insert-btn:hover {
        flex:1 1 calc(33.333% - 6px); height:44px;로 잡히므로 나머지 둘만 맞춤 —
        셋 다 여기서 다시 잡으면 cascade 순서상 뒤에 있는 그 규칙이 이겨서
        reservations-tab-btn만 높이가 달라진다. */
-    .sales-tab-btn, .price-tab-btn, .order-sheet-tab-btn, .moves-tab-btn {
+    .sales-tab-btn, .price-tab-btn, .order-sheet-tab-btn, .moves-tab-btn, .main-tab-btn {
         flex: 1 1 calc(33.333% - 6px);
         height: 44px;
         font-size: 13px;
@@ -2658,3 +2665,15 @@ tr.insert-card .remove-insert-btn:hover {
     background: #e4f7c1;
     transition: background 0.12s ease;
 }
+/* 파이프라인 하트비트 배너(관리자 전용, 2026-09-14) — .pipeline-status-banner의
+   display:none/inline-flex 자체는 login.js::applyRoleVisibility가 관리자 여부로
+   토글하고, 여기선 폰트/색상만 담당 */
+.pipeline-status-banner {
+    display: inline-flex;
+    gap: 8px;
+    font-size: 11px;
+    color: #64748b;
+    align-items: center;
+}
+.pipeline-status-banner .job-ok { color: #16a34a; }
+.pipeline-status-banner .job-stale { color: #dc2626; font-weight: 700; }

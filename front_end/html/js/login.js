@@ -80,6 +80,10 @@ export function applyRoleVisibility(role) {
     const movesTabBtn = document.querySelector(".moves-tab-btn");
     if (movesTabBtn) movesTabBtn.style.display = movesEnabled ? "" : "none";
 
+    // 파이프라인 하트비트 배너 — 관리자 전용(2026-09-14)
+    const pipelineBanner = document.querySelector(".pipeline-status-banner");
+    if (pipelineBanner) pipelineBanner.style.display = hasAdminAccess(role) ? "" : "none";
+
     const hideEditorOnly = !hasEditorAccess(role);
     EDITOR_ONLY_SELECTORS.forEach(sel => {
         const el = document.querySelector(sel);

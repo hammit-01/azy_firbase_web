@@ -54,6 +54,11 @@ export async function fetchMovingInventory() {
     return r.data;
 }
 
+export async function fetchPipelineStatus() {
+    const r = await apiFetch("/api/pipeline_status");
+    return r.data;
+}
+
 // 로그인 실패(401)는 흐름상 정상 케이스라 throw 없이 null로 반환
 export async function apiLogin(id, pw) {
     const res = await fetch(`${API_BASE}/api/login`, {

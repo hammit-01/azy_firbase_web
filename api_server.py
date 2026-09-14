@@ -98,6 +98,15 @@ def get_employees():
     return {"data": rows}
 
 
+@app.get("/api/pipeline_status")
+def get_pipeline_status_endpoint():
+    """관리자 화면 파이프라인 하트비트 배너용(2026-09-14) — 잡별 마지막 실행 시각/결과."""
+    from pipeline.mysql_db import get_pipeline_status
+    with get_conn() as conn:
+        rows = get_pipeline_status(conn)
+    return {"data": rows}
+
+
 @app.get("/api/moving_inventory")
 def get_moving_inventory():
     with get_conn() as conn:

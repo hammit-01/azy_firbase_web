@@ -401,9 +401,11 @@ def run_pipeline():
 
         elapsed = time.time() - start
         log.info(f"완료 | azy {len(azy_normalized)}건 | {elapsed:.1f}초 소요")
+        _record_status("run_pipeline", "OK")
 
     except Exception as e:
         log.error(f"파이프라인 오류: {e}", exc_info=True)
+        _record_status("run_pipeline", "ERROR")
 
 
 def run_jns_pipeline():
@@ -463,9 +465,11 @@ def run_jns_pipeline():
         jns_log.info(
             f"완료 | EDA {len(normalized)}건/{eda_qty}박스 → MySQL {len(new_snap)}건/{fs_qty}박스{qty_note} | 변경 {changed}건 | {elapsed:.1f}초 소요"
         )
+        _record_status("run_jns_pipeline", "OK")
 
     except Exception as e:
         jns_log.error(f"JNS 파이프라인 오류: {e}", exc_info=True)
+        _record_status("run_jns_pipeline", "ERROR")
 
 
 def run_ace_pipeline():
@@ -537,9 +541,11 @@ def run_ace_pipeline():
 
         elapsed = time.time() - start
         ace_log.info(f"완료 | {len(ace_df)}건 | {elapsed:.1f}초 소요")
+        _record_status("run_ace_pipeline", "OK")
 
     except Exception as e:
         ace_log.error(f"에이스 파이프라인 오류: {e}", exc_info=True)
+        _record_status("run_ace_pipeline", "ERROR")
 
 
 def run_daily_snapshot():
@@ -579,8 +585,19 @@ def run_drive_backup():
         from pipeline.backup_drive import run_backup
         run_backup()
         log.info("백업 완료")
+        _record_status("run_drive_backup", "OK")
     except Exception as e:
         log.error(f"백업 실패: {e}", exc_info=True)
+        _record_status("run_drive_backup", "ERROR")
+
+
+def _record_status(job: str, result: str) -> None:
+    """하트비트 기록 자체가 실패해도 파이프라인엔 영향 없게 여기서만 삼킨다."""
+    try:
+        from pipeline.mysql_db import record_pipeline_status
+        record_pipeline_status(job, result)
+    except Exception as e:
+        log.warning(f"파이프라인 상태 기록 실패({job}): {e}")
 
 
 def _in_operating_hours(dt: datetime) -> bool:
