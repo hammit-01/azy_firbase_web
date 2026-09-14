@@ -1548,13 +1548,20 @@ export async function renderReservationsTab(useCache = false) {
     rows = applyReservationSort(rows, state.reservationsSortColumns);
     const searchHadFocus = document.activeElement?.id === "reservations-search";
 
-    if (isEditor) {
+    if (isEditor || isTeamLead) {
         const groups = {};
         rows.forEach(r => {
             const key = r.담당자 || "(미지정)";
             (groups[key] = groups[key] || []).push(r);
         });
         const allNames = Object.keys(groups).sort((a, b) => a.localeCompare(b, "ko"));
+
+        // 팀장은 처음 들어왔을 때만 본인 이름으로 기본 선택(2026-09-14) — 이후
+        // 직접 "전체"나 다른 담당자를 고르면 그 선택을 유지(재초기화 안 함).
+        if (isTeamLead && !state.reservationsFilterInitialized) {
+            state.reservationsFilter = user?.이름 || "";
+            state.reservationsFilterInitialized = true;
+        }
 
         // 이전에 골랐던 담당자가 이번엔 예약이 하나도 없으면(전부 취소 등) 필터 초기화
         if (state.reservationsFilter && !allNames.includes(state.reservationsFilter)) {

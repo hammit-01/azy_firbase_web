@@ -11,7 +11,8 @@ export const state = {
     crudData: null,
     useDefaultOrder: true,
     sortColumns: [],    // [{key, dir}] dir: 1=오름차, 2=내림차
-    reservationsFilter: "", // 예약 현황 탭 — 담당자 필터(편집자 전용, ""=전체)
+    reservationsFilter: "", // 예약 현황 탭 — 담당자 필터(편집자/팀장, ""=전체)
+    reservationsFilterInitialized: false, // 팀장 첫 진입시 본인 이름으로 기본 선택하기 위한 1회성 플래그(2026-09-14)
     reservationsDateFilter: "", // 예약 현황 탭 — 출고일 필터(YYYY-MM-DD, ""=전체)
     reservationsSearch: "", // 예약 현황 탭 — 통합 검색어(전략단가와 동일 방식, 2026-08-20)
     reservationsWarehouseFilter: "", // 예약 현황 탭 — 창고 필터
