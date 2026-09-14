@@ -579,6 +579,7 @@ th.sort-active {
     height: fit-content;
     font-weight: 500;
     font-size: 12px;
+    white-space: pre-line;
 }
 
 /* 행 체크 시 뜨는 "총 N행, M박스 선택" — 테이블의 selected-row 초록과 동일 색 */
@@ -1961,28 +1962,6 @@ tr.insert-card .remove-insert-btn:hover {
 .badge-stopped { background: #fef3c7; color: #92400e; }
 .badge-moving  { background: #ffedd5; color: #c2410c; }
 .badge-price   { background: #fef3c7; color: #92400e; }
-
-/* 상태 선택 select — 추가/수정 팝업(2026-09-14 디자인 개선 요청). 고른 값에 따라
-   표/모바일 카드에서 쓰는 상태 배지와 같은 색으로 select 자체를 물들여서(선택 시점
-   부터 미리 보이게), 그냥 검은 글씨 드롭다운보다 상태 구분이 한눈에 들어오게 함 —
-   data-state는 panel.js::stateSelect가 초기값을, events.js의 change 리스너가
-   값 변경마다 갱신. 팝업마다 이미 .bulk-edit-grid select 등 그 컨테이너 전용
-   background/border-radius 리셋이 있어서(특이도가 이 클래스 단독보다 높음) 이
-   배지색이 묻히지 않게 !important로 확실히 이김. */
-.state-select {
-    appearance: auto;
-    border-radius: 20px !important;
-    font-weight: 700;
-    border: 1.5px solid transparent;
-    background-color: #f1f5f9 !important;
-    color: #475569 !important;
-}
-.state-select[data-state="holding"] { background: #dbeafe !important; color: #1d4ed8 !important; border-color: #bfdbfe; }
-.state-select[data-state="freeze"]  { background: #ede9fe !important; color: #6d28d9 !important; border-color: #ddd6fe; }
-.state-select[data-state="stopped"] { background: #fef3c7 !important; color: #92400e !important; border-color: #fde68a; }
-.state-select[data-state="moving"]  { background: #ffedd5 !important; color: #c2410c !important; border-color: #fed7aa; }
-.state-select[data-state="특이품"]  { background: #fee2e2 !important; color: #b91c1c !important; border-color: #fecaca; }
-.state-select[data-state="null"]    { background: #f3f4f6 !important; color: #6b7280 !important; border-color: #e5e7eb; }
 
 /* 전략단가 카드(2026-08-19) — 탭 테마색(#b45309, 호박색)에 맞춰 좌측 컬러바 +
    히어로 숫자. 전략가가 있으면 그게 실제 판매가라 히어로, 없으면 도매가 대신 */
