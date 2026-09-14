@@ -54,8 +54,13 @@ function wireModalOverlay(overlay, { onCancel, onSubmit } = {}) {
 // 팝업 뜨자마자 바로 입력할 수 있게 첫 입력칸에 포커스(2026-09-04 사용자 요청) —
 // 입력칸이 없는(조회 전용) 팝업은 대신 첫 버튼에 포커스해서 Enter/Space로 바로
 // 확인 가능하게. 텍스트 입력칸이면 기존 값을 전체 선택해서 바로 덮어쓸 수 있게.
+// type="hidden" 입력칸(예: 일반 권한은 담당자를 고를 필요가 없어 hold-note가
+// hidden으로 나옴)은 querySelector가 그대로 집어서 focus()를 호출해도 브라우저가
+// 무시하고 포커스가 body에 남는다 — 그러면 overlay의 keydown(Esc/Enter) 리스너가
+// body에서 시작된 이벤트를 못 잡아서 Tab/Esc/Enter가 전부 먹통이 됨(2026-09-14
+// 실측 발견, 일반 권한 예약 팝업). :not([type="hidden"])로 제외.
 function autoFocusFirstField(overlay) {
-    const field = overlay.querySelector("input, select, textarea");
+    const field = overlay.querySelector('input:not([type="hidden"]), select, textarea');
     if (field) {
         field.focus();
         if (typeof field.select === "function") field.select();
