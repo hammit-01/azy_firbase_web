@@ -38,7 +38,9 @@ h1 {
     flex-shrink: 0;
     z-index: 100;
     box-sizing: border-box;
+    width: min-content;
 }
+
 .sticky-header.is-hidden {
     display: none;
 }
@@ -1986,41 +1988,37 @@ tr.insert-card .remove-insert-btn:hover {
     }
 
     /* ── 툴바 ── */
-    /* CSS Grid 2열로 전환 — "재고장+로그인버튼"을 1열(위/아래), "행/박스+업데이트일자"를
-       2열(위/아래)로 명시 배치. flex-wrap의 "강제 줄바꿈" 트릭(순서/flex-basis로 흉내)은
-       요소 4개를 2×2로 나란히 배치하는 요구에는 안 맞아서(줄바꿈은 강제해도 "몇 개가
-       같은 줄을 나눠 쓸지"까지는 못 정함) grid-column/grid-row로 직접 지정하는 쪽이
-       훨씬 명확하고 안정적이다. 총중량은 모바일에서 숨김.
-       (2026-08-11, "총중량 안 보이게, 재고장/로그인버튼/행박스/업데이트일자 양옆으로" 요청) */
+    /* sticky-header 개편(2026-09-14)으로 .toolbar 직속 자식이 달라져서(로그인/탭/
+       총건수/다운로드/업데이트시각 + 모바일에서만 JS가 되돌려 넣는 액션버튼·필터)
+       예전 flex+grid가 뒤섞인 규칙들이 전부 무효화돼 있었다(display:flex인데
+       grid-column/row를 쓰는 죽은 코드, 사라진 #searchInput2 규칙 등 — "중구난방"
+       원인). grid-template-areas로 자식마다 자리를 명시해서 순서/생략에
+       흔들리지 않게 다시 짬. */
     .toolbar {
         display: grid;
         grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+            "tabs     tabs"
+            "login    updated"
+            "size     download"
+            "pipeline pipeline"
+            "actions  actions"
+            "filters  filters";
         align-items: center;
         column-gap: 12px;
-        row-gap: 4px;
+        row-gap: 8px;
         padding: 12px;
         margin: 0 0 6px 0;
     }
 
-    /* toolbar-left/toolbar-right가 toolbar-section 안에, 로그인 버튼/날짜/액션줄이
-       toolbar-login 안에 같이 묶여있는 채로는 원하는 2열 배치를 못 만든다(묶음
-       단위로만 재배치 가능) — 래퍼들을 display:contents로 투명화해서 그 안의 leaf
-       요소들을 전부 .toolbar 하나의 grid로 꺼낸 뒤 grid-column/row로 직접 배치 */
-    .toolbar-section { display: contents; }
-    .toolbar-login   { display: contents; }
-    .toolbar-left    { display: contents; }
-    .table_size      { display: contents; }
-
-    .logo-link { grid-column: 1; grid-row: 1; }
-    .login-btn { grid-column: 1; grid-row: 2; justify-self: start; }
-
-    .table_size_top,
-    .table_size_updated {
-        grid-column: 2;
-        justify-self: start;
-    }
-    .table_size_top     { grid-row: 1; }
-    .table_size_updated { grid-row: 2; }
+    .toolbar-section { grid-area: tabs; min-width: 0; }
+    .login-btn       { grid-area: login; justify-self: start; }
+    .table_size_updated { grid-area: updated; justify-self: end; font-size: 11px; color: #64748b; }
+    .table_size      { grid-area: size; justify-self: start; }
+    .main-download-btn { grid-area: download; justify-self: end; }
+    .pipeline-status-banner { grid-area: pipeline; flex-wrap: wrap; }
+    .toolbar-row-actions { grid-area: actions; }
+    .toolbar-right   { grid-area: filters; }
 
     .table_size_weight { display: none; }
 
@@ -2035,12 +2033,10 @@ tr.insert-card .remove-insert-btn:hover {
         height: 24px;
     }
 
-    .logo {
-        width: 80px;
-    }
-
+    /* 탭 줄에 이미 "재고장" 알약 버튼이 있어서 table-container 쪽 <h1>재고장</h1>은
+       바로 그 밑에 뜨는 중복 타이틀일 뿐 — 모바일에서는 숨김(2026-09-14) */
     h1 {
-        font-size: 20px;
+        display: none;
     }
 
     .table_size_main,
@@ -2049,53 +2045,32 @@ tr.insert-card .remove-insert-btn:hover {
         font-size: 13px;
     }
 
-    /* 상품명+브랜드를 한 줄(50%씩), 검색1을 한 줄(100%), 창고+상태를 한 줄(50%씩),
-       검색2를 한 줄(100%)로 보여주려면 row 구획을 없애고(display:contents)
-       .toolbar-right 하나의 flex-wrap 흐름으로 합친 뒤 order로 재배치한다 —
-       HTML 구조(row1=상품명+브랜드+검색1 등)는 그대로 두고 CSS만으로 재배치. */
-    .toolbar-right {
+    /* 탭 버튼(재고장/예약현황/단가표/타창고매출/업데이트 등) — 개수가 화면 폭에
+       따라 달라지고 버튼 텍스트 길이도 제각각이라 줄바꿈으로 개수를 맞추려 하면
+       매번 어긋난다. 대신 한 줄 가로 스크롤로 고정 — 몇 개가 있든 항상 예측 가능한
+       한 줄. */
+    .toolbar-center {
         display: flex;
         flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 6px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 2px;
+    }
+
+    .toolbar-center button {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+
+    /* 검색/필터 한 줄(상품명·브랜드·창고·상태 + 검색) — 셀렉트는 2개씩, 검색창은
+       단독 줄로 자연스럽게 줄바꿈 */
+    .toolbar-right .toolbar-row {
+        display: flex;
         flex-wrap: wrap;
         gap: 8px;
-        grid-column: 1 / -1;
     }
-
-    /* 액션 버튼 줄(.toolbar-row-actions)은 .toolbar-right가 아니라 .toolbar-login
-       안에 있어서 이 규칙 대상이 아님 — 자기 자신의 mobile 규칙(아래)을 따로 받음 */
-    .toolbar-right .toolbar-row {
-        display: contents;
-    }
-
-    /* 탭 전환 버튼 줄(예약현황/타창고매출현황/전략단가) — display:contents로
-       flatten 안 된 채 grid의 1열에 그대로 끼어들어서, 안 줄어드는(flex-shrink:0,
-       white-space:nowrap) 버튼 3개의 원래 폭(313px)이 그 열 너비를 그대로
-       강제해 grid 전체가 화면 밖으로 넘쳤다 — 이게 "버튼/필터/입력란이 짤린다"던
-       진짜 원인(2026-08-19). toolbar-row-actions와 똑같이 전체 폭을 주고 줄바꿈. */
-    .toolbar-center {
-        grid-column: 1 / -1;
-        flex-wrap: wrap;
-        gap: 6px;
-    }
-
-    /* .reservations-tab-btn은 아래(.toolbar-row-actions용 규칙)에서 이미
-       flex:1 1 calc(33.333% - 6px); height:44px;로 잡히므로 나머지 둘만 맞춤 —
-       셋 다 여기서 다시 잡으면 cascade 순서상 뒤에 있는 그 규칙이 이겨서
-       reservations-tab-btn만 높이가 달라진다. */
-    .sales-tab-btn, .price-tab-btn, .order-sheet-tab-btn, .moves-tab-btn, .main-tab-btn {
-        flex: 1 1 calc(33.333% - 6px);
-        height: 44px;
-        font-size: 13px;
-        padding: 0 4px;
-        white-space: normal;
-    }
-
-    .show-product-name { order: 1; }
-    .show-brand     { order: 2; }
-    #searchInput    { order: 3; }
-    .show-warehouse { order: 4; }
-    .show-state     { order: 5; }
-    #searchInput2   { order: 6; }
 
     .filter-sel {
         flex: 1 1 calc(50% - 4px);
@@ -2115,33 +2090,22 @@ tr.insert-card .remove-insert-btn:hover {
         display: none;
     }
 
-    /* 액션 버튼 줄 — 데스크톱은 justify-content:flex-end에 width:540px 고정이라
-       그대로 두면 화면 밖으로 넘쳐서 버튼이 안 보임. 폭을 100%로 풀고 grid 두 열을
-       모두 차지하게(grid-column:1/-1) 해서 여기서만 wrap시킨다. */
+    /* 액션 버튼 줄(예약/되돌리기/전체취소 — 추가·수정·전체삭제는 모바일에서 숨김) */
     .toolbar-row-actions {
+        display: flex;
+        flex-wrap: wrap;
         width: 100%;
         justify-content: flex-start;
-        grid-column: 1 / -1;
+        gap: 6px;
     }
 
-    .insert-btn     { order: 1; }
-    .update-btn     { order: 2; }
-    .holding-btn    { order: 3; }
-    .rollback-btn   { order: 4; }
-    .clear-btn      { order: 5; }
-    .all-delete-btn { order: 6; }
-    .reservations-tab-btn { order: 7; }
-    .changes-tab-btn { order: 8; }
-    .main-download-btn { order: 9; }
-
     .rollback-btn, .clear-btn, .all-delete-btn, .changes-tab-btn, .reservations-tab-btn,
-    .insert-btn, .update-btn, .holding-btn, .move-btn, .main-download-btn {
-        flex: 1 1 calc(33.333% - 6px);
-        height: 44px;
+    .insert-btn, .update-btn, .holding-btn, .move-btn, .main-download-btn, .sales-tab-btn,
+    .price-tab-btn, .order-sheet-tab-btn, .moves-tab-btn, .main-tab-btn {
         font-size: 13px;
-        padding: 0 4px;
+        padding: 0 10px;
+        height: 36px;
         width: auto;
-        border-radius: 8px;
     }
 
     /* 추가/수정/전체삭제는 모바일에서 숨김 — 인라인 표 편집 UI가 좁은 화면에 안 맞아
@@ -2178,6 +2142,10 @@ tr.insert-card .remove-insert-btn:hover {
         width: 26px;
         height: 26px;
         font-size: 14px;
+    }
+
+    .sticky-header {
+        width: auto;
     }
 
     /* ── 추가/수정/홀딩 입력행이 떠 있는 동안: 카드 목록 대신 테이블을 보여주되,
