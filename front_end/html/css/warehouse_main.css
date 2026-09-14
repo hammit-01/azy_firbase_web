@@ -218,9 +218,15 @@ tbody tr:nth-child(even) td {
     background: #f6fbea;
 }
 
+/* hover/체크박스 선택 색상은 헤더 열 색상(#475569) 계열 톤으로(2026-09-14 요청) —
+   홀수행/짝수행 줄무늬가 hover·선택 상태에서도 구분되게 짝수행은 한 단계 더
+   진하게. */
 tbody tr:hover td {
-    background: #e4f7c1 !important;
+    background: #f1f5f9 !important;
     transition: background 0.12s ease;
+}
+tbody tr:nth-child(even):hover td {
+    background: #e2e8f0 !important;
 }
 
 /* 열 고정(선택/상품명) — 표를 가로로 스크롤해도 이 두 칸은 왼쪽에 그대로 붙어있게
@@ -255,11 +261,19 @@ tbody tr:hover td {
 }
 .table-wrap tbody tr:hover td:nth-child(1),
 .table-wrap tbody tr:hover td:nth-child(2) {
-    background: #e4f7c1 !important;
+    background: #f1f5f9 !important;
+}
+.table-wrap tbody tr:nth-child(even):hover td:nth-child(1),
+.table-wrap tbody tr:nth-child(even):hover td:nth-child(2) {
+    background: #e2e8f0 !important;
 }
 .table-wrap tbody tr.selected-row td:nth-child(1),
 .table-wrap tbody tr.selected-row td:nth-child(2) {
-    background: #d4f7a0 !important;
+    background: #e2e8f0 !important;
+}
+.table-wrap tbody tr.selected-row:nth-child(even) td:nth-child(1),
+.table-wrap tbody tr.selected-row:nth-child(even) td:nth-child(2) {
+    background: #cbd5e1 !important;
 }
 .table-wrap tbody tr.flash-row td:nth-child(1),
 .table-wrap tbody tr.flash-row td:nth-child(2) {
@@ -1068,8 +1082,11 @@ th.sort-active {
 .order-sheet-fill-handle { position: absolute; right: -1px; bottom: -1px; width: 7px; height: 7px; background: #2563eb; cursor: crosshair; }
 
 /* 발주장 탭 — 손잡이 클릭으로 다중 선택한 행(일괄 삭제용, 2026-09-09).
-   짝수행 줄무늬를 이겨야 해서 .reservations-table로 특이도 확보. */
-.reservations-table tr.order-sheet-row-selected td { background: #dbeafe; }
+   짝수행 줄무늬를 이겨야 해서 .reservations-table로 특이도 확보.
+   색상은 다른 테이블 체크박스 선택과 동일하게 헤더 열 색상(#475569) 계열로
+   통일(2026-09-14, 기존 파란색에서 변경). */
+.reservations-table tr.order-sheet-row-selected td { background: #e2e8f0; }
+.reservations-table tr.order-sheet-row-selected:nth-child(even) td { background: #cbd5e1; }
 
 .order-sheet-bulk-delete-btn { background: #fee2e2; color: #b91c1c; border: none; border-radius: 4px; padding: 4px 10px; cursor: pointer; }
 .order-sheet-bulk-delete-btn:hover { background: #fecaca; }
@@ -1465,11 +1482,15 @@ tbody tr {
     background:#ffd6e8 !important;
 }
 
-/* 체크한 행 = 연초록 */
+/* 체크한 행 — 헤더 열 색상(#475569) 계열 톤(2026-09-14, 기존 연초록에서 변경).
+   짝수행은 한 단계 더 진하게 해서 hover와 마찬가지로 홀짝 구분 유지. */
 .selected-row td{
-    background:#d4f7a0 !important;
-    color: #3f7d00 !important;
+    background:#e2e8f0 !important;
+    color: #1e293b !important;
     font-weight:700;
+}
+.selected-row:nth-child(even) td{
+    background:#cbd5e1 !important;
 }
 
 /* 홀딩된 행 일시 표시 */
