@@ -566,13 +566,22 @@ export function bindEvents() {
     // position:fixed(바텀시트/하단 액션바)라 실제 DOM 부모는 안 중요하지만, 데스크톱
     // 복귀 시 원래 자리로 되돌리기 위해 계속 옮겨둔다. 검색창(#searchInput)만 예외 —
     // 모바일에서는 시트 밖 sticky 헤더에 얇게 남겨두는 표준 패턴이라 별도로 옮긴다.
+    // toolbar-left/toolbar-right가 .toolbar-top(사용자가 직접 추가한 래퍼)의
+    // 자식으로 한 단계 더 들어가면서 예전 ".table-container > .toolbar-left"
+    // 셀렉터가 아예 안 맞아 이 함수 전체가 조용히 아무것도 안 하고 있었음
+    // (2026-09-14 실측 발견 — 모바일 하단 액션바/검색창/필터가 전부 사라진
+    // 것처럼 보이던 원인). 컨테이너 구조에 덜 취약하게 각 요소의 "원래 자리"를
+    // (부모 + 다음 형제) 쌍으로 직접 기억해뒀다가 그대로 복원하는 방식으로 교체.
     const responsiveMQ        = window.matchMedia("(max-width: 768px)");
-    const toolbarLeftEl       = document.querySelector(".table-container > .toolbar-left");
-    const toolbarRightEl      = document.querySelector(".table-container > .toolbar-right");
+    const toolbarTopEl        = document.querySelector(".toolbar-top");
+    const toolbarLeftEl       = toolbarTopEl?.querySelector(".toolbar-left") || null;
+    const toolbarRightEl      = toolbarTopEl?.querySelector(".toolbar-right") || null;
     const toolbarRowActionsEl = document.querySelector(".toolbar-row-actions");
+    const rowActionsHomeEl    = toolbarRowActionsEl?.parentElement || null;
+    const rowActionsNextEl    = toolbarRowActionsEl?.nextElementSibling || null;
     const searchInputEl       = document.getElementById("searchInput");
     const searchRowEl         = searchInputEl?.closest(".toolbar-row") || null; // 검색창의 원래(데스크톱) 자리
-    const leftPanelEl         = document.querySelector(".table-container > .left-panel");
+    const searchNextEl        = searchInputEl?.nextElementSibling || null;
     const stickyToolbarEl     = document.querySelector(".sticky-header .toolbar");
     const mainDownloadBtnEl   = document.querySelector(".main-download-btn"); // 모바일에서 하단 액션바로 합류(2026-09-14)
     const mainDownloadNextEl  = mainDownloadBtnEl?.nextElementSibling || null; // 데스크톱 원래 자리(순서 중요 — .toolbar가 flex-column)
@@ -585,9 +594,9 @@ export function bindEvents() {
             if (searchInputEl) stickyToolbarEl.appendChild(searchInputEl);
             if (mainDownloadBtnEl) toolbarRowActionsEl.appendChild(mainDownloadBtnEl);
         } else {
-            toolbarLeftEl.appendChild(toolbarRowActionsEl);
-            toolbarLeftEl.parentElement.insertBefore(toolbarRightEl, leftPanelEl || null);
-            if (searchInputEl && searchRowEl) searchRowEl.appendChild(searchInputEl);
+            if (searchInputEl && searchRowEl) searchRowEl.insertBefore(searchInputEl, searchNextEl);
+            if (rowActionsHomeEl) rowActionsHomeEl.insertBefore(toolbarRowActionsEl, rowActionsNextEl);
+            toolbarLeftEl.parentElement.appendChild(toolbarRightEl); // .toolbar-top엔 이 둘뿐이라 append만 해도 순서 복원됨
             if (mainDownloadBtnEl) stickyToolbarEl.insertBefore(mainDownloadBtnEl, mainDownloadNextEl);
         }
     }
