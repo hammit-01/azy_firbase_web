@@ -93,7 +93,9 @@ def get_yesterday_inventory():
 def get_employees():
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT 이름, 권한, 직급 FROM employees ORDER BY 이름")
+            # 부서(2026-09-14 추가) — 예약현황 탭에서 팀장이 같은 부서 담당자를
+            # 가려내려면 프론트가 이름→부서 매핑을 가지고 있어야 함.
+            cur.execute("SELECT 이름, 권한, 직급, 부서 FROM employees ORDER BY 이름")
             rows = cur.fetchall()
     return {"data": rows}
 

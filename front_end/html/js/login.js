@@ -38,12 +38,12 @@ export function hasAdminAccess(role) {
     return role === "관리자";
 }
 
-// 창고이동 기능 접근 권한(2026-09-04) — 관리자 전체 + id 54(개별 테스트 허용
-// 요청) 만 보이게. 이전엔 관리자+로컬 테스트 서버(8001)로만 제한했었는데,
-// 이제 포트 상관없이 이 조건으로만 판단한다.
+// 창고이동 기능 접근 권한(2026-09-04 관리자+id 54 개별 허용 → 2026-09-14
+// "배차자" 권한으로 일반화, 박성찬/제갈준 권한을 배차자로 변경하면서 개별 id
+// 예외는 필요 없어져 제거) — 관리자 + 배차자 권한만 보이게.
 export function hasWarehouseMovesAccess() {
     const u = getStoredUser();
-    return u?.권한 === "관리자" || u?.id === "54";
+    return u?.권한 === "관리자" || u?.권한 === "배차자";
 }
 
 function closePopover() {
@@ -126,11 +126,12 @@ export function applyRoleVisibility(role) {
     const toolbarRight = document.querySelector(".toolbar-right");
     if (toolbarRight) toolbarRight.style.display = mainOnly ? "" : "none";
 
-    // 예약 현황 탭 라벨 — 편집자는 전체를 담당자별로 보고, 사원은 본인 예약만 보므로
-    // 버튼 이름도 그에 맞게(2026-08-06)
+    // 예약 현황 탭 라벨 — 편집자는 전체를 담당자별로 보고, 팀장은 같은 부서 예약을
+    // 보고(2026-09-14), 그 외는 본인 예약만 보므로 버튼 이름도 그에 맞게(2026-08-06)
     const reservationsBtn = document.querySelector(".reservations-tab-btn");
     if (reservationsBtn) {
-        reservationsBtn.textContent = hasEditorAccess(role) ? "예약 현황" : "나의 예약";
+        const isTeamLead = getStoredUser()?.직급 === "팀장";
+        reservationsBtn.textContent = (hasEditorAccess(role) || isTeamLead) ? "예약 현황" : "나의 예약";
     }
 }
 

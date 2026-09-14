@@ -1493,6 +1493,9 @@ export async function renderReservationsTab(useCache = false) {
 
     const user = getStoredUser();
     const isEditor = hasEditorAccess(user?.권한);
+    // 팀장(2026-09-14) — 본인 예약만이 아니라 같은 부서 담당자들 예약도 볼 수 있게.
+    // state.employees(이름/부서)로 같은 부서 이름 집합을 구해서 필터.
+    const isTeamLead = user?.직급 === "팀장";
 
     let rows;
     if (useCache && _reservationsRowsCache) {
@@ -1516,7 +1519,12 @@ export async function renderReservationsTab(useCache = false) {
     }
 
     if (!isEditor) {
-        rows = rows.filter(r => r.담당자 === user?.이름);
+        if (isTeamLead && user?.부서) {
+            const teamNames = new Set(state.employees.filter(e => e["부서"] === user.부서).map(e => e["이름"]));
+            rows = rows.filter(r => teamNames.has(r.담당자));
+        } else {
+            rows = rows.filter(r => r.담당자 === user?.이름);
+        }
     }
 
     // 출고일 필터 — 편집자/사원 공통(2026-08-13).
