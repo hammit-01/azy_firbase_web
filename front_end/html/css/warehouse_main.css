@@ -2499,27 +2499,31 @@ tr.insert-card .remove-insert-btn:hover {
 }
 
 /* ── 토스트 알림 ── */
+/* 화면 정중앙 고정 — 모바일/데스크톱 공통(2026-09-14 요청). max-width로
+   좁은 화면에서도 안 잘리고 줄바꿈되게. */
 .toast {
     position: fixed;
-    top: 24px;
-    right: 24px;
+    top: 50%;
+    left: 50%;
     background: #1e293b;
     color: #fff;
-    padding: 12px 20px;
+    padding: 14px 22px;
     border-radius: 8px;
     font-size: 14px;
     font-weight: 500;
     letter-spacing: 0.02em;
     z-index: 9999;
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translate(-50%, -50%) scale(0.95);
     transition: opacity 0.18s ease, transform 0.18s ease;
     pointer-events: none;
-    white-space: nowrap;
+    max-width: min(90vw, 420px);
+    text-align: center;
+    white-space: pre-line;
 }
 .toast.show {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate(-50%, -50%) scale(1);
 }
 .toast-error {
     background: #dc2626;
