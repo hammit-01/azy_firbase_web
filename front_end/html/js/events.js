@@ -1362,6 +1362,19 @@ export function bindEvents() {
         btn.click();
     });
 
+    // 되돌리기 단축키 — Ctrl+Z, 모든 권한 공통(2026-09-14 요청). 입력칸(input/
+    // textarea/select/contentEditable) 안에서는 브라우저 기본 되돌리기(텍스트
+    // 입력 취소)를 그대로 두고 가로채지 않는다.
+    document.addEventListener("keydown", (e) => {
+        if (!e.ctrlKey || e.key.toLowerCase() !== "z") return;
+        const tag = e.target.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.target.isContentEditable) return;
+        const btn = document.querySelector(".rollback-btn");
+        if (!btn || btn.offsetParent === null) return;
+        e.preventDefault();
+        btn.click();
+    });
+
     // 발주장 탭 — Ctrl+C/Ctrl+V를 네이티브 copy/paste 이벤트로 가로채서 진짜
     // 시스템 클립보드와 주고받는다(2026-09-09) — 실제 엑셀과 복사/붙여넣기가
     // 통하게 하려는 목적. 편집 중(입력창 있음)이면 입력창의 기본 복사/붙여넣기
