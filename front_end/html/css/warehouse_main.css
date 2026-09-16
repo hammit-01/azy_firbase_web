@@ -766,7 +766,7 @@ th.sort-active {
 .rl-field-strong { font-weight: 700; color: #1e293b; }
 /* ── 툴바 액션 버튼 ── */
 .rollback-btn, .clear-btn, .all-delete-btn, .changes-tab-btn, .reservations-tab-btn,
-.sales-tab-btn, .price-tab-btn, .order-sheet-tab-btn, .moves-tab-btn,
+.sales-tab-btn, .price-tab-btn, .order-sheet-tab-btn, .moves-tab-btn, .crawling-tab-btn,
 .insert-btn, .update-btn, .holding-btn, .move-btn, .main-download-btn, .main-tab-btn {
     height: 42px;
     padding: 0 18px;
@@ -841,6 +841,10 @@ th.sort-active {
 .moves-tab-btn { background: #ffedd5; color: #c2410c; }
 .moves-tab-btn:hover { background: #fed7aa; }
 .moves-tab-btn.active { background: #c2410c; color: #fff; }
+
+.crawling-tab-btn { background: #e2e8f0; color: #334155; }
+.crawling-tab-btn:hover { background: #cbd5e1; }
+.crawling-tab-btn.active { background: #475569; color: #fff; }
 
 .main-download-btn { background: #dcfce7; color: #15803d; }
 .main-download-btn:hover { background: #bbf7d0; }
@@ -2019,6 +2023,10 @@ tr.insert-card .remove-insert-btn:hover {
     margin-bottom: 8px;
 }
 
+.crawling-container {
+    width: stretch;
+}
+
 /* 재고 수량 + 유통기한 — 창고 직원이 제일 먼저 확인하는 값이라 카드에서 가장 크게 */
 .mc-hero {
     display: flex;
@@ -2326,7 +2334,7 @@ tr.insert-card .remove-insert-btn:hover {
 
     .rollback-btn, .clear-btn, .all-delete-btn, .changes-tab-btn, .reservations-tab-btn,
     .insert-btn, .update-btn, .holding-btn, .move-btn, .main-download-btn, .sales-tab-btn,
-    .price-tab-btn, .order-sheet-tab-btn, .moves-tab-btn, .main-tab-btn {
+    .price-tab-btn, .order-sheet-tab-btn, .moves-tab-btn, .crawling-tab-btn, .main-tab-btn {
         font-size: 13px;
         padding: 0 10px;
         height: 36px;
@@ -2893,6 +2901,20 @@ tr.insert-card .remove-insert-btn:hover {
     align-items: center;
     margin-bottom: 8px;
 }
+#crawling-log-refresh {
+    height: 38px;
+    padding: 0 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s ease, border-color 0.12s ease;
+}
+#crawling-log-refresh:hover { background: #e2e8f0; border-color: #cbd5e1; }
+#crawling-log-refresh:active { background: #cbd5e1; }
 .crawling-log-view {
     background: #0f172a;
     color: #e2e8f0;
