@@ -2006,6 +2006,21 @@ tr.insert-card .remove-insert-btn:hover {
     margin-bottom: 8px;
 }
 
+.crawling-status-table-first {
+    width: fit-content;
+}
+
+
+.crawling-status-table-second {
+    width: stretch;
+}
+
+.crawling-status{
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
 .mc-name {
     flex: 1;
     font-size: 17px;

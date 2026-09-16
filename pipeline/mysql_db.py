@@ -2233,3 +2233,20 @@ def get_crawl_source_totals(conn) -> list[dict]:
             "ORDER BY s.창고"
         )
         return cur.fetchall()
+
+
+# 유령 데이터(2026-09-16, 크롤링 탭) — 사용자가 "재고 추가" 팝업으로 수기 입력한
+# 행은 크롤이 아니라 사람이 만든 거라 수집일이 비어있음. 크롤이 매 사이클
+# 지나가면서 채워주는 게 아니라 계속 빈 채로 남고, 실제 창고 사이트에는 없는
+# 재고라 원본 대비 표에서도 안 잡힌다(관리자가 이런 행이 쌓이는 걸 알아채기 위함).
+def get_ghost_inventory_rows(conn) -> list[dict]:
+    rows = []
+    with conn.cursor() as cur:
+        for table in ("azy_inventory", "inventory"):
+            cur.execute(
+                f"SELECT '{table}' AS 출처, 상품명, 브랜드, 등급, ESTNO, BL, 창고, 재고, "
+                f"유통기한, updated_at FROM {table} WHERE 수집일 IS NULL OR 수집일='' "
+                f"ORDER BY updated_at DESC"
+            )
+            rows += cur.fetchall()
+    return rows

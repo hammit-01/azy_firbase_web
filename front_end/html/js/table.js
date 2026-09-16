@@ -3,7 +3,7 @@ import { dom } from "./dom.js";
 import { employeeSelect, stateSelect, dispatcherSelect, moveWarehouseSelect, employeeAutocomplete } from "./panel.js";
 import { getStoredUser, hasEditorAccess, hasPriceEditAccess, hasWarehouseMovesAccess } from "./login.js";
 import { getAllReservations, getAllOutbound, getAllPrices, getOrderSheet, getYesterdayReservationQty, getAllWarehouseMoves } from "./firestoreService.js";
-import { fetchPipelineStatus, fetchCrawlTotals, fetchPipelineLogs } from "./api.js";
+import { fetchPipelineStatus, fetchCrawlTotals, fetchPipelineLogs, fetchGhostInventory } from "./api.js";
 
 // 영문 브랜드를 한글 표기로 쳐도 검색되게 하는 별칭 테이블(2026-08-14).
 // key: 한글 표기, value: 실제 데이터의 영문 브랜드값 — 데이터에 실제로 존재하는
@@ -2076,9 +2076,9 @@ export async function renderCrawlingTab() {
     const listEl = document.getElementById("crawling-list");
     if (!container || !listEl || container.style.display === "none") return;
 
-    let statusRows = [], totalsRows = [];
+    let statusRows = [], totalsRows = [], ghostRows = [];
     try {
-        [statusRows, totalsRows] = await Promise.all([fetchPipelineStatus(), fetchCrawlTotals()]);
+        [statusRows, totalsRows, ghostRows] = await Promise.all([fetchPipelineStatus(), fetchCrawlTotals(), fetchGhostInventory()]);
     } catch (e) {
         listEl.innerHTML = `<p class="reservations-empty">크롤링 정보를 불러오지 못했습니다.</p>`;
         return;
@@ -2121,11 +2121,44 @@ export async function renderCrawlingTab() {
         </div>
     `;
 
+    // 유령 데이터(2026-09-16) — 수기로 추가돼 수집일이 비어있는(크롤이 손댄 적
+    // 없는) 재고 행. 크롤 사이클을 안 타서 위 "원본 vs 시스템" 표에도 안 잡히니
+    // 별도로 모아서 보여준다.
+    const ghostHtml = `
+        <div class="crawling-totals-wrap">
+        <table class="reservations-table crawling-ghost-table">
+            <thead><tr><th>테이블</th><th>창고</th><th>상품명</th><th>브랜드</th><th>등급</th><th>ESTNO</th><th>BL</th><th>재고</th><th>유통기한</th><th>최종수정</th></tr></thead>
+            <tbody>
+                ${ghostRows.length ? ghostRows.map(r => `<tr>
+                    <td>${r.출처}</td>
+                    <td>${whTag(r.창고)}</td>
+                    <td>${r.상품명}</td>
+                    <td>${r.브랜드}</td>
+                    <td>${r.등급}</td>
+                    <td>${r.ESTNO}</td>
+                    <td>${r.BL}</td>
+                    <td>${r.재고}</td>
+                    <td>${r.유통기한}</td>
+                    <td>${_fmtDateTime(r.updated_at)}</td>
+                </tr>`).join("") : `<tr><td colspan="10">유령 데이터가 없습니다.</td></tr>`}
+            </tbody>
+        </table>
+        </div>
+    `;
+
     listEl.innerHTML = `
+        <div class="crawling-status">
+        <div class="crawling-status-table-first">
         <h3 class="crawling-section-title">파이프라인 상태</h3>
         ${statusHtml}
+        </div>
+        <div class="crawling-status-table-second">
         <h3 class="crawling-section-title">창고별 원본 vs 시스템 재고</h3>
         ${totalsHtml}
+        </div>
+        </div>
+        <h3 class="crawling-section-title">유령 데이터(수기 입력, 수집일 없음) — ${ghostRows.length}건</h3>
+        ${ghostHtml}
         <h3 class="crawling-section-title">로그</h3>
         <div class="crawling-log-controls">
             <select id="crawling-log-job" class="reservations-filter-select">

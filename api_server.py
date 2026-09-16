@@ -120,6 +120,16 @@ def get_crawl_totals_endpoint():
     return {"data": rows}
 
 
+@app.get("/api/ghost_inventory")
+def get_ghost_inventory_endpoint():
+    """관리자 전용 "크롤링" 탭 — 수집일이 비어있는(=사용자가 수기로 추가한)
+    유령 재고 행 조회."""
+    from pipeline.mysql_db import get_ghost_inventory_rows
+    with get_conn() as conn:
+        rows = get_ghost_inventory_rows(conn)
+    return {"data": rows}
+
+
 _PIPELINE_LOG_FILES = {
     "run_pipeline": "pipeline.log",
     "run_jns_pipeline": "pipeline_jns.log",

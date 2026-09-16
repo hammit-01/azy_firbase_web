@@ -70,6 +70,11 @@ export async function fetchPipelineLogs(job, lines = 200) {
     return r.data;
 }
 
+export async function fetchGhostInventory() {
+    const r = await apiFetch("/api/ghost_inventory");
+    return r.data;
+}
+
 // 로그인 실패(401)는 흐름상 정상 케이스라 throw 없이 null로 반환
 export async function apiLogin(id, pw) {
     const res = await fetch(`${API_BASE}/api/login`, {
