@@ -19,22 +19,29 @@ USER_AGENT = (
     "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 )
 
+def _has_login(v):
+    # DB의 미사용 계정 슬롯은 NULL이 아니라 빈 문자열('')로 들어있는 경우가 많아서
+    # pd.notna()만으로는 안 걸러짐 — 계정을 줄인 창고(예: 대청, 2026-09-16)에서
+    # 빈 아이디로 매 사이클 로그인을 시도해 타임아웃 오류만 쌓이던 문제 발견.
+    return pd.notna(v) and str(v).strip() != ""
+
+
 def get_users(row):
     users = []
 
-    if pd.notna(row["아이디"]):
+    if _has_login(row["아이디"]):
         users.append(("일반", row["아이디"], row["비밀번호"], row["scustcd"], "00"))
 
-    if pd.notna(row["통관분_아이디"]):
+    if _has_login(row["통관분_아이디"]):
         users.append(("통관분", row["통관분_아이디"], row["통관분_비밀번호"], row["scustcd"], "00"))
 
-    if pd.notna(row["웹출고_아이디"]):
+    if _has_login(row["웹출고_아이디"]):
         users.append(("웹출고", row["웹출고_아이디"], row["웹출고_비밀번호"], row["scustcd"], "00"))
 
-    if pd.notna(row["웹출고(통관분)_아이디"]):
+    if _has_login(row["웹출고(통관분)_아이디"]):
         users.append(("웹출고(통관분)", row["웹출고(통관분)_아이디"], row["웹출고(통관분)_비밀번호"], row["scustcd"], row["scmdept"]))
 
-    return users        
+    return users
 
 
 SPECIAL_SITES = {
