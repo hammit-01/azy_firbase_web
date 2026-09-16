@@ -2017,8 +2017,17 @@ tr.insert-card .remove-insert-btn:hover {
 
 .crawling-status{
     display: flex;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 10px;
+}
+.crawling-status-table-first,
+.crawling-status-table-second {
+    display: flex;
+    flex-direction: column;
+}
+.crawling-status-table-first .crawling-totals-wrap,
+.crawling-status-table-second .crawling-totals-wrap {
+    flex: 1;
 }
 
 .mc-name {

@@ -2086,6 +2086,7 @@ export async function renderCrawlingTab() {
 
     const byJob = Object.fromEntries(statusRows.map(r => [r.job, r]));
     const statusHtml = `
+        <div class="crawling-totals-wrap">
         <table class="reservations-table crawling-status-table">
             <thead><tr><th>잡</th><th>마지막 실행</th><th>결과</th></tr></thead>
             <tbody>
@@ -2099,6 +2100,7 @@ export async function renderCrawlingTab() {
                 }).join("")}
             </tbody>
         </table>
+        </div>
     `;
 
     const totalsHtml = `
@@ -2156,9 +2158,11 @@ export async function renderCrawlingTab() {
         <h3 class="crawling-section-title">창고별 원본 vs 시스템 재고</h3>
         ${totalsHtml}
         </div>
-        </div>
+        <div class="crawling-status-table-second">
         <h3 class="crawling-section-title">유령 데이터(수기 입력, 수집일 없음) — ${ghostRows.length}건</h3>
         ${ghostHtml}
+        </div>
+        </div>
         <h3 class="crawling-section-title">로그</h3>
         <div class="crawling-log-controls">
             <select id="crawling-log-job" class="reservations-filter-select">
