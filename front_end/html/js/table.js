@@ -2102,6 +2102,7 @@ export async function renderCrawlingTab() {
     `;
 
     const totalsHtml = `
+        <div class="crawling-totals-wrap">
         <table class="reservations-table crawling-totals-table">
             <thead><tr><th>창고</th><th>원본 사이트 총 재고</th><th>시스템 총 재고</th><th>차이</th><th>마지막 크롤</th></tr></thead>
             <tbody>
@@ -2117,6 +2118,7 @@ export async function renderCrawlingTab() {
                 }).join("") : `<tr><td colspan="5">아직 기록된 크롤 데이터가 없습니다.</td></tr>`}
             </tbody>
         </table>
+        </div>
     `;
 
     listEl.innerHTML = `
