@@ -1760,8 +1760,8 @@ function moveRowHtml(r) {
             ${editableCell("수정사항", r.수정사항)}
             <td>${safeValue(r.평중)}</td>
             <td>${safeValue(총중량)}</td>
-            <td><input type="checkbox" class="move-processed-check" data-id="${r.id}" ${r.처리 ? "checked" : ""}></td>
-            <td><input type="checkbox" class="move-cancel-check" data-id="${r.id}" ${r.취소 ? "checked" : ""}></td>
+            <td>${r.취소 ? "" : `<input type="checkbox" class="move-processed-check" data-id="${r.id}" ${r.처리 ? "checked" : ""}>`}</td>
+            <td>${r.처리 ? "" : `<input type="checkbox" class="move-cancel-check" data-id="${r.id}" ${r.취소 ? "checked" : ""}>`}</td>
         </tr>
     `;
 }
