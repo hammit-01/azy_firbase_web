@@ -84,6 +84,10 @@ export function applyRoleVisibility(role) {
     const pipelineBanner = document.querySelector(".pipeline-status-banner");
     if (pipelineBanner) pipelineBanner.style.display = hasAdminAccess(role) ? "" : "none";
 
+    // 크롤링 탭 — 관리자 전용(2026-09-16)
+    const crawlingTabBtn = document.querySelector(".crawling-tab-btn");
+    if (crawlingTabBtn) crawlingTabBtn.style.display = hasAdminAccess(role) ? "" : "none";
+
     const hideEditorOnly = !hasEditorAccess(role);
     EDITOR_ONLY_SELECTORS.forEach(sel => {
         const el = document.querySelector(sel);

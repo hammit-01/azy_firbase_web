@@ -2199,3 +2199,31 @@ def get_pipeline_status(conn) -> list[dict]:
     with conn.cursor() as cur:
         cur.execute("SELECT job, last_run, result FROM pipeline_status ORDER BY job")
         return cur.fetchall()
+
+
+# ── 크롤링 원본 대비 시스템 재고 비교(2026-09-16, 관리자 전용 "크롤링" 탭) ──
+# _upload_azy가 매 사이클 넘겨받는 azy_df(창고별 원본 크롤 결과)의 창고별
+# 재고수량 합을 여기 남겨두고, azy_inventory의 현재 합계와 나란히 보여주면
+# EDA/중복합산 단계에서 수량이 새는 문제(예: 우부채/부채살 분리 건)를 화면에서
+# 바로 알아챌 수 있다.
+def record_crawl_source_totals(conn, totals: dict) -> None:
+    with conn.cursor() as cur:
+        for wh, qty in totals.items():
+            cur.execute(
+                "INSERT INTO crawl_source_totals (창고, qty, updated_at) VALUES (%s, %s, NOW()) "
+                "ON DUPLICATE KEY UPDATE qty=%s, updated_at=NOW()",
+                (wh, qty, qty),
+            )
+
+
+def get_crawl_source_totals(conn) -> list[dict]:
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT s.창고 AS 창고, s.qty AS 원본재고, s.updated_at AS updated_at, "
+            "COALESCE(i.qty, 0) AS 시스템재고 "
+            "FROM crawl_source_totals s "
+            "LEFT JOIN (SELECT 창고, SUM(재고) AS qty FROM azy_inventory GROUP BY 창고) i "
+            "ON i.창고 = s.창고 "
+            "ORDER BY s.창고"
+        )
+        return cur.fetchall()

@@ -109,6 +109,40 @@ def get_pipeline_status_endpoint():
     return {"data": rows}
 
 
+@app.get("/api/crawl_totals")
+def get_crawl_totals_endpoint():
+    """관리자 전용 "크롤링" 탭(2026-09-16) — 창고별 원본 사이트 크롤 재고 합계 vs
+    현재 azy_inventory 합계를 나란히 비교. 우부채/부채살처럼 EDA 단계에서
+    수량이 새는 문제를 화면에서 바로 알아채기 위함."""
+    from pipeline.mysql_db import get_crawl_source_totals
+    with get_conn() as conn:
+        rows = get_crawl_source_totals(conn)
+    return {"data": rows}
+
+
+_PIPELINE_LOG_FILES = {
+    "run_pipeline": "pipeline.log",
+    "run_jns_pipeline": "pipeline_jns.log",
+    "run_ace_pipeline": "pipeline_ace.log",
+    "run_drive_backup": "pipeline.log",
+}
+
+@app.get("/api/pipeline_logs")
+def get_pipeline_logs_endpoint(job: str, lines: int = 200):
+    """관리자 전용 "크롤링" 탭 — 잡별 최근 로그 tail. job은 화이트리스트
+    (_PIPELINE_LOG_FILES) 값만 허용해 임의 경로 접근을 막는다."""
+    filename = _PIPELINE_LOG_FILES.get(job)
+    if not filename:
+        raise HTTPException(status_code=400, detail="알 수 없는 job")
+    path = os.path.join(os.path.dirname(__file__), "pipeline", "logs", filename)
+    if not os.path.exists(path):
+        return {"data": []}
+    lines = max(1, min(lines, 1000))
+    with open(path, encoding="utf-8", errors="replace") as f:
+        tail = f.readlines()[-lines:]
+    return {"data": [line.rstrip("\n") for line in tail]}
+
+
 @app.get("/api/moving_inventory")
 def get_moving_inventory():
     with get_conn() as conn:

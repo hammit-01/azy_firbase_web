@@ -3,6 +3,7 @@ import { dom } from "./dom.js";
 import { employeeSelect, stateSelect, dispatcherSelect, moveWarehouseSelect, employeeAutocomplete } from "./panel.js";
 import { getStoredUser, hasEditorAccess, hasPriceEditAccess, hasWarehouseMovesAccess } from "./login.js";
 import { getAllReservations, getAllOutbound, getAllPrices, getOrderSheet, getYesterdayReservationQty, getAllWarehouseMoves } from "./firestoreService.js";
+import { fetchPipelineStatus, fetchCrawlTotals, fetchPipelineLogs } from "./api.js";
 
 // 영문 브랜드를 한글 표기로 쳐도 검색되게 하는 별칭 테이블(2026-08-14).
 // key: 한글 표기, value: 실제 데이터의 영문 브랜드값 — 데이터에 실제로 존재하는
@@ -2038,6 +2039,105 @@ export async function renderPriceTab() {
             input.setSelectionRange(input.value.length, input.value.length);
         }
     }
+}
+
+// =========================
+// 크롤링 탭(관리자 전용, 2026-09-16) — 창고별 원본 크롤 재고 vs 시스템 재고 비교
+// + 파이프라인 잡 상태/로그 조회. 우부채/부채살처럼 EDA 단계에서 수량이 새는
+// 문제를 다음에도 화면에서 바로 알아채기 위해 만듦(pipeline_status 배너와 별개로,
+// 그 배너보다 더 상세한 관리 화면).
+const CRAWLING_JOB_LABELS = {
+    run_pipeline: "재고(나머지 창고)", run_jns_pipeline: "JNS(제니스)", run_ace_pipeline: "에이스", run_drive_backup: "백업",
+};
+
+function _fmtDateTime(v) {
+    if (!v) return "-";
+    const d = new Date(v);
+    if (isNaN(d)) return String(v);
+    const pad = n => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+async function renderCrawlingLogs(job) {
+    const logEl = document.getElementById("crawling-log-view");
+    if (!logEl) return;
+    logEl.textContent = "불러오는 중...";
+    try {
+        const lines = await fetchPipelineLogs(job, 200);
+        logEl.textContent = lines.length ? lines.join("\n") : "로그가 없습니다.";
+        logEl.scrollTop = logEl.scrollHeight;
+    } catch (e) {
+        logEl.textContent = "로그를 불러오지 못했습니다.";
+    }
+}
+
+export async function renderCrawlingTab() {
+    const container = document.querySelector(".crawling-container");
+    const listEl = document.getElementById("crawling-list");
+    if (!container || !listEl || container.style.display === "none") return;
+
+    let statusRows = [], totalsRows = [];
+    try {
+        [statusRows, totalsRows] = await Promise.all([fetchPipelineStatus(), fetchCrawlTotals()]);
+    } catch (e) {
+        listEl.innerHTML = `<p class="reservations-empty">크롤링 정보를 불러오지 못했습니다.</p>`;
+        return;
+    }
+
+    const byJob = Object.fromEntries(statusRows.map(r => [r.job, r]));
+    const statusHtml = `
+        <table class="reservations-table crawling-status-table">
+            <thead><tr><th>잡</th><th>마지막 실행</th><th>결과</th></tr></thead>
+            <tbody>
+                ${Object.keys(CRAWLING_JOB_LABELS).map(job => {
+                    const row = byJob[job];
+                    return `<tr>
+                        <td>${CRAWLING_JOB_LABELS[job]}</td>
+                        <td>${row ? _fmtDateTime(row.last_run) : "기록없음"}</td>
+                        <td class="${row?.result === "OK" ? "crawling-ok" : "crawling-bad"}">${row?.result || "-"}</td>
+                    </tr>`;
+                }).join("")}
+            </tbody>
+        </table>
+    `;
+
+    const totalsHtml = `
+        <table class="reservations-table crawling-totals-table">
+            <thead><tr><th>창고</th><th>원본 사이트 총 재고</th><th>시스템 총 재고</th><th>차이</th><th>마지막 크롤</th></tr></thead>
+            <tbody>
+                ${totalsRows.length ? totalsRows.map(r => {
+                    const diff = r.원본재고 - r.시스템재고;
+                    return `<tr>
+                        <td>${whTag(r.창고)}</td>
+                        <td>${r.원본재고}</td>
+                        <td>${r.시스템재고}</td>
+                        <td class="${diff !== 0 ? "qty-dropped" : ""}">${diff}</td>
+                        <td>${_fmtDateTime(r.updated_at)}</td>
+                    </tr>`;
+                }).join("") : `<tr><td colspan="5">아직 기록된 크롤 데이터가 없습니다.</td></tr>`}
+            </tbody>
+        </table>
+    `;
+
+    listEl.innerHTML = `
+        <h3 class="crawling-section-title">파이프라인 상태</h3>
+        ${statusHtml}
+        <h3 class="crawling-section-title">창고별 원본 vs 시스템 재고</h3>
+        ${totalsHtml}
+        <h3 class="crawling-section-title">로그</h3>
+        <div class="crawling-log-controls">
+            <select id="crawling-log-job" class="reservations-filter-select">
+                ${Object.keys(CRAWLING_JOB_LABELS).map(job => `<option value="${job}">${CRAWLING_JOB_LABELS[job]}</option>`).join("")}
+            </select>
+            <button type="button" id="crawling-log-refresh">새로고침</button>
+        </div>
+        <pre id="crawling-log-view" class="crawling-log-view"></pre>
+    `;
+
+    const jobSelect = document.getElementById("crawling-log-job");
+    renderCrawlingLogs(jobSelect.value);
+    jobSelect.addEventListener("change", () => renderCrawlingLogs(jobSelect.value));
+    document.getElementById("crawling-log-refresh")?.addEventListener("click", () => renderCrawlingLogs(jobSelect.value));
 }
 
 // =========================

@@ -52,6 +52,7 @@
                     <button class="price-tab-btn">단가표</button>
                     <button class="sales-tab-btn">타창고매출</button>
                     <button class="moves-tab-btn" style="display:none">창고이동</button>
+                    <button class="crawling-tab-btn" style="display:none">크롤링</button>
                     <button class="changes-tab-btn">업데이트</button>
                 </div>
             </div>
@@ -105,7 +106,6 @@
                             <option value="특이품">특이품</option>
                             <option value="null">null(정보누락)</option>
                         </select>
-                        <input id="searchInput" class="search-input" placeholder="검색(띄어쓰기/쉼표로 여러 단어)">
                         <div class="toolbar-row toolbar-row-actions">
                             <!-- CRUD 버튼 -->
                             <button class="insert-btn">추가</button>
@@ -118,6 +118,7 @@
                             <button class="clear-btn" data-action="clear-selection">전체 취소</button>
                             <button class="all-delete-btn">전체 삭제</button>
                         </div>
+                        <input id="searchInput" class="search-input" placeholder="검색(띄어쓰기/쉼표로 여러 단어)">
                     </div>
                 </div>
             </div>
@@ -194,6 +195,12 @@
              버튼으로 등록한 기록(warehouse_moves) 조회 전용. ── -->
         <div class="moves-container" style="display:none">
             <div id="moves-list"></div>
+        </div>
+
+        <!-- ── 크롤링 탭(관리자 전용, 2026-09-16) — 창고별 원본 크롤 재고 vs 시스템
+             재고 비교 + 파이프라인 잡 상태/로그 조회. ── -->
+        <div class="crawling-container" style="display:none">
+            <div id="crawling-list"></div>
         </div>
 
         <!-- ── 전략단가 탭(2026-08-18 price.html에서 이관, 2026-08-19 mysql price

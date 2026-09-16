@@ -59,6 +59,17 @@ export async function fetchPipelineStatus() {
     return r.data;
 }
 
+// 크롤링 탭(관리자 전용, 2026-09-16) — 창고별 원본 크롤 재고 vs 시스템 재고 비교.
+export async function fetchCrawlTotals() {
+    const r = await apiFetch("/api/crawl_totals");
+    return r.data;
+}
+
+export async function fetchPipelineLogs(job, lines = 200) {
+    const r = await apiFetch(`/api/pipeline_logs?job=${encodeURIComponent(job)}&lines=${lines}`);
+    return r.data;
+}
+
 // 로그인 실패(401)는 흐름상 정상 케이스라 throw 없이 null로 반환
 export async function apiLogin(id, pw) {
     const res = await fetch(`${API_BASE}/api/login`, {

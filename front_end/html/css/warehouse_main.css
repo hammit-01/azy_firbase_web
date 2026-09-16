@@ -2876,3 +2876,32 @@ tr.insert-card .remove-insert-btn:hover {
 }
 .pipeline-status-banner .job-ok { color: #16a34a; }
 .pipeline-status-banner .job-stale { color: #dc2626; font-weight: 700; }
+
+/* 크롤링 탭(관리자 전용, 2026-09-16) */
+.crawling-section-title {
+    margin: 20px 0 8px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #334155;
+}
+.crawling-section-title:first-child { margin-top: 0; }
+.crawling-ok { color: #16a34a; font-weight: 700; }
+.crawling-bad { color: #dc2626; font-weight: 700; }
+.crawling-log-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.crawling-log-view {
+    background: #0f172a;
+    color: #e2e8f0;
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 12px;
+    border-radius: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+}

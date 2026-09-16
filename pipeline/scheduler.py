@@ -123,6 +123,20 @@ def _upload_azy(azy_df, warehouse_scope=None):
     if azy_df is None or azy_df.empty:
         return
 
+    # 크롤링 탭(관리자 전용, 2026-09-16) — 원본 사이트 총 재고수량 기록.
+    # 실패해도 본 업로드에는 영향 없게 별도로 감싼다.
+    try:
+        import pandas as _pd
+        from pipeline.mysql_db import record_crawl_source_totals as _record_crawl_totals
+        raw_qty = _pd.to_numeric(
+            azy_df["재고수량"].astype(str).str.replace(",", "", regex=False), errors="coerce"
+        ).fillna(0)
+        totals = raw_qty.groupby(azy_df["창고"]).sum().astype(int).to_dict()
+        with get_conn() as _conn:
+            _record_crawl_totals(_conn, totals)
+    except Exception:
+        pass
+
     today = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d")
 
     def _s(v):
