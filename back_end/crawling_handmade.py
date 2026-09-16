@@ -334,7 +334,28 @@ def _ace_do_fetch(driver, depot_key):
     driver.find_element(By.ID, _ACE_DEPOT_ROW[depot_key]).click()
     time.sleep(2)
     driver.find_element(By.ID, "btnInventorySearch").click()
-    time.sleep(5)
+    # 고정 time.sleep(5)만으로는 그리드 로딩이 그보다 늦게 끝날 때(네트워크 지연 등)
+    # 아직 안 채워진 상태를 그대로 파싱해서 실제보다 적거나 빈 결과를 반환하는 문제가
+    # 반복됨(2026-09-16, 에이스 재고가 사이클마다 크게 오르내리는 것으로 발견 —
+    # 기존 재고가 있던 창고인데 이번 크롤에 안 잡히면 "크롤에서 사라짐"으로 처리돼
+    # 홀딩 없는 행은 삭제, 홀딩 있는 행은 0으로 zeroing됨). 행 수가 더 늘지 않을
+    # 때까지(최대 15초, 1초 간격 2회 연속 동일하면 로딩 끝난 것으로 판단) 기다린다 —
+    # 너무 빨리 끝나는 정상 케이스에서 불필요하게 오래 기다리지 않게.
+    last_count, stable = -1, 0
+    deadline = time.time() + 15
+    while time.time() < deadline:
+        try:
+            count = len(driver.find_elements(By.CSS_SELECTOR, "#InventoryList_DXMainTable tr"))
+        except Exception:
+            count = 0
+        if count == last_count:
+            stable += 1
+            if stable >= 2:
+                break
+        else:
+            stable = 0
+        last_count = count
+        time.sleep(1)
     soup = BeautifulSoup(driver.page_source, "html.parser")
     inv_table = soup.find("table", id="InventoryList_DXMainTable")
     if not inv_table:
