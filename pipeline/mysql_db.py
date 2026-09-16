@@ -1813,8 +1813,11 @@ def _move_client_label(이동창고: str | None, 배차자: str | None, 매출�
 
 def create_warehouse_move(conn, row: dict) -> dict:
     """이동 등록 + 예약 동시 생성(2026-09-04). 재고 매칭(create_reservation)엔
-    상품명/브랜드/등급/ESTNO/BL/창고/상태/유통기한 7개가 정확히 일치해야 하므로
-    row에 상태/유통기한도 같이 넘어와야 한다(재고장 원본 행의 값 그대로).
+    상품명/브랜드/등급/ESTNO/BL/창고/상태/유통기한/평중이 정확히 일치해야 하므로
+    row에 전부 같이 넘어와야 한다(재고장 원본 행의 값 그대로) — 평중이 빠져있던
+    버그로 평중이 0이 아닌 모든 상품의 창고이동 등록이 "재고 매칭 0건"으로
+    실패하고 있었음(2026-09-16 발견, create_reservation에 평중 매칭 조건이
+    2026-09-07에 추가된 뒤 이 함수는 안 맞춰져 있었음).
     예약이 실패(가용재고 부족 등)하면 ValueError가 그대로 올라가 이동 등록도
     안 된다 — 호출부(API)가 400으로 변환."""
     import uuid
@@ -1831,7 +1834,7 @@ def create_warehouse_move(conn, row: dict) -> dict:
     reservation = create_reservation(conn, {
         "상품명": row.get("상품명"), "브랜드": row.get("브랜드", ""), "등급": row.get("등급", ""),
         "ESTNO": row.get("ESTNO", ""), "BL": row.get("BL"), "창고": row.get("창고"),
-        "상태": row.get("상태", ""), "유통기한": row.get("유통기한", ""),
+        "상태": row.get("상태", ""), "유통기한": row.get("유통기한", ""), "평중": row.get("평중"),
         "수량": row.get("수량"), "거래처": client, "담당자": row.get("담당자", ""),
         "출고일": row.get("이동일자", ""),
     })
