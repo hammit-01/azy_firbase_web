@@ -475,6 +475,16 @@ def run_jns_pipeline():
         qty_diff = eda_qty - fs_qty
         qty_note = f" ★ {qty_diff}박스 차이" if qty_diff != 0 else ""
 
+        # 크롤링 탭(관리자 전용, 2026-09-16) — 제니스는 우리 시스템에서 "곤"으로
+        # 시작하는 모든 창고(곤지암/곤CS/곤대청 등)를 통합한 개념이라 "제니스" 한
+        # 줄로 기록. 실패해도 본 업로드에는 영향 없게 격리.
+        try:
+            from pipeline.mysql_db import get_conn as _get_conn2, record_crawl_source_totals as _record_crawl_totals
+            with _get_conn2() as _conn:
+                _record_crawl_totals(_conn, {"제니스": eda_qty})
+        except Exception as _e:
+            jns_log.warning(f"크롤링 탭 원본재고 기록 실패: {_e}")
+
         elapsed = time.time() - start
         jns_log.info(
             f"완료 | EDA {len(normalized)}건/{eda_qty}박스 → MySQL {len(new_snap)}건/{fs_qty}박스{qty_note} | 변경 {changed}건 | {elapsed:.1f}초 소요"

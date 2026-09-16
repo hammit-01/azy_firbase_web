@@ -2217,10 +2217,16 @@ def record_crawl_source_totals(conn, totals: dict) -> None:
 
 
 def get_crawl_source_totals(conn) -> list[dict]:
+    # 제니스는 azy_inventory가 아니라 별도 inventory 테이블에, 그것도 "곤"으로
+    # 시작하는 여러 하위 창고(곤지암/곤CS/곤대청 등)로 나뉘어 저장돼 있어서
+    # 나머지 창고와 다르게 특별 취급 — record_crawl_source_totals가 이 창고들
+    # 원본 합을 "제니스" 한 줄로 기록해두면, 여기서 시스템 쪽만 곤%% 합으로 맞춰준다.
     with conn.cursor() as cur:
         cur.execute(
             "SELECT s.창고 AS 창고, s.qty AS 원본재고, s.updated_at AS updated_at, "
-            "COALESCE(i.qty, 0) AS 시스템재고 "
+            "CASE WHEN s.창고 = '제니스' "
+            "     THEN (SELECT COALESCE(SUM(재고), 0) FROM inventory WHERE 창고 LIKE '곤%') "
+            "     ELSE COALESCE(i.qty, 0) END AS 시스템재고 "
             "FROM crawl_source_totals s "
             "LEFT JOIN (SELECT 창고, SUM(재고) AS qty FROM azy_inventory GROUP BY 창고) i "
             "ON i.창고 = s.창고 "
