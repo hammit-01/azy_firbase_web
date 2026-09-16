@@ -1840,7 +1840,7 @@ async function handleClick(e) {
                         ? new Date(Date.now() + 86400000).toISOString().slice(0, 10)
                         : row.querySelector(".move-date")?.value || "";
                     try {
-                        await createWarehouseMove({
+                        const res = await createWarehouseMove({
                             pk: item.id,
                             상품명: item.상품명, 브랜드: item.브랜드, 등급: item.등급, ESTNO: item.ESTNO,
                             BL: item.BL, 창고: item.창고,
@@ -1857,6 +1857,12 @@ async function handleClick(e) {
                             평중: item.평중 || null,
                             등록자: user?.이름 || "",
                         });
+                        // 되돌리기(Ctrl+Z) 기록 누락 버그 수정(2026-09-16) — 창고이동
+                        // "추가"(수동, createWarehouseMoveManual)만 pushUndo를 남기고
+                        // 이 일반 등록 경로는 빠져있어서 등록 직후 되돌리기가 안 먹혔음.
+                        // deleteWarehouseMove가 연동 예약까지 같이 취소해주므로 같은
+                        // "warehouse-move-created" 타입을 그대로 재사용.
+                        if (res?.id) pushUndo({ type: "warehouse-move-created", id: res.id });
                         successCount++;
                     } catch (err) {
                         failCount++;
