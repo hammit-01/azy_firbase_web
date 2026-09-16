@@ -218,15 +218,9 @@ tbody tr:nth-child(even) td {
     background: #f6fbea;
 }
 
-/* hover/체크박스 선택 색상은 헤더 열 색상(#475569) 계열 톤으로(2026-09-14 요청) —
-   홀수행/짝수행 줄무늬가 hover·선택 상태에서도 구분되게 짝수행은 한 단계 더
-   진하게. */
 tbody tr:hover td {
-    background: #f1f5f9 !important;
+    background: #e4f7c1 !important;
     transition: background 0.12s ease;
-}
-tbody tr:nth-child(even):hover td {
-    background: #e2e8f0 !important;
 }
 
 /* 열 고정(선택/상품명) — 표를 가로로 스크롤해도 이 두 칸은 왼쪽에 그대로 붙어있게
@@ -261,19 +255,11 @@ tbody tr:nth-child(even):hover td {
 }
 .table-wrap tbody tr:hover td:nth-child(1),
 .table-wrap tbody tr:hover td:nth-child(2) {
-    background: #f1f5f9 !important;
-}
-.table-wrap tbody tr:nth-child(even):hover td:nth-child(1),
-.table-wrap tbody tr:nth-child(even):hover td:nth-child(2) {
-    background: #e2e8f0 !important;
+    background: #e4f7c1 !important;
 }
 .table-wrap tbody tr.selected-row td:nth-child(1),
 .table-wrap tbody tr.selected-row td:nth-child(2) {
-    background: #e2e8f0 !important;
-}
-.table-wrap tbody tr.selected-row:nth-child(even) td:nth-child(1),
-.table-wrap tbody tr.selected-row:nth-child(even) td:nth-child(2) {
-    background: #cbd5e1 !important;
+    background: #d4f7a0 !important;
 }
 .table-wrap tbody tr.flash-row td:nth-child(1),
 .table-wrap tbody tr.flash-row td:nth-child(2) {
@@ -593,7 +579,6 @@ th.sort-active {
     height: fit-content;
     font-weight: 500;
     font-size: 12px;
-    white-space: pre-line;
 }
 
 /* 행 체크 시 뜨는 "총 N행, M박스 선택" — 테이블의 selected-row 초록과 동일 색 */
@@ -1082,11 +1067,8 @@ th.sort-active {
 .order-sheet-fill-handle { position: absolute; right: -1px; bottom: -1px; width: 7px; height: 7px; background: #2563eb; cursor: crosshair; }
 
 /* 발주장 탭 — 손잡이 클릭으로 다중 선택한 행(일괄 삭제용, 2026-09-09).
-   짝수행 줄무늬를 이겨야 해서 .reservations-table로 특이도 확보.
-   색상은 다른 테이블 체크박스 선택과 동일하게 헤더 열 색상(#475569) 계열로
-   통일(2026-09-14, 기존 파란색에서 변경). */
-.reservations-table tr.order-sheet-row-selected td { background: #e2e8f0; }
-.reservations-table tr.order-sheet-row-selected:nth-child(even) td { background: #cbd5e1; }
+   짝수행 줄무늬를 이겨야 해서 .reservations-table로 특이도 확보. */
+.reservations-table tr.order-sheet-row-selected td { background: #dbeafe; }
 
 .order-sheet-bulk-delete-btn { background: #fee2e2; color: #b91c1c; border: none; border-radius: 4px; padding: 4px 10px; cursor: pointer; }
 .order-sheet-bulk-delete-btn:hover { background: #fecaca; }
@@ -1482,15 +1464,11 @@ tbody tr {
     background:#ffd6e8 !important;
 }
 
-/* 체크한 행 — 헤더 열 색상(#475569) 계열 톤(2026-09-14, 기존 연초록에서 변경).
-   짝수행은 한 단계 더 진하게 해서 hover와 마찬가지로 홀짝 구분 유지. */
+/* 체크한 행 = 연초록 */
 .selected-row td{
-    background:#e2e8f0 !important;
-    color: #1e293b !important;
+    background:#d4f7a0 !important;
+    color: #3f7d00 !important;
     font-weight:700;
-}
-.selected-row:nth-child(even) td{
-    background:#cbd5e1 !important;
 }
 
 /* 홀딩된 행 일시 표시 */
@@ -1984,6 +1962,26 @@ tr.insert-card .remove-insert-btn:hover {
 .badge-moving  { background: #ffedd5; color: #c2410c; }
 .badge-price   { background: #fef3c7; color: #92400e; }
 
+/* 상태 선택 select — 추가/수정 팝업(2026-09-14 디자인 개선 요청). 고른 값에 따라
+   표/모바일 카드에서 쓰는 상태 배지와 같은 색으로 select 자체를 물들여서(선택 시점
+   부터 미리 보이게), 그냥 검은 글씨 드롭다운보다 상태 구분이 한눈에 들어오게 함 —
+   data-state는 panel.js::stateSelect가 초기값을, events.js의 change 리스너가
+   값 변경마다 갱신. */
+.state-select {
+    appearance: auto;
+    border-radius: 20px;
+    font-weight: 700;
+    border: 1.5px solid transparent;
+    background-color: #f1f5f9;
+    color: #475569;
+}
+.state-select[data-state="holding"] { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
+.state-select[data-state="freeze"]  { background: #ede9fe; color: #6d28d9; border-color: #ddd6fe; }
+.state-select[data-state="stopped"] { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+.state-select[data-state="moving"]  { background: #ffedd5; color: #c2410c; border-color: #fed7aa; }
+.state-select[data-state="특이품"]  { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+.state-select[data-state="null"]    { background: #f3f4f6; color: #6b7280; border-color: #e5e7eb; }
+
 /* 전략단가 카드(2026-08-19) — 탭 테마색(#b45309, 호박색)에 맞춰 좌측 컬러바 +
    히어로 숫자. 전략가가 있으면 그게 실제 판매가라 히어로, 없으면 도매가 대신 */
 .price-card { border-left-color: #b45309; }
@@ -2145,6 +2143,14 @@ tr.insert-card .remove-insert-btn:hover {
     .pipeline-status-banner, .job-stale, .toolbar-left { display: none; }
     #searchInput     { grid-area: search; }
     .mobile-filter-toggle { grid-area: filterbtn; }
+
+    .reservations-filter-select {
+        width: 100px;
+    }
+
+    .input:not([type="checkbox"]) {
+        width: 300px;
+    }
 
     .table_size_weight { display: none; }
 
@@ -2805,8 +2811,7 @@ tr.insert-card .remove-insert-btn:hover {
     min-width: 110px;
     max-width: 180px;
 }
-.edit-reservation-form input,
-.edit-reservation-form select {
+.edit-reservation-form input {
     box-sizing: border-box;
     width: 100%;
     height: 40px;
@@ -2820,10 +2825,8 @@ tr.insert-card .remove-insert-btn:hover {
     outline: none;
     transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
-.edit-reservation-form input:hover,
-.edit-reservation-form select:hover { border-color: #cbd5e1; }
-.edit-reservation-form input:focus,
-.edit-reservation-form select:focus { border-color: #0d9488; background: #fff; box-shadow: 0 0 0 3px rgba(13,148,136,0.15); }
+.edit-reservation-form input:hover { border-color: #cbd5e1; }
+.edit-reservation-form input:focus { border-color: #0d9488; background: #fff; box-shadow: 0 0 0 3px rgba(13,148,136,0.15); }
 
 /* 타창고매출현황/창고이동 "추가" 팝업의 여러 행 입력(2026-09-04) — 행마다
    테두리로 구분하고, 오른쪽에 삭제(✕) 버튼을 붙인다. */

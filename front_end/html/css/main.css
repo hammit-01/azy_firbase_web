@@ -10,6 +10,10 @@ body {
     overflow: hidden;
 }
 
+.toolbar {
+    background: white;
+}
+
 /* 배경 그라디언트 장식 */
 body::before {
     content: "";
