@@ -907,7 +907,11 @@ def get_all_active_reservations(conn) -> list[dict]:
                 f"SELECT r.id, r.pk, r.수량, r.홀딩 AS 담당자, r.메모 AS 거래처, r.홀딩일자, r.출고일, "
                 f"r.전달사항, r.비고, "
                 f"i.상품명, i.브랜드, i.등급, i.ESTNO, i.BL, i.창고, i.재고, i.상태, i.유통기한, i.평중, "
-                f"i.재고 - COALESCE(agg.총예약, 0) - COALESCE(ob.총출고, 0) AS 가용재고 "
+                f"i.재고 - COALESCE(agg.총예약, 0) - COALESCE(ob.총출고, 0) AS 가용재고, "
+                # 이 예약이 이미 창고이동에 연결돼 있는지(취소되지 않은 이동만) — 프론트가
+                # "이동" 액션 버튼을 숨기는 데 씀(2026-09-16, 이미 이동 등록된 예약에도
+                # 이동 버튼이 계속 떠서 중복 이동이 가능했던 버그).
+                f"(m.id IS NOT NULL AND COALESCE(m.취소, 0) = 0) AS 이동됨 "
                 f"FROM {hr_table} r LEFT JOIN {inv_table} i ON r.pk = i.id "
                 f"LEFT JOIN (SELECT pk, CAST(SUM(수량) AS SIGNED) AS 총예약 FROM {hr_table} "
                 f"           WHERE status='ACTIVE' GROUP BY pk) agg ON r.pk = agg.pk "

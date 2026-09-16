@@ -1278,7 +1278,7 @@ function reservationRowHtml(r, isSalesPage = false) {
                     ${completed || cancelled || !access.canCancel || isTomorrow ? "" : `<button class="cancel-reservation-btn" data-id="${r.id}" data-sales="${isSalesPage && !isPreview ? "1" : ""}">취소</button>`}
                     ${cancelled && access.canCancel ? `<button class="reactivate-outbound-btn" data-id="${r.id}">취소 해제</button>` : ""}
                     ${isSalesPage || cancelled || !access.canOthers ? "" : `<button class="register-outbound-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">출고</button>`}
-                    ${isSalesPage || !access.canOthers || !hasWarehouseMovesAccess() ? "" : `<button class="move-from-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">이동</button>`}
+                    ${isSalesPage || !access.canOthers || !hasWarehouseMovesAccess() || r.이동됨 ? "" : `<button class="move-from-reservation-btn" data-id="${r.id}" data-qty="${safeValue(r.수량) || 0}">이동</button>`}
                 </div>
             </td>
         </tr>
