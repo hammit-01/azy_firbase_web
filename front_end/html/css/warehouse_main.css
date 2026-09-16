@@ -760,6 +760,7 @@ th.sort-active {
     white-space: nowrap;
 }
 .rl-badge-reservation { background: #dbeafe; color: #1d4ed8; }
+.rl-badge-move         { background: #ffedd5; color: #c2410c; }
 .rl-badge-outbound    { background: #ede9fe; color: #6d28d9; }
 .rl-badge-done         { background: #f1f5f9; color: #64748b; }
 .rl-field { color: #475569; }

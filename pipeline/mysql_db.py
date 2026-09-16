@@ -855,9 +855,15 @@ def get_active_reservations_by_pk(conn, pk: str) -> list[dict]:
     result = []
     with conn.cursor() as cur:
         for hr_table in ("holding_records", "azy_holding_records"):
+            # 창고이동으로 만들어진 예약은(warehouse_moves.예약id가 이 행을 가리킴)
+            # 일반 예약과 구분해서 "이동"으로 보여준다(2026-09-16 사용자 요청) —
+            # 단순 예약 상세에 이동 건까지 "예약"으로만 뜨면 헷갈린다는 피드백.
             cur.execute(
-                f"SELECT id, 수량, 홀딩 AS 담당자, 메모 AS 거래처, 출고일, 홀딩일자, "
-                f"'예약' AS 구분 FROM {hr_table} WHERE pk=%s AND status='ACTIVE'",
+                f"SELECT hr.id, hr.수량, hr.홀딩 AS 담당자, hr.메모 AS 거래처, hr.출고일, hr.홀딩일자, "
+                f"CASE WHEN wm.id IS NULL THEN '예약' ELSE '이동' END AS 구분 "
+                f"FROM {hr_table} hr "
+                f"LEFT JOIN warehouse_moves wm ON wm.예약id COLLATE utf8mb4_unicode_ci = hr.id COLLATE utf8mb4_unicode_ci "
+                f"WHERE hr.pk=%s AND hr.status='ACTIVE'",
                 (pk,),
             )
             result.extend(cur.fetchall())

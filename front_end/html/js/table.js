@@ -588,7 +588,7 @@ export function renderTableSize(count, size, mean) {
 // =========================
 export function reservationListItemsHtml(reservations) {
     if (!reservations || reservations.length === 0) return "예약/출고 내역이 없습니다";
-    const badgeCls = { "예약": "rl-badge-reservation", "출고중": "rl-badge-outbound", "출고완료": "rl-badge-done" };
+    const badgeCls = { "예약": "rl-badge-reservation", "이동": "rl-badge-move", "출고중": "rl-badge-outbound", "출고완료": "rl-badge-done" };
     return reservations.map(r => {
         const unitPrice = parseUnitPrice(r.거래처);
         const weight = parseWeight(r.거래처);
