@@ -72,50 +72,52 @@
 
         <!-- ── 테이블 ── -->
         <div class="table-container">
-            <div class="toolbar-left">
-                <a href="/warehouse_main.html" class="logo-link" title="메인으로">
-                    <h1>재고장</h1>
-                </a>
-            </div>
-            <div class="toolbar-right">
-                <div class="mobile-filter-sheet-header">
-                    <span>필터</span>
-                    <button id="mobile-filter-close" type="button" class="mobile-filter-close">닫기</button>
+            <div class="toolbar-top">
+                <div class="toolbar-left">
+                    <a href="/warehouse_main.html" class="logo-link" title="메인으로">
+                        <h1>재고장</h1>
+                    </a>
                 </div>
-                <div class="toolbar-row">
-                    <select class="show-product-name filter-sel">
-                        <option value="">상품명</option>
-                        <!-- 실제 옵션은 현재 데이터 기준으로 js/table.js의 renderProductNameOptions()가 가나다순으로 채움 -->
-                    </select>
-                    <select class="show-brand filter-sel">
-                        <option value="">브랜드</option>
-                        <!-- 실제 옵션은 현재 데이터 기준으로 js/table.js의 renderBrandOptions()가 가나다순으로 채움 -->
-                    </select>
-                    <select class="show-warehouse filter-sel">
-                        <option value="">창고</option>
-                        <!-- 실제 옵션은 현재 크롤링된 데이터 기준으로 js/table.js의 renderWarehouseOptions()가 가나다순으로 채움 -->
-                    </select>
-                    <select class="show-state filter-sel">
-                        <option value="">상태</option>
-                        <option value="holding">예약</option>
-                        <option value="freeze">동결</option>
-                        <option value="stopped">사용불가</option>
-                        <option value="moving">이고</option>
-                        <option value="특이품">특이품</option>
-                        <option value="null">null(정보누락)</option>
-                    </select>
-                    <input id="searchInput" class="search-input" placeholder="검색(띄어쓰기/쉼표로 여러 단어)">
-                    <div class="toolbar-row toolbar-row-actions">
-                        <!-- CRUD 버튼 -->
-                        <button class="insert-btn">추가</button>
-                        <button class="update-btn">수정</button>
-                        <button class="holding-btn">예약</button>
-                        <button class="move-btn" style="display:none">이동</button>
+                <div class="toolbar-right">
+                    <div class="mobile-filter-sheet-header">
+                        <span>필터</span>
+                        <button id="mobile-filter-close" type="button" class="mobile-filter-close">닫기</button>
+                    </div>
+                    <div class="toolbar-row">
+                        <select class="show-product-name filter-sel">
+                            <option value="">상품명</option>
+                            <!-- 실제 옵션은 현재 데이터 기준으로 js/table.js의 renderProductNameOptions()가 가나다순으로 채움 -->
+                        </select>
+                        <select class="show-brand filter-sel">
+                            <option value="">브랜드</option>
+                            <!-- 실제 옵션은 현재 데이터 기준으로 js/table.js의 renderBrandOptions()가 가나다순으로 채움 -->
+                        </select>
+                        <select class="show-warehouse filter-sel">
+                            <option value="">창고</option>
+                            <!-- 실제 옵션은 현재 크롤링된 데이터 기준으로 js/table.js의 renderWarehouseOptions()가 가나다순으로 채움 -->
+                        </select>
+                        <select class="show-state filter-sel">
+                            <option value="">상태</option>
+                            <option value="holding">예약</option>
+                            <option value="freeze">동결</option>
+                            <option value="stopped">사용불가</option>
+                            <option value="moving">이고</option>
+                            <option value="특이품">특이품</option>
+                            <option value="null">null(정보누락)</option>
+                        </select>
+                        <input id="searchInput" class="search-input" placeholder="검색(띄어쓰기/쉼표로 여러 단어)">
+                        <div class="toolbar-row toolbar-row-actions">
+                            <!-- CRUD 버튼 -->
+                            <button class="insert-btn">추가</button>
+                            <button class="update-btn">수정</button>
+                            <button class="holding-btn">예약</button>
+                            <button class="move-btn" style="display:none">이동</button>
 
-                        <!-- 유틸 버튼 -->
-                        <button class="rollback-btn">되돌리기</button>
-                        <button class="clear-btn" data-action="clear-selection">전체 취소</button>
-                        <button class="all-delete-btn">전체 삭제</button>
+                            <!-- 유틸 버튼 -->
+                            <button class="rollback-btn">되돌리기</button>
+                            <button class="clear-btn" data-action="clear-selection">전체 취소</button>
+                            <button class="all-delete-btn">전체 삭제</button>
+                        </div>
                     </div>
                 </div>
             </div>
