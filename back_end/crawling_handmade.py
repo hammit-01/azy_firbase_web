@@ -374,17 +374,34 @@ def _ace_do_fetch(driver, depot_key):
 def _ace_fetch_depot(depot_key):
     driver = _ace_get_driver()
     try:
-        return _ace_do_fetch(driver, depot_key)
+        records = _ace_do_fetch(driver, depot_key)
     except Exception:
         # 세션 문제로 의심 → 캐시 폐기하고 재로그인 후 한 번만 재시도
         _discard_driver(_ACE_KEY)
         driver = _ace_get_driver()
         try:
-            return _ace_do_fetch(driver, depot_key)
+            records = _ace_do_fetch(driver, depot_key)
         except Exception as e:
             print(f"[에이스-{depot_key}] 재시도 실패: {e}")
             _discard_driver(_ACE_KEY)
             return []
+
+    # 빈 결과는 재고 0건일 수도 있지만(정상), 같은 세션 재사용 중 앞 창고 선택
+    # 상태가 덜 정리된 채로 검색되는 등 일시적 오류로 빈/부분 결과가 나오는 경우도
+    # 있어 왔음(2026-09-16, 에이스 재고가 사이클마다 크게 오르내리는 문제로 발견 —
+    # time.sleep 고정 대기를 그리드 행수 안정화 대기로 바꿔도 여전히 재발). 빈
+    # 결과면 세션을 버리고 한 번 더 시도해서 진짜 0건인지 확인한다.
+    if not records:
+        _discard_driver(_ACE_KEY)
+        driver = _ace_get_driver()
+        try:
+            records = _ace_do_fetch(driver, depot_key)
+        except Exception as e:
+            print(f"[에이스-{depot_key}] 빈 결과 재확인 재시도 실패: {e}")
+            _discard_driver(_ACE_KEY)
+            return []
+
+    return records
 
 
 def _parse_ace_product(text):
@@ -728,6 +745,12 @@ def crawling_handmade():
 
 
 def crawling_ace():
-    """에이스냉장 3개 사업소(기흥/처인/용인) 전용 — 별도 스케줄에서만 호출."""
+    """에이스냉장 3개 사업소(기흥/처인/용인) 전용 — 별도 스케줄에서만 호출.
+    드라이버 세션을 정각 사이클 사이 계속 재사용해왔는데(_driver_cache는
+    프로세스 전역, 최대 며칠씩 유지), 오래 유지된 세션에서 창고 선택이 이전
+    조회 상태를 덜 정리한 채로 검색되는 등으로 의심되는 재고 급락/오탐이
+    반복돼(2026-09-16) 사이클마다 완전히 새 세션으로 시작하도록 변경 —
+    로그인 한 번(약 10초) 더 드는 대신 안정성을 우선."""
+    _discard_driver(_ACE_KEY)
     result = pd.concat([aceGH_eda(), aceCHIN_eda(), aceYOGIN_eda()], ignore_index=True)
     return _finalize_handmade(result)
