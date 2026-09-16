@@ -10,7 +10,7 @@ import { undoLastAction, pushUndo } from "./crud_history.js";
 import { fetchAllData } from "./firebase.js";
 import { showToast, showError, showConfirm, showEditReservationModal, showRegisterOutboundModal, showNoteModal, showCancelOutboundModal, showAlertModal, showPriceExportModal, showEditPriceModal, showReservationDetailModal, showBulkEditModal, showMoveToWarehouseModal, showOutboundManualInsertModal, showMoveManualInsertModal, showInventoryInsertModal, showOrderSheetInsertModal } from "./ui.js";
 import { getStoredUser, applyRoleVisibility, hasPriceEditAccess, hasWarehouseMovesAccess, hasAdminAccess } from "./login.js";
-import { apiLogActivity, fetchPipelineStatus } from "./api.js";
+import { apiLogActivity, fetchPipelineStatus, deleteGhostInventoryRow } from "./api.js";
 
 // 예약현황/타창고매출현황 액션(취소/완료/변경/토글 등) 이후 공용 새로고침(2026-08-19) —
 // renderSalesTab()이 renderReservationsTab()에서 분리되며(2026-08-18) 각 액션
@@ -1883,6 +1883,22 @@ async function handleClick(e) {
     if (e.target.classList.contains("price-tab-btn")) { switchTab("price-tab-btn", ".price-container", renderPriceTab); return; }
     if (e.target.classList.contains("order-sheet-tab-btn")) { switchTab("order-sheet-tab-btn", ".order-sheet-container", renderOrderSheetTab); return; }
     if (e.target.classList.contains("crawling-tab-btn")) { switchTab("crawling-tab-btn", ".crawling-container", renderCrawlingTab); return; }
+
+    // 크롤링 탭 — 유령 데이터(수기 입력, 수집일 없음) 행 직접 삭제(2026-09-16)
+    if (e.target.classList.contains("ghost-delete-btn")) {
+        (async () => {
+            const { id, table } = e.target.dataset;
+            if (!await showConfirm("이 유령 데이터를 삭제할까요?\n크롤에도 안 잡히고 되돌릴 수 없습니다.")) return;
+            try {
+                await deleteGhostInventoryRow(id, table);
+                showToast("✓ 삭제 완료");
+                renderCrawlingTab();
+            } catch (err) {
+                showError(err.message || "삭제에 실패했습니다.");
+            }
+        })();
+        return;
+    }
 
     // 예약 현황 탭 — 출고일 필터 해제
     if (e.target.classList.contains("reservations-date-filter-clear")) {

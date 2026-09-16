@@ -2129,7 +2129,7 @@ export async function renderCrawlingTab() {
     const ghostHtml = `
         <div class="crawling-totals-wrap">
         <table class="reservations-table crawling-ghost-table">
-            <thead><tr><th>테이블</th><th>창고</th><th>상품명</th><th>브랜드</th><th>등급</th><th>ESTNO</th><th>BL</th><th>재고</th><th>유통기한</th><th>최종수정</th></tr></thead>
+            <thead><tr><th>테이블</th><th>창고</th><th>상품명</th><th>브랜드</th><th>등급</th><th>ESTNO</th><th>BL</th><th>재고</th><th>유통기한</th><th>최종수정</th><th>삭제</th></tr></thead>
             <tbody>
                 ${ghostRows.length ? ghostRows.map(r => `<tr>
                     <td>${r.출처}</td>
@@ -2142,7 +2142,8 @@ export async function renderCrawlingTab() {
                     <td>${r.재고}</td>
                     <td>${r.유통기한}</td>
                     <td>${_fmtDateTime(r.updated_at)}</td>
-                </tr>`).join("") : `<tr><td colspan="10">유령 데이터가 없습니다.</td></tr>`}
+                    <td><button class="ghost-delete-btn" data-id="${r.id}" data-table="${r.출처}">삭제</button></td>
+                </tr>`).join("") : `<tr><td colspan="11">유령 데이터가 없습니다.</td></tr>`}
             </tbody>
         </table>
         </div>

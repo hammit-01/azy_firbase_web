@@ -75,6 +75,13 @@ export async function fetchGhostInventory() {
     return r.data;
 }
 
+// 유령 데이터 삭제 — 출처 테이블에 따라 기존 재고 삭제 엔드포인트(홀딩 레코드
+// 정리까지 처리하는 /api/inventory, /api/azy_inventory)를 그대로 재사용.
+export async function deleteGhostInventoryRow(id, table) {
+    const path = table === "azy_inventory" ? "/api/azy_inventory" : "/api/inventory";
+    return apiFetch(`${path}/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
 // 로그인 실패(401)는 흐름상 정상 케이스라 throw 없이 null로 반환
 export async function apiLogin(id, pw) {
     const res = await fetch(`${API_BASE}/api/login`, {

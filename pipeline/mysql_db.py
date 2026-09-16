@@ -2253,7 +2253,7 @@ def get_ghost_inventory_rows(conn) -> list[dict]:
     with conn.cursor() as cur:
         for table in ("azy_inventory", "inventory"):
             cur.execute(
-                f"SELECT '{table}' AS 출처, 상품명, 브랜드, 등급, ESTNO, BL, 창고, 재고, "
+                f"SELECT id, '{table}' AS 출처, 상품명, 브랜드, 등급, ESTNO, BL, 창고, 재고, "
                 f"유통기한, updated_at FROM {table} WHERE 수집일 IS NULL OR 수집일='' "
                 f"ORDER BY updated_at DESC"
             )
