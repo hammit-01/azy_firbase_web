@@ -2221,20 +2221,13 @@ def get_crawl_source_totals(conn) -> list[dict]:
     # 시작하는 여러 하위 창고(곤지암/곤CS/곤대청 등)로 나뉘어 저장돼 있어서
     # 나머지 창고와 다르게 특별 취급 — record_crawl_source_totals가 이 창고들
     # 원본 합을 "제니스" 한 줄로 기록해두면, 여기서 시스템 쪽만 곤%% 합으로 맞춰준다.
-    #
-    # 대청은 통관분(JNS/곤대청) 계정과 일반(azy/대청) 계정이 같은 재고를 그대로
-    # 보여줘서, _upload_azy가 곤대청에 이미 있는 BL은 azy_inventory 쪽에 아예 안
-    # 쌓는다(중복 적재 방지, 2026-08-03). 그래서 원본 크롤 합계(대청+곤대청 몫이
-    # 섞여 들어옴)를 azy_inventory 대청 합계만으로 비교하면 항상 그 몫만큼
-    # "차이"가 나는 것처럼 보인다 — 실제로는 정상이라 azy_inventory 대청 +
-    # inventory 곤대청을 합쳐서 비교해야 진짜 차이만 남는다.
+    # 대청은 "곤대청"과 별개로 그냥 대청만 비교(사용자 확인, 2026-09-16) —
+    # 곤으로 시작하는 창고는 전부 제니스 쪽으로 이미 구분되므로 여기 합치지 않는다.
     with conn.cursor() as cur:
         cur.execute(
             "SELECT s.창고 AS 창고, s.qty AS 원본재고, s.updated_at AS updated_at, "
             "CASE WHEN s.창고 = '제니스' "
             "     THEN (SELECT COALESCE(SUM(재고), 0) FROM inventory WHERE 창고 LIKE '곤%') "
-            "     WHEN s.창고 = '대청' "
-            "     THEN COALESCE(i.qty, 0) + (SELECT COALESCE(SUM(재고), 0) FROM inventory WHERE 창고 = '곤대청') "
             "     ELSE COALESCE(i.qty, 0) END AS 시스템재고 "
             "FROM crawl_source_totals s "
             "LEFT JOIN (SELECT 창고, SUM(재고) AS qty FROM azy_inventory GROUP BY 창고) i "

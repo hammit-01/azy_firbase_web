@@ -2950,6 +2950,20 @@ tr.insert-card .remove-insert-btn:hover {
     top: 0;
     z-index: 1;
 }
+.ghost-delete-btn {
+    height: 28px;
+    padding: 0 12px;
+    border: none;
+    border-radius: 6px;
+    background: #fee2e2;
+    color: #b91c1c;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+.ghost-delete-btn:hover { background: #fecaca; }
+.ghost-delete-btn:active { background: #fca5a5; }
 .crawling-log-view {
     background: #0f172a;
     color: #e2e8f0;
