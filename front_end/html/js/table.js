@@ -1254,7 +1254,7 @@ function reservationRowHtml(r, isSalesPage = false) {
             <td class="reservation-note-cell">${noteBtn(r, isSalesPage && !isPreview, access.canEditNote)}</td>
             ${isSalesPage ? `<td class="${access.canEditRemark ? "sales-remark-cell" : ""}" data-id="${r.id}" data-remark="${attrEscape(r.비고)}" data-preview="${isPreview ? "1" : ""}" title="${access.canEditRemark ? "더블클릭해서 수정" : ""}">${r.수량내림 && r.비고 ? `<span class="qty-dropped">${safeValue(r.비고)}</span>` : safeValue(r.비고)}</td>` : ""}
             ${isSalesPage ? `<td class="reservation-register-cell">${limitedActions || cancelled ? "" : registerCheckboxHtml(r, access.canOthers)}</td>` : ""}
-            <td>${safeValue(r.담당자) || "(미지정)"}</td>
+            ${isSalesPage ? clientCell : `<td>${safeValue(r.담당자) || "(미지정)"}</td>`}
             <td>${safeValue(r.상품명)}</td>
             <td>${safeValue(r.브랜드)}</td>
             <td>${safeValue(r.등급)}</td>
@@ -1263,7 +1263,7 @@ function reservationRowHtml(r, isSalesPage = false) {
             <td>${safeValue(r.BL)}</td>
             <td>${whTag(r.창고)}</td>
             ${isSalesPage ? "" : `<td>${safeValue(r.재고)}</td><td>${availableCell(r.가용재고)}</td>`}
-            ${clientCell}
+            ${isSalesPage ? `<td>${safeValue(r.담당자) || "(미지정)"}</td>` : clientCell}
             ${reservationPriceCell}
             ${dateCell}
             ${yesterdayQtyCell}
@@ -1310,7 +1310,7 @@ function reservationsHead(isSalesPage = false, sortColumns = []) {
         <col style="width:4%">  <!--전달사항-->
         <col style="width:3%">  <!--비고-->
         <col style="width:4%">  <!--등록완료-->
-        <col style="width:6%">  <!--담당자-->
+        <col style="width:6%">  <!--거래처-->
         <col style="width:10%"> <!--상품명-->
         <col style="width:6%">  <!--브랜드-->
         <col style="width:3%">  <!--등급-->
@@ -1318,7 +1318,7 @@ function reservationsHead(isSalesPage = false, sortColumns = []) {
         <col style="width:4%">  <!--수량-->
         <col style="width:12%"> <!--BL-->
         <col style="width:6%">  <!--창고-->
-        <col style="width:6%">  <!--거래처-->
+        <col style="width:6%">  <!--담당자-->
         <col style="width:4%">  <!--단가-->
         <col style="width:4%">  <!--중량-->
         <col style="width:5%">  <!--총금액-->
@@ -1328,9 +1328,9 @@ function reservationsHead(isSalesPage = false, sortColumns = []) {
     <thead>
         <tr>
             <th></th>${sh("비고", "비고")}<th>수정중</th>
-            ${sh("담당자", "담당자")}${sh("상품명", "상품명")}${sh("브랜드", "브랜드")}${sh("등급", "등급")}${sh("ESTNO", "ESTNO")}
+            ${sh("거래처", "거래처")}${sh("상품명", "상품명")}${sh("브랜드", "브랜드")}${sh("등급", "등급")}${sh("ESTNO", "ESTNO")}
             ${sh("수량", "수량")}${sh("BL", "BL")}${sh("창고", "창고")}
-            ${sh("거래처", "거래처")}<th>단가</th><th>중량</th><th>총금액</th>${sh("출고일", "출고일")}<th>액션</th>
+            ${sh("담당자", "담당자")}<th>단가</th><th>중량</th><th>총금액</th>${sh("출고일", "출고일")}<th>액션</th>
         </tr>
     </thead>
 `;
