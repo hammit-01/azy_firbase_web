@@ -134,8 +134,8 @@ def _upload_azy(azy_df, warehouse_scope=None):
         totals = raw_qty.groupby(azy_df["창고"]).sum().astype(int).to_dict()
         with get_conn() as _conn:
             _record_crawl_totals(_conn, totals)
-    except Exception:
-        pass
+    except Exception as _e:
+        log.warning(f"크롤링 탭 원본재고 기록 실패: {_e}")
 
     today = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d")
 
