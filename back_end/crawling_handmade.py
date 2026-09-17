@@ -371,6 +371,37 @@ def _ace_do_fetch(driver, depot_key):
     return records
 
 
+_ACE_DEPOT_WAREHOUSE = {
+    "기흥사업소": "에이스기흥", "처인사업소": "에이스처인", "용인사업소": "에이스용인",
+}
+
+
+def _ace_records_qty_sum(records) -> int:
+    total = 0
+    for r in records:
+        try:
+            total += int(str(r[9]).replace(",", ""))
+        except (IndexError, ValueError):
+            pass
+    return total
+
+
+def _ace_baseline_qty(warehouse: str):
+    """직전에 성공적으로 기록해둔 이 창고의 원본 크롤 총량(크롤링 탭이 쓰는
+    crawl_source_totals) — 이번 결과가 그거보다 터무니없이 적으면 진짜 재고
+    변동이 아니라 크롤 결함으로 의심할 기준선. 조회 실패해도 그냥 기준선 없이
+    (None) 진행 — 이 안전장치 하나 때문에 크롤 자체가 막히면 안 된다."""
+    try:
+        from pipeline.mysql_db import get_conn
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT qty FROM crawl_source_totals WHERE 창고=%s", (warehouse,))
+                row = cur.fetchone()
+                return int(row["qty"]) if row else None
+    except Exception:
+        return None
+
+
 def _ace_fetch_depot(depot_key):
     driver = _ace_get_driver()
     try:
@@ -389,8 +420,9 @@ def _ace_fetch_depot(depot_key):
     # 빈 결과는 재고 0건일 수도 있지만(정상), 같은 세션 재사용 중 앞 창고 선택
     # 상태가 덜 정리된 채로 검색되는 등 일시적 오류로 빈/부분 결과가 나오는 경우도
     # 있어 왔음(2026-09-16, 에이스 재고가 사이클마다 크게 오르내리는 문제로 발견 —
-    # time.sleep 고정 대기를 그리드 행수 안정화 대기로 바꿔도 여전히 재발). 빈
-    # 결과면 세션을 버리고 한 번 더 시도해서 진짜 0건인지 확인한다.
+    # time.sleep 고정 대기를 그리드 행수 안정화 대기로 바꿔도, 사이클마다 완전히
+    # 새 세션으로 시작해도 여전히 재발). 빈 결과면 세션을 버리고 한 번 더
+    # 시도해서 진짜 0건인지 확인한다.
     if not records:
         _discard_driver(_ACE_KEY)
         driver = _ace_get_driver()
@@ -400,6 +432,27 @@ def _ace_fetch_depot(depot_key):
             print(f"[에이스-{depot_key}] 빈 결과 재확인 재시도 실패: {e}")
             _discard_driver(_ACE_KEY)
             return []
+
+    # 비어있진 않지만 직전 기록보다 터무니없이 적은 경우(2026-09-17, 위 두 안전장치를
+    # 다 거쳐도 여전히 재발 — 순서상 두 번째 이후로 조회하는 창고(기흥 다음 처인)가
+    # 유독 잦았음. 같은 세션에서 창고 선택 드롭다운을 다시 여는 게 완전히 초기화가
+    # 안 된 채로 검색되는 것으로 의심되나 확증은 못 함) — 세션을 버리고 한 번 더
+    # 확인. 그래도 여전히 적으면 실제 재고 변동일 수 있어 그 값을 그대로 쓴다
+    # (여기서 무한 재시도하지 않음).
+    warehouse = _ACE_DEPOT_WAREHOUSE.get(depot_key)
+    baseline = _ace_baseline_qty(warehouse) if warehouse else None
+    if baseline and baseline > 0:
+        current = _ace_records_qty_sum(records)
+        if current < baseline * 0.5:
+            print(f"[에이스-{depot_key}] 원본 {current}박스가 직전 기록 {baseline}박스의 절반 미만 — 재확인 재시도")
+            _discard_driver(_ACE_KEY)
+            driver = _ace_get_driver()
+            try:
+                retried = _ace_do_fetch(driver, depot_key)
+                if _ace_records_qty_sum(retried) > current:
+                    records = retried
+            except Exception as e:
+                print(f"[에이스-{depot_key}] 저재고 재확인 재시도 실패: {e}")
 
     return records
 
