@@ -1,5 +1,6 @@
 import atexit
 import concurrent.futures
+import logging
 import subprocess
 import pandas as pd
 import re
@@ -324,9 +325,13 @@ def _ace_get_driver():
     return driver
 
 
+_ace_log = logging.getLogger("ace_scheduler")
+
+
 def _ace_do_fetch(driver, depot_key):
     from selenium.webdriver.common.by import By
     from bs4 import BeautifulSoup
+    start = time.time()
     driver.find_element(By.PARTIAL_LINK_TEXT, "재고조회").click()
     time.sleep(3)
     driver.find_element(By.ID, "gridLookupDepotInventoryInfo_B-1").click()
@@ -339,10 +344,15 @@ def _ace_do_fetch(driver, depot_key):
     # 반복됨(2026-09-16, 에이스 재고가 사이클마다 크게 오르내리는 것으로 발견 —
     # 기존 재고가 있던 창고인데 이번 크롤에 안 잡히면 "크롤에서 사라짐"으로 처리돼
     # 홀딩 없는 행은 삭제, 홀딩 있는 행은 0으로 zeroing됨). 행 수가 더 늘지 않을
-    # 때까지(최대 15초, 1초 간격 2회 연속 동일하면 로딩 끝난 것으로 판단) 기다린다 —
-    # 너무 빨리 끝나는 정상 케이스에서 불필요하게 오래 기다리지 않게.
+    # 때까지(최대 45초, 1초 간격 2회 연속 동일하면 로딩 끝난 것으로 판단) 기다린다 —
+    # 너무 빨리 끝나는 정상 케이스에서 불필요하게 오래 기다리지 않게. 15초로는
+    # 부족한 게 아니냐는 의심(2026-09-17, 실제 로그 기준 전체 사이클이 넉넉잡아
+    # 2분 걸리는데 타임아웃이 너무 짧았을 수 있음)으로 45초로 늘리고, 타임아웃으로
+    # 빠져나왔는지 안정화로 빠져나왔는지도 로그로 남긴다.
     last_count, stable = -1, 0
-    deadline = time.time() + 15
+    search_start = time.time()
+    deadline = search_start + 45
+    timed_out = True
     while time.time() < deadline:
         try:
             count = len(driver.find_elements(By.CSS_SELECTOR, "#InventoryList_DXMainTable tr"))
@@ -351,14 +361,17 @@ def _ace_do_fetch(driver, depot_key):
         if count == last_count:
             stable += 1
             if stable >= 2:
+                timed_out = False
                 break
         else:
             stable = 0
         last_count = count
         time.sleep(1)
+    wait_elapsed = time.time() - search_start
     soup = BeautifulSoup(driver.page_source, "html.parser")
     inv_table = soup.find("table", id="InventoryList_DXMainTable")
     if not inv_table:
+        _ace_log.info(f"[에이스-{depot_key}] 그리드 없음 | 대기 {wait_elapsed:.1f}초({'타임아웃' if timed_out else '안정화'}) | {time.time()-start:.1f}초 소요")
         return []
     records = []
     for row in inv_table.find_all("tr"):
@@ -368,6 +381,11 @@ def _ace_do_fetch(driver, depot_key):
         vals = [c.get_text(strip=True) for c in cells]
         if len([v for v in vals if v]) >= 8 and vals[5]:
             records.append(vals)
+    qty_sum = _ace_records_qty_sum(records)
+    _ace_log.info(
+        f"[에이스-{depot_key}] {len(records)}건/{qty_sum}박스 | 대기 {wait_elapsed:.1f}초"
+        f"({'타임아웃' if timed_out else '안정화'}, 최종 행수 {last_count}) | {time.time()-start:.1f}초 소요"
+    )
     return records
 
 
@@ -413,7 +431,7 @@ def _ace_fetch_depot(depot_key):
         try:
             records = _ace_do_fetch(driver, depot_key)
         except Exception as e:
-            print(f"[에이스-{depot_key}] 재시도 실패: {e}")
+            _ace_log.warning(f"[에이스-{depot_key}] 재시도 실패: {e}")
             _discard_driver(_ACE_KEY)
             return []
 
@@ -429,7 +447,7 @@ def _ace_fetch_depot(depot_key):
         try:
             records = _ace_do_fetch(driver, depot_key)
         except Exception as e:
-            print(f"[에이스-{depot_key}] 빈 결과 재확인 재시도 실패: {e}")
+            _ace_log.warning(f"[에이스-{depot_key}] 빈 결과 재확인 재시도 실패: {e}")
             _discard_driver(_ACE_KEY)
             return []
 
@@ -444,7 +462,7 @@ def _ace_fetch_depot(depot_key):
     if baseline and baseline > 0:
         current = _ace_records_qty_sum(records)
         if current < baseline * 0.5:
-            print(f"[에이스-{depot_key}] 원본 {current}박스가 직전 기록 {baseline}박스의 절반 미만 — 재확인 재시도")
+            _ace_log.warning(f"[에이스-{depot_key}] 원본 {current}박스가 직전 기록 {baseline}박스의 절반 미만 — 재확인 재시도")
             _discard_driver(_ACE_KEY)
             driver = _ace_get_driver()
             try:
@@ -452,7 +470,7 @@ def _ace_fetch_depot(depot_key):
                 if _ace_records_qty_sum(retried) > current:
                     records = retried
             except Exception as e:
-                print(f"[에이스-{depot_key}] 저재고 재확인 재시도 실패: {e}")
+                _ace_log.warning(f"[에이스-{depot_key}] 저재고 재확인 재시도 실패: {e}")
 
     return records
 
