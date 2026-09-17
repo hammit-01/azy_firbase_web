@@ -1841,11 +1841,17 @@ def create_warehouse_move(conn, row: dict) -> dict:
     row.setdefault("수량내림", 0)
 
     client = _move_client_label(row.get("이동창고"), row.get("배차자"), row.get("매출처"))
+    # 예약의 담당자(홀딩)는 창고이동 담당자칸과 별개로 항상 "제갈준" 고정
+    # (2026-09-17 사용자 요청) — migrate_due_reservations_to_outbound가 담당자
+    # "제갈준"인 예약은 출고일이 와도 outbound로 안 넘기는 예외를 이미 갖고
+    # 있어서(2026-08-26), 이걸 재사용해 창고이동으로 잡힌 예약이 타창고매출현황에
+    # 새는 걸 막는다. warehouse_moves.담당자(실제 입력값)는 row에 그대로 남아
+    # 창고이동 탭 표시용으로 따로 저장된다.
     reservation = create_reservation(conn, {
         "상품명": row.get("상품명"), "브랜드": row.get("브랜드", ""), "등급": row.get("등급", ""),
         "ESTNO": row.get("ESTNO", ""), "BL": row.get("BL"), "창고": row.get("창고"),
         "상태": row.get("상태", ""), "유통기한": row.get("유통기한", ""), "평중": row.get("평중"),
-        "수량": row.get("수량"), "거래처": client, "담당자": row.get("담당자", ""),
+        "수량": row.get("수량"), "거래처": client, "담당자": "제갈준",
         "출고일": row.get("이동일자", ""),
     })
     row["예약id"] = reservation["id"]
@@ -1967,6 +1973,11 @@ def create_warehouse_move_from_reservation(conn, rec_id: str, qty: int, move_fie
             cur.execute(f"UPDATE {src_table} SET 수량=수량-%s WHERE id=%s", (qty, rec_id))
         move_rec_id = new_rec_id
         sibling_id = rec_id
+
+    # 창고이동에 연결된 예약도 담당자(홀딩)를 "제갈준"으로 바꿔 outbound 자동
+    # 이관에서 제외한다(2026-09-17 사용자 요청, create_warehouse_move와 동일 이유).
+    with conn.cursor() as cur:
+        cur.execute(f"UPDATE {src_table} SET 홀딩='제갈준' WHERE id=%s", (move_rec_id,))
 
     row = dict(move_fields)
     row.update({
