@@ -9,8 +9,8 @@ import { calculateTotal } from "./input_calculater.js";
 import { undoLastAction, pushUndo } from "./crud_history.js";
 import { fetchAllData } from "./firebase.js";
 import { showToast, showError, showConfirm, showEditReservationModal, showRegisterOutboundModal, showNoteModal, showCancelOutboundModal, showAlertModal, showPriceExportModal, showEditPriceModal, showReservationDetailModal, showBulkEditModal, showMoveToWarehouseModal, showOutboundManualInsertModal, showMoveManualInsertModal, showInventoryInsertModal, showOrderSheetInsertModal } from "./ui.js";
-import { getStoredUser, applyRoleVisibility, hasPriceEditAccess, hasWarehouseMovesAccess, hasAdminAccess } from "./login.js";
-import { apiLogActivity, fetchPipelineStatus, deleteGhostInventoryRow } from "./api.js";
+import { getStoredUser, applyRoleVisibility, hasPriceEditAccess, hasWarehouseMovesAccess } from "./login.js";
+import { apiLogActivity, deleteGhostInventoryRow } from "./api.js";
 
 // 예약현황/타창고매출현황 액션(취소/완료/변경/토글 등) 이후 공용 새로고침(2026-08-19) —
 // renderSalesTab()이 renderReservationsTab()에서 분리되며(2026-08-18) 각 액션
@@ -435,48 +435,7 @@ async function applyOrderSheetPaste(startCell, text) {
     reapplyOrderSheetSelection();
 }
 
-// 파이프라인 하트비트 배너(관리자 전용, 2026-09-14) — 잡별 정상 주기(분 단위).
-// 평일 07~19시 밖에서는 원래 안 도는 게 정상이라(scheduler.py::_in_operating_hours와
-// 동일 조건) 그 시간대엔 무조건 정상(회색) 표시로 오탐(밤마다 빨간불) 방지.
-const PIPELINE_JOB_LABELS = {
-    run_pipeline: "재고", run_jns_pipeline: "JNS", run_ace_pipeline: "에이스", run_drive_backup: "백업",
-};
-const PIPELINE_STALE_MIN = { run_pipeline: 5, run_jns_pipeline: 5, run_ace_pipeline: 90, run_drive_backup: 90 };
-
-function _inOperatingHours(d) {
-    const day = d.getDay(); // 0=일 6=토
-    if (day === 0 || day === 6) return false;
-    const h = d.getHours();
-    return h >= 7 && h < 19;
-}
-
-async function refreshPipelineStatusBanner() {
-    const banner = document.querySelector(".pipeline-status-banner");
-    if (!banner || !hasAdminAccess(getStoredUser()?.권한)) return;
-    let rows;
-    try {
-        rows = await fetchPipelineStatus();
-    } catch {
-        banner.textContent = "파이프라인 상태 조회 실패";
-        return;
-    }
-    const now = new Date();
-    const operating = _inOperatingHours(now);
-    const byJob = Object.fromEntries(rows.map(r => [r.job, r]));
-    banner.innerHTML = Object.keys(PIPELINE_JOB_LABELS).map(job => {
-        const row = byJob[job];
-        const label = PIPELINE_JOB_LABELS[job];
-        if (!row) return `<span class="job-stale">${label} 기록없음</span>`;
-        const minsAgo = Math.floor((now - new Date(row.last_run)) / 60000);
-        const stale = operating && (row.result !== "OK" || minsAgo > PIPELINE_STALE_MIN[job]);
-        return `<span class="${stale ? "job-stale" : "job-ok"}">${label} ${minsAgo}분전</span>`;
-    }).join("");
-}
-
 export function bindEvents() {
-    refreshPipelineStatusBanner();
-    setInterval(refreshPipelineStatusBanner, 60000);
-
     // 날짜 입력창(<input type="date">)은 기본적으로 달력 아이콘을 눌러야만 날짜
     // 선택기가 열려서 불편함 — 박스 어디를 클릭해도 열리게 함(2026-08-13).
     // showPicker() 미지원 브라우저에서는 그냥 원래대로 아이콘 클릭만 동작(자동 무시).
