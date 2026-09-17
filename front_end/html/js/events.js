@@ -735,6 +735,7 @@ export function bindEvents() {
         // 재고 체크는 사용자 확인상 순수 표시용(2026-09-04)이라 재렌더 시 다른 행
         // 색깔에 영향 없음 — 그냥 체크 상태만 저장.
         if (e.target.classList.contains("move-select-check") || e.target.classList.contains("move-processed-check") || e.target.classList.contains("move-cancel-check")) {
+            if (!hasWarehouseMovesAccess()) return;
             const id = e.target.dataset.id;
             const field = e.target.classList.contains("move-select-check") ? "재고"
                 : e.target.classList.contains("move-processed-check") ? "처리" : "취소";

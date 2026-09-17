@@ -1724,6 +1724,10 @@ const MOVE_SEARCHABLE_KEYS = ["상품명", "브랜드", "등급", "ESTNO", "BL",
 // 총중량/처리/취소. 상품명→품목, ESTNO→EST, 창고→출고창고는 화면 표시 라벨만
 // 바꾼 것(DB 컬럼명은 그대로).
 function moveRowHtml(r) {
+    // 탭 열람은 전 직원에 열려있지만(2026-09-17) 실제 수정은 hasWarehouseMovesAccess
+    // (관리자/배차자/운영팀/제갈준·박성찬)만 — 그 외는 체크박스 비활성화 + 셀
+    // 더블클릭 수정 자체를 막는다(move-editable-cell 클래스를 안 붙임).
+    const canEdit = hasWarehouseMovesAccess();
     const 평중 = Number(r.평중) || 0;
     const 총중량 = 평중 ? Math.round((Number(r.수량) || 0) * 평중 * 100) / 100 : "";
     // 취소가 처리보다 우선(둘 다 체크됐으면 빨간 취소 표시로) — sales-completed-row가
@@ -1734,8 +1738,9 @@ function moveRowHtml(r) {
     // sales-remark-cell과 동일한 더블클릭→input 패턴, 배차자/이동창고/담당자는
     // 고정 목록/직원 목록이라 더블클릭→select로. data-field/data-type으로 구분해서
     // events.js가 공용 핸들러 하나로 처리.
-    const editableCell = (field, value, type = "text") =>
-        `<td class="move-editable-cell" data-id="${r.id}" data-field="${field}" data-type="${type}" data-value="${attrEscape(value)}" title="더블클릭해서 수정">${safeValue(value)}</td>`;
+    const editableCell = (field, value, type = "text") => canEdit
+        ? `<td class="move-editable-cell" data-id="${r.id}" data-field="${field}" data-type="${type}" data-value="${attrEscape(value)}" title="더블클릭해서 수정">${safeValue(value)}</td>`
+        : `<td>${safeValue(value)}</td>`;
     // 비고에 값이 들어가면 수량내림(타창고매출현황과 동일 규칙, 2026-09-04) —
     // 수량 칸은 원수량을 빨갛게, 비고 칸도 값 자체를 빨갛고 굵게 보여준다.
     const dropped = !!r.수량내림;
@@ -1743,14 +1748,18 @@ function moveRowHtml(r) {
     const remarkDisplay = dropped && r.비고 ? `<span class="qty-dropped">${safeValue(r.비고)}</span>` : safeValue(r.비고);
     return `
         <tr data-id="${r.id}"${rowClass ? ` class="${rowClass}"` : ""}>
-            <td><input type="checkbox" class="move-select-check" data-id="${r.id}" ${r.재고 ? "checked" : ""}></td>
-            <td class="move-editable-cell" data-id="${r.id}" data-field="비고" data-type="text" data-value="${attrEscape(r.비고)}" title="더블클릭해서 수정 — 값을 입력하면 수량이 자동으로 내려갑니다">${remarkDisplay}</td>
+            <td><input type="checkbox" class="move-select-check" data-id="${r.id}" ${r.재고 ? "checked" : ""} ${canEdit ? "" : "disabled"}></td>
+            ${canEdit
+                ? `<td class="move-editable-cell" data-id="${r.id}" data-field="비고" data-type="text" data-value="${attrEscape(r.비고)}" title="더블클릭해서 수정 — 값을 입력하면 수량이 자동으로 내려갑니다">${remarkDisplay}</td>`
+                : `<td>${remarkDisplay}</td>`}
             ${editableCell("배차자", r.배차자, "select-dispatcher")}
             <td>${safeValue(r.상품명)}</td>
             <td>${safeValue(r.브랜드)}</td>
             <td>${safeValue(r.등급)}</td>
             <td>${safeValue(r.ESTNO)}</td>
-            <td class="move-editable-cell" data-id="${r.id}" data-field="수량" data-type="number" data-value="${attrEscape(r.수량)}" title="더블클릭해서 수정">${qtyDisplay}</td>
+            ${canEdit
+                ? `<td class="move-editable-cell" data-id="${r.id}" data-field="수량" data-type="number" data-value="${attrEscape(r.수량)}" title="더블클릭해서 수정">${qtyDisplay}</td>`
+                : `<td>${qtyDisplay}</td>`}
             <td>${safeValue(r.BL) || safeValue(r.매입처)}</td>
             <td>${whTag(r.창고)}</td>
             ${editableCell("이동창고", r.이동창고, "select-warehouse")}
@@ -1760,8 +1769,8 @@ function moveRowHtml(r) {
             ${editableCell("수정사항", r.수정사항)}
             <td>${safeValue(r.평중)}</td>
             <td>${safeValue(총중량)}</td>
-            <td>${r.취소 ? "" : `<input type="checkbox" class="move-processed-check" data-id="${r.id}" ${r.처리 ? "checked" : ""}>`}</td>
-            <td>${r.처리 ? "" : `<input type="checkbox" class="move-cancel-check" data-id="${r.id}" ${r.취소 ? "checked" : ""}>`}</td>
+            <td>${r.취소 ? "" : `<input type="checkbox" class="move-processed-check" data-id="${r.id}" ${r.처리 ? "checked" : ""} ${canEdit ? "" : "disabled"}>`}</td>
+            <td>${r.처리 ? "" : `<input type="checkbox" class="move-cancel-check" data-id="${r.id}" ${r.취소 ? "checked" : ""} ${canEdit ? "" : "disabled"}>`}</td>
         </tr>
     `;
 }

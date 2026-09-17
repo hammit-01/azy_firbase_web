@@ -38,12 +38,26 @@ export function hasAdminAccess(role) {
     return role === "관리자";
 }
 
-// 창고이동 기능 접근 권한(2026-09-04 관리자+id 54 개별 허용 → 2026-09-14
-// "배차자" 권한으로 일반화, 박성찬/제갈준 권한을 배차자로 변경하면서 개별 id
-// 예외는 필요 없어져 제거) — 관리자 + 배차자 권한만 보이게.
+// 창고이동 탭 열람 권한(2026-09-17 전 직원으로 확대) — 로그인만 하면 누구나
+// 탭을 보고 조회할 수 있다. 실제 등록/수정 권한은 hasWarehouseMovesAccess로
+// 따로 gating한다.
+export function hasWarehouseMovesViewAccess() {
+    return !!getStoredUser();
+}
+
+// 창고이동 등록/수정 권한(2026-09-04 관리자+id 54 개별 허용 → 2026-09-14
+// "배차자" 권한으로 일반화 → 2026-09-17 운영팀 전원 + 제갈준/박성찬 개별
+// 허용 추가, 탭 열람 자체는 hasWarehouseMovesViewAccess로 전 직원에 개방됨에
+// 따라 실제 등록/수정은 이 함수로 별도 제한) — 관리자 + 배차자 + 운영팀
+// 부서원 + 제갈준/박성찬만 가능.
+const WAREHOUSE_MOVES_EDIT_DEPTS = new Set(["운영팀"]);
+const WAREHOUSE_MOVES_EDIT_NAMES = new Set(["제갈준", "박성찬"]);
 export function hasWarehouseMovesAccess() {
     const u = getStoredUser();
-    return u?.권한 === "관리자" || u?.권한 === "배차자";
+    if (!u) return false;
+    if (u.권한 === "관리자" || u.권한 === "배차자") return true;
+    if (WAREHOUSE_MOVES_EDIT_DEPTS.has(u.부서)) return true;
+    return WAREHOUSE_MOVES_EDIT_NAMES.has(u.이름);
 }
 
 function closePopover() {
@@ -73,16 +87,16 @@ function _currentTabName() {
 }
 
 export function applyRoleVisibility(role) {
-    // 창고이동(2026-09-04) — 관리자+id 54 전용 게이트. role만으론 안 되고
-    // id도 봐야 해서 EDITOR_ONLY_SELECTORS/LOGIN_ONLY_SELECTORS 목록에 안 넣고
-    // 따로 처리.
-    const movesEnabled = hasWarehouseMovesAccess();
+    // 창고이동(2026-09-04, 2026-09-17 탭 열람은 전 직원으로 확대) — 탭
+    // 노출은 로그인만 하면 되고, 실제 등록/수정 가능 여부는 별도 함수로 gating.
+    const movesEnabled = hasWarehouseMovesViewAccess();
+    const movesEditEnabled = hasWarehouseMovesAccess();
     const movesTabBtn = document.querySelector(".moves-tab-btn");
     if (movesTabBtn) movesTabBtn.style.display = movesEnabled ? "" : "none";
 
-    // 크롤링 탭 — 관리자 전용(2026-09-16)
+    // 크롤링 탭 — 관리자 + 운영팀 전원(2026-09-16 관리자 전용 → 2026-09-17 운영팀 확대)
     const crawlingTabBtn = document.querySelector(".crawling-tab-btn");
-    if (crawlingTabBtn) crawlingTabBtn.style.display = hasAdminAccess(role) ? "" : "none";
+    if (crawlingTabBtn) crawlingTabBtn.style.display = (hasAdminAccess(role) || getStoredUser()?.부서 === "운영팀") ? "" : "none";
 
     const hideEditorOnly = !hasEditorAccess(role);
     EDITOR_ONLY_SELECTORS.forEach(sel => {
@@ -112,7 +126,7 @@ export function applyRoleVisibility(role) {
     if (insertBtn) insertBtn.style.display = (tab !== "reservations" && tab !== "changes" && canAddOnTab) ? "" : "none";
     if (updateBtn) updateBtn.style.display = (mainOnly && isEditor) ? "" : "none";
     if (holdingBtn) holdingBtn.style.display = (mainOnly && !!role) ? "" : "none";
-    if (moveBtn) moveBtn.style.display = (mainOnly && movesEnabled) ? "" : "none";
+    if (moveBtn) moveBtn.style.display = (mainOnly && movesEditEnabled) ? "" : "none";
     // 전체취소/전체삭제 — 타창고매출현황/전략단가/예약현황(나의예약)/업데이트에서는
     // 숨김, 재고장 탭에서만 노출(2026-08-20). 전체삭제는 기존처럼 편집자만.
     if (clearBtn) clearBtn.style.display = mainOnly ? "" : "none";
