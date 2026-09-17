@@ -56,15 +56,27 @@ def _new_session() -> requests.Session:
     return session
 
 
+def _crawl_source_baseline(warehouse: str):
+    """직전에 기록된 크롤링 탭 원본재고 총량(2026-09-18, 대청 사고 대응 —
+    로그인+조회는 성공하는데 결과가 비어있는 게 격리 실행하면 재현이 안 되고
+    전체 창고 동시 크롤 때만 터지는 걸 확인함). 조회는 성공했는데 결과가
+    비어있을 때 원래 재고가 있던 창고인지 판단해 재시도 여부를 정하는 데만
+    쓴다 — 조회 실패 시 재시도를 건너뛰도록 None을 돌려준다."""
+    try:
+        from pipeline.mysql_db import get_conn
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT qty FROM crawl_source_totals WHERE 창고=%s", (warehouse,))
+                row = cur.fetchone()
+                return row["qty"] if row else None
+    except Exception:
+        return None
+
+
 def _crawl_single_row(row: pd.Series, session_cache: dict, cache_lock: threading.Lock) -> tuple:
     warehouse = str(row["창고"])
     ip_port   = str(row["ip포트"])
     path      = str(row["약식주소"])
-    frames    = []
-    # 계정 하나라도 로그인+조회가 실제로 끝까지 성공했는지(결과가 비어있어도) —
-    # "성공했지만 진짜 재고 0"과 "로그인/조회 자체가 실패"를 구분해서 stale
-    # 삭제 판단에 쓰기 위함(2026-08-28, 아래 return 참고).
-    had_success = False
 
     users = get_users(row)
     if warehouse in _DUPLICATE_ACCOUNT_WAREHOUSES:
@@ -76,62 +88,88 @@ def _crawl_single_row(row: pd.Series, session_cache: dict, cache_lock: threading
         users = [u for u in users if u[0] == "일반"]
     users = [u for u in users if (warehouse, u[0]) not in _SKIP_ACCOUNT_TYPES]
 
-    for user_type, uid, pw, scustcd, scmdept in users:
-        cache_key = (warehouse, user_type)
-        try:
-            with cache_lock:
-                session = session_cache.get(cache_key)
-
-            data = None
-            if session is not None:
-                # 캐시된 세션으로 우선 시도 — 유효하면 재로그인 없이 바로 조회
-                data = get_data(session, ip_port, path, scustcd, scmdept, warehouse)
-
-            if session is None or data is None:
-                # 세션 없음/만료 → 재로그인 후 캐시 갱신
-                if session is not None:
-                    session.close()  # 만료된 옛 세션 커넥션 정리
-                session = _new_session()
-                res = login(session, ip_port, path, uid, pw, warehouse)
-                if res is None:
+    def attempt(force_fresh: bool) -> tuple:
+        # 계정 하나라도 로그인+조회가 실제로 끝까지 성공했는지(결과가 비어있어도) —
+        # "성공했지만 진짜 재고 0"과 "로그인/조회 자체가 실패"를 구분해서 stale
+        # 삭제 판단에 쓰기 위함(2026-08-28, 아래 return 참고).
+        frames = []
+        had_success = False
+        for user_type, uid, pw, scustcd, scmdept in users:
+            cache_key = (warehouse, user_type)
+            try:
+                session = None
+                if not force_fresh:
                     with cache_lock:
-                        session_cache.pop(cache_key, None)
+                        session = session_cache.get(cache_key)
+
+                data = None
+                if session is not None:
+                    # 캐시된 세션으로 우선 시도 — 유효하면 재로그인 없이 바로 조회
+                    data = get_data(session, ip_port, path, scustcd, scmdept, warehouse)
+
+                if session is None or data is None:
+                    # 세션 없음/만료 → 재로그인 후 캐시 갱신
+                    if session is not None:
+                        session.close()  # 만료된 옛 세션 커넥션 정리
+                    session = _new_session()
+                    res = login(session, ip_port, path, uid, pw, warehouse)
+                    if res is None:
+                        with cache_lock:
+                            session_cache.pop(cache_key, None)
+                        continue
+                    with cache_lock:
+                        session_cache[cache_key] = session
+                    data = get_data(session, ip_port, path, scustcd, scmdept, warehouse)
+
+                if data is None:
+                    # 재로그인 직후에도 세션 만료 신호 — 이 계정은 실패로 취급
                     continue
+                had_success = True  # 여기까지 왔으면 로그인+조회 자체는 성공(빈 결과 포함)
+                if data.empty:
+                    continue
+
+                if warehouse == "이스트밸리" and "B/L NO,식별번호" in data.columns:
+                    # 기본 재고조회(rtv_stock.do)에는 브랜드 컬럼이 없어서 브랜드가 있는
+                    # 별도 화면(rtv_stock02.do)을 한 번 더 조회해 B/L No+식별번호로 매칭해 채운다.
+                    brand_map = get_eastbelly_brand_map(session, scustcd, scmdept)
+                    data["브랜드"] = data["B/L NO,식별번호"].map(brand_map).fillna("")
+
+                # drop_duplicates() 금지: 동일 BL/수량/유통기한이라도 별도 로트인 경우가 있음
+                # (#012와 동일한 유형의 버그 — 뒤 단계의 pk/uid 기준 groupby+합산이 중복을 처리하므로
+                # 여기서 행 단위로 먼저 지우면 유효한 박스 수량이 조용히 손실된다)
+                data["창고"] = warehouse
+
+                func = PROCESS_MAP.get(warehouse)
+                if func:
+                    data = func(data)
+
+                if data is not None and not data.empty:
+                    frames.append(data)
+
+            except Exception as e:
                 with cache_lock:
-                    session_cache[cache_key] = session
-                data = get_data(session, ip_port, path, scustcd, scmdept, warehouse)
+                    dead = session_cache.pop(cache_key, None)
+                if dead is not None:
+                    dead.close()
+                log.error(f"  [{warehouse}] {user_type} 오류: {e}")
+        return frames, had_success
 
-            if data is None:
-                # 재로그인 직후에도 세션 만료 신호 — 이 계정은 실패로 취급
-                continue
-            had_success = True  # 여기까지 왔으면 로그인+조회 자체는 성공(빈 결과 포함)
-            if data.empty:
-                continue
+    frames, had_success = attempt(force_fresh=False)
 
-            if warehouse == "이스트밸리" and "B/L NO,식별번호" in data.columns:
-                # 기본 재고조회(rtv_stock.do)에는 브랜드 컬럼이 없어서 브랜드가 있는
-                # 별도 화면(rtv_stock02.do)을 한 번 더 조회해 B/L No+식별번호로 매칭해 채운다.
-                brand_map = get_eastbelly_brand_map(session, scustcd, scmdept)
-                data["브랜드"] = data["B/L NO,식별번호"].map(brand_map).fillna("")
-
-            # drop_duplicates() 금지: 동일 BL/수량/유통기한이라도 별도 로트인 경우가 있음
-            # (#012와 동일한 유형의 버그 — 뒤 단계의 pk/uid 기준 groupby+합산이 중복을 처리하므로
-            # 여기서 행 단위로 먼저 지우면 유효한 박스 수량이 조용히 손실된다)
-            data["창고"] = warehouse
-
-            func = PROCESS_MAP.get(warehouse)
-            if func:
-                data = func(data)
-
-            if data is not None and not data.empty:
-                frames.append(data)
-
-        except Exception as e:
-            with cache_lock:
-                dead = session_cache.pop(cache_key, None)
-            if dead is not None:
-                dead.close()
-            log.error(f"  [{warehouse}] {user_type} 오류: {e}")
+    if not frames and had_success:
+        # 로그인/조회는 됐는데 결과가 비어있음 — 직전에 기록된 원본재고가 0이
+        # 아니었다면 전체 창고 동시 크롤 때만 간헐적으로 발생하는 일시적 오류일
+        # 수 있으니(2026-09-18, 대청 사고: 격리 실행하면 매번 정상 조회되는데
+        # 전체 배치 동시 실행 때만 이 창고만 빈 결과가 나오는 걸 직접 재현·확인함)
+        # 새 세션으로 한 번만 재시도한다. baseline이 없거나 0인 창고(원래 항상
+        # 재고 0인 창고)는 재시도하지 않는다.
+        baseline = _crawl_source_baseline(warehouse)
+        if baseline and baseline > 0:
+            log.warning(f"  [{warehouse}] 조회 결과 비어있음(직전 원본재고 {baseline}) — 새 세션으로 재시도")
+            retry_frames, retry_had_success = attempt(force_fresh=True)
+            if retry_frames:
+                frames = retry_frames
+            had_success = had_success or retry_had_success
 
     if frames:
         return warehouse, pd.concat(frames, ignore_index=True)
