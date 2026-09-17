@@ -310,9 +310,28 @@ def _upload_azy(azy_df, warehouse_scope=None):
             else:
                 stale_ids.append(uid)
 
+        # 임시 진단(2026-09-17) — 에이스 재고가 크롤은 정상(원본 크롤 총량은
+        # crawl_source_totals에 맞게 찍히는데) DB엔 0으로 반영되는 문제 추적용.
+        # upsert 직전 시점 rows(메모리 계산 결과) 자체가 이미 틀렸는지, 아니면
+        # upsert 이후 뭔가가 덮어쓰는지 구분하기 위해 창고 범위가 에이스일 때만
+        # upsert 직전 총량을 남긴다. 원인 확인되면 제거할 것.
+        if warehouse_scope and any(str(w).startswith("에이스") for w in warehouse_scope):
+            _ace_check = {}
+            for d in rows.values():
+                _ace_check[d.get("창고")] = _ace_check.get(d.get("창고"), 0) + (d.get("재고") or 0)
+            log.info(f"  [진단-에이스] upsert 직전 rows 창고별 합계: {_ace_check}")
+
         upsert_azy_inventory(conn, list(rows.values()))
         if stale_ids:
             delete_azy_inventory(conn, stale_ids)
+
+        if warehouse_scope and any(str(w).startswith("에이스") for w in warehouse_scope):
+            with conn.cursor() as _cur:
+                _cur.execute(
+                    "SELECT 창고, SUM(재고) AS qty FROM azy_inventory WHERE 창고 IN (%s,%s,%s) GROUP BY 창고",
+                    ("에이스기흥", "에이스처인", "에이스용인"),
+                )
+                log.info(f"  [진단-에이스] upsert 직후 DB 재조회: {_cur.fetchall()}")
 
     new_total = sum(r["재고"] for r in rows.values())
     diff_note = ""
