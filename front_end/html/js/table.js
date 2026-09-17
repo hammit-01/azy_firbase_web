@@ -1497,6 +1497,10 @@ export async function renderReservationsTab(useCache = false) {
     // 팀장(2026-09-14) — 본인 예약만이 아니라 같은 부서 담당자들 예약도 볼 수 있게.
     // state.employees(이름/부서)로 같은 부서 이름 집합을 구해서 필터.
     const isTeamLead = user?.직급 === "팀장";
+    // 제갈준(2026-09-18 사용자 요청) — 팀장이라 원래는 같은 부서만 보이지만
+    // 전 직원 예약현황을 볼 수 있게 개별 허용. 기본 필터가 본인 이름으로
+    // 시작하는 팀장 로직(아래 isTeamLead 분기)은 그대로 재사용된다.
+    const seesAllReservations = isEditor || user?.이름 === "제갈준";
 
     let rows;
     if (useCache && _reservationsRowsCache) {
@@ -1519,7 +1523,7 @@ export async function renderReservationsTab(useCache = false) {
         _reservationsRowsCache = rows;
     }
 
-    if (!isEditor) {
+    if (!seesAllReservations) {
         if (isTeamLead && user?.부서) {
             const teamNames = new Set(state.employees.filter(e => e["부서"] === user.부서).map(e => e["이름"]));
             rows = rows.filter(r => teamNames.has(r.담당자));
