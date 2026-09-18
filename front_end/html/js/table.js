@@ -249,7 +249,6 @@ export function createUpdateRow(item) {
     const id = item.id;
     return `
         <tr class="update-row-edit" data-id="${id}">
-            <td><input type="checkbox" class="row-check" data-id="${id}" checked></td>
             <td data-label="상품명"><input type="text" class="update-name cell-input" data-id="${id}" value="${safeValue(item.상품명)}"></td>
             <td data-label="브랜드"><input type="text" class="update-brand cell-input" data-id="${id}" value="${safeValue(item.브랜드)}"></td>
             <td data-label="등급"><input type="text" class="update-grade cell-input" data-id="${id}" value="${safeValue(item.등급)}"></td>
@@ -272,6 +271,7 @@ export function createUpdateRow(item) {
                 <input type="hidden" class="update-releaseDate" data-id="${id}" value="${safeValue(item.출고일)}">
                 <input type="hidden" class="update-holding" data-id="${id}" value="${safeValue(item.홀딩)}">
             </td>
+            <td><input type="checkbox" class="row-check" data-id="${id}" checked></td>
         </tr>
     `;
 }
@@ -286,7 +286,6 @@ export function createHoldingInsertRow(item) {
         : employeeSelect("hold-note", id, "");
     return `
         <tr class="holding-insert-row" data-id="${id}">
-            <td></td>
             <td class="holding-inherited" data-label="상품명">${safeValue(item.상품명)}</td>
             <td class="holding-inherited" data-label="브랜드">${safeValue(item.브랜드)}</td>
             <td class="holding-inherited" data-label="등급">${safeValue(item.등급)}</td>
@@ -310,6 +309,7 @@ export function createHoldingInsertRow(item) {
                     <button class="cancel-btn" data-id="${id}" title="취소">✕</button>
                 </div>
             </td>
+            <td></td>
         </tr>
     `;
 }
@@ -829,17 +829,7 @@ export function renderTable() {
         html += `
             <tr class="${rowClass}" data-id="${id}" data-출고일="${safeValue(item.출고일)}" data-홀딩="${safeValue(item.홀딩)}" data-pk="${item._rawId ?? id}" data-예약수량="${Number(item.예약수량) || 0}">
 
-                <td>
-                    <input
-                        type="checkbox"
-                        class="row-check"
-                        data-id="${id}"
-                        ${checked ? "checked" : ""}
-                        ${item._isMoving ? "disabled title=\"이고 취합 시트 데이터 — 읽기 전용\"" : ""}
-                    >
-                </td>
-
-                <td><button type="button" class="row-copy-btn" data-id="${id}" title="상품명~창고 복사">⎘</button>${safeValue(item.상품명)}</td>
+                <td>${safeValue(item.상품명)}</td>
                 <td>${safeValue(item.브랜드)}</td>
                 <td>${safeValue(item.등급)}</td>
                 <td>${safeValue(item.ESTNO)}</td>
@@ -853,6 +843,17 @@ export function renderTable() {
                 <td>${dueDateTag(item.유통기한, limitDate)}</td>
                 <td>${safeValue(item.평중)}</td>
                 <td>${safeValue(item.메모)}</td>
+
+                <td class="select-copy-cell">
+                    <button type="button" class="row-copy-btn" data-id="${id}" title="상품명~창고 복사">⎘</button>
+                    <input
+                        type="checkbox"
+                        class="row-check"
+                        data-id="${id}"
+                        ${checked ? "checked" : ""}
+                        ${item._isMoving ? "disabled title=\"이고 취합 시트 데이터 — 읽기 전용\"" : ""}
+                    >
+                </td>
             </tr>
         `;
 

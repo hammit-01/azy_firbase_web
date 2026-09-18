@@ -1487,20 +1487,9 @@ async function handleClick(e) {
     if (e.target.classList.contains("row-copy-btn")) {
         const tr = e.target.closest("tr");
         if (tr) {
-            // 열 순서: 0=선택, 1=상품명, 2=브랜드, 3=등급, 4=ESTNO, 5=재고, 6=BL, 7=창고.
-            // 1번 칸은 복사 버튼(⎘)과 텍스트가 같이 들어있어 버튼 글자는 빼고 읽는다.
-            const cells = [1, 2, 3, 4, 5, 6, 7].map(i => {
-                const cell = tr.children[i];
-                if (!cell) return "";
-                if (i === 1) {
-                    return [...cell.childNodes]
-                        .filter(n => n.nodeType === Node.TEXT_NODE)
-                        .map(n => n.textContent)
-                        .join("")
-                        .trim();
-                }
-                return (cell.textContent || "").trim();
-            });
+            // 열 순서(2026-09-18, 선택 열을 맨 뒤로 옮기며 재조정):
+            // 0=상품명, 1=브랜드, 2=등급, 3=ESTNO, 4=재고, 5=BL, 6=창고.
+            const cells = [0, 1, 2, 3, 4, 5, 6].map(i => (tr.children[i]?.textContent || "").trim());
             try {
                 await navigator.clipboard.writeText(cells.join("\t"));
                 showToast("✓ 복사됨");

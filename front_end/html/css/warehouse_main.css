@@ -185,7 +185,7 @@ th {
     font-weight: 700;
     letter-spacing: -0.1px;
 }
-.table-wrap th:first-child { text-align: center; }
+.table-wrap th:last-child { text-align: center; }
 
 td {
     padding: 13px 8px;
@@ -201,14 +201,16 @@ td {
 }
 /* 선택 체크박스 칸은 왼쪽 정렬하면 좁은 칸에서 어색해서 계속 가운데 정렬 유지
    (2026-08-18, 재고장 표 데이터 칸만 왼쪽 정렬로 바꾼 요청 — 다른 표(가격 등)의
-   첫 칸까지 건드리지 않게 .table-wrap 범위로 한정) */
-.table-wrap td:first-child { text-align: center; }
+   칸까지 건드리지 않게 .table-wrap 범위로 한정). 2026-09-18에 선택 열을 맨
+   뒤로 옮기면서 first-child → last-child로 변경.
+   -->
+.table-wrap td:last-child { text-align: center; }
 
-/* BL번호 열 한 줄 표시 — 열 순서: 선택,상품명,브랜드,등급,ESTNO,재고,BL,창고,예약,가용,유통기한,평균,비고
-   (2026-08-25, 예약/가용만 창고~유통기한 사이로 다시 옮기며 BL 위치가 9→7번째로
-   바뀜. 다른 표(예약현황/타창고매출현황 등)의 같은 위치 칸까지 건드리지 않게 위
-   .table-wrap td:first-child처럼 .table-wrap으로 범위 한정) */
-.table-wrap td:nth-child(7) {
+/* BL번호 열 한 줄 표시 — 열 순서(2026-09-18, 선택을 맨 뒤로 옮기며 재조정):
+   상품명,브랜드,등급,ESTNO,재고,BL,창고,예약,가용,유통기한,평균,비고,선택 —
+   BL이 6번째. 다른 표(예약현황/타창고매출현황 등)의 같은 위치 칸까지 건드리지
+   않게 위 .table-wrap td:last-child처럼 .table-wrap으로 범위 한정) */
+.table-wrap td:nth-child(6) {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -223,9 +225,8 @@ tbody tr:hover td {
     transition: background 0.12s ease;
 }
 
-/* 열 고정(선택/상품명) — 표를 가로로 스크롤해도 이 두 칸은 왼쪽에 그대로 붙어있게
-   (2026-09-14 요청). left는 각 칸의 colgroup % 너비를 그대로 반영(1번째 0%,
-   2번째는 1번째 너비인 5%만큼 밀어서 안 겹치게).
+/* 열 고정(상품명) — 표를 가로로 스크롤해도 이 칸은 왼쪽에 그대로 붙어있게
+   (2026-09-14 요청, 2026-09-18 선택 열이 맨 뒤로 옮겨가며 상품명 하나만 고정).
    고정 칸은 그 뒤 칸들이 밑으로 지나가므로 배경이 투명하면 겹쳐 보인다 — 홀수행
    기본색/짝수행 줄무늬/hover/선택된 행 색을 전부 명시적으로 다시 지정해서
    스크롤 중에도 해당 행 색과 항상 일치하게 함(기본 td 규칙에 얹혀가는 상속에
@@ -237,32 +238,20 @@ tbody tr:hover td {
     z-index: 40;
     background: #fff;
 }
-.table-wrap td:nth-child(2),
-.table-wrap th:nth-child(2) {
-    position: sticky;
-    left: 5%;
-    z-index: 40;
-    background: #fff;
-}
-.table-wrap thead th:nth-child(1),
-.table-wrap thead th:nth-child(2) {
+.table-wrap thead th:nth-child(1) {
     z-index: 55;
     background: #475569;
 }
-.table-wrap tbody tr:nth-child(even) td:nth-child(1),
-.table-wrap tbody tr:nth-child(even) td:nth-child(2) {
+.table-wrap tbody tr:nth-child(even) td:nth-child(1) {
     background: #f6fbea;
 }
-.table-wrap tbody tr:hover td:nth-child(1),
-.table-wrap tbody tr:hover td:nth-child(2) {
+.table-wrap tbody tr:hover td:nth-child(1) {
     background: #e4f7c1 !important;
 }
-.table-wrap tbody tr.selected-row td:nth-child(1),
-.table-wrap tbody tr.selected-row td:nth-child(2) {
+.table-wrap tbody tr.selected-row td:nth-child(1) {
     background: #d4f7a0 !important;
 }
-.table-wrap tbody tr.flash-row td:nth-child(1),
-.table-wrap tbody tr.flash-row td:nth-child(2) {
+.table-wrap tbody tr.flash-row td:nth-child(1) {
     background: #d3f5c4 !important;
 }
 
@@ -1436,17 +1425,23 @@ input[type="checkbox"] {
     height: 24px;
 }
 
-/* 재고장 행별 복사 버튼(2026-09-18) — 상품명 칸 앞에 아이콘처럼 붙는 작은 버튼 */
+/* 재고장 선택 열(2026-09-18 맨 뒤로 이동) — 복사 버튼 + 선택 체크박스를
+   한 칸에 나란히 배치 */
+.select-copy-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
 .row-copy-btn {
     border: none;
     background: none;
-    padding: 0 4px 0 0;
+    padding: 0;
     margin: 0;
-    font-size: 13px;
+    font-size: 18px;
     line-height: 1;
     color: #9ca3af;
     cursor: pointer;
-    vertical-align: middle;
 }
 .row-copy-btn:hover { color: #4b5563; }
 
@@ -2504,9 +2499,10 @@ tr.insert-card .remove-insert-btn:hover {
         grid-column: 1 / -1;
     }
 
-    /* 체크박스 칸은 카드 뷰에서 불필요, +버튼 칸은 헤더 옆에 붙임 */
-    tr.update-row-edit td:first-child,
-    tr.holding-insert-row td:first-child {
+    /* 체크박스 칸은 카드 뷰에서 불필요, +버튼 칸은 헤더 옆에 붙임(2026-09-18
+       선택 열이 맨 뒤로 옮겨가며 first-child → last-child) */
+    tr.update-row-edit td:last-child,
+    tr.holding-insert-row td:last-child {
         display: none;
     }
     tr.insert-card td:first-child {
