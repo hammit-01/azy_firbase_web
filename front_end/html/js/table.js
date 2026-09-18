@@ -839,7 +839,7 @@ export function renderTable() {
                     >
                 </td>
 
-                <td>${safeValue(item.상품명)}</td>
+                <td><button type="button" class="row-copy-btn" data-id="${id}" title="상품명~창고 복사">⎘</button>${safeValue(item.상품명)}</td>
                 <td>${safeValue(item.브랜드)}</td>
                 <td>${safeValue(item.등급)}</td>
                 <td>${safeValue(item.ESTNO)}</td>

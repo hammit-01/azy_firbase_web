@@ -1430,6 +1430,26 @@ input[type="checkbox"] {
     accent-color: #94d900;
 }
 
+/* 재고장 선택 체크박스만 살짝 키움(2026-09-18 사용자 요청) */
+.row-check {
+    width: 18px;
+    height: 18px;
+}
+
+/* 재고장 행별 복사 버튼(2026-09-18) — 상품명 칸 앞에 아이콘처럼 붙는 작은 버튼 */
+.row-copy-btn {
+    border: none;
+    background: none;
+    padding: 0 4px 0 0;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1;
+    color: #9ca3af;
+    cursor: pointer;
+    vertical-align: middle;
+}
+.row-copy-btn:hover { color: #4b5563; }
+
 /* 테이블 행 hover 시 커서 포인터 */
 tbody tr {
     cursor: pointer;

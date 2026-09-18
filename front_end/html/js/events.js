@@ -1480,6 +1480,37 @@ async function handleClick(e) {
         return;
     }
 
+    // 행 복사(2026-09-18 사용자 요청) — 상품명~창고(7칸)를 탭 구분 텍스트로
+    // 클립보드에 복사해 엑셀 등에 그대로 붙여넣을 수 있게. state 조회 대신
+    // 화면에 실제로 찍힌 셀 값을 그대로 읽어서(whTag 등 표시용 가공과 항상
+    // 일치하게) 복사한다.
+    if (e.target.classList.contains("row-copy-btn")) {
+        const tr = e.target.closest("tr");
+        if (tr) {
+            // 열 순서: 0=선택, 1=상품명, 2=브랜드, 3=등급, 4=ESTNO, 5=재고, 6=BL, 7=창고.
+            // 1번 칸은 복사 버튼(⎘)과 텍스트가 같이 들어있어 버튼 글자는 빼고 읽는다.
+            const cells = [1, 2, 3, 4, 5, 6, 7].map(i => {
+                const cell = tr.children[i];
+                if (!cell) return "";
+                if (i === 1) {
+                    return [...cell.childNodes]
+                        .filter(n => n.nodeType === Node.TEXT_NODE)
+                        .map(n => n.textContent)
+                        .join("")
+                        .trim();
+                }
+                return (cell.textContent || "").trim();
+            });
+            try {
+                await navigator.clipboard.writeText(cells.join("\t"));
+                showToast("✓ 복사됨");
+            } catch (err) {
+                showError("복사에 실패했습니다.");
+            }
+        }
+        return;
+    }
+
     // 전체 선택 (현재 필터된 행만)
     if (e.target.classList.contains("select-all")) {
         const visible = state.filteredData.length > 0 ? state.filteredData : state.allData;
