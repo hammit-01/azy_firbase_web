@@ -890,10 +890,7 @@ export function bindEvents() {
 
     document.addEventListener("click", handleClick);
 
-    // 더블클릭으로 행 선택
     document.addEventListener("dblclick", (e) => {
-        if (e.target.classList.contains("row-check")) return;
-
         // 타창고매출현황 — 비고 칸 더블클릭하면 그 자리에서 바로 수정(2026-08-19,
         // 매번 "출고변경" 모달을 열지 않아도 되게). 이미 입력창으로 바뀐 상태면
         // 다시 더블클릭해도 무시(inline input 안에서의 더블클릭은 텍스트 선택용).
@@ -1183,50 +1180,8 @@ export function bindEvents() {
             return;
         }
 
-        const target = e.target.closest("tr") || e.target.closest(".mobile-card");
-        if (!target) return;
-
-        const checkbox = target.querySelector(".row-check");
-        if (!checkbox) return;
-        if (checkbox.disabled) return; // 이고(moving) 행 등 선택 금지된 행은 더블클릭으로도 선택 못 하게
-
-        const id = checkbox.dataset.id;
-        const item = state.allData.find(d => d.id === id);
-        if (!item) return;
-
-        const nowChecked = !state.selectedItems.has(id);
-        if (nowChecked) {
-            addSelectedItem(state, id, item);
-        } else {
-            state.selectedItems.delete(id);
-            if (state.selectedItems.size === 0) state.crudData = null;
-        }
-
-        // ① 체크박스·행 클래스만 토글
-        checkbox.checked = nowChecked;
-        if (target.tagName === "TR") {
-            target.classList.toggle("selected-row", nowChecked);
-        } else {
-            target.classList.toggle("mobile-selected", nowChecked);
-        }
-
-        if (state.selectedItems.size === 0) {
-            dom.container?.classList.remove("active");
-            if (dom.sideBox) dom.sideBox.innerHTML = "";
-            window.getSelection()?.removeAllRanges();
-            return;
-        }
-
-        switch (state.crudData) {
-            case "update":
-            case "holding":
-                renderTable();
-                break;
-            default:
-                renderSelectData();
-        }
-
-        window.getSelection()?.removeAllRanges();
+        // 재고장 행 선택은 더블클릭이 아니라 한 번 클릭으로 처리(2026-09-18,
+        // handleClick의 "재고장 행 선택" 블록 참고) — 여기서는 손대지 않는다.
     });
 
     // 발주장 탭(2026-09-08 사용자 요청: "행을 마우스 움직여서 행 순서 변경") —
@@ -1498,6 +1453,46 @@ async function handleClick(e) {
             }
         }
         return;
+    }
+
+    // 재고장 행 선택(2026-09-18 사용자 요청) — 체크박스를 없애면서 더블클릭
+    // 대신 행 한 번 클릭으로 선택/해제. 입력창·버튼·링크를 클릭한 거면 그
+    // 자체 동작이 우선이니 건너뛰고(수정중인 행에서 입력칸 클릭했는데 선택이
+    // 풀려 편집이 취소되는 걸 막기 위함), 수정/예약 입력행(update-row-edit/
+    // holding-insert-row) 자체도 이미 선택된 행이 편집 중인 거라 행 클릭으로
+    // 또 토글하지 않는다(취소는 그 행의 ✕ 버튼으로).
+    const selRow = e.target.closest("#list tr");
+    if (selRow && !e.target.closest("input, select, textarea, button, a, option, .select-copy-cell")
+        && !selRow.classList.contains("update-row-edit")
+        && !selRow.classList.contains("holding-insert-row")) {
+        const id = selRow.dataset.id;
+        const item = state.allData.find(d => d.id === id);
+        if (item && !item._isMoving) {
+            const nowChecked = !state.selectedItems.has(id);
+            if (nowChecked) {
+                addSelectedItem(state, id, item);
+            } else {
+                state.selectedItems.delete(id);
+                if (state.selectedItems.size === 0) state.crudData = null;
+            }
+            selRow.classList.toggle("selected-row", nowChecked);
+
+            if (state.selectedItems.size === 0) {
+                dom.container?.classList.remove("active");
+                if (dom.sideBox) dom.sideBox.innerHTML = "";
+            } else {
+                switch (state.crudData) {
+                    case "update":
+                    case "holding":
+                        renderTable();
+                        break;
+                    default:
+                        renderSelectData();
+                }
+            }
+            window.getSelection()?.removeAllRanges();
+            return;
+        }
     }
 
     // 전체 선택 (현재 필터된 행만)

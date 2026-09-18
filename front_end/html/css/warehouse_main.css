@@ -1425,20 +1425,19 @@ input[type="checkbox"] {
     height: 24px;
 }
 
-/* 재고장 선택 열(2026-09-18 맨 뒤로 이동) — 복사 버튼 + 선택 체크박스를
-   한 칸에 나란히 배치 */
+/* 재고장 복사 열(2026-09-18 맨 뒤로 이동, 체크박스는 제거 — 행 선택은
+   행 자체를 한 번 클릭) — 복사 버튼을 칸 가운데 배치 */
 .select-copy-cell {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
 }
 .row-copy-btn {
     border: none;
     background: none;
     padding: 0;
     margin: 0;
-    font-size: 18px;
+    font-size: 45px;
     line-height: 1;
     color: #9ca3af;
     cursor: pointer;

@@ -271,7 +271,7 @@ export function createUpdateRow(item) {
                 <input type="hidden" class="update-releaseDate" data-id="${id}" value="${safeValue(item.출고일)}">
                 <input type="hidden" class="update-holding" data-id="${id}" value="${safeValue(item.홀딩)}">
             </td>
-            <td><input type="checkbox" class="row-check" data-id="${id}" checked></td>
+            <td></td>
         </tr>
     `;
 }
@@ -847,13 +847,6 @@ export function renderTable() {
                 <td>
                     <div class="select-copy-cell">
                         <button type="button" class="row-copy-btn" data-id="${id}" title="상품명~창고 복사">⎘</button>
-                        <input
-                            type="checkbox"
-                            class="row-check"
-                            data-id="${id}"
-                            ${checked ? "checked" : ""}
-                            ${item._isMoving ? "disabled title=\"이고 취합 시트 데이터 — 읽기 전용\"" : ""}
-                        >
                     </div>
                 </td>
             </tr>
