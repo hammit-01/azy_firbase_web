@@ -917,15 +917,18 @@ def get_all_active_reservations(conn) -> list[dict]:
                 f"           WHERE status='ACTIVE' GROUP BY pk) agg ON r.pk = agg.pk "
                 f"LEFT JOIN (SELECT pk, CAST(SUM(수량) AS SIGNED) AS 총출고 FROM outbound "
                 f"           WHERE status='ACTIVE' GROUP BY pk) ob ON r.pk = ob.pk "
-                # 창고이동 비고로 수량이 0까지 내려간 예약 중, 그 이동이 "처리"까지
-                # 체크된 건 더 이상 살아있는 예약이 아니라고 보고 숨긴다(2026-09-04
-                # 사용자 요청) — 비고만 입력되고 처리 전이면 계속 보여야 하므로
-                # 수량=0 단독이 아니라 반드시 m.처리=1까지 같이 확인.
                 # warehouse_moves가 holding_records/azy_holding_records와 콜레이션이
                 # 달라(테이블 생성 시점 차이) 그냥 비교하면 "Illegal mix of collations"
                 # 에러가 나서 명시적으로 맞춰준다.
                 f"LEFT JOIN warehouse_moves m ON m.예약id = r.id COLLATE utf8mb4_unicode_ci "
-                f"WHERE r.status='ACTIVE' AND NOT (r.수량 = 0 AND m.처리 = 1) "
+                # 수량=0인 ACTIVE 예약은 항상 비고 입력으로 수량내림된 상태(정상
+                # 경로로는 예약 수량이 0이 될 수 없음 — update_reservation이 0 이하는
+                # 막음)라 더 이상 살아있는 예약이 아니다. 예전엔 창고이동 "처리"
+                # 체크까지 확인했지만(2026-09-04), 처리 여부와 무관하게 수량=0이면
+                # 예약현황에서는 바로 숨기기로 변경(2026-09-18 사용자 요청) — 창고이동
+                # 탭은 warehouse_moves를 직접 조회해 따로 보여주므로 이 필터와 무관하게
+                # 계속 표시된다.
+                f"WHERE r.status='ACTIVE' AND r.수량 > 0 "
                 f"ORDER BY r.홀딩일자 DESC"
             )
             result.extend(cur.fetchall())
