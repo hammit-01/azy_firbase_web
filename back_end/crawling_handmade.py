@@ -281,6 +281,11 @@ def korea_eda():
     parsed = korea["수탁품"].apply(_parse_korea_web)
     korea["수탁품"] = parsed["수탁품"]
     korea["등급"] = parsed["등급"]
+    # 스탠브르크 형식만 브랜드/비고를 직접 채움(2026-09-28) — 그 외 상품은
+    # 위에서 이미 채운 원본 사이트 브랜드 컬럼 값을 그대로 둔다.
+    has_brand_override = parsed["브랜드"].notna()
+    korea.loc[has_brand_override, "브랜드"] = parsed.loc[has_brand_override, "브랜드"]
+    korea["_manual_메모"] = parsed["비고"]
 
     return korea
 
@@ -727,20 +732,37 @@ def parse_product_yousang(text):
 
 _KOREA_WEB_NOT_GRADE = {"ACC"}  # 브랜드 코드인데 등급으로 잘못 뽑히던 것들 — 브랜드는 별도 컬럼에서 이미 채워짐
 
+# 고려냉장 스탠브르크 공급분 전용(2026-09-28 사용자 확인) — 품명 형식이 다른
+# 상품과 달리 "실유기"(입고월)+상품명+등급+브랜드가 구분자 없이 그대로
+# 이어붙어 온다. ex) "12월대창GF스탠브르크" → 실유기=12월, 상품명=대창, 등급=GF.
+# 원본 사이트 브랜드 컬럼은 이 상품들에선 비어있어 신뢰 못 해 여기서 직접 채움.
+_KOREA_STANBROKE_RE = re.compile(r"^(\d+월)([가-힣]+)([A-Z/\-]+)스탠브르크$")
+
 def _parse_korea_web(text):
     """고려/미빙냉장 웹 수탁품명 파싱: 대창(8788610)PS → 대창, PS등급.
-    끝에 붙은 대문자 코드가 등급이 아니라 브랜드 코드인 경우(ACC 등)는 등급으로 안 뽑음."""
+    끝에 붙은 대문자 코드가 등급이 아니라 브랜드 코드인 경우(ACC 등)는 등급으로 안 뽑음.
+    브랜드/비고는 스탠브르크 형식일 때만 채워지고(그 외엔 None), 호출부가 그때만
+    덮어쓴다 — 나머지 상품은 기존처럼 별도 브랜드 컬럼 값을 그대로 쓴다."""
     if pd.isna(text):
-        return pd.Series({"수탁품": None, "등급": None, "ESTNO": None})
+        return pd.Series({"수탁품": None, "등급": None, "ESTNO": None, "브랜드": None, "비고": None})
     text = str(text).strip()
+
+    m_sb = _KOREA_STANBROKE_RE.match(text)
+    if m_sb:
+        실유기, 품명, 등급 = m_sb.group(1), m_sb.group(2), m_sb.group(3)
+        return pd.Series({
+            "수탁품": 품명, "등급": 등급, "ESTNO": None,
+            "브랜드": "스탠브르크", "비고": f"실유기{실유기}",
+        })
+
     cleaned = re.sub(r"\(\d+\)", "", text).strip()
     m = re.match(r"^([가-힣\s]+)([A-Z/\-]+)$", cleaned)
     if m:
         grade = m.group(2)
         if grade in _KOREA_WEB_NOT_GRADE:
             grade = None
-        return pd.Series({"수탁품": m.group(1).strip(), "등급": grade, "ESTNO": None})
-    return pd.Series({"수탁품": cleaned, "등급": None, "ESTNO": None})
+        return pd.Series({"수탁품": m.group(1).strip(), "등급": grade, "ESTNO": None, "브랜드": None, "비고": None})
+    return pd.Series({"수탁품": cleaned, "등급": None, "ESTNO": None, "브랜드": None, "비고": None})
 
 
 def _finalize_handmade(result):

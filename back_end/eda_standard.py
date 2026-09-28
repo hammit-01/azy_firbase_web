@@ -258,6 +258,16 @@ def eda_standard(df):
     df.loc[has_qualifier, "_auto_상태"] = "특이품"
     df.loc[has_qualifier, "_auto_메모"] = extracted[has_qualifier]
 
+    # 1-1) 창고별 EDA가 직접 넘겨준 자동 메모(예: 고려냉장 스탠브르크 "실유기"
+    # 표시, 2026-09-28 crawling_handmade.py::korea_eda) — 파손/특이품과 달리
+    # 상태는 강제하지 않고 메모만 매 사이클 재계산되게 한다(_upload_azy 참고).
+    # 임시 컬럼이라 여기서 다 쓰고 지운다.
+    if "_manual_메모" in df.columns:
+        manual_note = df["_manual_메모"].astype(str).str.strip()
+        has_manual = manual_note.notna() & (manual_note != "") & (manual_note != "nan") & ~has_qualifier
+        df.loc[has_manual, "_auto_메모"] = manual_note[has_manual]
+        df.drop(columns=["_manual_메모"], inplace=True)
+
     # 2) 상품명/브랜드/등급/ESTNO 중 하나라도 비어있음 → 상태=null (메모는 안 건드림)
     core_cols = ["수탁품", "브랜드", "등급", "ESTNO"]
     missing_mask = pd.Series(False, index=df.index)

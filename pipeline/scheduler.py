@@ -341,6 +341,17 @@ def _upload_azy(azy_df, warehouse_scope=None):
                 if auto_state == "특이품":
                     data["상태"] = "특이품"
                     data["메모"] = auto_memo
+                elif auto_memo:
+                    # 특이품(파손 등) 태그는 아니지만 크롤 원본 텍스트에서 매 사이클
+                    # 재계산되는 메모가 있는 경우(예: 고려냉장 스탠브르크 "실유기"
+                    # 표시, 2026-09-28) — 상태는 강제하지 않고 메모만 자동 반영한다.
+                    data["메모"] = auto_memo
+                    if "검품" in str(prev_memo):
+                        data["상태"] = "특이품"
+                    elif is_missing:
+                        data["상태"] = "null"
+                    else:
+                        data["상태"] = "없음"
                 elif "검품" in str(prev_memo):
                     # 메모에 "검품"이 남아있으면(사람이 직접 남긴 태그) 상태를 특이품으로 강제
                     data["상태"] = "특이품"

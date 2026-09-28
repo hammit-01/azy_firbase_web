@@ -147,6 +147,7 @@ BRAND_MAP = {
     "인터칸": "INTERGAN",
     "알레한드로": "ALEJANDRO",
     "ALE/DU": "ALEJANDRO",
+    "스탠브르크": "STANBROKE",
 }
 
 # 등급 표기 정규화
