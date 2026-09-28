@@ -1493,10 +1493,11 @@ export async function renderReservationsTab(useCache = false) {
     // 팀장(2026-09-14) — 본인 예약만이 아니라 같은 부서 담당자들 예약도 볼 수 있게.
     // state.employees(이름/부서)로 같은 부서 이름 집합을 구해서 필터.
     const isTeamLead = user?.직급 === "팀장";
-    // 제갈준(2026-09-18 사용자 요청) — 팀장이라 원래는 같은 부서만 보이지만
-    // 전 직원 예약현황을 볼 수 있게 개별 허용. 기본 필터가 본인 이름으로
-    // 시작하는 팀장 로직(아래 isTeamLead 분기)은 그대로 재사용된다.
-    const seesAllReservations = isEditor || user?.이름 === "제갈준";
+    // 제갈준(2026-09-18 사용자 요청, 2026-09-28 박성찬도 동일 확대) — 팀장이라
+    // 원래는 같은 부서만 보이지만 전 직원 예약현황을 볼 수 있게 개별 허용.
+    // 기본 필터가 본인 이름으로 시작하는 팀장 로직(아래 isTeamLead 분기)은
+    // 그대로 재사용된다.
+    const seesAllReservations = isEditor || user?.이름 === "제갈준" || user?.이름 === "박성찬";
 
     let rows;
     if (useCache && _reservationsRowsCache) {
@@ -1644,9 +1645,10 @@ export async function renderSalesTab(useCache = false) {
         _salesRowsCache = rows;
     }
 
-    // 담당자 제갈준 출고건은 타창고매출현황에서 숨김(2026-08-25) — 예약현황/
-    // 발주장 등 다른 화면은 그대로 보이고 이 탭에서만 제외.
-    rows = rows.filter(r => r.담당자 !== "제갈준");
+    // 담당자 제갈준/박성찬 출고건은 타창고매출현황에서 숨김(2026-08-25 제갈준,
+    // 2026-09-28 박성찬도 동일 확대) — 예약현황/발주장 등 다른 화면은 그대로
+    // 보이고 이 탭에서만 제외.
+    rows = rows.filter(r => r.담당자 !== "제갈준" && r.담당자 !== "박성찬");
 
     // 미리보기 행(_preview:true — 출고일 예약된 ACTIVE 예약, 아직 outbound로 안
     // 넘어간 것) 노출은 로그인만 하면 됨(2026-08-24 전체 공개). login.js를 여기서

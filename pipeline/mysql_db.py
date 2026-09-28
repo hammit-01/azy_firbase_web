@@ -960,9 +960,11 @@ def migrate_due_reservations_to_outbound(conn) -> int:
     맞춘다. 옮겨진 뒤로는 실재고 가용성 계산(홀딩 합계)에서 빠진다 — 출고일이
     오늘인 예약은 이미 출고 확정 단계로 보고 예약 단계 계산에서 제외.
 
-    담당자(홀딩 컬럼)가 "제갈준"인 예약은 예외 — outbound로 넘기지 않고 예약
-    현황에 계속 ACTIVE로 남긴다(2026-08-26 사용자 요청: 출고일이 와도 자동으로
-    타창고매출현황으로 넘어가면 안 됨)."""
+    담당자(홀딩 컬럼)가 "제갈준"/"박성찬"인 예약은 예외 — outbound로 넘기지
+    않고 예약현황에 계속 ACTIVE로 남긴다(2026-08-26 제갈준 대상 사용자 요청:
+    출고일이 와도 자동으로 타창고매출현황으로 넘어가면 안 됨. 2026-09-28
+    박성찬도 동일하게 확대 — 둘 다 창고이동 등록 시 담당자 미입력분의
+    placeholder로 쓰임)."""
     today = _today_iso()
     moved = 0
     cols = ", ".join(f"`{c}`" for c in _RESERVATION_COLS)
@@ -971,7 +973,7 @@ def migrate_due_reservations_to_outbound(conn) -> int:
         with conn.cursor() as cur:
             cur.execute(
                 f"SELECT * FROM {hr_table} WHERE status='ACTIVE' AND 출고일=%s "
-                f"AND (홀딩 IS NULL OR 홀딩 <> '제갈준') FOR UPDATE",
+                f"AND (홀딩 IS NULL OR 홀딩 NOT IN ('제갈준','박성찬')) FOR UPDATE",
                 (today,),
             )
             rows = cur.fetchall()
