@@ -106,6 +106,69 @@ def _azy_uid(bl, estno, grade, name, wh, auto_state="", auto_memo=""):
     return f"{uid_base}_{qualifier}" if qualifier else uid_base
 
 
+def _spawn_ace_zero_watchdog(committed_totals: dict) -> None:
+    """에이스 재고가 정상 커밋된 지 얼마 안 돼(직접 관측된 사례로는 20초) 원인
+    불명으로 0에 가깝게 급감하는 사고(2026-09-17 에이스처인, 2026-09-28
+    에이스기흥 — 매번 다른 창고에서 간헐적으로 재현) 추적용(2026-09-28 추가).
+    이 DB 계정에 SUPER/SYSTEM_VARIABLES_ADMIN 권한이 없어 general_log를 못
+    켜서(직접 시도해 확인) 범인 쿼리를 못 잡았고, 수동으로 띄운 0.2~2초 간격
+    폴링 스크립트로 여러 사이클을 지켜봐도 매번 재현되진 않아 못 잡았다 —
+    그래서 이 기능 자체를 파이프라인에 상시 내장해, 사람이 지켜보고 있지
+    않은 사이클에 터져도 놓치지 않게 한다.
+
+    커밋 직후 별도 데몬 스레드를 띄워 5분간 5초 간격으로 같은 창고들을
+    다시 조회하다가, 방금 커밋한 값의 절반 밑으로 떨어진 순간을 잡으면 그때의
+    MySQL 프로세스리스트 전체와 문제 행들의 현재 상태(id/재고/updated_at)를
+    CRITICAL 로그로 남기고 감시를 끝낸다(중복 스팸 방지, 최초 1회만). 5분 안에
+    안 떨어지면 조용히 종료. 스케줄러 본 흐름은 절대 막지 않도록 데몬 스레드에서
+    돌고, 실패해도 조용히 삼킨다."""
+    import threading
+
+    warehouses = list(committed_totals.keys())
+    if not warehouses:
+        return
+
+    def _check():
+        from pipeline.mysql_db import get_conn as _gc
+        placeholders = ", ".join(["%s"] * len(warehouses))
+        deadline = time.time() + 300
+        elapsed_at_start = 0
+        while time.time() < deadline:
+            time.sleep(5)
+            elapsed_at_start += 5
+            try:
+                with _gc() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            f"SELECT 창고, SUM(재고) AS qty FROM azy_inventory WHERE 창고 IN ({placeholders}) GROUP BY 창고",
+                            tuple(warehouses),
+                        )
+                        now_totals = {r["창고"]: int(r["qty"] or 0) for r in cur.fetchall()}
+                        dropped = {
+                            wh: {"커밋직후": committed_totals[wh], "지금": now_totals.get(wh, 0)}
+                            for wh in warehouses
+                            if committed_totals[wh] > 0 and now_totals.get(wh, 0) < committed_totals[wh] * 0.5
+                        }
+                        if not dropped:
+                            continue
+                        cur.execute(
+                            f"SELECT id, 재고, updated_at FROM azy_inventory WHERE 창고 IN ({placeholders})",
+                            tuple(warehouses),
+                        )
+                        rows_now = cur.fetchall()
+                        cur.execute("SHOW FULL PROCESSLIST")
+                        processlist = cur.fetchall()
+                log.error(
+                    f"  [에이스 사후감시] 커밋 {elapsed_at_start}초 후 재고 급감 감지! {dropped} | "
+                    f"현재 행 상태: {rows_now} | 그 순간 MySQL 프로세스리스트: {processlist}"
+                )
+                return
+            except Exception as e:
+                log.warning(f"  [에이스 사후감시] 확인 실패(계속 재시도): {e}")
+
+    threading.Thread(target=_check, daemon=True, name="ace-zero-watchdog").start()
+
+
 def _upload_azy(azy_df, warehouse_scope=None):
     """azy_inventory 테이블 diff 갱신 — 기존 행의 홀딩/상태/메모는 보존.
 
@@ -331,7 +394,9 @@ def _upload_azy(azy_df, warehouse_scope=None):
                     "SELECT 창고, SUM(재고) AS qty FROM azy_inventory WHERE 창고 IN (%s,%s,%s) GROUP BY 창고",
                     ("에이스기흥", "에이스처인", "에이스용인"),
                 )
-                log.info(f"  [진단-에이스] upsert 직후 DB 재조회: {_cur.fetchall()}")
+                _ace_post = _cur.fetchall()
+                log.info(f"  [진단-에이스] upsert 직후 DB 재조회: {_ace_post}")
+            _spawn_ace_zero_watchdog({r["창고"]: int(r["qty"] or 0) for r in _ace_post})
 
     new_total = sum(r["재고"] for r in rows.values())
     diff_note = ""
