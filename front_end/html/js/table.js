@@ -1,7 +1,7 @@
 import { state } from "./state.js";
 import { dom } from "./dom.js";
 import { employeeSelect, stateSelect, dispatcherSelect, moveWarehouseSelect, employeeAutocomplete } from "./panel.js";
-import { getStoredUser, hasEditorAccess, hasPriceEditAccess, hasWarehouseMovesAccess } from "./login.js";
+import { getStoredUser, hasEditorAccess, hasPriceEditAccess, hasWarehouseMovesAccess, hasReservationsFullAccess } from "./login.js";
 import { getAllReservations, getAllOutbound, getAllPrices, getOrderSheet, getYesterdayReservationQty, getAllWarehouseMoves } from "./firestoreService.js";
 import { fetchPipelineStatus, fetchCrawlTotals, fetchPipelineLogs, fetchGhostInventory } from "./api.js";
 
@@ -1493,11 +1493,10 @@ export async function renderReservationsTab(useCache = false) {
     // 팀장(2026-09-14) — 본인 예약만이 아니라 같은 부서 담당자들 예약도 볼 수 있게.
     // state.employees(이름/부서)로 같은 부서 이름 집합을 구해서 필터.
     const isTeamLead = user?.직급 === "팀장";
-    // 제갈준(2026-09-18 사용자 요청, 2026-09-28 박성찬도 동일 확대) — 팀장이라
-    // 원래는 같은 부서만 보이지만 전 직원 예약현황을 볼 수 있게 개별 허용.
-    // 기본 필터가 본인 이름으로 시작하는 팀장 로직(아래 isTeamLead 분기)은
-    // 그대로 재사용된다.
-    const seesAllReservations = isEditor || user?.이름 === "제갈준" || user?.이름 === "박성찬";
+    // 제갈준/박성찬(login.js::hasReservationsFullAccess) — 팀장이 아니어도
+    // 전 직원 예약현황을 볼 수 있게 개별 허용. 기본 필터가 본인 이름으로
+    // 시작하는 팀장 로직(아래 isTeamLead 분기)은 그대로 재사용된다.
+    const seesAllReservations = isEditor || hasReservationsFullAccess();
 
     let rows;
     if (useCache && _reservationsRowsCache) {

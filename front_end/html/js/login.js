@@ -60,6 +60,15 @@ export function hasWarehouseMovesAccess() {
     return WAREHOUSE_MOVES_EDIT_NAMES.has(u.이름);
 }
 
+// 예약현황 전체 조회 개별 예외(2026-09-18 제갈준, 2026-09-28 박성찬 확대) —
+// 팀장이 아니어도 전 직원 예약을 볼 수 있게. table.js의 renderReservationsTab
+// (실제 필터링)과 이 파일의 탭 라벨 표시가 항상 같이 움직이도록 여기 한 곳에서
+// 공유한다.
+const RESERVATIONS_FULL_ACCESS_NAMES = new Set(["제갈준", "박성찬"]);
+export function hasReservationsFullAccess() {
+    return RESERVATIONS_FULL_ACCESS_NAMES.has(getStoredUser()?.이름);
+}
+
 function closePopover() {
     document.querySelector(".login-btn")?.classList.remove("active");
     document.querySelector(".login-popover")?.classList.remove("open");
@@ -145,7 +154,7 @@ export function applyRoleVisibility(role) {
     const reservationsBtn = document.querySelector(".reservations-tab-btn");
     if (reservationsBtn) {
         const isTeamLead = getStoredUser()?.직급 === "팀장";
-        reservationsBtn.textContent = (hasEditorAccess(role) || isTeamLead) ? "예약 현황" : "나의 예약";
+        reservationsBtn.textContent = (hasEditorAccess(role) || isTeamLead || hasReservationsFullAccess()) ? "예약 현황" : "나의 예약";
     }
 }
 
