@@ -95,15 +95,19 @@ updater  = MySQLUpdater()
 crawler  = CrawlerPool(max_workers=20)
 
 
-def _azy_uid(bl, estno, grade, name, wh, auto_state="", auto_memo=""):
-    """azy_inventory 행 식별자. 특이품(파손/상이품/반품/검품)이면 사유를 접미사로
-    붙여 같은 BL의 정상 로트와 별도 행으로 갈라지게 한다 — qualifier가 없으면
+def _azy_uid(bl, estno, grade, name, wh, auto_memo=""):
+    """azy_inventory 행 식별자. auto_메모가 있으면(특이품 사유든, 고려냉장
+    스탠브르크 "실유기"월 표시든) 접미사로 붙여 같은 BL의 다른 로트와 별도
+    행으로 갈라지게 한다 — 2026-09-28, 실유기 11월/12월 로트가 메모만 다르고
+    나머지 필드가 같아서 한 행으로 합산되던 문제 발견(사용자 지적: "비고가
+    11월인거랑 12월인거를 왜 합쳐") — 원래는 auto_state=="특이품"일 때만
+    갈랐는데, 메모가 있으면 그 자체로 "같은 재고 취급하면 안 되는 별도 로트"
+    라는 뜻이라 auto_state와 무관하게 적용하도록 일반화. auto_메모가 없으면
     (절대다수) 기존 id 형식 그대로 유지해야 기존 행이 안 깨진다."""
     if not bl:
         return None
     uid_base = f"{bl}_{estno}_{grade}_{name}_{wh}"
-    qualifier = auto_memo if auto_state == "특이품" else ""
-    return f"{uid_base}_{qualifier}" if qualifier else uid_base
+    return f"{uid_base}_{auto_memo}" if auto_memo else uid_base
 
 
 def _spawn_ace_zero_watchdog(committed_totals: dict) -> None:
@@ -233,9 +237,7 @@ def _upload_azy(azy_df, warehouse_scope=None):
         # "정상 N박스" + "파손 1박스"처럼 별도 줄로 쪼개 주는 경우가 있는데(2026-08-12,
         # ONEYRICFPX299900: 정상 2178 + 파손 1 = 2179), 이걸 빼면 두 줄이 같은 uid로
         # 합쳐지면서 정상 재고까지 통째로 "특이품"으로 잘못 태깅된다.
-        uid = _azy_uid(bl, estno, grade, name, wh, _s(r.get("_auto_상태")), _s(r.get("_auto_메모"))) or uuid.uuid4().hex
-        if wh == "고려":
-            log.info(f"  [진단-고려] 계산된 uid={uid!r} (uid in rows 이미 있음={uid in rows})")
+        uid = _azy_uid(bl, estno, grade, name, wh, _s(r.get("_auto_메모"))) or uuid.uuid4().hex
         try:
             raw_qty = int(str(r.get("재고수량", 0)).replace(",", ""))
         except Exception:
@@ -386,13 +388,6 @@ def _upload_azy(azy_df, warehouse_scope=None):
             else:
                 stale_ids.append(uid)
 
-        _korea_final = {uid: d for uid, d in rows.items() if d.get("창고") == "고려"}
-        if _korea_final:
-            log.info(f"  [진단-고려] upsert 직전 최종 rows: {[(k, v['상품명'], v['등급'], v['재고']) for k, v in _korea_final.items()]}")
-        _korea_stale = [i for i in stale_ids if "고려" in i]
-        if _korea_stale:
-            log.info(f"  [진단-고려] stale 삭제 대상: {_korea_stale}")
-
         # 임시 진단(2026-09-17) — 에이스 재고가 크롤은 정상(원본 크롤 총량은
         # crawl_source_totals에 맞게 찍히는데) DB엔 0으로 반영되는 문제 추적용.
         # upsert 직전 시점 rows(메모리 계산 결과) 자체가 이미 틀렸는지, 아니면
@@ -407,11 +402,6 @@ def _upload_azy(azy_df, warehouse_scope=None):
         upsert_azy_inventory(conn, list(rows.values()))
         if stale_ids:
             delete_azy_inventory(conn, stale_ids)
-
-        if _korea_final:
-            with conn.cursor() as _cur:
-                _cur.execute("SELECT id, 상품명, 등급, 재고 FROM azy_inventory WHERE 창고='고려'")
-                log.info(f"  [진단-고려] upsert 직후 DB 재조회: {_cur.fetchall()}")
 
         if warehouse_scope and any(str(w).startswith("에이스") for w in warehouse_scope):
             with conn.cursor() as _cur:

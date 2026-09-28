@@ -1,9 +1,12 @@
-"""azy_inventory 행 id(_azy_uid) — 같은 BL/ESTNO/등급/상품명/창고라도 특이품
-(파손/상이품/반품/검품) 사유가 다르면 별도 id로 갈라져야 한다 (2026-08-12,
-ONEYRICFPX299900: 정상 2178박스 + 파손 1박스가 같은 uid로 합쳐지면서 정상
-재고까지 통째로 "특이품"으로 잘못 태깅되던 버그 발견). qualifier가 없는 절대
-다수 케이스는 기존 id 형식이 그대로 유지돼야 한다(안 그러면 전체 행 id가
-바뀌어서 테이블 전체가 삭제+재삽입된다).
+"""azy_inventory 행 id(_azy_uid) — 같은 BL/ESTNO/등급/상품명/창고라도 auto_메모가
+다르면 별도 id로 갈라져야 한다. 원래는 특이품(파손/상이품/반품/검품) 사유만
+갈랐는데(2026-08-12, ONEYRICFPX299900: 정상 2178박스 + 파손 1박스가 같은
+uid로 합쳐지면서 정상 재고까지 통째로 "특이품"으로 잘못 태깅되던 버그),
+2026-09-28에 특이품이 아닌 일반 auto_메모(고려냉장 스탠브르크 "실유기"월
+표시)도 같은 이유로 갈라지게 일반화 — 11월/12월 로트가 메모만 다르고 나머지
+필드가 같아 한 행으로 합쳐지던 문제 발견. qualifier가 없는 절대다수 케이스는
+기존 id 형식이 그대로 유지돼야 한다(안 그러면 전체 행 id가 바뀌어서 테이블
+전체가 삭제+재삽입된다).
 """
 import sys
 from pathlib import Path
@@ -20,9 +23,17 @@ def test_normal_row_keeps_legacy_id_format():
 
 def test_damaged_lot_gets_distinct_id_from_normal_lot():
     normal = _azy_uid("ONEYRICFPX299900", "86R", "", "우건", "SWC")
-    damaged = _azy_uid("ONEYRICFPX299900", "86R", "", "우건", "SWC", "특이품", "파손")
+    damaged = _azy_uid("ONEYRICFPX299900", "86R", "", "우건", "SWC", "파손")
     assert normal != damaged
     assert damaged == "ONEYRICFPX299900_86R__우건_SWC_파손"
+
+
+def test_non_qualifier_memo_also_splits_lot():
+    # 같은 BL/등급/상품명이라도 실유기 월이 다른 두 로트는 합쳐지면 안 된다.
+    nov = _azy_uid("ZIMUSYD000032787", "203", "GF", "대창", "고려", "실유기11월")
+    dec = _azy_uid("ZIMUSYD000032787", "203", "GF", "대창", "고려", "실유기12월")
+    assert nov != dec
+    assert nov == "ZIMUSYD000032787_203_GF_대창_고려_실유기11월"
 
 
 def test_no_bl_returns_none():
@@ -32,5 +43,6 @@ def test_no_bl_returns_none():
 if __name__ == "__main__":
     test_normal_row_keeps_legacy_id_format()
     test_damaged_lot_gets_distinct_id_from_normal_lot()
+    test_non_qualifier_memo_also_splits_lot()
     test_no_bl_returns_none()
     print("OK")
