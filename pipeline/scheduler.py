@@ -238,6 +238,8 @@ def _upload_azy(azy_df, warehouse_scope=None):
         # ONEYRICFPX299900: 정상 2178 + 파손 1 = 2179), 이걸 빼면 두 줄이 같은 uid로
         # 합쳐지면서 정상 재고까지 통째로 "특이품"으로 잘못 태깅된다.
         uid = _azy_uid(bl, estno, grade, name, wh, _s(r.get("_auto_메모"))) or uuid.uuid4().hex
+        if wh == "고려":
+            log.info(f"  [진단-고려2] uid={uid!r} name={name!r} grade={grade!r} memo={r.get('_auto_메모')!r}")
         try:
             raw_qty = int(str(r.get("재고수량", 0)).replace(",", ""))
         except Exception:
@@ -306,6 +308,10 @@ def _upload_azy(azy_df, warehouse_scope=None):
                 )
             existing = {row["id"]: row for row in cur.fetchall()}
 
+        _korea_existing_keys = [k for k in existing if "고려" in k]
+        if _korea_existing_keys:
+            log.info(f"  [진단-고려2] existing(DB 기존) 고려 키: {_korea_existing_keys}")
+
         prev_total = sum(row["재고"] or 0 for row in existing.values())
 
         # 사용자가 UI에서 직접 고칠 수 있는 마스터 필드 — 기존 행이면 크롤값으로 덮어쓰지 않고 보존
@@ -314,6 +320,8 @@ def _upload_azy(azy_df, warehouse_scope=None):
             auto_state = data.pop("_auto_상태", "")
             auto_memo  = data.pop("_auto_메모", "")
             data["홀딩"] = prev.get("홀딩", "") if prev else ""
+            if "고려" in uid:
+                log.info(f"  [진단-고려2] merge단계 uid={uid!r} prev찾음={prev is not None} prev_상품명={prev.get('상품명') if prev else None!r}")
 
             if prev:
                 # 재고는 절대 여기 넣지 않음 — 매 사이클 크롤 원본 기준으로 다시 계산돼야 함
