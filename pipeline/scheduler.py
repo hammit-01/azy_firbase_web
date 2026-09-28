@@ -224,10 +224,6 @@ def _upload_azy(azy_df, warehouse_scope=None):
         grade = _s(r.get("등급"))
         wh    = _s(r.get("창고"))
         name  = _s(r.get("수탁품"))
-        # 임시 진단(2026-09-28) — 고려냉장 스탠브르크 파싱이 standalone 테스트에선
-        # 맞는데 실제 서비스에선 일부 행만 반영되는 문제 추적용. 원인 확인되면 제거.
-        if wh == "고려":
-            log.info(f"  [진단-고려] bl={bl} estno={estno} grade={grade!r} name={name!r} auto_메모={r.get('_auto_메모')!r}")
         if wh == "대청" and bl in gon_daecheong_bls:
             continue
         # 등급·상품명도 식별자에 포함 — 같은 BL+ESTNO라도 등급(CH/UN 등)이 다르면 별도 재고이고,
@@ -238,6 +234,8 @@ def _upload_azy(azy_df, warehouse_scope=None):
         # ONEYRICFPX299900: 정상 2178 + 파손 1 = 2179), 이걸 빼면 두 줄이 같은 uid로
         # 합쳐지면서 정상 재고까지 통째로 "특이품"으로 잘못 태깅된다.
         uid = _azy_uid(bl, estno, grade, name, wh, _s(r.get("_auto_상태")), _s(r.get("_auto_메모"))) or uuid.uuid4().hex
+        if wh == "고려":
+            log.info(f"  [진단-고려] 계산된 uid={uid!r} (uid in rows 이미 있음={uid in rows})")
         try:
             raw_qty = int(str(r.get("재고수량", 0)).replace(",", ""))
         except Exception:
@@ -388,6 +386,13 @@ def _upload_azy(azy_df, warehouse_scope=None):
             else:
                 stale_ids.append(uid)
 
+        _korea_final = {uid: d for uid, d in rows.items() if d.get("창고") == "고려"}
+        if _korea_final:
+            log.info(f"  [진단-고려] upsert 직전 최종 rows: {[(k, v['상품명'], v['등급'], v['재고']) for k, v in _korea_final.items()]}")
+        _korea_stale = [i for i in stale_ids if "고려" in i]
+        if _korea_stale:
+            log.info(f"  [진단-고려] stale 삭제 대상: {_korea_stale}")
+
         # 임시 진단(2026-09-17) — 에이스 재고가 크롤은 정상(원본 크롤 총량은
         # crawl_source_totals에 맞게 찍히는데) DB엔 0으로 반영되는 문제 추적용.
         # upsert 직전 시점 rows(메모리 계산 결과) 자체가 이미 틀렸는지, 아니면
@@ -402,6 +407,11 @@ def _upload_azy(azy_df, warehouse_scope=None):
         upsert_azy_inventory(conn, list(rows.values()))
         if stale_ids:
             delete_azy_inventory(conn, stale_ids)
+
+        if _korea_final:
+            with conn.cursor() as _cur:
+                _cur.execute("SELECT id, 상품명, 등급, 재고 FROM azy_inventory WHERE 창고='고려'")
+                log.info(f"  [진단-고려] upsert 직후 DB 재조회: {_cur.fetchall()}")
 
         if warehouse_scope and any(str(w).startswith("에이스") for w in warehouse_scope):
             with conn.cursor() as _cur:
