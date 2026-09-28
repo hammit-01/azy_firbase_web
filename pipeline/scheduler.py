@@ -224,6 +224,10 @@ def _upload_azy(azy_df, warehouse_scope=None):
         grade = _s(r.get("등급"))
         wh    = _s(r.get("창고"))
         name  = _s(r.get("수탁품"))
+        # 임시 진단(2026-09-28) — 고려냉장 스탠브르크 파싱이 standalone 테스트에선
+        # 맞는데 실제 서비스에선 일부 행만 반영되는 문제 추적용. 원인 확인되면 제거.
+        if wh == "고려":
+            log.info(f"  [진단-고려] bl={bl} estno={estno} grade={grade!r} name={name!r} auto_메모={r.get('_auto_메모')!r}")
         if wh == "대청" and bl in gon_daecheong_bls:
             continue
         # 등급·상품명도 식별자에 포함 — 같은 BL+ESTNO라도 등급(CH/UN 등)이 다르면 별도 재고이고,
