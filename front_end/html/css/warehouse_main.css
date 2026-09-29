@@ -1107,7 +1107,7 @@ th.sort-active {
     display: block;
     width: 100%;
     padding: 5px;
-    margin: 0;
+    margin: 5px;
     border: 1.5px solid #8fce00;
     font-size: 14px;
     font-family: inherit;
