@@ -221,7 +221,7 @@ tbody tr:nth-child(even) td {
 }
 
 tbody tr:hover td {
-    background: #e2e8f0 !important;  /* 행 호버 배경 - 연한 슬레이트 */
+    background: #ede9fe !important;  /* 행 호버 배경 - 연한 보라 */
     transition: background 0.12s ease;
 }
 
@@ -246,14 +246,14 @@ tbody tr:hover td {
     background: #f1f5f9;  /* 짝수행 고정 칸 배경 - 아주 연한 슬레이트(줄무늬) */
 }
 .table-wrap tbody tr.selected-row td:nth-child(1) {
-    background: #dbeafe !important;  /* 선택된 행 고정 칸 배경 - 연한 파랑 */
+    background: #ddd6fe !important;  /* 선택된 행 고정 칸 배경 - 연한 보라 */
 }
 /* hover는 selected-row와 우선순위(specificity)가 동일해서 소스상 나중에 오는
    쪽이 이긴다 — 다른(고정 아닌) 칸들처럼 "선택된 행이어도 호버하면 색이 한 번
    더 바뀌는" 동작을 맞추려면 이 규칙이 selected-row보다 아래에 있어야 한다
    (2026-09-29, 상품명 칸만 호버 색이 안 바뀌던 버그 수정). */
 .table-wrap tbody tr:hover td:nth-child(1) {
-    background: #e2e8f0 !important;  /* 호버 시 고정 칸 배경 - 연한 슬레이트(다른 칸과 통일) */
+    background: #ede9fe !important;  /* 호버 시 고정 칸 배경 - 연한 보라(다른 칸과 통일) */
 }
 .table-wrap tbody tr.flash-row td:nth-child(1) {
     background: #fef08a !important;  /* flash-row 고정 칸 배경 - 연노랑(플래시 효과) */
@@ -1492,10 +1492,10 @@ tbody tr {
     background:#ffd6e8 !important;
 }
 
-/* 체크한 행 = 연한 파랑 */
+/* 체크한 행 = 연한 보라 */
 .selected-row td{
-    background:#dbeafe !important;
-    color: #1d4ed8 !important;  /* 선택된 행 글자색 - 진한 파랑 */
+    background:#ddd6fe !important;
+    color: #6d28d9 !important;  /* 선택된 행 글자색 - 진한 보라 */
     font-weight:700;
 }
 
