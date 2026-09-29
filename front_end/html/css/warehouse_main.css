@@ -22,7 +22,7 @@ h1 {
     font-size: 32px;
     margin: 0;
     font-weight: 800;
-    color: #1e293b;
+    color: #1e293b;  /* h1 제목 글자색 - 짙은 남색 */
     letter-spacing: -0.3px;
 }
 
@@ -64,14 +64,14 @@ h1 {
     height: 27px;
     border: none;
     border-radius: 6px;
-    background: #e2e8f0;
-    color: #64748b;
+    background: #e2e8f0;  /* 상단바 숨김 토글 버튼 배경 - 연회색 */
+    color: #64748b;  /* 토글 버튼 아이콘 글자색 - 회색 */
     font-size: 13px;
     line-height: 1;
     cursor: pointer;
 }
 .toggle-sticky-header-btn:hover {
-    background: #cbd5e1;
+    background: #cbd5e1;  /* 토글 버튼 호버 배경 - 진회색 */
 }
 .toggle-sticky-header-btn.is-collapsed {
     transform: translateX(-50%) rotate(180deg);
@@ -91,20 +91,20 @@ h1 {
     padding: 0 10px;
     border: none;
     border-radius: 6px;
-    background: #e2e8f0;
-    color: #64748b;
+    background: #e2e8f0;  /* PC 강제전환 버튼 배경 - 연회색 */
+    color: #64748b;  /* PC 강제전환 버튼 아이콘색 - 회색 */
     font-size: 13px;
     font-weight: 700;
     line-height: 27px;
     cursor: pointer;
 }
 .toggle-desktop-view-btn:hover {
-    background: #cbd5e1;
+    background: #cbd5e1;  /* PC 강제전환 버튼 호버 배경 - 진회색 */
 }
 body.force-desktop-view .toggle-desktop-view-btn {
     display: block !important;
-    background: #8fce00;
-    color: #fff;
+    background: #8fce00;  /* PC 모드 활성 배경 - 브랜드 그린(포인트 컬러) */
+    color: #fff;  /* PC 모드 활성 글자색 - 흰색 */
 }
 
 /* 모바일 전용 필터 바텀시트 토글/배경/시트헤더 — 데스크톱에서는 항상 숨김,
@@ -121,7 +121,7 @@ body.force-desktop-view .toggle-desktop-view-btn {
     overflow-x: hidden;
     min-height: 0;
     scrollbar-width: thin;
-    scrollbar-color: #cbd5e1 transparent;
+    scrollbar-color: #cbd5e1 transparent;  /* 스크롤바 색 - 회색 */
     gap: 3px;
 }
 .table-container::-webkit-scrollbar {
@@ -131,7 +131,7 @@ body.force-desktop-view .toggle-desktop-view-btn {
     background: transparent;
 }
 .table-container::-webkit-scrollbar-thumb {
-    background-color: #cbd5e1;
+    background-color: #cbd5e1;  /* 스크롤바 손잡이 배경 - 회색 */
     border-radius: 999px;
     border: 2px solid #eef1f5; /* 트랙과 같은 배경색 테두리로 손잡이를 살짝 띄운 알약 모양 */
     background-clip: padding-box;
@@ -166,7 +166,7 @@ body.force-desktop-view .toggle-desktop-view-btn {
 .table-wrap {
     width: 100%;
     overflow-x: auto;
-    background: #fff;
+    background: #fff;  /* 표 감싸는 박스 배경 - 흰색 */
     border-radius: 12px;
 }
 
@@ -195,8 +195,8 @@ td {
     font-size: 21px;
     font-weight: 500;
     letter-spacing: -0.1px;
-    color: #334155;
-    border-bottom: 1px solid #f0f2f5;
+    color: #334155;  /* 표 본문 글자색 - 진회색 */
+    border-bottom: 1px solid #f0f2f5;  /* 표 셀 구분선 - 연회색 */
     font-variant-numeric: tabular-nums;
 }
 /* 선택 체크박스 칸은 왼쪽 정렬하면 좁은 칸에서 어색해서 계속 가운데 정렬 유지
@@ -217,11 +217,11 @@ td {
 }
 
 tbody tr:nth-child(even) td {
-    background: #f6fbea;
+    background: #f6fbea;  /* 짝수행 배경 - 연한 연두(줄무늬) */
 }
 
 tbody tr:hover td {
-    background: #e4f7c1 !important;
+    background: #e4f7c1 !important;  /* 행 호버 배경 - 연초록 */
     transition: background 0.12s ease;
 }
 
@@ -236,41 +236,41 @@ tbody tr:hover td {
     position: sticky;
     left: 0;
     z-index: 40;
-    background: #fff;
+    background: #fff;  /* 고정 칸(상품명) 기본 배경 - 흰색 */
 }
 .table-wrap thead th:nth-child(1) {
     z-index: 55;
-    background: #475569;
+    background: #475569;  /* 고정 헤더 칸 배경 - 남색(헤더와 동일) */
 }
 .table-wrap tbody tr:nth-child(even) td:nth-child(1) {
-    background: #f6fbea;
+    background: #f6fbea;  /* 짝수행 고정 칸 배경 - 연한 연두(줄무늬) */
 }
 .table-wrap tbody tr.selected-row td:nth-child(1) {
-    background: #d4f7a0 !important;
+    background: #d4f7a0 !important;  /* 선택된 행 고정 칸 배경 - 연초록 */
 }
 /* hover는 selected-row와 우선순위(specificity)가 동일해서 소스상 나중에 오는
    쪽이 이긴다 — 다른(고정 아닌) 칸들처럼 "선택된 행이어도 호버하면 색이 한 번
    더 바뀌는" 동작을 맞추려면 이 규칙이 selected-row보다 아래에 있어야 한다
    (2026-09-29, 상품명 칸만 호버 색이 안 바뀌던 버그 수정). */
 .table-wrap tbody tr:hover td:nth-child(1) {
-    background: #e4f7c1 !important;
+    background: #e4f7c1 !important;  /* 호버 시 고정 칸 배경 - 연초록(살짝 진하게) */
 }
 .table-wrap tbody tr.flash-row td:nth-child(1) {
-    background: #d3f5c4 !important;
+    background: #d3f5c4 !important;  /* flash-row 고정 칸 배경 - 연초록(플래시 효과) */
 }
 
 
 .toolbar-top {
-    background: #fff;
+    background: #fff;  /* 상단 툴바 배경 - 흰색 */
 }
 
 thead {
-    background: #475569;
-    color: #ffffff;
+    background: #475569;  /* 표 헤더(thead) 배경 - 남색 */
+    color: #ffffff;  /* 표 헤더 글자색 - 흰색 */
     position: sticky;
     top: 0;
     z-index: 50;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);  /* 헤더 그림자 - 옅은 검정 */
 }
 
 th.sortable {
@@ -280,11 +280,11 @@ th.sortable {
 }
 
 th.sortable:hover {
-    background: rgba(0,0,0,0.1);
+    background: rgba(0,0,0,0.1);  /* 정렬가능 헤더 호버 배경 - 옅은 검정 오버레이 */
 }
 
 th.sort-active {
-    background: rgba(0,0,0,0.18);
+    background: rgba(0,0,0,0.18);  /* 정렬 활성 헤더 배경 - 검정 오버레이(진하게) */
 }
 
 
@@ -298,9 +298,9 @@ th.sort-active {
     display: flex;
     gap: 16px;
     padding: 20px 20px;
-    background: #ffffff;
+    background: #ffffff;  /* 툴바 배경 - 흰색 */
     border-radius: 14px;
-    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.07);
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.07);  /* 툴바 그림자 - 옅은 남색 */
     box-sizing: border-box;
     width: 100%;
     height: 100%;
@@ -361,10 +361,10 @@ th.sort-active {
     gap: 8px;
     height: 42px;
     padding: 0 18px 0 8px;
-    border: 1.5px solid #e5e7eb;
+    border: 1.5px solid #e5e7eb;  /* 로그인 버튼 테두리 - 연회색 */
     border-radius: 24px;
-    background: #f9fafb;
-    color: #334155;
+    background: #f9fafb;  /* 로그인 버튼 배경 - 연회색 */
+    color: #334155;  /* 로그인 버튼 글자색 - 진회색 */
     font-size: 15px;
     font-weight: 700;
     cursor: pointer;
@@ -374,9 +374,9 @@ th.sort-active {
 
 .login-btn:hover,
 .login-btn.active {
-    border-color: #8fce00;
-    background: #fff;
-    box-shadow: 0 0 0 3px rgba(143,206,0,0.12);
+    border-color: #8fce00;  /* 호버/활성 테두리 - 브랜드 그린 */
+    background: #fff;  /* 호버/활성 배경 - 흰색 */
+    box-shadow: 0 0 0 3px rgba(143,206,0,0.12);  /* 포커스 그림자 - 브랜드 그린 반투명 */
 }
 
 .login-icon {
@@ -386,7 +386,7 @@ th.sort-active {
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    background: #e2e8f0;
+    background: #e2e8f0;  /* 로그인 아이콘 배경 - 연회색 */
     font-size: 15px;
     flex-shrink: 0;
 }
@@ -396,9 +396,9 @@ th.sort-active {
     position: absolute;
     width: 230px;
     padding: 18px;
-    background: #fff;
+    background: #fff;  /* 로그인 팝오버 배경 - 흰색 */
     border-radius: 16px;
-    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.16), 0 2px 8px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.16), 0 2px 8px rgba(15, 23, 42, 0.06);  /* 팝오버 그림자 - 옅은 남색(이중) */
     opacity: 0;
     transform: translateY(-6px);
     pointer-events: none;
@@ -428,7 +428,7 @@ th.sort-active {
 .login-error {
     font-size: 12px;
     font-weight: 600;
-    color: #dc2626;
+    color: #dc2626;  /* 로그인 에러 메시지 글자색 - 빨강 */
     min-height: 14px;
     margin: -4px 0 0;
 }
@@ -444,53 +444,53 @@ th.sort-active {
 .login-profile-name {
     font-size: 16px;
     font-weight: 800;
-    color: #1e293b;
+    color: #1e293b;  /* 로그인 프로필 이름 글자색 - 짙은 남색 */
 }
 
 .login-profile-role {
     font-size: 13px;
-    color: #94a3b8;
+    color: #94a3b8;  /* 로그인 역할 텍스트색 - 연회색 */
     margin-bottom: 6px;
 }
 
 .logout-btn {
     width: 100%;
     height: 40px;
-    border: 1.5px solid #fecaca;
+    border: 1.5px solid #fecaca;  /* 로그아웃 버튼 테두리 - 연빨강 */
     border-radius: 9px;
-    background: #fef2f2;
-    color: #b91c1c;
+    background: #fef2f2;  /* 로그아웃 버튼 배경 - 연빨강 */
+    color: #b91c1c;  /* 로그아웃 버튼 글자색 - 진빨강 */
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
 }
 
-.logout-btn:hover { background: #fee2e2; border-color: #fca5a5; }
+.logout-btn:hover { background: #fee2e2; border-color: #fca5a5; }  /* 로그아웃 버튼 호버 배경/테두리 - 진한 빨강 계열 */
 
 .login-label {
     font-size: 12px;
     font-weight: 700;
-    color: #94a3b8;
+    color: #94a3b8;  /* 로그인 라벨 글자색 - 연회색 */
 }
 
 .login-input {
     height: 40px;
     padding: 0 12px;
-    border: 1.5px solid #e5e7eb;
+    border: 1.5px solid #e5e7eb;  /* 로그인 입력창 테두리 - 연회색 */
     border-radius: 9px;
     font-size: 14px;
-    background: #f9fafb;
+    background: #f9fafb;  /* 로그인 입력창 배경 - 연회색 */
     outline: none;
     box-sizing: border-box;
     transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 
-.login-input:hover { border-color: #94a3b8; }
+.login-input:hover { border-color: #94a3b8; }  /* 입력창 호버 테두리 - 회색 */
 .login-input:focus {
-    border-color: #8fce00;
-    background: #fff;
-    box-shadow: 0 0 0 3px rgba(143,206,0,0.15);
+    border-color: #8fce00;  /* 포커스 테두리 - 브랜드 그린 */
+    background: #fff;  /* 포커스 배경 - 흰색 */
+    box-shadow: 0 0 0 3px rgba(143,206,0,0.15);  /* 포커스 그림자 - 브랜드 그린 반투명 */
 }
 
 .login-submit-btn {
@@ -498,15 +498,15 @@ th.sort-active {
     margin-top: 2px;
     border: none;
     border-radius: 9px;
-    background: #8fce00;
-    color: #fff;
+    background: #8fce00;  /* 제출 버튼 배경 - 브랜드 그린 */
+    color: #fff;  /* 제출 버튼 글자색 - 흰색 */
     font-size: 15px;
     font-weight: 700;
     cursor: pointer;
     transition: background 0.15s, transform 0.1s;
 }
 
-.login-submit-btn:hover { background: #7ab800; }
+.login-submit-btn:hover { background: #7ab800; }  /* 제출 버튼 호버 배경 - 진한 브랜드 그린 */
 .login-submit-btn:active { transform: translateY(1px); }
 
 .toolbar-title {
@@ -547,8 +547,8 @@ th.sort-active {
     width: fit-content;
     font-size: 12px;
     font-weight: 700;
-    color: #334155;
-    background: #f1f5f9;
+    color: #334155;  /* 배지 글자색 - 진회색 */
+    background: #f1f5f9;  /* 배지 배경 - 연회색 */
     padding: 4px 12px;
     border-radius: 20px;
     white-space: pre-line;
@@ -563,7 +563,7 @@ th.sort-active {
 .table_size_weight {
     font-size: 12px;
     font-weight: 600;
-    color: #94a3b8;
+    color: #94a3b8;  /* 중량 텍스트색 - 연회색 */
     padding-left: 4px;
 }
 
@@ -580,7 +580,7 @@ th.sort-active {
     font-size: 12px;
     font-weight: 700;
     /* color: #3f7d00; */
-    background: #f1f5f9;
+    background: #f1f5f9;  /* 선택요약 배지 배경 - 연회색 */
     padding: 6px 14px;
     border-radius: 20px;
     white-space: nowrap;
@@ -613,10 +613,10 @@ th.sort-active {
 .filter-sel {
     height: 42px;
     padding: 0 10px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid #e5e7eb;  /* 필터 셀렉트 테두리 - 연회색 */
     border-radius: 9px;
     font-size: 16px;
-    background: #f9fafb;
+    background: #f9fafb;  /* 필터 셀렉트 배경 - 연회색 */
     cursor: pointer;
     outline: none;
     transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
@@ -624,31 +624,31 @@ th.sort-active {
     flex-shrink: 0;
 }
 
-.filter-sel:hover  { border-color: #94a3b8; }
-.filter-sel:focus  { border-color: #8fce00; background: #fff; box-shadow: 0 0 0 3px rgba(143,206,0,0.15); }
+.filter-sel:hover  { border-color: #94a3b8; }  /* 필터 호버 테두리 - 회색 */
+.filter-sel:focus  { border-color: #8fce00; background: #fff; box-shadow: 0 0 0 3px rgba(143,206,0,0.15); }  /* 필터 포커스 - 브랜드 그린 테두리/흰 배경/그린 그림자 */
 
 .search-input {
     flex: 1;
     min-width: 120px;
     height: 42px;
     padding: 0 14px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid #e5e7eb;  /* 검색창 테두리 - 연회색 */
     border-radius: 9px;
     font-size: 16px;
-    background: #f9fafb;
+    background: #f9fafb;  /* 검색창 배경 - 연회색 */
     outline: none;
     transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
     box-sizing: border-box;
     margin-top: 0;
 }
 
-.search-input:hover { border-color: #94a3b8; }
-.search-input:focus { border-color: #8fce00; background: #fff; box-shadow: 0 0 0 3px rgba(143,206,0,0.15); }
+.search-input:hover { border-color: #94a3b8; }  /* 검색창 호버 테두리 - 회색 */
+.search-input:focus { border-color: #8fce00; background: #fff; box-shadow: 0 0 0 3px rgba(143,206,0,0.15); }  /* 검색창 포커스 - 브랜드 그린 테두리/흰 배경/그린 그림자 */
 
 .tb-sep {
     width: 2px;
     height: 36px;
-    background: #cbd5e1;
+    background: #cbd5e1;  /* 구분선 색 - 회색 */
     border-radius: 2px;
     flex-shrink: 0;
     margin: 0 6px;
@@ -660,8 +660,8 @@ th.sort-active {
     align-items: center;
     justify-content: center;
     padding: 2px 10px;
-    background: #e2e8f0;
-    color: #475569;
+    background: #e2e8f0;  /* s-tag 기본 배경 - 회색 */
+    color: #475569;  /* s-tag 기본 글자색 - 회색 */
     border-radius: 20px;
     font-size: 18px;
     font-weight: 600;
@@ -670,19 +670,19 @@ th.sort-active {
 }
 
 .s-tag-qty {
-    background: #dbeafe;
-    color: #1d4ed8;
+    background: #dbeafe;  /* 수량 태그 배경 - 파랑 */
+    color: #1d4ed8;  /* 수량 태그 글자색 - 파랑 */
 }
 
 /* 창고별 라벨 색상 */
-.wh-곤지암    { background: #dcfce7; color: #166534; }
-.wh-곤CS     { background: #dbeafe; color: #1d4ed8; }
-.wh-곤SWC    { background: #fef3c7; color: #92400e; }
-.wh-곤대재    { background: #fce7f3; color: #9d174d; }
-.wh-곤대청    { background: #e0e7ff; color: #3730a3; }
-.wh-곤삼진2   { background: #ffedd5; color: #c2410c; }
-.wh-곤에이스처인 { background: #f3e8ff; color: #7e22ce; }
-.wh-default   { background: #f1f5f9; color: #475569; }
+.wh-곤지암    { background: #dcfce7; color: #166534; }  /* 곤지암 창고 라벨 - 연초록 배경/진초록 글자 */
+.wh-곤CS     { background: #dbeafe; color: #1d4ed8; }  /* 곤CS 창고 라벨 - 연파랑 배경/진파랑 글자 */
+.wh-곤SWC    { background: #fef3c7; color: #92400e; }  /* 곤SWC 창고 라벨 - 연노랑 배경/갈색 글자 */
+.wh-곤대재    { background: #fce7f3; color: #9d174d; }  /* 곤대재 창고 라벨 - 연분홍 배경/진분홍 글자 */
+.wh-곤대청    { background: #e0e7ff; color: #3730a3; }  /* 곤대청 창고 라벨 - 연남색 배경/진남색 글자 */
+.wh-곤삼진2   { background: #ffedd5; color: #c2410c; }  /* 곤삼진2 창고 라벨 - 연주황 배경/진주황 글자 */
+.wh-곤에이스처인 { background: #f3e8ff; color: #7e22ce; }  /* 곤에이스처인 창고 라벨 - 연보라 배경/진보라 글자 */
+.wh-default   { background: #f1f5f9; color: #475569; }  /* 기본 창고 라벨 - 회색 */
 
 .wh-tag {
     display: inline-block;
@@ -702,22 +702,22 @@ th.sort-active {
 }
 
 .due-tag-normal {
-    background: #f1f5f9;
-    color: #475569;
+    background: #f1f5f9;  /* 기한 임박 아님 태그 배경 - 회색 */
+    color: #475569;  /* 기한 임박 아님 태그 글자색 - 회색 */
 }
 
 .due-tag-urgent {
-    background: #fee2e2;
-    color: #b91c1c;
-    border: 1px solid #fca5a5;
+    background: #fee2e2;  /* 기한 임박 태그 배경 - 연빨강(경고) */
+    color: #b91c1c;  /* 기한 임박 태그 글자색 - 진빨강 */
+    border: 1px solid #fca5a5;  /* 기한 임박 태그 테두리 - 연빨강 */
     font-weight: 700;
 }
 
 /* ── 예약 수량(클릭하면 예약 목록/취소) ── */
 .view-reservations-btn {
-    background: #eff6ff;
-    color: #1d4ed8;
-    border: 1px solid #bfdbfe;
+    background: #eff6ff;  /* 예약 버튼 배경 - 연파랑 */
+    color: #1d4ed8;  /* 예약 버튼 글자색 - 파랑 */
+    border: 1px solid #bfdbfe;  /* 예약 버튼 테두리 - 연파랑 */
     border-radius: 8px;
     padding: 2px 8px;
     font-size: 14px;
@@ -725,7 +725,7 @@ th.sort-active {
     cursor: pointer;
 }
 .view-reservations-btn:hover {
-    background: #dbeafe;
+    background: #dbeafe;  /* 예약 버튼 호버 배경 - 진한 연파랑 */
 }
 
 .reservation-detail-list {
@@ -738,8 +738,8 @@ th.sort-active {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: #fff;
-    border: 1px solid #e2e8f0;
+    background: #fff;  /* 예약 목록 아이템 배경 - 흰색 */
+    border: 1px solid #e2e8f0;  /* 예약 목록 아이템 테두리 - 연회색 */
     border-radius: 8px;
     padding: 4px 10px;
     margin: 2px 6px 2px 0;
@@ -752,12 +752,12 @@ th.sort-active {
     font-weight: 700;
     white-space: nowrap;
 }
-.rl-badge-reservation { background: #dbeafe; color: #1d4ed8; }
-.rl-badge-move         { background: #ffedd5; color: #c2410c; }
-.rl-badge-outbound    { background: #ede9fe; color: #6d28d9; }
-.rl-badge-done         { background: #f1f5f9; color: #64748b; }
-.rl-field { color: #475569; }
-.rl-field-strong { font-weight: 700; color: #1e293b; }
+.rl-badge-reservation { background: #dbeafe; color: #1d4ed8; }  /* 예약 배지 - 파랑 */
+.rl-badge-move         { background: #ffedd5; color: #c2410c; }  /* 이동 배지 - 주황 */
+.rl-badge-outbound    { background: #ede9fe; color: #6d28d9; }  /* 출고 배지 - 보라 */
+.rl-badge-done         { background: #f1f5f9; color: #64748b; }  /* 완료 배지 - 회색 */
+.rl-field { color: #475569; }  /* rl-field 텍스트색 - 회색 */
+.rl-field-strong { font-weight: 700; color: #1e293b; }  /* rl-field-strong 텍스트색 - 진남색 */
 /* ── 툴바 액션 버튼 ── */
 .rollback-btn, .clear-btn, .all-delete-btn, .changes-tab-btn, .reservations-tab-btn,
 .sales-tab-btn, .price-tab-btn, .order-sheet-tab-btn, .moves-tab-btn, .crawling-tab-btn,
@@ -799,49 +799,49 @@ th.sort-active {
 }
 
 /* ── 색상 ── */
-.rollback-btn { background: #fef3c7; color: #92400e; }
-.rollback-btn:hover { background: #fde68a; }
+.rollback-btn { background: #fef3c7; color: #92400e; }  /* 되돌리기 버튼 - 주황/갈색 */
+.rollback-btn:hover { background: #fde68a; }  /* 되돌리기 호버 배경 - 진한 노랑 */
 
-.clear-btn { background: #f1f5f9; color: #475569; }
-.clear-btn:hover { background: #e2e8f0; }
+.clear-btn { background: #f1f5f9; color: #475569; }  /* 초기화 버튼 - 회색 */
+.clear-btn:hover { background: #e2e8f0; }  /* 초기화 호버 배경 - 진회색 */
 
-.all-delete-btn { background: #fee2e2; color: #b91c1c; }
-.all-delete-btn:hover { background: #fca5a5; }
+.all-delete-btn { background: #fee2e2; color: #b91c1c; }  /* 전체삭제 버튼 - 빨강 */
+.all-delete-btn:hover { background: #fca5a5; }  /* 전체삭제 호버 배경 - 진빨강 */
 
-.main-tab-btn { background: #ffe0fc; color: #a33090; }
-.main-tab-btn:hover { background: #fec7fb; }
-.main-tab-btn.active { background: #e546cb; color: #fff; }
+.main-tab-btn { background: #ffe0fc; color: #a33090; }  /* 발주장 탭 버튼 - 분홍 */
+.main-tab-btn:hover { background: #fec7fb; }  /* 발주장 탭 호버 배경 - 진한 분홍 */
+.main-tab-btn.active { background: #e546cb; color: #fff; }  /* 발주장 탭 활성 배경/글자 - 진분홍/흰색 */
 
-.changes-tab-btn { background: #e0e7ff; color: #3730a3; }
-.changes-tab-btn:hover { background: #c7d2fe; }
-.changes-tab-btn.active { background: #4f46e5; color: #fff; }
+.changes-tab-btn { background: #e0e7ff; color: #3730a3; }  /* 업데이트 탭 버튼 - 남색 */
+.changes-tab-btn:hover { background: #c7d2fe; }  /* 업데이트 탭 호버 배경 - 진한 남색 */
+.changes-tab-btn.active { background: #4f46e5; color: #fff; }  /* 업데이트 탭 활성 배경/글자 - 진보라/흰색 */
 
-.reservations-tab-btn { background: #ccfbf1; color: #0f766e; }
-.reservations-tab-btn:hover { background: #99f6e4; }
-.reservations-tab-btn.active { background: #0d9488; color: #fff; }
+.reservations-tab-btn { background: #ccfbf1; color: #0f766e; }  /* 예약현황 탭 버튼 - 청록 */
+.reservations-tab-btn:hover { background: #99f6e4; }  /* 예약현황 탭 호버 배경 - 진한 청록 */
+.reservations-tab-btn.active { background: #0d9488; color: #fff; }  /* 예약현황 탭 활성 배경/글자 - 진청록/흰색 */
 
-.sales-tab-btn { background: #ede9fe; color: #6d28d9; }
-.sales-tab-btn:hover { background: #ddd6fe; }
-.sales-tab-btn.active { background: #6d28d9; color: #fff; }
+.sales-tab-btn { background: #ede9fe; color: #6d28d9; }  /* 매출 탭 버튼 - 보라 */
+.sales-tab-btn:hover { background: #ddd6fe; }  /* 매출 탭 호버 배경 - 진한 보라 */
+.sales-tab-btn.active { background: #6d28d9; color: #fff; }  /* 매출 탭 활성 배경/글자 - 진보라/흰색 */
 
-.price-tab-btn { background: #fef3c7; color: #92400e; }
-.price-tab-btn:hover { background: #fde68a; }
-.price-tab-btn.active { background: #b45309; color: #fff; }
+.price-tab-btn { background: #fef3c7; color: #92400e; }  /* 전략단가 탭 버튼 - 노랑/갈색 */
+.price-tab-btn:hover { background: #fde68a; }  /* 전략단가 탭 호버 배경 - 진한 노랑 */
+.price-tab-btn.active { background: #b45309; color: #fff; }  /* 전략단가 탭 활성 배경/글자 - 진한 주황/흰색 */
 
-.order-sheet-tab-btn { background: #dbeafe; color: #1d4ed8; }
-.order-sheet-tab-btn:hover { background: #bfdbfe; }
-.order-sheet-tab-btn.active { background: #1d4ed8; color: #fff; }
+.order-sheet-tab-btn { background: #dbeafe; color: #1d4ed8; }  /* 발주장(주문서) 탭 버튼 - 파랑 */
+.order-sheet-tab-btn:hover { background: #bfdbfe; }  /* 발주장 탭 호버 배경 - 진한 연파랑 */
+.order-sheet-tab-btn.active { background: #1d4ed8; color: #fff; }  /* 발주장 탭 활성 배경/글자 - 진파랑/흰색 */
 
-.moves-tab-btn { background: #ffedd5; color: #c2410c; }
-.moves-tab-btn:hover { background: #fed7aa; }
-.moves-tab-btn.active { background: #c2410c; color: #fff; }
+.moves-tab-btn { background: #ffedd5; color: #c2410c; }  /* 이동내역 탭 버튼 - 주황 */
+.moves-tab-btn:hover { background: #fed7aa; }  /* 이동내역 탭 호버 배경 - 진한 주황 */
+.moves-tab-btn.active { background: #c2410c; color: #fff; }  /* 이동내역 탭 활성 배경/글자 - 진주황/흰색 */
 
-.crawling-tab-btn { background: #e2e8f0; color: #334155; }
-.crawling-tab-btn:hover { background: #cbd5e1; }
-.crawling-tab-btn.active { background: #475569; color: #fff; }
+.crawling-tab-btn { background: #e2e8f0; color: #334155; }  /* 크롤링 탭 버튼 - 회색 */
+.crawling-tab-btn:hover { background: #cbd5e1; }  /* 크롤링 탭 호버 배경 - 진회색 */
+.crawling-tab-btn.active { background: #475569; color: #fff; }  /* 크롤링 탭 활성 배경/글자 - 진남색/흰색 */
 
-.main-download-btn { background: #dcfce7; color: #15803d; }
-.main-download-btn:hover { background: #bbf7d0; }
+.main-download-btn { background: #dcfce7; color: #15803d; }  /* 엑셀 다운로드 버튼 - 초록 */
+.main-download-btn:hover { background: #bbf7d0; }  /* 다운로드 호버 배경 - 연초록 */
 
 /* ── 업데이트(신규/갱신) 탭 ── */
 .changes-container {
@@ -849,7 +849,7 @@ th.sort-active {
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;
-    background: #fff;
+    background: #fff;  /* 업데이트 탭 컨테이너 배경 - 흰색 */
     border-radius: 12px;
     padding: 16px 20px;
     box-sizing: border-box;
@@ -861,7 +861,7 @@ th.sort-active {
     gap: 12px;
     font-size: 15px;
     font-weight: 700;
-    color: #475569;
+    color: #475569;  /* changes-count 글자색 - 회색 */
     margin-bottom: 10px;
 }
 
@@ -874,7 +874,7 @@ th.sort-active {
     padding: 10px 8px;
     text-align: center;
     font-size: 13px;
-    border-bottom: 2px solid #e2e8f0;
+    border-bottom: 2px solid #e2e8f0;  /* changes-table 헤더 밑줄 - 연회색 */
     white-space: nowrap;
 }
 
@@ -882,7 +882,7 @@ th.sort-active {
     padding: 10px 8px;
     text-align: center;
     font-size: 14px;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f1f5f9;  /* changes-table 셀 밑줄 - 연회색 */
     white-space: nowrap;
 }
 
@@ -894,7 +894,7 @@ th.sort-active {
 .changes-cell-changed {
     font-weight: 800;
     font-size: 16px;
-    color: #1e293b;
+    color: #1e293b;  /* 변경된 셀 강조 글자색 - 진남색 */
 }
 
 /* ── 예약 현황 / 타창고매출현황 / 전략단가 / 발주장 탭(2026-08-18, sales.html·
@@ -908,7 +908,7 @@ th.sort-active {
        바꿔 가로 스크롤 가능하게 함(2026-08-12) */
     overflow-x: auto;
     min-height: 0;
-    background: #fff;
+    background: #fff;  /* 탭 컨테이너 배경 - 흰색(예약현황 등 공통) */
     border-radius: 12px;
     padding: 16px 20px;
     box-sizing: border-box;
@@ -924,23 +924,23 @@ th.sort-active {
 .reservations-filter-bar label {
     font-size: 14px;
     font-weight: 700;
-    color: #475569;
+    color: #475569;  /* 필터 라벨 글자색 - 회색 */
 }
 .reservations-filter-select {
     width: 170px;
     height: 38px;
     padding: 0 10px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid #e5e7eb;  /* 필터 셀렉트 테두리 - 연회색 */
     border-radius: 8px;
     font-size: 14px;
-    background: #f9fafb;
+    background: #f9fafb;  /* 필터 셀렉트 배경 - 연회색 */
     cursor: pointer;
     outline: none;
     box-sizing: border-box;
     transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
-.reservations-filter-select:hover { border-color: #94a3b8; }
-.reservations-filter-select:focus { border-color: #0d9488; background: #fff; box-shadow: 0 0 0 3px rgba(13,148,136,0.15); }
+.reservations-filter-select:hover { border-color: #94a3b8; }  /* 필터 호버 테두리 - 회색 */
+.reservations-filter-select:focus { border-color: #0d9488; background: #fff; box-shadow: 0 0 0 3px rgba(13,148,136,0.15); }  /* 필터 포커스 - 청록 테두리/흰 배경/청록 그림자 */
 
 /* 출고일 필터는 날짜 하나만 담으면 돼서 담당자 드롭다운(170px)만큼 넓을 필요가
    없음(2026-08-18, "필터 박스 너무 길다" 피드백). 타창고매출현황의 출고일
@@ -956,24 +956,24 @@ th.sort-active {
     width: 24px;
     border: none;
     border-radius: 6px;
-    background: #e2e8f0;
-    color: #64748b;
+    background: #e2e8f0;  /* 날짜필터 지우기 버튼 - 회색 */
+    color: #64748b;  /* 날짜필터 지우기 글자색 - 회색 */
     font-size: 12px;
     cursor: pointer;
 }
-.reservations-date-filter-clear:hover { background: #cbd5e1; }
+.reservations-date-filter-clear:hover { background: #cbd5e1; }  /* 날짜필터 지우기 호버 배경 - 진회색 */
 
 
 .reservations-group { margin-bottom: 24px; }
 .reservations-group h3 {
     font-size: 15px;
     font-weight: 700;
-    color: #1e293b;
+    color: #1e293b;  /* 그룹 제목 글자색 - 진남색 */
     margin: 0 0 8px;
 }
 .reservations-group-count {
     font-weight: 500;
-    color: #64748b;
+    color: #64748b;  /* 그룹 카운트 글자색 - 회색 */
     font-size: 13px;
 }
 
@@ -986,7 +986,7 @@ th.sort-active {
     padding: 10px 8px;
     text-align: left;
     font-size: 13px;
-    border-bottom: 2px solid #e2e8f0;
+    border-bottom: 2px solid #e2e8f0;  /* 표 헤더 밑줄 - 연회색 */
     white-space: nowrap;
 }
 .reservations-table th:first-child { text-align: center; }
@@ -994,13 +994,13 @@ th.sort-active {
     padding: 10px 8px;
     text-align: left;
     font-size: 14px;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f1f5f9;  /* 표 셀 밑줄 - 연회색 */
     white-space: nowrap;
 }
 /* 발주장(2026-08-24, 2026-08-26 가독성 개선) — 담당자 열을 강조하고, 정렬
    기준인 담당자가 바뀌는 지점마다 굵은 구분선을 넣어 한 사람 몫씩 묶어 보이게. */
-.order-sheet-table .order-sheet-manager { font-weight: 700; color: #0f766e; }
-.order-sheet-table tr.order-sheet-group-start td { border-top: 2px solid #cbd5e1; }
+.order-sheet-table .order-sheet-manager { font-weight: 700; color: #0f766e; }  /* 담당자 강조 글자색 - 청록 */
+.order-sheet-table tr.order-sheet-group-start td { border-top: 2px solid #cbd5e1; }  /* 담당자 구분선 - 회색 */
 
 /* 타창고매출현황 — 출고완료 표시(2026-08-14, 2026-08-19 취소선 빼고 노란
    배경만 남김). 맨 뒤 정렬은 table.js에서 처리. */
@@ -1012,8 +1012,8 @@ th.sort-active {
 
 /* 타창고매출현황 — 출고취소(되돌리기/삭제 둘 다, 2026-09-04) 표시. 삭제해도
    물리적으로 안 지우고 취소선으로 남겨서 흔적을 유지한다. */
-.reservations-table tr.sales-cancelled-row td { background: #f3f4f6; color: #9ca3af; text-decoration: line-through; }
-.reservation-card.sales-cancelled-row { background: #f3f4f6; color: #9ca3af; text-decoration: line-through; }
+.reservations-table tr.sales-cancelled-row td { background: #f3f4f6; color: #9ca3af; text-decoration: line-through; }  /* 출고취소 행 배경/글자 - 회색(취소선) */
+.reservation-card.sales-cancelled-row { background: #f3f4f6; color: #9ca3af; text-decoration: line-through; }  /* 출고취소 카드 배경/글자 - 회색(취소선) */
 
 /* 창고이동 탭 — 취소 체크 시 빨간 배경 + 취소선, 처리 체크 시 핑크 배경(2026-09-04).
    위 완료 행과 마찬가지로 짝수행 줄무늬를 이겨야 해서 .reservations-table로 특이도 확보. */
@@ -1023,12 +1023,12 @@ th.sort-active {
 /* 발주장 탭 — 전표 체크 시 배경색으로 가독성, 취소 체크 시 텍스트만 빨간색
    (2026-09-08 사용자 요청). 취소가 전표보다 우선(둘 다 체크되면 취소 표시).
    짝수행 줄무늬를 이겨야 해서 .reservations-table로 특이도 확보. */
-.reservations-table tr.order-sheet-slip-row td { background: #dcfce7; }
+.reservations-table tr.order-sheet-slip-row td { background: #dcfce7; }  /* 발주장 전표체크 행 배경 - 연초록 */
 .reservations-table tr.order-sheet-cancelled-row td { color: #dc2626; }
 
 /* 발주장 탭 — 행 순서를 마우스로 드래그해서 바꾸는 손잡이(2026-09-08).
    드래그 중인 행은 반투명하게 표시해서 어느 행을 옮기는 중인지 눈에 띄게. */
-.order-sheet-drag-handle { cursor: grab; text-align: center; color: #9ca3af; user-select: none; }
+.order-sheet-drag-handle { cursor: grab; text-align: center; color: #9ca3af; user-select: none; }  /* 드래그 손잡이 아이콘색 - 회색 */
 .order-sheet-tbody tr.order-sheet-dragging { opacity: 0.4; }
 
 /* 발주장 탭 — 더블클릭으로 셀 편집(2026-09-14) — .sales-remark-input과 같은 의도로
@@ -1045,7 +1045,7 @@ th.sort-active {
     padding: 0;
     margin: 0;
     border: none;
-    border-bottom: 1.5px solid #8fce00;
+    border-bottom: 1.5px solid #8fce00;  /* 편집중 셀 밑줄 - 브랜드 그린 */
     border-radius: 0;
     font-size: inherit;
     font-family: inherit;
@@ -1061,15 +1061,15 @@ th.sort-active {
    항상 걸어둬도 시각적으로는 아무 차이 없음. */
 .order-sheet-editable-cell { position: relative; }
 .order-sheet-editable-cell:focus { outline: none; }
-.order-sheet-editable-cell.order-sheet-cell-selected { outline: 2px solid #2563eb; outline-offset: -2px; }
-.order-sheet-fill-handle { position: absolute; right: -1px; bottom: -1px; width: 7px; height: 7px; background: #2563eb; cursor: crosshair; }
+.order-sheet-editable-cell.order-sheet-cell-selected { outline: 2px solid #2563eb; outline-offset: -2px; }  /* 선택된 칸 외곽선 - 파랑 */
+.order-sheet-fill-handle { position: absolute; right: -1px; bottom: -1px; width: 7px; height: 7px; background: #2563eb; cursor: crosshair; }  /* 채우기 핸들 색 - 파랑 */
 
 /* 발주장 탭 — 손잡이 클릭으로 다중 선택한 행(일괄 삭제용, 2026-09-09).
    짝수행 줄무늬를 이겨야 해서 .reservations-table로 특이도 확보. */
-.reservations-table tr.order-sheet-row-selected td { background: #dbeafe; }
+.reservations-table tr.order-sheet-row-selected td { background: #dbeafe; }  /* 다중 선택된 행 배경 - 파랑 */
 
-.order-sheet-bulk-delete-btn { background: #fee2e2; color: #b91c1c; border: none; border-radius: 4px; padding: 4px 10px; cursor: pointer; }
-.order-sheet-bulk-delete-btn:hover { background: #fecaca; }
+.order-sheet-bulk-delete-btn { background: #fee2e2; color: #b91c1c; border: none; border-radius: 4px; padding: 4px 10px; cursor: pointer; }  /* 일괄삭제 버튼 - 빨강 */
+.order-sheet-bulk-delete-btn:hover { background: #fecaca; }  /* 일괄삭제 호버 배경 - 진한 연빨강 */
 
 /* 타창고매출현황 — "수정중" 체크한 사람 기준 행 색(2026-08-25, 고정 매핑:
    전미림=핑크/김나미=골드/박채연=보라/임보연=하늘색). 짝수행 줄무늬를 이겨야
@@ -1079,18 +1079,18 @@ th.sort-active {
    실선만 보임) 줄무늬처럼 깨져 보임(2026-08-25, 스크린샷으로 실제 확인) —
    4차: box-shadow 제거, 배경만 확실히 보이는 톤으로, 왼쪽 띠는 첫 번째
    셀(td:first-child)에만 border로 둬서 행 전체에 한 줄만 나오게 함. */
-.reservations-table tr.mgr-color-pink td   { background: #fce7f3; }
-.reservations-table tr.mgr-color-yellow td { background: #ffedd5; }
-.reservations-table tr.mgr-color-purple td { background: #ede9fe; }
-.reservations-table tr.mgr-color-skyblue td { background: #cffafe; }
-.reservations-table tr.mgr-color-pink td:first-child   { border-left: 6px solid #db2777; }
-.reservations-table tr.mgr-color-yellow td:first-child { border-left: 6px solid #c2410c; }
-.reservations-table tr.mgr-color-purple td:first-child { border-left: 6px solid #7c3aed; }
-.reservations-table tr.mgr-color-skyblue td:first-child { border-left: 6px solid #0891b2; }
-.reservation-card.mgr-color-pink   { background: #fce7f3; border-left: 6px solid #db2777; }
-.reservation-card.mgr-color-yellow { background: #ffedd5; border-left: 6px solid #c2410c; }
-.reservation-card.mgr-color-purple { background: #ede9fe; border-left: 6px solid #7c3aed; }
-.reservation-card.mgr-color-skyblue { background: #cffafe; border-left: 6px solid #0891b2; }
+.reservations-table tr.mgr-color-pink td   { background: #fce7f3; }  /* 전미림 담당 행 배경 - 핑크 */
+.reservations-table tr.mgr-color-yellow td { background: #ffedd5; }  /* 김나미 담당 행 배경 - 골드(주황) */
+.reservations-table tr.mgr-color-purple td { background: #ede9fe; }  /* 박채연 담당 행 배경 - 보라 */
+.reservations-table tr.mgr-color-skyblue td { background: #cffafe; }  /* 임보연 담당 행 배경 - 하늘색 */
+.reservations-table tr.mgr-color-pink td:first-child   { border-left: 6px solid #db2777; }  /* 전미림 좌측 띠 - 진핑크 */
+.reservations-table tr.mgr-color-yellow td:first-child { border-left: 6px solid #c2410c; }  /* 김나미 좌측 띠 - 진주황 */
+.reservations-table tr.mgr-color-purple td:first-child { border-left: 6px solid #7c3aed; }  /* 박채연 좌측 띠 - 진보라 */
+.reservations-table tr.mgr-color-skyblue td:first-child { border-left: 6px solid #0891b2; }  /* 임보연 좌측 띠 - 진하늘색 */
+.reservation-card.mgr-color-pink   { background: #fce7f3; border-left: 6px solid #db2777; }  /* 카드형 전미림 배경/띠 - 핑크 */
+.reservation-card.mgr-color-yellow { background: #ffedd5; border-left: 6px solid #c2410c; }  /* 카드형 김나미 배경/띠 - 골드(주황) */
+.reservation-card.mgr-color-purple { background: #ede9fe; border-left: 6px solid #7c3aed; }  /* 카드형 박채연 배경/띠 - 보라 */
+.reservation-card.mgr-color-skyblue { background: #cffafe; border-left: 6px solid #0891b2; }  /* 카드형 임보연 배경/띠 - 하늘색 */
 
 
 /* 타창고매출현황 비고 칸 — 더블클릭하면 그 자리에서 바로 입력창으로 바뀜
@@ -1101,7 +1101,7 @@ th.sort-active {
    실제로는 이 padding:0이 안 먹히고 있었던 걸 뒤늦게 발견 — 조상 클래스까지
    셀렉터에 넣어 특이도를 높임(0,2,1), 발주장 .order-sheet-cell-input과 동일 처방) */
 .sales-remark-cell, .inventory-memo-cell { cursor: pointer; }
-.sales-remark-cell:hover, .inventory-memo-cell:hover { background: #f8fafc; }
+.sales-remark-cell:hover, .inventory-memo-cell:hover { background: #f8fafc; }  /* 비고칸 호버 배경 - 아주 연한 회색 */
 .sales-remark-cell input.sales-remark-input,
 .inventory-memo-cell input.inventory-memo-input {
     display: block;
@@ -1109,11 +1109,11 @@ th.sort-active {
     padding: 0;
     margin: 0;
     border: none;
-    border: 1.5px solid #8fce00;
+    border: 1.5px solid #8fce00;  /* 비고 편집 입력창 테두리 - 브랜드 그린 */
     font-size: 14px;
     font-family: inherit;
     line-height: inherit;
-    color: #334155;
+    color: #334155;  /* 비고 입력 글자색 - 진회색 */
     outline: none;
     background: transparent;
 }
@@ -1135,25 +1135,25 @@ tr.outbound-insert-row select {
     border-radius: 6px;
     font-size: 14px;
     font-family: inherit;
-    color: #334155;
+    color: #334155;  /* outbound 입력 글자색 - 진회색 */
     background: transparent;
     text-align: center;
     transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
 }
 tr.outbound-insert-row .cell-input:hover,
 tr.outbound-insert-row select:hover {
-    border-color: #c0c0c0;
-    background: #fff;
+    border-color: #c0c0c0;  /* 입력 호버 테두리 - 연회색 */
+    background: #fff;  /* 입력 호버 배경 - 흰색 */
 }
 tr.outbound-insert-row .cell-input:focus,
 tr.outbound-insert-row select:focus {
     outline: none;
-    border-color: #22c55e;
-    background: #fff;
-    box-shadow: 0 0 0 3px rgba(34,197,94,0.15);
+    border-color: #22c55e;  /* 입력 포커스 테두리 - 초록 */
+    background: #fff;  /* 입력 포커스 배경 - 흰색 */
+    box-shadow: 0 0 0 3px rgba(34,197,94,0.15);  /* 입력 포커스 그림자 - 초록 반투명 */
 }
 tr.outbound-insert-row .cell-input::placeholder {
-    color: #9ca3af;
+    color: #9ca3af;  /* placeholder 글자색 - 회색 */
 }
 /* 숫자 입력 스피너 제거 — 다른 셀과 시각적으로 통일 */
 tr.outbound-insert-row input[type="number"].cell-input {
@@ -1198,7 +1198,7 @@ tr.price-row .price-edit-input {
     border-radius: 6px;
     font-size: 14px;
     font-family: inherit;
-    color: #334155;
+    color: #334155;  /* 가격 입력 글자색 - 진회색 */
     background: transparent;
     transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
 }
@@ -1225,18 +1225,18 @@ tr.price-row .price-highlight .price-edit-input {
 }
 tr.price-insert-row .cell-input:hover,
 .price-edit-input:hover {
-    border-color: #bbf7d0;
-    background: #fff;
+    border-color: #bbf7d0;  /* 가격 입력 호버 테두리 - 연초록 */
+    background: #fff;  /* 가격 입력 호버 배경 - 흰색 */
 }
 tr.price-insert-row .cell-input:focus,
 .price-edit-input:focus {
     outline: none;
-    border-color: #22c55e;
-    background: #fff;
-    box-shadow: 0 0 0 3px rgba(34,197,94,0.15);
+    border-color: #22c55e;  /* 가격 입력 포커스 테두리 - 초록 */
+    background: #fff;  /* 가격 입력 포커스 배경 - 흰색 */
+    box-shadow: 0 0 0 3px rgba(34,197,94,0.15);  /* 가격 입력 포커스 그림자 - 초록 반투명 */
 }
 tr.price-insert-row .cell-input::placeholder {
-    color: #9ca3af;
+    color: #9ca3af;  /* placeholder 글자색 - 회색 */
 }
 tr.price-insert-row input[type="number"].cell-input,
 input[type="number"].price-edit-input {
@@ -1255,7 +1255,7 @@ input[type="date"].price-edit-input {
     color-scheme: light;
 }
 .price-row { cursor: pointer; }
-.price-highlight { font-weight: 700; color: #b91c1c; }
+.price-highlight { font-weight: 700; color: #b91c1c; }  /* 가격 강조 글자색 - 빨강 */
 
 /* 액션 칸 — 버튼이 최대 4개(예약변경/사용완료/예약취소/출고등록)까지 붙는데
    2줄로 감싸면 보기 안 좋다는 피드백으로 한 줄 고정으로 바꿈(2026-08-19).
@@ -1276,7 +1276,7 @@ input[type="date"].price-edit-input {
 .reservations-empty {
     text-align: center;
     padding: 40px;
-    color: #9ca3af;
+    color: #9ca3af;  /* 예약 없음 안내 글자색 - 회색 */
 }
 
 /* 데스크톱에서는 표만, 768px 이하에서는 카드만 보이도록 토글(모바일 미디어쿼리에서 뒤집음) */
@@ -1298,33 +1298,33 @@ input[type="date"].price-edit-input {
     cursor: pointer;
     white-space: nowrap;
 }
-.edit-reservation-btn { background: #dbeafe; color: #1d4ed8; }
-.edit-reservation-btn:hover { background: #bfdbfe; }
-.qty-dropped { color: #b91c1c; font-weight: 700; }
+.edit-reservation-btn { background: #dbeafe; color: #1d4ed8; }  /* 예약수정 버튼 - 파랑 */
+.edit-reservation-btn:hover { background: #bfdbfe; }  /* 예약수정 호버 배경 - 진한 연파랑 */
+.qty-dropped { color: #b91c1c; font-weight: 700; }  /* 수량 감소 표시 글자색 - 빨강 */
 
 /* 창고이동 표 — 더블클릭으로 수정 가능한 칸(2026-09-04, 처음 도입 후 CSS를
    못 챙겨서 그냥 일반 텍스트처럼 보였음)임을 밑줄+커서로 표시하고, 마우스
    올리면 살짝 배경이 들어와 어떤 칸을 고칠 수 있는지 바로 알 수 있게 함. */
 .move-editable-cell {
     cursor: pointer;
-    border-bottom: 1px dashed #cbd5e1;
+    border-bottom: 1px dashed #cbd5e1;  /* 창고이동 편집가능 칸 밑줄 - 회색 점선 */
 }
 .move-editable-cell:hover {
-    background: #fff7ed;
-    border-bottom-color: #c2410c;
+    background: #fff7ed;  /* 편집가능 칸 호버 배경 - 연주황 */
+    border-bottom-color: #c2410c;  /* 편집가능 칸 호버 밑줄 - 진주황 */
 }
-.use-reservation-btn { background: #dcfce7; color: #15803d; }
-.use-reservation-btn:hover { background: #bbf7d0; }
-.cancel-reservation-btn { background: #fee2e2; color: #b91c1c; }
-.cancel-reservation-btn:hover { background: #fca5a5; }
-.register-outbound-btn { background: #ede9fe; color: #6d28d9; }
-.register-outbound-btn:hover { background: #ddd6fe; }
-.move-from-reservation-btn { background: #ffedd5; color: #c2410c; }
-.move-from-reservation-btn:hover { background: #fed7aa; }
-.reactivate-outbound-btn { background: #ccfbf1; color: #0f766e; }
-.reactivate-outbound-btn:hover { background: #99f6e4; }
-.price-delete-btn { background: #fee2e2; color: #b91c1c; }
-.price-delete-btn:hover { background: #fca5a5; }
+.use-reservation-btn { background: #dcfce7; color: #15803d; }  /* 사용완료 버튼 - 초록 */
+.use-reservation-btn:hover { background: #bbf7d0; }  /* 사용완료 호버 배경 - 연초록 */
+.cancel-reservation-btn { background: #fee2e2; color: #b91c1c; }  /* 예약취소 버튼 - 빨강 */
+.cancel-reservation-btn:hover { background: #fca5a5; }  /* 예약취소 호버 배경 - 진빨강 */
+.register-outbound-btn { background: #ede9fe; color: #6d28d9; }  /* 출고등록 버튼 - 보라 */
+.register-outbound-btn:hover { background: #ddd6fe; }  /* 출고등록 호버 배경 - 연보라 */
+.move-from-reservation-btn { background: #ffedd5; color: #c2410c; }  /* 창고이동 버튼 - 주황 */
+.move-from-reservation-btn:hover { background: #fed7aa; }  /* 창고이동 호버 배경 - 연주황 */
+.reactivate-outbound-btn { background: #ccfbf1; color: #0f766e; }  /* 재개 버튼 - 청록 */
+.reactivate-outbound-btn:hover { background: #99f6e4; }  /* 재개 호버 배경 - 연청록 */
+.price-delete-btn { background: #fee2e2; color: #b91c1c; }  /* 가격삭제 버튼 - 빨강 */
+.price-delete-btn:hover { background: #fca5a5; }  /* 가격삭제 호버 배경 - 진빨강 */
 
 /* 전달사항 "!" 버튼(2026-08-14, 맨 왼쪽 배치 + 빨간색으로 가시성 강화) —
    메시지 없으면 옅은 빨강, 있으면 진한 빨강으로 눈에 띄게 */
@@ -1334,19 +1334,19 @@ input[type="date"].price-edit-input {
     height: 22px;
     border: none;
     border-radius: 50%;
-    background: #fee2e2;
-    color: #ef4444;
+    background: #fee2e2;  /* 전달사항 버튼 배경 - 연빨강(메시지 없음) */
+    color: #ef4444;  /* 전달사항 버튼 글자색 - 빨강 */
     font-size: 13px;
     font-weight: 800;
     line-height: 1;
     cursor: pointer;
 }
-.reservation-note-btn:hover { background: #fecaca; }
+.reservation-note-btn:hover { background: #fecaca; }  /* 전달사항 버튼 호버 배경 - 진한 연빨강 */
 .reservation-note-btn.has-note {
-    background: #ef4444;
-    color: #fff;
+    background: #ef4444;  /* 메시지 있음 배경 - 진빨강 */
+    color: #fff;  /* 메시지 있음 글자색 - 흰색 */
 }
-.reservation-note-btn.has-note:hover { background: #dc2626; }
+.reservation-note-btn.has-note:hover { background: #dc2626; }  /* 메시지 있음 호버 배경 - 더 진한 빨강 */
 .mc-header .reservation-note-btn {
     flex-shrink: 0;
 }
@@ -1360,7 +1360,7 @@ input[type="date"].price-edit-input {
     gap: 4px;
     flex-shrink: 0;
     font-size: 12px;
-    color: #475569;
+    color: #475569;  /* 등록완료 라벨 글자색 - 회색 */
 }
 
 .logo-link {
@@ -1377,39 +1377,39 @@ input[type="date"].price-edit-input {
 }
 
 .insert-btn, .select-insert-btn, .all-insert-btn {
-    background: #22c55e; color: #fff;
-    box-shadow: 0 2px 8px rgba(34,197,94,0.28);
+    background: #22c55e; color: #fff;  /* 추가 버튼 배경/글자 - 초록 배경, 흰 글자 */
+    box-shadow: 0 2px 8px rgba(34,197,94,0.28);  /* 추가 버튼 그림자 - 초록 반투명 */
 }
 .insert-btn:hover, .select-insert-btn:hover, .all-insert-btn:hover {
-    background: #16a34a;
+    background: #16a34a;  /* 추가 버튼 호버 배경 - 진한 초록 */
 }
 
 .update-btn, .all-update-btn, .select-update-btn {
-    background: #3b82f6; color: #fff;
-    box-shadow: 0 2px 8px rgba(59,130,246,0.28);
+    background: #3b82f6; color: #fff;  /* 수정 버튼 배경/글자 - 파랑 배경, 흰 글자 */
+    box-shadow: 0 2px 8px rgba(59,130,246,0.28);  /* 수정 버튼 그림자 - 파랑 반투명 */
 }
 .update-btn:hover, .all-update-btn:hover, .select-update-btn:hover {
-    background: #2563eb;
+    background: #2563eb;  /* 수정 버튼 호버 배경 - 진한 파랑 */
 }
 
 .holding-btn, .all-holding-btn, .select-holding-btn {
-    background: #0ea5e9; color: #fff;
-    box-shadow: 0 2px 8px rgba(14,165,233,0.28);
+    background: #0ea5e9; color: #fff;  /* 홀딩 버튼 배경/글자 - 하늘색 배경, 흰 글자 */
+    box-shadow: 0 2px 8px rgba(14,165,233,0.28);  /* 홀딩 버튼 그림자 - 하늘색 반투명 */
 }
 .holding-btn:hover, .all-holding-btn:hover, .select-holding-btn:hover {
-    background: #0284c7;
+    background: #0284c7;  /* 홀딩 버튼 호버 배경 - 진한 하늘색 */
 }
 
 .move-btn {
-    background: #8b5cf6; color: #fff;
-    box-shadow: 0 2px 8px rgba(139,92,246,0.28);
+    background: #8b5cf6; color: #fff;  /* 이동 버튼 배경/글자 - 보라 배경, 흰 글자 */
+    box-shadow: 0 2px 8px rgba(139,92,246,0.28);  /* 이동 버튼 그림자 - 보라 반투명 */
 }
 .move-btn:hover {
-    background: #7c3aed;
+    background: #7c3aed;  /* 이동 버튼 호버 배경 - 진한 보라 */
 }
 
-.select-delete-btn { background: #fee2e2; color: #b91c1c; }
-.select-delete-btn:hover { background: #fca5a5; }
+.select-delete-btn { background: #fee2e2; color: #b91c1c; }  /* 삭제 버튼 - 빨강 */
+.select-delete-btn:hover { background: #fca5a5; }  /* 삭제 버튼 호버 배경 - 진빨강 */
 
 input:not([type="checkbox"]) {
     margin-top: 5px;
@@ -1425,7 +1425,7 @@ input[type="checkbox"] {
     cursor: pointer;
     width: 16px;
     height: 16px;
-    accent-color: #94d900;
+    accent-color: #94d900;  /* 체크박스 색 - 브랜드 그린 계열 */
 }
 
 /* 재고장 선택 체크박스만 키움(2026-09-18 사용자 요청 — 18px로는 안 커서 더 키움) */
@@ -1448,10 +1448,10 @@ input[type="checkbox"] {
     margin: 0;
     font-size: 45px;
     line-height: 1;
-    color: #9ca3af;
+    color: #9ca3af;  /* 복사 버튼 아이콘색 - 회색 */
     cursor: pointer;
 }
-.row-copy-btn:hover { color: #4b5563; }
+.row-copy-btn:hover { color: #4b5563; }  /* 복사 버튼 호버 글자색 - 진회색 */
 
 /* 테이블 행 hover 시 커서 포인터 */
 tbody tr {
@@ -1466,19 +1466,19 @@ tbody tr {
 
 /* 동결 */
 .freezed-row td{
-    color:#6d28d9;
+    color:#6d28d9;  /* 동결 상태 글자색 - 보라 */
     font-weight:700;
 }
 
 /* 사용불가 */
 .stopped-row td{
-    color:#92400e;
+    color:#92400e;  /* 사용불가 상태 글자색 - 갈색(주황) */
     font-weight:700;
 }
 
 /* 이고 */
 .moving-row td{
-    color:#ff8838;
+    color:#ff8838;  /* 이고 상태 글자색 - 주황 */
     font-weight:700;
 }
 
@@ -1495,13 +1495,13 @@ tbody tr {
 /* 체크한 행 = 연초록 */
 .selected-row td{
     background:#d4f7a0 !important;
-    color: #3f7d00 !important;
+    color: #3f7d00 !important;  /* 선택된 행 글자색 - 진초록 */
     font-weight:700;
 }
 
 /* 홀딩된 행 일시 표시 */
 .flash-row td {
-    background: #d3f5c4 !important;
+    background: #d3f5c4 !important;  /* 홀딩 행 일시 표시 배경 - 연초록(플래시) */
     transition: 0.3s;
 }
 
@@ -1527,9 +1527,9 @@ tr.insert-card, tr.update-row-edit, tr.holding-insert-row {
 }
 
 tr.insert-card td {
-    background: linear-gradient(180deg, #f0fdf4 0%, #e7fbe9 100%) !important;
+    background: linear-gradient(180deg, #f0fdf4 0%, #e7fbe9 100%) !important;  /* 추가행 배경 그라데이션 - 연초록 */
     padding: 8px 7px !important;
-    border-bottom: 2px solid #86efac !important;
+    border-bottom: 2px solid #86efac !important;  /* 추가행 밑줄 - 초록 */
 }
 
 /* 인라인 수정행 = 파랑(수정 버튼과 동일 색 계열) */
@@ -1548,7 +1548,7 @@ tr.holding-insert-row td {
 
 /* 원본 행에서 그대로 가져오는 값(수정 불가) — 편집 가능한 입력값과 구분되게 흐리게 표시 */
 tr.holding-insert-row td.holding-inherited {
-    color: #64748b;
+    color: #64748b;  /* 원본 값 글자색 - 회색(비활성 느낌) */
     font-style: italic;
 }
 
@@ -1597,9 +1597,9 @@ tr.holding-insert-row td.holding-inherited {
     gap: 16px;
     padding: 14px 16px 14px 20px;
     border-radius: 14px;
-    background: #fff;
-    box-shadow: 0 12px 32px rgba(15,23,42,0.2), 0 2px 8px rgba(15,23,42,0.08);
-    border-left: 5px solid #cbd5e1;
+    background: #fff;  /* 카드 배경 - 흰색 */
+    box-shadow: 0 12px 32px rgba(15,23,42,0.2), 0 2px 8px rgba(15,23,42,0.08);  /* 카드 그림자 - 남색 반투명(이중) */
+    border-left: 5px solid #cbd5e1;  /* 카드 좌측 기본 띠 - 회색 */
     opacity: 0;
     transform: translateY(18px) scale(0.95);
     transition: opacity 0.22s ease, transform 0.22s ease;
@@ -1609,7 +1609,7 @@ tr.holding-insert-row td.holding-inherited {
     padding: 8px 12px 8px 14px;
     gap: 10px;
     border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(15,23,42,0.12);
+    box-shadow: 0 4px 12px rgba(15,23,42,0.12);  /* 축소 카드 그림자 - 남색 반투명 */
 }
 
 .bulk-action-bar.visible .bulk-action-card {
@@ -1620,7 +1620,7 @@ tr.holding-insert-row td.holding-inherited {
 .bulk-action-label {
     font-size: 14px;
     font-weight: 700;
-    color: #334155;
+    color: #334155;  /* 라벨 글자색 - 진회색 */
     white-space: nowrap;
 }
 
@@ -1632,9 +1632,9 @@ tr.holding-insert-row td.holding-inherited {
     white-space: nowrap;
 }
 
-.bulk-action-card.bulk-insert  { border-left-color: #22c55e; }
-.bulk-action-card.bulk-update  { border-left-color: #3b82f6; }
-.bulk-action-card.bulk-holding { border-left-color: #0ea5e9; }
+.bulk-action-card.bulk-insert  { border-left-color: #22c55e; }  /* 추가 카드 좌측 띠 - 초록 */
+.bulk-action-card.bulk-update  { border-left-color: #3b82f6; }  /* 수정 카드 좌측 띠 - 파랑 */
+.bulk-action-card.bulk-holding { border-left-color: #0ea5e9; }  /* 홀딩 카드 좌측 띠 - 하늘색 */
 
 tr.insert-card .cell-input,
 tr.update-row-edit .cell-input,
@@ -1644,43 +1644,43 @@ tr.holding-insert-row select {
     box-sizing: border-box;
     margin-top: 0;
     padding: 8px 10px;
-    border: 1.5px solid #bbf7d0;
+    border: 1.5px solid #bbf7d0;  /* 입력 테두리 - 연초록(기본) */
     border-radius: 8px;
     font-size: 19px;
-    background: #fff;
+    background: #fff;  /* 입력 배경 - 흰색 */
     transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 
-tr.update-row-edit .cell-input { border-color: #bfdbfe; }
-tr.holding-insert-row .cell-input, tr.holding-insert-row select { border-color: #bae6fd; height: 34px; }
+tr.update-row-edit .cell-input { border-color: #bfdbfe; }  /* 수정행 입력 테두리 - 연파랑 */
+tr.holding-insert-row .cell-input, tr.holding-insert-row select { border-color: #bae6fd; height: 34px; }  /* 홀딩행 입력 테두리 - 연하늘색 */
 
-tr.insert-card .cell-input:hover { border-color: #86efac; }
-tr.update-row-edit .cell-input:hover { border-color: #60a5fa; }
-tr.holding-insert-row .cell-input:hover, tr.holding-insert-row select:hover { border-color: #38bdf8; }
+tr.insert-card .cell-input:hover { border-color: #86efac; }  /* 추가행 입력 호버 테두리 - 초록 */
+tr.update-row-edit .cell-input:hover { border-color: #60a5fa; }  /* 수정행 입력 호버 테두리 - 파랑 */
+tr.holding-insert-row .cell-input:hover, tr.holding-insert-row select:hover { border-color: #38bdf8; }  /* 홀딩행 입력 호버 테두리 - 하늘색 */
 
 tr.insert-card .cell-input:focus {
     outline: none;
-    border-color: #22c55e;
-    background: #fff;
-    box-shadow: 0 0 0 3px rgba(34,197,94,0.15);
+    border-color: #22c55e;  /* 추가행 입력 포커스 테두리 - 초록 */
+    background: #fff;  /* 추가행 입력 포커스 배경 - 흰색 */
+    box-shadow: 0 0 0 3px rgba(34,197,94,0.15);  /* 추가행 입력 포커스 그림자 - 초록 반투명 */
 }
 tr.update-row-edit .cell-input:focus {
     outline: none;
-    border-color: #3b82f6;
-    background: #fff;
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+    border-color: #3b82f6;  /* 수정행 입력 포커스 테두리 - 파랑 */
+    background: #fff;  /* 수정행 입력 포커스 배경 - 흰색 */
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.15);  /* 수정행 입력 포커스 그림자 - 파랑 반투명 */
 }
 tr.holding-insert-row .cell-input:focus, tr.holding-insert-row select:focus {
     outline: none;
-    border-color: #0ea5e9;
-    background: #fff;
-    box-shadow: 0 0 0 3px rgba(14,165,233,0.15);
+    border-color: #0ea5e9;  /* 홀딩행 입력 포커스 테두리 - 하늘색 */
+    background: #fff;  /* 홀딩행 입력 포커스 배경 - 흰색 */
+    box-shadow: 0 0 0 3px rgba(14,165,233,0.15);  /* 홀딩행 입력 포커스 그림자 - 하늘색 반투명 */
 }
 
 tr.insert-card .cell-input::placeholder,
 tr.update-row-edit .cell-input::placeholder,
 tr.holding-insert-row .cell-input::placeholder {
-    color: #9ca3af;
+    color: #9ca3af;  /* placeholder 글자색 - 회색 */
 }
 
 /* 숫자 입력 스피너 제거 (재고/평중) — 다른 셀 입력과 시각적으로 통일 */
@@ -1746,8 +1746,8 @@ tr.holding-insert-row input[type="number"].cell-input::-webkit-inner-spin-button
     height: 22px;
     border: none;
     border-radius: 50%;
-    background: #e2e8f0;
-    color: #64748b;
+    background: #e2e8f0;  /* 닫기 버튼 배경 - 연회색 */
+    color: #64748b;  /* 닫기 버튼 글자색 - 회색 */
     cursor: pointer;
     font-size: 13px;
     display: flex;
@@ -1758,8 +1758,8 @@ tr.holding-insert-row input[type="number"].cell-input::-webkit-inner-spin-button
 }
 
 .card-close-btn:hover {
-    background: #fca5a5;
-    color: #b91c1c;
+    background: #fca5a5;  /* 닫기 버튼 호버 배경 - 연빨강 */
+    color: #b91c1c;  /* 닫기 버튼 호버 글자색 - 진빨강 */
 }
 
 tr.insert-card td:first-child {
@@ -1779,7 +1779,7 @@ tr.insert-card td:first-child {
     width: 100%;
     height: 100%;
     padding: 10px 12px;
-    border: 1.5px solid #e2e8f0;
+    border: 1.5px solid #e2e8f0;  /* 메모 입력창 테두리 - 연회색 */
     border-radius: 8px;
     font-size: 15px;
     line-height: 1.5;
@@ -1790,8 +1790,8 @@ tr.insert-card td:first-child {
     transition: border-color 0.15s, box-shadow 0.15s;
 }
 .note-modal-input:focus {
-    border-color: #0d9488;
-    box-shadow: 0 0 0 3px rgba(13,148,136,0.15);
+    border-color: #0d9488;  /* 메모 입력창 포커스 테두리 - 청록 */
+    box-shadow: 0 0 0 3px rgba(13,148,136,0.15);  /* 메모 입력창 포커스 그림자 - 청록 반투명 */
 }
 .note-modal-view {
     min-height: 60px;
@@ -1799,23 +1799,23 @@ tr.insert-card td:first-child {
     overflow-y: auto;
     padding: 12px 14px;
     margin-bottom: 20px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background: #f8fafc;  /* 메모 보기 배경 - 아주 연한 회색 */
+    border: 1px solid #e2e8f0;  /* 메모 보기 테두리 - 연회색 */
     border-radius: 8px;
     font-size: 14px;
     line-height: 1.6;
-    color: #1e293b;
+    color: #1e293b;  /* 메모 보기 글자색 - 진남색 */
     text-align: left;
     white-space: pre-wrap;
     word-break: break-word;
 }
 .note-modal-empty {
-    color: #94a3b8;
+    color: #94a3b8;  /* 메모 없음 글자색 - 회색 */
     font-style: italic;
 }
 .confirm-edit {
-    background: #f1f5f9;
-    color: #475569;
+    background: #f1f5f9;  /* 확인/수정 버튼 배경 - 회색 */
+    color: #475569;  /* 확인/수정 버튼 글자색 - 진회색 */
     border: none;
     border-radius: 6px;
     padding: 9px 28px;
@@ -1823,14 +1823,14 @@ tr.insert-card td:first-child {
     font-weight: 600;
     cursor: pointer;
 }
-.confirm-edit:hover { background: #e2e8f0; }
+.confirm-edit:hover { background: #e2e8f0; }  /* 확인/수정 버튼 호버 배경 - 진회색 */
 .add-insert-row-btn {
     width: 18px;
     height: 18px;
     border: none;
     border-radius: 50%;
-    background: #bbf7d0;
-    color: #15803d;
+    background: #bbf7d0;  /* 행추가 버튼 배경 - 연초록 */
+    color: #15803d;  /* 행추가 버튼 글자색 - 진초록 */
     cursor: pointer;
     font-size: 12px;
     font-weight: 700;
@@ -1840,15 +1840,15 @@ tr.insert-card td:first-child {
     justify-content: center;
     padding: 0;
     vertical-align: middle;
-    box-shadow: 0 1px 3px rgba(21,128,61,0.25);
+    box-shadow: 0 1px 3px rgba(21,128,61,0.25);  /* 행추가 버튼 그림자 - 초록 반투명 */
     transition: background 0.15s, transform 0.12s, box-shadow 0.15s;
 }
 
 .add-insert-row-btn:hover {
-    background: #22c55e;
-    color: #fff;
+    background: #22c55e;  /* 행추가 버튼 호버 배경 - 초록 */
+    color: #fff;  /* 행추가 버튼 호버 글자색 - 흰색 */
     transform: scale(1.08);
-    box-shadow: 0 2px 6px rgba(34,197,94,0.4);
+    box-shadow: 0 2px 6px rgba(34,197,94,0.4);  /* 행추가 버튼 호버 그림자 - 초록 반투명 */
 }
 
 .add-insert-row-btn:active {
@@ -1867,14 +1867,14 @@ tr.insert-card .remove-insert-btn:hover {
     width: 100%;
     height: 100%;
     padding: 0 12px;
-    border: 1px solid #ccc;
+    border: 1px solid #ccc;  /* 입력 박스 테두리 - 회색 */
     border-radius: 6px;
     font-size: 16px;
     box-sizing: border-box;
 }
 
 .input-required {
-    background-color: #d6ffc2;
+    background-color: #d6ffc2;  /* 필수 입력 강조 배경 - 연초록 */
 }
 
 .holding-pan {
@@ -1899,8 +1899,8 @@ tr.insert-card .remove-insert-btn:hover {
     padding: 2px 8px;
     font-size: 12px;
     font-weight: 700;
-    background: #22c55e;
-    color: #fff;
+    background: #22c55e;  /* 홀딩완료 버튼 배경 - 초록 */
+    color: #fff;  /* 홀딩완료 버튼 글자색 - 흰색 */
     border: none;
     border-radius: 6px;
     cursor: pointer;
@@ -1909,7 +1909,7 @@ tr.insert-card .remove-insert-btn:hover {
 }
 
 .complete-holding-btn:hover {
-    background: #16a34a;
+    background: #16a34a;  /* 홀딩완료 버튼 호버 배경 - 진한 초록 */
 }
 
 .cancel-btn {
@@ -1918,8 +1918,8 @@ tr.insert-card .remove-insert-btn:hover {
     height: 22px;
     border: none;
     border-radius: 50%;
-    background: #e2e8f0;
-    color: #64748b;
+    background: #e2e8f0;  /* 취소 버튼 배경 - 연회색 */
+    color: #64748b;  /* 취소 버튼 글자색 - 회색 */
     cursor: pointer;
     font-size: 13px;
     display: flex;
@@ -1930,8 +1930,8 @@ tr.insert-card .remove-insert-btn:hover {
 }
 
 .cancel-btn:hover {
-    background: #fca5a5;
-    color: #b91c1c;
+    background: #fca5a5;  /* 취소 버튼 호버 배경 - 연빨강 */
+    color: #b91c1c;  /* 취소 버튼 호버 글자색 - 진빨강 */
 }
 
 .note {
@@ -1953,27 +1953,27 @@ tr.insert-card .remove-insert-btn:hover {
 .mobile-list { display: none; }
 
 .mobile-card {
-    background: #fff;
-    border: 1px solid #e2e8f0;
+    background: #fff;  /* 모바일 카드 배경 - 흰색 */
+    border: 1px solid #e2e8f0;  /* 모바일 카드 테두리 - 연회색 */
     border-left: 4px solid transparent;
     border-radius: 12px;
     padding: 14px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);  /* 모바일 카드 그림자 - 검정 반투명 */
     cursor: pointer;
     transition: box-shadow 0.15s;
     -webkit-tap-highlight-color: transparent;
 }
 
-.mobile-card:active   { box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-.mobile-selected      { background: #baff25 !important; border-color: #78b800; }
+.mobile-card:active   { box-shadow: 0 1px 4px rgba(0,0,0,0.1); }  /* 모바일 카드 active 그림자 - 검정 반투명 */
+.mobile-selected      { background: #baff25 !important; border-color: #78b800; }  /* 모바일 선택된 카드 배경/테두리 - 연두/진녹색 */
 
 /* 상태는 좌측 컬러바 + 배지로 표시 — 카드 전체 글자색을 바꾸면 오히려 읽기 힘들어서 뺌 */
-.mobile-holding { border-left-color: #3b82f6; }
-.mobile-freeze  { border-left-color: #8b5cf6; }
-.mobile-stopped { border-left-color: #f59e0b; }
-.mobile-moving  { border-left-color: #f97316; }
-.mobile-moving-inventory { background: #fff3b0; }
-.mobile-moving-inventory-tomorrow { background: #ffd6e8; }
+.mobile-holding { border-left-color: #3b82f6; }  /* 홀딩 카드 좌측 띠 - 파랑 */
+.mobile-freeze  { border-left-color: #8b5cf6; }  /* 동결 카드 좌측 띠 - 보라 */
+.mobile-stopped { border-left-color: #f59e0b; }  /* 사용불가 카드 좌측 띠 - 주황/갈색 */
+.mobile-moving  { border-left-color: #f97316; }  /* 이고 카드 좌측 띠 - 주황 */
+.mobile-moving-inventory { background: #fff3b0; }  /* 이고 미러 카드 배경 - 노랑 */
+.mobile-moving-inventory-tomorrow { background: #ffd6e8; }  /* 익일 이고 카드 배경 - 분홍 */
 
 .mc-status-badge {
     display: inline-flex;
@@ -1984,11 +1984,11 @@ tr.insert-card .remove-insert-btn:hover {
     font-weight: 700;
     white-space: nowrap;
 }
-.badge-holding { background: #dbeafe; color: #1d4ed8; }
-.badge-freeze  { background: #ede9fe; color: #6d28d9; }
-.badge-stopped { background: #fef3c7; color: #92400e; }
-.badge-moving  { background: #ffedd5; color: #c2410c; }
-.badge-price   { background: #fef3c7; color: #92400e; }
+.badge-holding { background: #dbeafe; color: #1d4ed8; }  /* 홀딩 배지 - 파랑 배경/글자 */
+.badge-freeze  { background: #ede9fe; color: #6d28d9; }  /* 동결 배지 - 보라 배경/글자 */
+.badge-stopped { background: #fef3c7; color: #92400e; }  /* 사용불가 배지 - 노랑/갈색 배경/글자 */
+.badge-moving  { background: #ffedd5; color: #c2410c; }  /* 이동 배지 - 주황 배경/글자 */
+.badge-price   { background: #fef3c7; color: #92400e; }  /* 가격 배지 - 노랑/갈색 배경/글자 */
 
 /* 상태 선택 select — 추가/수정 팝업(2026-09-14 디자인 개선 요청). 고른 값에 따라
    표/모바일 카드에서 쓰는 상태 배지와 같은 색으로 select 자체를 물들여서(선택 시점
@@ -2000,15 +2000,15 @@ tr.insert-card .remove-insert-btn:hover {
     border-radius: 20px;
     font-weight: 700;
     border: 1.5px solid transparent;
-    background-color: #f1f5f9;
-    color: #475569;
+    background-color: #f1f5f9;  /* 상태 선택 기본 배경 - 회색 */
+    color: #475569;  /* 상태 선택 기본 글자색 - 회색 */
 }
-.state-select[data-state="holding"] { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
-.state-select[data-state="freeze"]  { background: #ede9fe; color: #6d28d9; border-color: #ddd6fe; }
-.state-select[data-state="stopped"] { background: #fef3c7; color: #92400e; border-color: #fde68a; }
-.state-select[data-state="moving"]  { background: #ffedd5; color: #c2410c; border-color: #fed7aa; }
-.state-select[data-state="특이품"]  { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
-.state-select[data-state="null"]    { background: #f3f4f6; color: #6b7280; border-color: #e5e7eb; }
+.state-select[data-state="holding"] { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }  /* 홀딩 상태 선택 색 - 파랑 계열 */
+.state-select[data-state="freeze"]  { background: #ede9fe; color: #6d28d9; border-color: #ddd6fe; }  /* 동결 상태 선택 색 - 보라 계열 */
+.state-select[data-state="stopped"] { background: #fef3c7; color: #92400e; border-color: #fde68a; }  /* 사용불가 상태 선택 색 - 노랑/갈색 계열 */
+.state-select[data-state="moving"]  { background: #ffedd5; color: #c2410c; border-color: #fed7aa; }  /* 이동 상태 선택 색 - 주황 계열 */
+.state-select[data-state="특이품"]  { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }  /* 특이품 상태 선택 색 - 빨강 계열 */
+.state-select[data-state="null"]    { background: #f3f4f6; color: #6b7280; border-color: #e5e7eb; }  /* null(상태없음) 선택 색 - 회색 계열 */
 
 /* 전략단가 카드(2026-08-19) — 탭 테마색(#b45309, 호박색)에 맞춰 좌측 컬러바 +
    히어로 숫자. 전략가가 있으면 그게 실제 판매가라 히어로, 없으면 도매가 대신 */
@@ -2016,8 +2016,8 @@ tr.insert-card .remove-insert-btn:hover {
 .price-hero-label {
     font-size: 12px;
     font-weight: 700;
-    color: #92400e;
-    background: #fef3c7;
+    color: #92400e;  /* 히어로 라벨 글자색 - 갈색 */
+    background: #fef3c7;  /* 히어로 라벨 배경 - 노랑 */
     padding: 3px 10px;
     border-radius: 20px;
     white-space: nowrap;
@@ -2058,7 +2058,7 @@ tr.insert-card .remove-insert-btn:hover {
     flex: 1;
     font-size: 17px;
     font-weight: 700;
-    color: #1e293b;
+    color: #1e293b;  /* 카드 상품명 글자색 - 진남색 */
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2083,32 +2083,32 @@ tr.insert-card .remove-insert-btn:hover {
     gap: 10px;
     margin-bottom: 8px;
     padding: 8px 10px;
-    background: #f8fafc;
+    background: #f8fafc;  /* 히어로 박스 배경 - 아주 연한 회색 */
     border-radius: 10px;
 }
 
 .mc-qty {
     font-size: 22px;
     font-weight: 800;
-    color: #1d4ed8;
+    color: #1d4ed8;  /* 재고 수량 글자색 - 파랑 */
     line-height: 1;
 }
 
 .mc-qty-unit {
     font-size: 13px;
     font-weight: 600;
-    color: #64748b;
+    color: #64748b;  /* 단위 글자색 - 회색 */
     margin-left: 3px;
 }
 
-.price-qty { color: #b45309; }
+.price-qty { color: #b45309; }  /* 전략단가 수량 글자색 - 갈색 */
 
 .mc-info {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 4px 12px;
     font-size: 14px;
-    color: #475569;
+    color: #475569;  /* 정보 텍스트색 - 회색 */
 }
 
 .mc-row {
@@ -2122,14 +2122,14 @@ tr.insert-card .remove-insert-btn:hover {
 .mc-label {
     font-size: 12px;
     font-weight: 700;
-    color: #94a3b8;
+    color: #94a3b8;  /* 라벨 글자색 - 연회색 */
     white-space: nowrap;
 }
 
 .mobile-empty {
     text-align: center;
     padding: 40px;
-    color: #9ca3af;
+    color: #9ca3af;  /* 빈 상태 안내 글자색 - 회색 */
     font-size: 16px;
 }
 
@@ -2192,7 +2192,7 @@ tr.insert-card .remove-insert-btn:hover {
     .table_size_top { display: none; }
     .toolbar-section { grid-area: tabs; min-width: 0; display: block;}
     .login-btn       { grid-area: login; justify-self: start; }
-    .table_size_updated { grid-area: updated; justify-self: end; font-size: 11px; color: #64748b; }
+    .table_size_updated { grid-area: updated; justify-self: end; font-size: 11px; color: #64748b; }  /* 업데이트 시각 글자색 - 회색(모바일) */
     .table_size      { grid-area: size; justify-self: start; }
     /* .main-download-btn(엑셀/이미지 다운로드)은 이제 JS가 하단 액션바
        (.toolbar-row-actions)로 옮겨서 여기 grid-area 지정 불필요(2026-09-14) */
@@ -2268,12 +2268,12 @@ tr.insert-card .remove-insert-btn:hover {
         justify-self: end;
         height: 40px;
         padding: 0 14px;
-        border: 1px solid #cbd5e1;
+        border: 1px solid #cbd5e1;  /* 필터 버튼 테두리 - 회색 */
         border-radius: 8px;
-        background: #fff;
+        background: #fff;  /* 필터 버튼 배경 - 흰색 */
         font-size: 14px;
         font-weight: 600;
-        color: #334155;
+        color: #334155;  /* 필터 버튼 글자색 - 진회색 */
     }
     .mobile-filter-badge {
         display: inline-flex;
@@ -2284,8 +2284,8 @@ tr.insert-card .remove-insert-btn:hover {
         margin-left: 4px;
         padding: 0 4px;
         border-radius: 9px;
-        background: #16a34a;
-        color: #fff;
+        background: #16a34a;  /* 필터 배지 배경 - 진초록 */
+        color: #fff;  /* 필터 배지 글자색 - 흰색 */
         font-size: 11px;
         font-weight: 700;
     }
@@ -2298,9 +2298,9 @@ tr.insert-card .remove-insert-btn:hover {
         right: 0;
         bottom: 0;
         z-index: 1001;
-        background: #fff;
+        background: #fff;  /* 필터 시트 배경 - 흰색 */
         border-radius: 16px 16px 0 0;
-        box-shadow: 0 -4px 16px rgba(0,0,0,.15);
+        box-shadow: 0 -4px 16px rgba(0,0,0,.15);  /* 필터 시트 그림자 - 검정 반투명 */
         padding: 4px 16px calc(16px + env(safe-area-inset-bottom, 0px));
         max-height: 70vh;
         overflow-y: auto;
@@ -2318,13 +2318,13 @@ tr.insert-card .remove-insert-btn:hover {
         padding: 12px 0;
         font-size: 15px;
         font-weight: 700;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;  /* 필터 시트 헤더 밑줄 - 연회색 */
         margin-bottom: 10px;
     }
     .mobile-filter-close {
         border: none;
         background: none;
-        color: #64748b;
+        color: #64748b;  /* 필터 시트 닫기 글자색 - 회색 */
         font-size: 13px;
         padding: 4px 8px;
     }
@@ -2350,7 +2350,7 @@ tr.insert-card .remove-insert-btn:hover {
         position: fixed;
         inset: 0;
         z-index: 1000;
-        background: rgba(15, 23, 42, .4);
+        background: rgba(15, 23, 42, .4);  /* 필터 배경 오버레이 - 남색 반투명 */
         opacity: 0;
         pointer-events: none;
         transition: opacity .25s ease;
@@ -2376,8 +2376,8 @@ tr.insert-card .remove-insert-btn:hover {
         justify-content: center;
         gap: 6px;
         padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
-        background: #fff;
-        box-shadow: 0 -2px 10px rgba(0,0,0,.1);
+        background: #fff;  /* 하단 액션바 배경 - 흰색 */
+        box-shadow: 0 -2px 10px rgba(0,0,0,.1);  /* 하단 액션바 그림자 - 검정 반투명 */
     }
 
     .rollback-btn, .clear-btn, .all-delete-btn, .changes-tab-btn, .reservations-tab-btn,
@@ -2460,7 +2460,7 @@ tr.insert-card .remove-insert-btn:hover {
         border-radius: 14px;
         padding: 14px;
         margin-bottom: 12px;
-        box-shadow: 0 2px 12px rgba(15,23,42,0.12);
+        box-shadow: 0 2px 12px rgba(15,23,42,0.12);  /* 모바일 카드폼 그림자 - 남색 반투명 */
     }
 
     /* 어떤 작업 중인지 색 있는 헤더 타이틀 — 마크업 안 건드리고 pseudo-element로만 표시 */
@@ -2473,9 +2473,9 @@ tr.insert-card .remove-insert-btn:hover {
         margin-bottom: 2px;
         border-bottom: 2px solid currentColor;
     }
-    tr.insert-card::before     { content: "✚ 상품 추가"; color: #16a34a; }
-    tr.update-row-edit::before { content: "✎ 상품 수정"; color: #2563eb; }
-    tr.holding-insert-row::before { content: "❄ 예약 등록"; color: #0284c7; }
+    tr.insert-card::before     { content: "✚ 상품 추가"; color: #16a34a; }  /* 추가 헤더 글자색 - 초록 */
+    tr.update-row-edit::before { content: "✎ 상품 수정"; color: #2563eb; }  /* 수정 헤더 글자색 - 파랑 */
+    tr.holding-insert-row::before { content: "❄ 예약 등록"; color: #0284c7; }  /* 예약등록 헤더 글자색 - 하늘색 */
 
     tr.insert-card td, tr.update-row-edit td, tr.holding-insert-row td {
         display: block;
@@ -2491,7 +2491,7 @@ tr.insert-card .remove-insert-btn:hover {
         display: block;
         font-size: 12px;
         font-weight: 700;
-        color: #94a3b8;
+        color: #94a3b8;  /* 라벨 글자색 - 연회색 */
         margin-bottom: 4px;
     }
 
@@ -2564,8 +2564,8 @@ tr.insert-card .remove-insert-btn:hover {
         font-size: 14px;
     }
     tr.update-row-edit .select-delete-btn {
-        background: #fee2e2;
-        color: #b91c1c;
+        background: #fee2e2;  /* 삭제 버튼(모바일 카드폼) 배경 - 연빨강 */
+        color: #b91c1c;  /* 삭제 버튼(모바일 카드폼) 글자색 - 진빨강 */
     }
 
     /* ── 모바일: 페이지 스크롤 복구 ── */
@@ -2648,8 +2648,8 @@ tr.insert-card .remove-insert-btn:hover {
     position: fixed;
     top: 50%;
     left: 50%;
-    background: #1e293b;
-    color: #fff;
+    background: #1e293b;  /* 토스트 배경 - 진남색 */
+    color: #fff;  /* 토스트 글자색 - 흰색 */
     padding: 14px 22px;
     border-radius: 8px;
     font-size: 14px;
@@ -2669,36 +2669,36 @@ tr.insert-card .remove-insert-btn:hover {
     transform: translate(-50%, -50%) scale(1);
 }
 .toast-error {
-    background: #dc2626;
+    background: #dc2626;  /* 에러 토스트 배경 - 빨강 */
 }
 .toast-info {
-    background: #2563eb;
+    background: #2563eb;  /* 정보 토스트 배경 - 파랑 */
 }
 
 /* ── 커스텀 confirm 모달 ── */
 .confirm-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.45);
+    background: rgba(0,0,0,0.45);  /* 모달 오버레이 배경 - 검정 반투명 */
     z-index: 10000;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 .confirm-modal {
-    background: #fff;
+    background: #fff;  /* 확인 모달 배경 - 흰색 */
     border-radius: 10px;
     padding: 28px 32px 20px;
     min-width: 260px;
     max-width: 1000px;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);  /* 확인 모달 그림자 - 검정 반투명 */
     text-align: center;
 }
 .confirm-msg {
     font-size: 15px;
-    color: #1e293b;
+    color: #1e293b;  /* 확인 메시지 글자색 - 진남색 */
     margin: 0 0 20px;
     line-height: 1.6;
     white-space: pre-line;
@@ -2709,8 +2709,8 @@ tr.insert-card .remove-insert-btn:hover {
     justify-content: center;
 }
 .confirm-yes {
-    background: #1e293b;
-    color: #fff;
+    background: #1e293b;  /* 확인(예) 버튼 배경 - 진남색 */
+    color: #fff;  /* 확인(예) 버튼 글자색 - 흰색 */
     border: none;
     border-radius: 6px;
     padding: 9px 28px;
@@ -2718,7 +2718,7 @@ tr.insert-card .remove-insert-btn:hover {
     font-weight: 600;
     cursor: pointer;
 }
-.confirm-yes:hover { background: #334155; }
+.confirm-yes:hover { background: #334155; }  /* 확인(예) 버튼 호버 배경 - 남색 */
 .bulk-edit-modal { max-width: min(92vw, 760px); text-align: left; padding: 24px 24px 20px; }
 .bulk-edit-modal .confirm-msg { text-align: center; font-weight: 700; font-size: 16px; margin-bottom: 16px; }
 .bulk-edit-scroll {
@@ -2731,10 +2731,10 @@ tr.insert-card .remove-insert-btn:hover {
     margin-bottom: 18px;
 }
 .bulk-edit-card {
-    border: 1px solid #e2e8f0;
+    border: 1px solid #e2e8f0;  /* 일괄수정 카드 테두리 - 연회색 */
     border-radius: 10px;
     padding: 14px 16px;
-    background: #f8fafc;
+    background: #f8fafc;  /* 일괄수정 카드 배경 - 아주 연한 회색 */
 }
 .bulk-edit-card-head {
     display: flex;
@@ -2743,8 +2743,8 @@ tr.insert-card .remove-insert-btn:hover {
     margin-bottom: 4px;
     flex-wrap: wrap;
 }
-.bulk-edit-card-title { font-size: 15px; font-weight: 700; color: #1e293b; }
-.bulk-edit-card-sub { font-size: 12px; color: #94a3b8; margin-left: auto; }
+.bulk-edit-card-title { font-size: 15px; font-weight: 700; color: #1e293b; }  /* 일괄수정 카드 제목 글자색 - 진남색 */
+.bulk-edit-card-sub { font-size: 12px; color: #94a3b8; margin-left: auto; }  /* 일괄수정 카드 부제 글자색 - 연회색 */
 .bulk-edit-card-remove {
     flex-shrink: 0;
     width: 22px;
@@ -2752,24 +2752,24 @@ tr.insert-card .remove-insert-btn:hover {
     border: none;
     border-radius: 50%;
     background: transparent;
-    color: #94a3b8;
+    color: #94a3b8;  /* 카드 삭제 아이콘 색 - 연회색 */
     font-size: 13px;
     line-height: 1;
     cursor: pointer;
 }
-.bulk-edit-card-remove:hover { background: #fee2e2; color: #b91c1c; }
+.bulk-edit-card-remove:hover { background: #fee2e2; color: #b91c1c; }  /* 카드 삭제 호버 배경/글자 - 연빨강/진빨강 */
 .bulk-edit-card-meta {
     display: flex;
     gap: 14px;
     flex-wrap: wrap;
     font-size: 12px;
-    color: #64748b;
+    color: #64748b;  /* 카드 메타 글자색 - 회색 */
     margin: 4px 0 12px;
     padding-bottom: 10px;
-    border-bottom: 1px dashed #e2e8f0;
+    border-bottom: 1px dashed #e2e8f0;  /* 카드 메타 구분선 - 연회색 점선 */
 }
-.bulk-edit-card-meta b { color: #1e293b; font-weight: 700; }
-.bulk-edit-card-bl { margin-left: auto; color: #94a3b8; }
+.bulk-edit-card-meta b { color: #1e293b; font-weight: 700; }  /* 카드 메타 강조 글자색 - 진남색 */
+.bulk-edit-card-bl { margin-left: auto; color: #94a3b8; }  /* BL 텍스트 글자색 - 연회색 */
 .bulk-edit-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -2781,7 +2781,7 @@ tr.insert-card .remove-insert-btn:hover {
     gap: 3px;
     font-size: 11px;
     font-weight: 600;
-    color: #64748b;
+    color: #64748b;  /* 필드 라벨 글자색 - 회색 */
     text-transform: uppercase;
     letter-spacing: 0.02em;
     min-width: 0;
@@ -2794,12 +2794,12 @@ tr.insert-card .remove-insert-btn:hover {
     box-sizing: border-box;
     height: 34px;
     padding: 0 10px;
-    border: 1px solid #cbd5e1;
+    border: 1px solid #cbd5e1;  /* 일괄수정 입력 테두리 - 회색 */
     border-radius: 6px;
     font-size: 13px;
     font-weight: 500;
-    color: #1e293b;
-    background: #fff;
+    color: #1e293b;  /* 일괄수정 입력 글자색 - 진남색 */
+    background: #fff;  /* 일괄수정 입력 배경 - 흰색 */
     font-family: inherit;
     text-transform: none;
     letter-spacing: normal;
@@ -2807,15 +2807,15 @@ tr.insert-card .remove-insert-btn:hover {
 .bulk-edit-grid input:focus,
 .bulk-edit-grid select:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+    border-color: #3b82f6;  /* 일괄수정 입력 포커스 테두리 - 파랑 */
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.15);  /* 일괄수정 입력 포커스 그림자 - 파랑 반투명 */
 }
 @media (max-width: 640px) {
     .bulk-edit-grid { grid-template-columns: repeat(2, 1fr); }
 }
 .confirm-no {
-    background: #f1f5f9;
-    color: #475569;
+    background: #f1f5f9;  /* 취소(아니오) 버튼 배경 - 회색 */
+    color: #475569;  /* 취소(아니오) 버튼 글자색 - 진회색 */
     border: none;
     border-radius: 6px;
     padding: 9px 28px;
@@ -2823,10 +2823,10 @@ tr.insert-card .remove-insert-btn:hover {
     font-weight: 600;
     cursor: pointer;
 }
-.confirm-no:hover { background: #e2e8f0; }
+.confirm-no:hover { background: #e2e8f0; }  /* 취소(아니오) 버튼 호버 배경 - 진회색 */
 .confirm-revert {
-    background: #1e293b;
-    color: #fff;
+    background: #1e293b;  /* 되돌리기 확인 버튼 배경 - 진남색 */
+    color: #fff;  /* 되돌리기 확인 버튼 글자색 - 흰색 */
     border: none;
     border-radius: 6px;
     padding: 9px 20px;
@@ -2834,10 +2834,10 @@ tr.insert-card .remove-insert-btn:hover {
     font-weight: 600;
     cursor: pointer;
 }
-.confirm-revert:hover { background: #334155; }
+.confirm-revert:hover { background: #334155; }  /* 되돌리기 확인 호버 배경 - 남색 */
 .confirm-delete {
-    background: #fee2e2;
-    color: #b91c1c;
+    background: #fee2e2;  /* 삭제 확인 버튼 배경 - 연빨강 */
+    color: #b91c1c;  /* 삭제 확인 버튼 글자색 - 진빨강 */
     border: none;
     border-radius: 6px;
     padding: 9px 20px;
@@ -2845,7 +2845,7 @@ tr.insert-card .remove-insert-btn:hover {
     font-weight: 600;
     cursor: pointer;
 }
-.confirm-delete:hover { background: #fecaca; }
+.confirm-delete:hover { background: #fecaca; }  /* 삭제 확인 호버 배경 - 진한 연빨강 */
 
 .edit-reservation-form {
     display: flex;
@@ -2862,7 +2862,7 @@ tr.insert-card .remove-insert-btn:hover {
     gap: 6px;
     font-size: 12.5px;
     font-weight: 700;
-    color: #64748b;
+    color: #64748b;  /* 예약수정 폼 라벨 글자색 - 회색 */
     letter-spacing: 0.02em;
     flex: 1 1 120px;
     min-width: 110px;
@@ -2873,17 +2873,17 @@ tr.insert-card .remove-insert-btn:hover {
     width: 100%;
     height: 40px;
     padding: 0 12px;
-    border: 1.5px solid #e2e8f0;
+    border: 1.5px solid #e2e8f0;  /* 예약수정 입력 테두리 - 연회색 */
     border-radius: 8px;
     font-size: 14.5px;
     font-weight: 500;
-    color: #1e293b;
-    background: #f9fafb;
+    color: #1e293b;  /* 예약수정 입력 글자색 - 진남색 */
+    background: #f9fafb;  /* 예약수정 입력 배경 - 연회색 */
     outline: none;
     transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
-.edit-reservation-form input:hover { border-color: #cbd5e1; }
-.edit-reservation-form input:focus { border-color: #0d9488; background: #fff; box-shadow: 0 0 0 3px rgba(13,148,136,0.15); }
+.edit-reservation-form input:hover { border-color: #cbd5e1; }  /* 예약수정 입력 호버 테두리 - 회색 */
+.edit-reservation-form input:focus { border-color: #0d9488; background: #fff; box-shadow: 0 0 0 3px rgba(13,148,136,0.15); }  /* 예약수정 입력 포커스 - 청록 테두리/흰 배경/청록 그림자 */
 
 /* 타창고매출현황/창고이동 "추가" 팝업의 여러 행 입력(2026-09-04) — 행마다
    테두리로 구분하고, 오른쪽에 삭제(✕) 버튼을 붙인다. */
@@ -2891,7 +2891,7 @@ tr.insert-card .remove-insert-btn:hover {
 .multi-insert-rows { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
 .multi-insert-row {
     display: flex; align-items: flex-start; gap: 10px;
-    padding: 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; background: #f8fafc;
+    padding: 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; background: #f8fafc;  /* 다중입력 행 테두리/배경 - 연회색/아주 연한 회색 */
 }
 .multi-insert-row .edit-reservation-form { flex: 1; margin-bottom: 0; }
 /* 열마다 실제 데이터 길이에 맞춰 입력칸 너비를 다르게(2026-09-04 사용자 지정 —
@@ -2903,22 +2903,22 @@ tr.insert-card .remove-insert-btn:hover {
 .multi-insert-row .edit-reservation-form label.mi-field-lg { flex: 1.8 1 170px; min-width: 150px; max-width: 230px; }
 .multi-insert-remove-row {
     flex: 0 0 auto; width: 28px; height: 28px; margin-top: 2px;
-    border: none; border-radius: 6px; background: #fee2e2; color: #b91c1c;
+    border: none; border-radius: 6px; background: #fee2e2; color: #b91c1c;  /* 다중입력 삭제 버튼 배경/글자 - 연빨강/진빨강 */
     font-weight: 700; cursor: pointer;
 }
-.multi-insert-remove-row:hover { background: #fca5a5; }
+.multi-insert-remove-row:hover { background: #fca5a5; }  /* 다중입력 삭제 호버 배경 - 진한 연빨강 */
 .multi-insert-add-row {
     display: inline-flex; align-items: center; height: 34px; padding: 0 14px;
-    border: 1.5px dashed #94a3b8; border-radius: 8px; background: #fff; color: #475569;
+    border: 1.5px dashed #94a3b8; border-radius: 8px; background: #fff; color: #475569;  /* 다중입력 추가 버튼 테두리/배경/글자 - 회색 점선/흰색/회색 */
     font-size: 13px; font-weight: 700; cursor: pointer; margin-bottom: 20px;
 }
-.multi-insert-add-row:hover { border-color: #0d9488; color: #0d9488; }
+.multi-insert-add-row:hover { border-color: #0d9488; color: #0d9488; }  /* 다중입력 추가 호버 - 청록 */
 
 /* sales.html "추가" 입력행 — 행에 마우스 올리면(tbody tr:hover td 규칙) 배경이
    바뀌는데, 입력칸 자체는 흰 배경이라 안 보였음. 입력칸도 같이 바뀌게 함
    (2026-08-14). */
 .outbound-insert-row:hover input {
-    background: #e4f7c1;
+    background: #e4f7c1;  /* 입력창 호버 배경 - 연초록(행 호버와 통일) */
     transition: background 0.12s ease;
 }
 /* 크롤링 탭(관리자 전용, 2026-09-16) */
@@ -2926,11 +2926,11 @@ tr.insert-card .remove-insert-btn:hover {
     margin: 20px 0 8px;
     font-size: 15px;
     font-weight: 700;
-    color: #334155;
+    color: #334155;  /* 크롤링 섹션 제목 글자색 - 진회색 */
 }
 .crawling-section-title:first-child { margin-top: 0; }
-.crawling-ok { color: #16a34a; font-weight: 700; }
-.crawling-bad { color: #dc2626; font-weight: 700; }
+.crawling-ok { color: #16a34a; font-weight: 700; }  /* 크롤링 성공 글자색 - 초록 */
+.crawling-bad { color: #dc2626; font-weight: 700; }  /* 크롤링 실패 글자색 - 빨강 */
 .crawling-log-controls {
     display: flex;
     gap: 8px;
@@ -2940,21 +2940,21 @@ tr.insert-card .remove-insert-btn:hover {
 #crawling-log-refresh {
     height: 38px;
     padding: 0 16px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #e2e8f0;  /* 새로고침 버튼 테두리 - 연회색 */
     border-radius: 8px;
-    background: #f1f5f9;
-    color: #334155;
+    background: #f1f5f9;  /* 새로고침 버튼 배경 - 연회색 */
+    color: #334155;  /* 새로고침 버튼 글자색 - 진회색 */
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     transition: background 0.12s ease, border-color 0.12s ease;
 }
-#crawling-log-refresh:hover { background: #e2e8f0; border-color: #cbd5e1; }
-#crawling-log-refresh:active { background: #cbd5e1; }
+#crawling-log-refresh:hover { background: #e2e8f0; border-color: #cbd5e1; }  /* 새로고침 호버 배경/테두리 - 진회색 */
+#crawling-log-refresh:active { background: #cbd5e1; }  /* 새로고침 active 배경 - 회색 */
 .crawling-totals-wrap {
     max-height: 400px;
     overflow-y: auto;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #e2e8f0;  /* 크롤링 표 테두리 - 연회색 */
     border-radius: 8px;
 }
 .crawling-totals-wrap thead th {
@@ -2967,18 +2967,18 @@ tr.insert-card .remove-insert-btn:hover {
     padding: 0 12px;
     border: none;
     border-radius: 6px;
-    background: #fee2e2;
-    color: #b91c1c;
+    background: #fee2e2;  /* 고스트 삭제 버튼 배경 - 연빨강 */
+    color: #b91c1c;  /* 고스트 삭제 버튼 글자색 - 진빨강 */
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     transition: background 0.12s ease;
 }
-.ghost-delete-btn:hover { background: #fecaca; }
-.ghost-delete-btn:active { background: #fca5a5; }
+.ghost-delete-btn:hover { background: #fecaca; }  /* 고스트 삭제 호버 배경 - 진한 연빨강 */
+.ghost-delete-btn:active { background: #fca5a5; }  /* 고스트 삭제 active 배경 - 더 진한 연빨강 */
 .crawling-log-view {
-    background: #0f172a;
-    color: #e2e8f0;
+    background: #0f172a;  /* 로그 뷰 배경 - 짙은 남색(터미널 느낌) */
+    color: #e2e8f0;  /* 로그 뷰 글자색 - 연회색 */
     font-size: 12px;
     line-height: 1.5;
     padding: 12px;
