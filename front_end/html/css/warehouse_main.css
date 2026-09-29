@@ -1120,6 +1120,7 @@ th.sort-active {
 .inventory-memo-cell input.inventory-memo-input {
     padding: 6px 0;
     font-size: 15px;
+    border: 1.5px solid #000000;  /* 재고장 비고 입력창 테두리 - 검정 */
 }
 
 /* sales.html "추가" 입력행 — 값을 다 채운 뒤 밑에 있는 일반 행이랑 똑같아
