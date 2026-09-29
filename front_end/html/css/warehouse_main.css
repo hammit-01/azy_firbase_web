@@ -221,7 +221,7 @@ tbody tr:nth-child(even) td {
 }
 
 tbody tr:hover td {
-    background: #fffd97 !important;  /* 행 호버 배경 - 연초록 */
+    background: #c8c8c8 !important;  /* 행 호버 배경 - 회색 */
     transition: background 0.12s ease;
 }
 
@@ -253,10 +253,10 @@ tbody tr:hover td {
    더 바뀌는" 동작을 맞추려면 이 규칙이 selected-row보다 아래에 있어야 한다
    (2026-09-29, 상품명 칸만 호버 색이 안 바뀌던 버그 수정). */
 .table-wrap tbody tr:hover td:nth-child(1) {
-    background: #747474 !important;  /* 호버 시 고정 칸 배경 - 연초록(살짝 진하게) */
+    background: #c8c8c8 !important;  /* 호버 시 고정 칸 배경 - 회색(다른 칸과 통일) */
 }
 .table-wrap tbody tr.flash-row td:nth-child(1) {
-    background: #ffff00 !important;  /* flash-row 고정 칸 배경 - 연초록(플래시 효과) */
+    background: #ffff00 !important;  /* flash-row 고정 칸 배경 - 노랑(플래시 효과) */
 }
 
 
@@ -1501,7 +1501,7 @@ tbody tr {
 
 /* 홀딩된 행 일시 표시 */
 .flash-row td {
-    background: #4b4b4b !important;  /* 홀딩 행 일시 표시 배경 - 연초록(플래시) */
+    background: #ffff00 !important;  /* 홀딩 행 일시 표시 배경 - 노랑(플래시, 다른 칸과 통일) */
     transition: 0.3s;
 }
 
