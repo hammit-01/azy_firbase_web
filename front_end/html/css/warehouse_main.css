@@ -1142,7 +1142,7 @@ tr.outbound-insert-row select {
 }
 tr.outbound-insert-row .cell-input:hover,
 tr.outbound-insert-row select:hover {
-    border-color: #bbf7d0;
+    border-color: #c0c0c0;
     background: #fff;
 }
 tr.outbound-insert-row .cell-input:focus,
