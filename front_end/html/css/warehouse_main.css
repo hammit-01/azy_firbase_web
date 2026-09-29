@@ -246,7 +246,7 @@ tbody tr:hover td {
     background: #f6fbea;
 }
 .table-wrap tbody tr.selected-row td:nth-child(1) {
-    background: #d4f7a0 !important;
+    background: #7e7e7e !important;
 }
 /* hover는 selected-row와 우선순위(specificity)가 동일해서 소스상 나중에 오는
    쪽이 이긴다 — 다른(고정 아닌) 칸들처럼 "선택된 행이어도 호버하면 색이 한 번
