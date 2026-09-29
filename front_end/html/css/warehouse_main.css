@@ -1045,7 +1045,7 @@ th.sort-active {
     padding: 0;
     margin: 0;
     border: none;
-    border-bottom: 1.5px solid #ffd82c;  /* 편집중 셀 밑줄 - 브랜드 그린 */
+    border-bottom: 1.5px solid #000000;  /* 편집중 셀 밑줄 - 브랜드 그린 */
     border-radius: 0;
     font-size: inherit;
     font-family: inherit;
