@@ -1106,10 +1106,9 @@ th.sort-active {
 .inventory-memo-cell input.inventory-memo-input {
     display: block;
     width: 100%;
-    padding: 0;
+    padding: 5px;
     margin: 0;
-    border: none;
-    border-bottom: 1.5px solid #8fce00;
+    border: 1.5px solid #8fce00;
     font-size: 14px;
     font-family: inherit;
     line-height: inherit;
