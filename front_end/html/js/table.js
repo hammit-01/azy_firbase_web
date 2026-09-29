@@ -842,7 +842,7 @@ export function renderTable() {
                 <td>${availableCell(item.가용재고)}</td>
                 <td>${dueDateTag(item.유통기한, limitDate)}</td>
                 <td>${safeValue(item.평중)}</td>
-                <td>${safeValue(item.메모)}</td>
+                <td class="inventory-memo-cell" data-id="${id}" data-memo="${attrEscape(item.메모)}" title="더블클릭해서 수정">${safeValue(item.메모)}</td>
 
                 <td>
                     <div class="select-copy-cell">

@@ -213,6 +213,25 @@ export async function updateData(item, id, name, brand, grade, estNo, qty, bl, w
     }
 }
 
+// 재고장 표에서 비고(메모)만 단독으로 수정(2026-09-29, 전 직원 허용 — 나머지
+// 필드(상품명/재고/등급 등)는 여전히 편집자 전용 updateData/updateBtn을 통해야 함).
+export async function updateMemo(item, memo, noUndo = false) {
+    const azy = _isAzy(item);
+    const rawId = _rawId(item);
+    const prevMemo = item.memo || item["메모"] || "";
+    try {
+        await updateItem(rawId, { 메모: memo }, azy);
+        if (!noUndo) pushUndo({ type: "inventory-memo", rawId, prevMemo, azy });
+        _logChange(azy, rawId, "수정");
+        _logActivity(azy, rawId, "수정", { 메모: prevMemo }, { 메모: memo }, "비고 변경");
+        await fetchAllData();
+        return true;
+    } catch (error) {
+        console.error("비고 수정 실패:", error);
+        return false;
+    }
+}
+
 export async function deleteItem(item, noUndo = false, noFetch = false) {
     const azy = _isAzy(item);
     const rawId = _rawId(item);

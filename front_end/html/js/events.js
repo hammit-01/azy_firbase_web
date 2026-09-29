@@ -2,7 +2,7 @@ import { state } from "./state.js";
 import { renderTable, updateSortHeaders, renderBulkActionBar, renderChangesTab, getChangesTabRows, renderReservationsTab, renderSalesTab, renderMovesTab, renderPriceTab, renderOrderSheetTab, renderCrawlingTab, priceInsertRowHtml, PRICE_FIELDS, priceFieldClass, clientPrefix, parseUnitPrice, parseWeight, buildClientWithDetails, todayISOStr, createUpdateCard, createHoldingCard, createMoveCard, WH_DISPLAY_NAME } from "./table.js";
 import { renderSelectData, dispatcherSelect, moveWarehouseSelect, employeeAutocomplete, driverAutocomplete, clientAutocomplete } from "./panel.js";
 import { addSelectedItem } from "./data_eda.js";
-import { holdingData, insertData, updateData, deleteItem } from "./crud.js";
+import { holdingData, insertData, updateData, deleteItem, updateMemo } from "./crud.js";
 import { getReservationsByPk, cancelReservation, useReservation, updateReservation, toggleReservationRegister, updateOutbound, cancelOutbound, reactivateOutbound, createOutbound, createOutboundManual, registerOutboundFromReservation, toggleOutboundComplete, toggleOutboundRegister, createOrderSheetRow, updateOrderSheetRow, deleteOrderSheetRow, reorderOrderSheet, createPrice, updatePrice, deletePrice, createWarehouseMove, createWarehouseMoveManual, updateWarehouseMove, createWarehouseMoveFromReservation } from "./firestoreService.js";
 import { dom } from "./dom.js";
 import { calculateTotal } from "./input_calculater.js";
@@ -891,6 +891,44 @@ export function bindEvents() {
     document.addEventListener("click", handleClick);
 
     document.addEventListener("dblclick", (e) => {
+        // 재고장 표 — 비고 칸 더블클릭하면 그 자리에서 바로 수정(2026-09-29, 전 직원
+        // 허용). 나머지 필드(상품명/재고/등급 등)는 여전히 편집자 전용 "수정" 버튼을
+        // 통해야 하므로, 이 칸만 별도로 sales-remark-cell과 동일한 더블클릭→input 패턴.
+        const invMemoCell = e.target.closest(".inventory-memo-cell");
+        if (invMemoCell) {
+            if (invMemoCell.querySelector("input")) return;
+            const id = invMemoCell.dataset.id;
+            const original = invMemoCell.dataset.memo || "";
+            const item = state.allData.find(d => d.id === id);
+            if (!item) return;
+            invMemoCell.innerHTML = `<input type="text" class="inventory-memo-input" value="${original.replace(/"/g, "&quot;")}">`;
+            const input = invMemoCell.querySelector("input");
+            input.focus();
+            input.select();
+
+            let done = false;
+            const finish = async (save) => {
+                if (done) return;
+                done = true;
+                const newValue = input.value.trim();
+                if (save && newValue !== original) {
+                    const ok = await updateMemo(item, newValue);
+                    if (ok) showToast("✓ 비고 저장됨");
+                    else { showError("저장에 실패했습니다."); renderTable(); return; }
+                } else {
+                    renderTable();
+                }
+            };
+            // 엔터를 쳐야 저장(2026-09-29 사용자 지정) — 그냥 포커스만 벗어나면
+            // (다른 곳 클릭 등) 저장하지 않고 원래 값으로 되돌린다.
+            input.addEventListener("blur", () => finish(false));
+            input.addEventListener("keydown", (ke) => {
+                if (ke.key === "Enter") { ke.preventDefault(); finish(true); input.blur(); }
+                if (ke.key === "Escape") { ke.preventDefault(); finish(false); }
+            });
+            return;
+        }
+
         // 타창고매출현황 — 비고 칸 더블클릭하면 그 자리에서 바로 수정(2026-08-19,
         // 매번 "출고변경" 모달을 열지 않아도 되게). 이미 입력창으로 바뀐 상태면
         // 다시 더블클릭해도 무시(inline input 안에서의 더블클릭은 텍스트 선택용).
@@ -1462,7 +1500,7 @@ async function handleClick(e) {
     // holding-insert-row) 자체도 이미 선택된 행이 편집 중인 거라 행 클릭으로
     // 또 토글하지 않는다(취소는 그 행의 ✕ 버튼으로).
     const selRow = e.target.closest("#list tr");
-    if (selRow && !e.target.closest("input, select, textarea, button, a, option, .select-copy-cell")
+    if (selRow && !e.target.closest("input, select, textarea, button, a, option, .select-copy-cell, .inventory-memo-cell")
         && !selRow.classList.contains("update-row-edit")
         && !selRow.classList.contains("holding-insert-row")) {
         const id = selRow.dataset.id;

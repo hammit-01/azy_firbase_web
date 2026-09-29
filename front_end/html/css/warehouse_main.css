@@ -245,11 +245,15 @@ tbody tr:hover td {
 .table-wrap tbody tr:nth-child(even) td:nth-child(1) {
     background: #f6fbea;
 }
-.table-wrap tbody tr:hover td:nth-child(1) {
-    background: #e4f7c1 !important;
-}
 .table-wrap tbody tr.selected-row td:nth-child(1) {
     background: #d4f7a0 !important;
+}
+/* hover는 selected-row와 우선순위(specificity)가 동일해서 소스상 나중에 오는
+   쪽이 이긴다 — 다른(고정 아닌) 칸들처럼 "선택된 행이어도 호버하면 색이 한 번
+   더 바뀌는" 동작을 맞추려면 이 규칙이 selected-row보다 아래에 있어야 한다
+   (2026-09-29, 상품명 칸만 호버 색이 안 바뀌던 버그 수정). */
+.table-wrap tbody tr:hover td:nth-child(1) {
+    background: #e4f7c1 !important;
 }
 .table-wrap tbody tr.flash-row td:nth-child(1) {
     background: #d3f5c4 !important;
@@ -1096,9 +1100,10 @@ th.sort-active {
    (2026-09-14: 전역 input:not([type="checkbox"]) 리셋과 특이도가 같아서(0,1,1)
    실제로는 이 padding:0이 안 먹히고 있었던 걸 뒤늦게 발견 — 조상 클래스까지
    셀렉터에 넣어 특이도를 높임(0,2,1), 발주장 .order-sheet-cell-input과 동일 처방) */
-.sales-remark-cell { cursor: pointer; }
-.sales-remark-cell:hover { background: #f8fafc; }
-.sales-remark-cell input.sales-remark-input {
+.sales-remark-cell, .inventory-memo-cell { cursor: pointer; }
+.sales-remark-cell:hover, .inventory-memo-cell:hover { background: #f8fafc; }
+.sales-remark-cell input.sales-remark-input,
+.inventory-memo-cell input.inventory-memo-input {
     display: block;
     width: 100%;
     padding: 0;
@@ -1111,6 +1116,10 @@ th.sort-active {
     color: #334155;
     outline: none;
     background: transparent;
+}
+.inventory-memo-cell input.inventory-memo-input {
+    padding: 6px 0;
+    font-size: 15px;
 }
 
 /* sales.html "추가" 입력행 — 값을 다 채운 뒤 밑에 있는 일반 행이랑 똑같아

@@ -57,6 +57,9 @@ function _buildFn(desc) {
         case "bulk-update":
             return async () => { for (const b of desc.backups) await updateItem(b.id, b.prevData, b.azy); };
 
+        case "inventory-memo":
+            return async () => updateItem(desc.rawId, { 메모: desc.prevMemo }, desc.azy);
+
         case "bulk-delete":
             return async () => { for (const d of desc.items) await insertItem(d.data, d.azy); };
 
