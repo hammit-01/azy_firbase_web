@@ -217,11 +217,11 @@ td {
 }
 
 tbody tr:nth-child(even) td {
-    background: #d6d6d6;  /* 짝수행 배경 - 연한 연두(줄무늬) */
+    background: #f1f5f9;  /* 짝수행 배경 - 아주 연한 슬레이트(줄무늬) */
 }
 
 tbody tr:hover td {
-    background: #c8c8c8 !important;  /* 행 호버 배경 - 회색 */
+    background: #e2e8f0 !important;  /* 행 호버 배경 - 연한 슬레이트 */
     transition: background 0.12s ease;
 }
 
@@ -243,20 +243,20 @@ tbody tr:hover td {
     background: #475569;  /* 고정 헤더 칸 배경 - 남색(헤더와 동일) */
 }
 .table-wrap tbody tr:nth-child(even) td:nth-child(1) {
-    background: #e2e2e2;  /* 짝수행 고정 칸 배경 - 연한 연두(줄무늬) */
+    background: #f1f5f9;  /* 짝수행 고정 칸 배경 - 아주 연한 슬레이트(줄무늬) */
 }
 .table-wrap tbody tr.selected-row td:nth-child(1) {
-    background: #b4b4b4 !important;  /* 선택된 행 고정 칸 배경 - 연초록 */
+    background: #dbeafe !important;  /* 선택된 행 고정 칸 배경 - 연한 파랑 */
 }
 /* hover는 selected-row와 우선순위(specificity)가 동일해서 소스상 나중에 오는
    쪽이 이긴다 — 다른(고정 아닌) 칸들처럼 "선택된 행이어도 호버하면 색이 한 번
    더 바뀌는" 동작을 맞추려면 이 규칙이 selected-row보다 아래에 있어야 한다
    (2026-09-29, 상품명 칸만 호버 색이 안 바뀌던 버그 수정). */
 .table-wrap tbody tr:hover td:nth-child(1) {
-    background: #c8c8c8 !important;  /* 호버 시 고정 칸 배경 - 회색(다른 칸과 통일) */
+    background: #e2e8f0 !important;  /* 호버 시 고정 칸 배경 - 연한 슬레이트(다른 칸과 통일) */
 }
 .table-wrap tbody tr.flash-row td:nth-child(1) {
-    background: #ffff00 !important;  /* flash-row 고정 칸 배경 - 노랑(플래시 효과) */
+    background: #fef08a !important;  /* flash-row 고정 칸 배경 - 연노랑(플래시 효과) */
 }
 
 
@@ -1492,16 +1492,16 @@ tbody tr {
     background:#ffd6e8 !important;
 }
 
-/* 체크한 행 = 연초록 */
+/* 체크한 행 = 연한 파랑 */
 .selected-row td{
-    background:#bbbaba !important;
-    color: #3d3d3d !important;  /* 선택된 행 글자색 - 진초록 */
+    background:#dbeafe !important;
+    color: #1d4ed8 !important;  /* 선택된 행 글자색 - 진한 파랑 */
     font-weight:700;
 }
 
 /* 홀딩된 행 일시 표시 */
 .flash-row td {
-    background: #ffff00 !important;  /* 홀딩 행 일시 표시 배경 - 노랑(플래시, 다른 칸과 통일) */
+    background: #fef08a !important;  /* 홀딩 행 일시 표시 배경 - 연노랑(플래시, 다른 칸과 통일) */
     transition: 0.3s;
 }
 
