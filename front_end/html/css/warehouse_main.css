@@ -103,7 +103,7 @@ h1 {
 }
 body.force-desktop-view .toggle-desktop-view-btn {
     display: block !important;
-    background: #8fce00;  /* PC 모드 활성 배경 - 브랜드 그린(포인트 컬러) */
+    background: #5c5c5c;  /* PC 모드 활성 배경 - 브랜드 그린(포인트 컬러) */
     color: #fff;  /* PC 모드 활성 글자색 - 흰색 */
 }
 
@@ -138,7 +138,7 @@ body.force-desktop-view .toggle-desktop-view-btn {
     transition: background-color 0.15s ease;
 }
 .table-container::-webkit-scrollbar-thumb:hover {
-    background-color: #8fce00; /* 로그인 버튼과 같은 포인트 컬러 */
+    background-color: #5c5c5c; /* 로그인 버튼과 같은 포인트 컬러 */
 }
 
 .left-panel {
@@ -217,11 +217,11 @@ td {
 }
 
 tbody tr:nth-child(even) td {
-    background: #f6fbea;  /* 짝수행 배경 - 연한 연두(줄무늬) */
+    background: #d6d6d6;  /* 짝수행 배경 - 연한 연두(줄무늬) */
 }
 
 tbody tr:hover td {
-    background: #e4f7c1 !important;  /* 행 호버 배경 - 연초록 */
+    background: #fffd97 !important;  /* 행 호버 배경 - 연초록 */
     transition: background 0.12s ease;
 }
 
@@ -243,20 +243,20 @@ tbody tr:hover td {
     background: #475569;  /* 고정 헤더 칸 배경 - 남색(헤더와 동일) */
 }
 .table-wrap tbody tr:nth-child(even) td:nth-child(1) {
-    background: #f6fbea;  /* 짝수행 고정 칸 배경 - 연한 연두(줄무늬) */
+    background: #e2e2e2;  /* 짝수행 고정 칸 배경 - 연한 연두(줄무늬) */
 }
 .table-wrap tbody tr.selected-row td:nth-child(1) {
-    background: #d4f7a0 !important;  /* 선택된 행 고정 칸 배경 - 연초록 */
+    background: #b4b4b4 !important;  /* 선택된 행 고정 칸 배경 - 연초록 */
 }
 /* hover는 selected-row와 우선순위(specificity)가 동일해서 소스상 나중에 오는
    쪽이 이긴다 — 다른(고정 아닌) 칸들처럼 "선택된 행이어도 호버하면 색이 한 번
    더 바뀌는" 동작을 맞추려면 이 규칙이 selected-row보다 아래에 있어야 한다
    (2026-09-29, 상품명 칸만 호버 색이 안 바뀌던 버그 수정). */
 .table-wrap tbody tr:hover td:nth-child(1) {
-    background: #e4f7c1 !important;  /* 호버 시 고정 칸 배경 - 연초록(살짝 진하게) */
+    background: #747474 !important;  /* 호버 시 고정 칸 배경 - 연초록(살짝 진하게) */
 }
 .table-wrap tbody tr.flash-row td:nth-child(1) {
-    background: #d3f5c4 !important;  /* flash-row 고정 칸 배경 - 연초록(플래시 효과) */
+    background: #ffff00 !important;  /* flash-row 고정 칸 배경 - 연초록(플래시 효과) */
 }
 
 
@@ -374,7 +374,7 @@ th.sort-active {
 
 .login-btn:hover,
 .login-btn.active {
-    border-color: #8fce00;  /* 호버/활성 테두리 - 브랜드 그린 */
+    border-color: #777777;  /* 호버/활성 테두리 - 브랜드 그린 */
     background: #fff;  /* 호버/활성 배경 - 흰색 */
     box-shadow: 0 0 0 3px rgba(143,206,0,0.12);  /* 포커스 그림자 - 브랜드 그린 반투명 */
 }
@@ -488,7 +488,7 @@ th.sort-active {
 
 .login-input:hover { border-color: #94a3b8; }  /* 입력창 호버 테두리 - 회색 */
 .login-input:focus {
-    border-color: #8fce00;  /* 포커스 테두리 - 브랜드 그린 */
+    border-color: #636363;  /* 포커스 테두리 - 브랜드 그린 */
     background: #fff;  /* 포커스 배경 - 흰색 */
     box-shadow: 0 0 0 3px rgba(143,206,0,0.15);  /* 포커스 그림자 - 브랜드 그린 반투명 */
 }
@@ -498,7 +498,7 @@ th.sort-active {
     margin-top: 2px;
     border: none;
     border-radius: 9px;
-    background: #8fce00;  /* 제출 버튼 배경 - 브랜드 그린 */
+    background: #333333;  /* 제출 버튼 배경 - 브랜드 그린 */
     color: #fff;  /* 제출 버튼 글자색 - 흰색 */
     font-size: 15px;
     font-weight: 700;
@@ -506,7 +506,7 @@ th.sort-active {
     transition: background 0.15s, transform 0.1s;
 }
 
-.login-submit-btn:hover { background: #7ab800; }  /* 제출 버튼 호버 배경 - 진한 브랜드 그린 */
+.login-submit-btn:hover { background: #666666; }  /* 제출 버튼 호버 배경 - 진한 브랜드 그린 */
 .login-submit-btn:active { transform: translateY(1px); }
 
 .toolbar-title {
@@ -625,7 +625,7 @@ th.sort-active {
 }
 
 .filter-sel:hover  { border-color: #94a3b8; }  /* 필터 호버 테두리 - 회색 */
-.filter-sel:focus  { border-color: #8fce00; background: #fff; box-shadow: 0 0 0 3px rgba(143,206,0,0.15); }  /* 필터 포커스 - 브랜드 그린 테두리/흰 배경/그린 그림자 */
+.filter-sel:focus  { border-color: #636363; background: #fff; box-shadow: 0 0 0 3px rgba(99,99,99,0.15); }  /* 필터 포커스 - 브랜드 그린 테두리/흰 배경/그린 그림자 */
 
 .search-input {
     flex: 1;
@@ -643,7 +643,7 @@ th.sort-active {
 }
 
 .search-input:hover { border-color: #94a3b8; }  /* 검색창 호버 테두리 - 회색 */
-.search-input:focus { border-color: #8fce00; background: #fff; box-shadow: 0 0 0 3px rgba(143,206,0,0.15); }  /* 검색창 포커스 - 브랜드 그린 테두리/흰 배경/그린 그림자 */
+.search-input:focus { border-color: #636363; background: #fff; box-shadow: 0 0 0 3px rgba(99,99,99,0.15); }  /* 검색창 포커스 - 브랜드 그린 테두리/흰 배경/그린 그림자 */
 
 .tb-sep {
     width: 2px;
@@ -1045,7 +1045,7 @@ th.sort-active {
     padding: 0;
     margin: 0;
     border: none;
-    border-bottom: 1.5px solid #8fce00;  /* 편집중 셀 밑줄 - 브랜드 그린 */
+    border-bottom: 1.5px solid #ffd82c;  /* 편집중 셀 밑줄 - 브랜드 그린 */
     border-radius: 0;
     font-size: inherit;
     font-family: inherit;
@@ -1109,7 +1109,7 @@ th.sort-active {
     padding: 0;
     margin: 0;
     border: none;
-    border: 1.5px solid #8fce00;  /* 비고 편집 입력창 테두리 - 브랜드 그린 */
+    border: 1.5px solid #ffd82c;  /* 비고 편집 입력창 테두리 - 브랜드 그린 */
     font-size: 14px;
     font-family: inherit;
     line-height: inherit;
@@ -1148,9 +1148,9 @@ tr.outbound-insert-row select:hover {
 tr.outbound-insert-row .cell-input:focus,
 tr.outbound-insert-row select:focus {
     outline: none;
-    border-color: #22c55e;  /* 입력 포커스 테두리 - 초록 */
+    border-color: #ffd82c;  /* 입력 포커스 테두리 - 초록 */
     background: #fff;  /* 입력 포커스 배경 - 흰색 */
-    box-shadow: 0 0 0 3px rgba(34,197,94,0.15);  /* 입력 포커스 그림자 - 초록 반투명 */
+    box-shadow: 0 0 0 3px rgba(255,216,44,0.15);  /* 입력 포커스 그림자 - 초록 반투명 */
 }
 tr.outbound-insert-row .cell-input::placeholder {
     color: #9ca3af;  /* placeholder 글자색 - 회색 */
@@ -1231,9 +1231,9 @@ tr.price-insert-row .cell-input:hover,
 tr.price-insert-row .cell-input:focus,
 .price-edit-input:focus {
     outline: none;
-    border-color: #22c55e;  /* 가격 입력 포커스 테두리 - 초록 */
+    border-color: #ffd82c;  /* 가격 입력 포커스 테두리 - 초록 */
     background: #fff;  /* 가격 입력 포커스 배경 - 흰색 */
-    box-shadow: 0 0 0 3px rgba(34,197,94,0.15);  /* 가격 입력 포커스 그림자 - 초록 반투명 */
+    box-shadow: 0 0 0 3px rgba(255,216,44,0.15);  /* 가격 입력 포커스 그림자 - 초록 반투명 */
 }
 tr.price-insert-row .cell-input::placeholder {
     color: #9ca3af;  /* placeholder 글자색 - 회색 */
@@ -1425,7 +1425,7 @@ input[type="checkbox"] {
     cursor: pointer;
     width: 16px;
     height: 16px;
-    accent-color: #94d900;  /* 체크박스 색 - 브랜드 그린 계열 */
+    accent-color: #5e5e5e;  /* 체크박스 색 - 브랜드 그린 계열 */
 }
 
 /* 재고장 선택 체크박스만 키움(2026-09-18 사용자 요청 — 18px로는 안 커서 더 키움) */
@@ -1494,14 +1494,14 @@ tbody tr {
 
 /* 체크한 행 = 연초록 */
 .selected-row td{
-    background:#d4f7a0 !important;
-    color: #3f7d00 !important;  /* 선택된 행 글자색 - 진초록 */
+    background:#bbbaba !important;
+    color: #3d3d3d !important;  /* 선택된 행 글자색 - 진초록 */
     font-weight:700;
 }
 
 /* 홀딩된 행 일시 표시 */
 .flash-row td {
-    background: #d3f5c4 !important;  /* 홀딩 행 일시 표시 배경 - 연초록(플래시) */
+    background: #4b4b4b !important;  /* 홀딩 행 일시 표시 배경 - 연초록(플래시) */
     transition: 0.3s;
 }
 
