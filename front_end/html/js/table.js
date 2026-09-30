@@ -825,6 +825,7 @@ export function renderTable() {
         if (item.상태 === "stopped") rowClass += " stopped-row";
         if (item.상태 === "moving")  rowClass += " moving-row";
         if (item._isMoving)          rowClass += item._isTomorrowMoving ? " moving-inventory-tomorrow-row" : " moving-inventory-row";
+        if (String(item.상품명 || "").includes("작업")) rowClass += " product-name-work-row";
 
         html += `
             <tr class="${rowClass}" data-id="${id}" data-출고일="${safeValue(item.출고일)}" data-홀딩="${safeValue(item.홀딩)}" data-pk="${item._rawId ?? id}" data-예약수량="${Number(item.예약수량) || 0}">
