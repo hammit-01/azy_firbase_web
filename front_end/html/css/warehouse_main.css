@@ -1483,8 +1483,18 @@ tbody tr {
     font-weight:700;
 }
 
+/* 상품명에 "작업"이 포함된 경우 행 전체 글자색 파랑으로 구분(2026-09-30) —
+   이고분이면 아래 moving-inventory-row 쪽이 이겨야 하므로(2026-09-30, 사용자
+   지정: 동결/사용불가/작업보다 이고분 디자인이 우선) 이 규칙을 그보다 위에 둔다 —
+   !important끼리 특이도가 같을 때는 소스상 나중에 오는 쪽이 이기기 때문. */
+.product-name-work-row td {
+    color: #2563eb !important;
+}
+
 /* 이고(창고이동) 취합 시트에서 들어온 행 — moving_inventory 미러. 배경은 일반
-   행과 동일하게 두고 글자색만 주황으로 구분(2026-09-30, 배경 강조 대신 글자색으로 변경) */
+   행과 동일하게 두고 글자색만 주황으로 구분(2026-09-30, 배경 강조 대신 글자색으로 변경).
+   동결/사용불가/작업보다 이고분이 우선이어야 해서(2026-09-30) 이 블록을 그
+   규칙들보다 아래에 둔다. */
 .moving-inventory-row td{
     color: #ea580c !important;
     font-weight: 700;
@@ -1494,11 +1504,6 @@ tbody tr {
 .moving-inventory-tomorrow-row td{
     color: #db2777 !important;
     font-weight: 700;
-}
-
-/* 상품명에 "작업"이 포함된 경우 행 전체 글자색 파랑으로 구분(2026-09-30) */
-.product-name-work-row td {
-    color: #2563eb !important;
 }
 
 /* 체크한 행 = 연한 갈색 */
