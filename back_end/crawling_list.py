@@ -101,6 +101,14 @@ SPECIAL_SITES = {
     "도지냉장": {
         "login": "https://wms.pentascan.com/login/login",
         "data": "https://wms.pentascan.com/list/stock"
+    },
+    # 한라동탄: 사이트 이전(2026-09-30, 사용자 제보) — IP가 .91:8080 → .90(포트 없음)으로,
+    # 조회 엔드포인트가 rtv_stock01.do → rtv_stock02.do로 바뀜. DB(warehouse_login)의
+    # ip포트/약식주소는 예전 값(91:8080/hdtdst) 그대로 두고 여기서 override — 로그인
+    # 계정은 기존과 동일(사용자 확인), 직접 로그인+조회 테스트로 정상 동작 확인함.
+    "한라동탄": {
+        "login": "http://211.239.173.90/hdtdst/login.do",
+        "data": "http://211.239.173.90/hdtdst/rtv_stock02.do"
     }
 }
 
