@@ -1626,29 +1626,27 @@ export async function renderSalesTab(useCache = false) {
     const listEl = document.getElementById("sales-list");
     if (!container || !listEl || container.style.display === "none") return;
 
+    // 출고일 필터(2026-08-19) — 안 고르면 오늘(기존 고정 동작 그대로), 고르면 그 날짜.
+    // outbound 잔여물(하루 지나도록 완료/취소 안 된 것)도 이걸로 확인 가능해짐.
+    const salesDate = state.salesDateFilter || todayISOStr();
+
     let rows;
     if (useCache && _salesRowsCache) {
         rows = _salesRowsCache;
     } else {
         try {
             // outbound(타창고매출현황)는 예약과 완전히 분리된 별도 저장소(2026-08-14) —
-            // 이 탭은 예약 API가 아니라 outbound API만 쓴다. 서버가 조회 시점에
-            // 출고일=오늘인 예약을 outbound로 옮긴 뒤 내려주므로, 서버가 이미 오늘
-            // 것만 담고 있어 별도 날짜 필터가 원래는 필요 없지만, 하루가 지나도록
-            // 수정 안 된 outbound 잔여물이 계속 보이는 걸 막기 위해 클라이언트에서도
-            // 한 번 더 오늘 날짜로 걸러준다.
-            rows = await getAllOutbound();
+            // 이 탭은 예약 API가 아니라 outbound API만 쓴다. 출고일+제갈준/박성찬
+            // 제외는 서버(SQL)에서 걸러서 받는다(2026-09-30, 전체 이력을 다 받아
+            // 클라이언트에서 재필터링하던 걸 제거 — 이력이 쌓일수록 페이로드가
+            // 커지는데 화면엔 대부분 하루치만 필요했음).
+            rows = await getAllOutbound(salesDate);
         } catch (e) {
             listEl.innerHTML = `<p class="reservations-empty">출고 현황을 불러오지 못했습니다.</p>`;
             return;
         }
         _salesRowsCache = rows;
     }
-
-    // 담당자 제갈준/박성찬 출고건은 타창고매출현황에서 숨김(2026-08-25 제갈준,
-    // 2026-09-28 박성찬도 동일 확대) — 예약현황/발주장 등 다른 화면은 그대로
-    // 보이고 이 탭에서만 제외.
-    rows = rows.filter(r => r.담당자 !== "제갈준" && r.담당자 !== "박성찬");
 
     // 미리보기 행(_preview:true — 출고일 예약된 ACTIVE 예약, 아직 outbound로 안
     // 넘어간 것) 노출은 로그인만 하면 됨(2026-08-24 전체 공개). login.js를 여기서
@@ -1659,11 +1657,6 @@ export async function renderSalesTab(useCache = false) {
         previewEnabled = !!u?.권한;
     } catch {}
     if (!previewEnabled) rows = rows.filter(r => !r._preview);
-
-    // 출고일 필터(2026-08-19) — 안 고르면 오늘(기존 고정 동작 그대로), 고르면 그 날짜.
-    // outbound 잔여물(하루 지나도록 완료/취소 안 된 것)도 이걸로 확인 가능해짐.
-    const salesDate = state.salesDateFilter || todayISOStr();
-    rows = rows.filter(r => safeValue(r.출고일) === salesDate);
 
     // 검색/창고/브랜드 필터 — 전략단가 탭과 동일 방식(2026-08-20, 재고장 전용
     // 툴바 재사용을 그만두고 이 탭 자체 상태로 관리).

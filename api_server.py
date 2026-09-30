@@ -607,10 +607,13 @@ def register_outbound_endpoint(rec_id: str, body: RegisterOutboundBody):
 # 예약 중 출고일=오늘인 것은 outbound로 이동되고, sales.html은 이 API만 쓴다.
 
 @app.get("/api/outbound")
-def list_outbound():
+def list_outbound(date: str | None = None):
+    # 타창고매출현황 탭은 항상 특정 출고일 하나만 보여주므로(2026-09-30), 날짜를
+    # 넘겨주면 SQL에서 그 날짜 + 제갈준/박성찬 제외까지 걸러서 페이로드를 줄인다.
+    # 날짜 없이 호출되면(백업 등 다른 용도) 기존처럼 전체 이력 반환.
     with get_conn() as conn:
         migrate_due_reservations_to_outbound(conn)
-        rows = get_all_outbound(conn)
+        rows = get_all_outbound(conn, date=date, exclude_managers=bool(date))
     return {"data": rows}
 
 

@@ -226,8 +226,11 @@ export async function apiRegisterOutboundFromReservation(id, { 수량, 출고일
 }
 
 // ── outbound(타창고매출현황) — 예약과 분리된 별도 저장소(2026-08-14) ──
-export async function apiGetAllOutbound() {
-    const r = await apiFetch("/api/outbound", {});
+// date를 넘기면 서버가 그 출고일 + 제갈준/박성찬 제외까지 SQL에서 걸러서
+// 반환한다(2026-09-30, 전체 이력을 다 받아 클라이언트에서 재필터링하던 것 제거).
+export async function apiGetAllOutbound(date) {
+    const qs = date ? `?date=${encodeURIComponent(date)}` : "";
+    const r = await apiFetch(`/api/outbound${qs}`, {});
     return r.data;
 }
 

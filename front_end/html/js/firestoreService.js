@@ -54,8 +54,8 @@ export async function getYesterdayReservationQty() {
 }
 
 // outbound(타창고매출현황) — 예약과 분리된 별도 저장소(2026-08-14)
-export async function getAllOutbound() {
-    return apiGetAllOutbound();
+export async function getAllOutbound(date) {
+    return apiGetAllOutbound(date);
 }
 export async function getOrderSheet() {
     return apiGetOrderSheet();

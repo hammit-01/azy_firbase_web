@@ -1176,14 +1176,21 @@ def _bulk_product_join(conn, pks: set) -> dict:
     return result
 
 
-def get_all_outbound(conn) -> list[dict]:
-    """outbound(타창고매출현황) 전체 조회 + 상품 정보(상품명/브랜드/창고/재고)
-    조인. pk가 inventory/azy_inventory 어느 쪽 소속인지 outbound 자체엔 표시가
+def get_all_outbound(conn, date: str | None = None, exclude_managers: bool = False) -> list[dict]:
+    """outbound(타창고매출현황) 조회 + 상품 정보(상품명/브랜드/창고/재고) 조인.
+    pk가 inventory/azy_inventory 어느 쪽 소속인지 outbound 자체엔 표시가
     없어서 _bulk_product_join()으로 관련 pk를 한 번에 조회한다(2026-09-02,
     N+1 제거). 가용재고 = 실재고 − ACTIVE 예약 합계 − ACTIVE outbound 합계
     (get_all_active_reservations와 동일 원칙, 2026-08-14). status=COMPLETED
     (출고완료 토글)/CANCEL(2026-09-04, 취소 — 되돌리기든 삭제든)도 같이
     내려준다 — 둘 다 화면에서 안 사라지고 각각 회색/취소선으로 표시된다.
+
+    date: 지정하면 그 출고일만 SQL에서 걸러서 반환(2026-09-30, 타창고매출현황
+    탭이 매번 전체 이력을 다 받아 JS에서 오늘 날짜로 재필터링하던 걸 SQL로
+    이전 — 전체 이력이 쌓일수록 페이로드가 커지는데 화면은 대부분 하루치만
+    보여줬음). None이면 기존처럼 전체 이력 반환(백업 등 날짜 무관 용도).
+    exclude_managers: 참이면 제갈준/박성찬 담당 건을 SQL에서 제외(타창고매출현황
+    전용 규칙 — 백업 등 다른 용도는 그대로 전체 포함해야 하므로 기본값 False).
 
     미리보기(2026-08-24, _preview=True): 출고일이 잡혀있지만 아직 오늘이 안
     돼서 migrate_due_reservations_to_outbound()로 outbound에 안 넘어간 ACTIVE
@@ -1191,18 +1198,34 @@ def get_all_outbound(conn) -> list[dict]:
     미리 조회만 가능하게 하려는 용도. 프론트가 실제 노출 여부(관리자+8001)를
     판단하므로 여기서는 항상 같이 내려준다."""
     with conn.cursor() as cur:
+        where = ["status IN ('ACTIVE','COMPLETED','CANCEL')"]
+        params: list = []
+        if date:
+            where.append("출고일=%s")
+            params.append(date)
+        if exclude_managers:
+            where.append("홀딩 NOT IN ('제갈준','박성찬')")
         cur.execute(
             "SELECT id, pk, 수량, 원수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, status, 전달사항, 등록, 비고, 수량내림, 수정자, 전표, 배송취소, "
             "상품명, 브랜드, 창고, BL, ESTNO, 등급 "
-            "FROM outbound WHERE status IN ('ACTIVE','COMPLETED','CANCEL') ORDER BY 홀딩일자 DESC"
+            f"FROM outbound WHERE {' AND '.join(where)} ORDER BY 홀딩일자 DESC",
+            params,
         )
         outbound_rows = cur.fetchall()
 
         preview_rows = []
         for hr_table in ("holding_records", "azy_holding_records"):
+            where2 = ["status='ACTIVE'", "출고일 != ''"]
+            params2: list = []
+            if date:
+                where2.append("출고일=%s")
+                params2.append(date)
+            if exclude_managers:
+                where2.append("홀딩 NOT IN ('제갈준','박성찬')")
             cur.execute(
                 f"SELECT id, pk, 수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, 전달사항, 비고, 등록, 수정자, 수량내림, 원수량 "
-                f"FROM {hr_table} WHERE status='ACTIVE' AND 출고일 != ''"
+                f"FROM {hr_table} WHERE {' AND '.join(where2)}",
+                params2,
             )
             preview_rows.extend(cur.fetchall())
 
