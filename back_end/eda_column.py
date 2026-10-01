@@ -122,6 +122,16 @@ def daejae(df):
     return _apply_schema(df, columns_a, "대재")
 
 def hanladt(df):
+    # 한라동탄 사이트 이전(2026-09-30) 이후 "B/L NO"와 "식별번호"가 합쳐진 한
+    # 컬럼("B/L NO식별번호")이 아니라 둘로 분리된 컬럼으로 내려옴(2026-10-01,
+    # 사용자 제보로 BL 전부 빈 값인 것 발견) — _wms_new_style은 합쳐진 컬럼명만
+    # 찾으므로 여기서 미리 합쳐준다(jns()의 동일 패턴 재사용).
+    if df is not None and "B/L NO" in df.columns and "식별번호" in df.columns:
+        df = df.copy()
+        df["B/L NO식별번호"] = (
+            df["B/L NO"].astype(str).str.strip() +
+            df["식별번호"].astype(str).str.strip()
+        )
     return _wms_new_style(df, "hanladt")
 
 def hanla(df):

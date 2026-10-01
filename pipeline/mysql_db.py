@@ -113,6 +113,9 @@ _NAME_RENAME_RULES = [
     # KILCOY만 사내 표기가 원본과 다름(2026-08-12 확인) — 브랜드 조건 없이 걸려있어서
     # AMH의 양지OFF까지 같이 양지ON으로 잘못 바뀌던 걸 KILCOY로 좁힘.
     (lambda row: row.get("상품명") == "양지OFF" and row.get("브랜드") == "KILCOY" and str(row.get("창고") or "").startswith("곤"), "양지ON"),
+    # 한라동탄 "닭정육씨에라"는 사이트 원본이 상품명+브랜드를 붙여서 주는 표기
+    # (2026-10-01 사용자 제보) — 실제 상품명은 닭장각정육, 브랜드는 SEARA.
+    (lambda row: row.get("상품명") == "닭정육씨에라" and row.get("창고") == "한라동탄", "닭장각정육"),
 ]
 
 def sync_name_rename(row: dict) -> dict:
@@ -136,11 +139,32 @@ def sync_grade_clear(row: dict) -> dict:
     return row
 
 
+# (조건, 새 브랜드, 새 등급) — 조건 만족 시 브랜드를 쪼개서 등급도 같이 채움
+_BRAND_SPLIT_RULES = [
+    # 한라동탄은 브랜드 칸에 "IBP(UN)"처럼 등급을 괄호로 붙여서 줌(2026-10-01
+    # 사용자 제보) — 실제로는 브랜드=IBP, 등급=UN.
+    (lambda row: row.get("브랜드") == "IBP(UN)" and row.get("창고") == "한라동탄", "IBP", "UN"),
+]
+
+def sync_brand_split(row: dict) -> dict:
+    for condition, new_brand, new_grade in _BRAND_SPLIT_RULES:
+        if condition(row):
+            row["브랜드"] = new_brand
+            row["등급"] = new_grade
+            break
+    return row
+
+
 # (조건, {필드: 값}) — 조건 만족 시 비어있는 필드만 채움(이미 값 있으면 안 건드림).
 # BL로 좁혀서 건다 — 상품명만으로 걸면 다른 브랜드의 동명 상품까지 잘못 덮어씀
 # (2026-07-29 돈목뼈/SWIFT 전체 제외 사고와 같은 실수 반복 방지).
 _FIELD_FILL_RULES = [
     (lambda row: row.get("BL") == "HLCUSYD251245191", {"브랜드": "MERAMIST", "등급": "A", "ESTNO": "3416"}),
+    # 한라동탄 닭장각정육(원래 "닭정육씨에라" → sync_name_rename에서 이미 개명됨,
+    # 이 함수보다 먼저 실행됨)은 브랜드 컬럼 자체가 없는 사이트라 항상 비어있는데
+    # 실제로는 SEARA산(2026-10-01 사용자 제보) — 창고로 좁혀서 다른 창고의 동명
+    # 상품(제니스 등, PERDIGAO/SADIA)까지 잘못 덮어쓰지 않게 함.
+    (lambda row: row.get("상품명") == "닭장각정육" and row.get("창고") == "한라동탄", {"브랜드": "SEARA"}),
 ]
 
 def sync_field_fill(row: dict) -> dict:
@@ -185,7 +209,7 @@ def upsert_inventory(conn, rows: list[dict]):
     sql = (f"INSERT INTO inventory ({col_names}) VALUES ({placeholders}) "
            f"ON DUPLICATE KEY UPDATE {update_part}")
     with conn.cursor() as cur:
-        data = [[_val(c, sync_field_fill(sync_grade_clear(sync_name_rename(sync_estno_prefix(sync_freeze(row)))))) for c in cols] for row in rows]
+        data = [[_val(c, sync_field_fill(sync_brand_split(sync_grade_clear(sync_name_rename(sync_estno_prefix(sync_freeze(row))))))) for c in cols] for row in rows]
         cur.executemany(sql, data)
 
 
@@ -315,7 +339,7 @@ def upsert_azy_inventory(conn, rows: list[dict]):
     sql = (f"INSERT INTO azy_inventory ({col_names}) VALUES ({placeholders}) "
            f"ON DUPLICATE KEY UPDATE {update_part}")
     with conn.cursor() as cur:
-        data = [[_val(c, sync_field_fill(sync_grade_clear(sync_name_rename(sync_estno_prefix(sync_freeze(row)))))) for c in cols] for row in rows]
+        data = [[_val(c, sync_field_fill(sync_brand_split(sync_grade_clear(sync_name_rename(sync_estno_prefix(sync_freeze(row))))))) for c in cols] for row in rows]
         cur.executemany(sql, data)
 
 
