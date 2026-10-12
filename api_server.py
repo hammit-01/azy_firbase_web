@@ -174,6 +174,9 @@ def login(body: LoginBody):
             row = cur.fetchone()
     if not row:
         raise HTTPException(401, "아이디 또는 비밀번호가 올바르지 않습니다")
+    # 직급 총괄은 DB 권한값과 무관하게 관리자(=모든 권한)로 취급(2026-10-12)
+    if row.get("직급") == "총괄":
+        row["권한"] = "관리자"
     return row
 
 
