@@ -107,7 +107,17 @@ def _azy_uid(bl, estno, grade, name, wh, auto_memo=""):
     if not bl:
         return None
     uid_base = f"{bl}_{estno}_{grade}_{name}_{wh}"
-    return f"{uid_base}_{auto_memo}" if auto_memo else uid_base
+    return _zw(f"{uid_base}_{auto_memo}" if auto_memo else uid_base)
+
+
+def _zw(s) -> str:
+    """제로폭 공백(\\u200b) 제거 — azy_inventory.id 콜레이션(utf8mb4_unicode_ci)은
+    이 문자를 무시해서 "X\\u200b_…"와 "X_…"를 같은 행으로 보는데 Python은 다르게
+    봐서, 같은 업로드 안에서 새 행이 기존 행에 수량을 쓴 직후 기존 행을 stale로
+    판단해 0으로 덮거나 삭제했다(2026-10-28, .91→.90:8080 서버 이전 후 BL에
+    \\u200b가 붙어 오기 시작한 CS/프라자/한라/CH에서 발견). Python 쪽 키 비교를
+    DB와 똑같이 맞춘다."""
+    return str(s).replace("​", "")
 
 
 def _spawn_ace_zero_watchdog(committed_totals: dict) -> None:
@@ -212,8 +222,10 @@ def _upload_azy(azy_df, warehouse_scope=None):
         return str(v)
 
     with get_conn() as conn:
-        holding_sum = get_azy_holding_sum(conn)
-        outbound_pks = get_outbound_active_pks(conn)  # stale 삭제 보호 판단에만 사용(아래)
+        holding_sum = {}
+        for _pk, _q in get_azy_holding_sum(conn).items():
+            holding_sum[_zw(_pk)] = holding_sum.get(_zw(_pk), 0) + _q
+        outbound_pks = {_zw(p) for p in get_outbound_active_pks(conn)}  # stale 삭제 보호 판단에만 사용(아래)
         with conn.cursor() as cur:
             # 대청은 통관분(JNS/곤대청) 계정과 일반(azy/대청) 계정이 같은 재고를 그대로
             # 보여줘서 BL이 겹치면 두 테이블에 통째로 중복 적재된다(2026-08-03, DB에
@@ -304,7 +316,7 @@ def _upload_azy(azy_df, warehouse_scope=None):
                     "SELECT id, 홀딩, 상태, 메모, 상품명, 브랜드, 등급, ESTNO, BL, 창고, 재고, 평중, 유통기한, 출고일, stock_version "
                     "FROM azy_inventory WHERE 수집일 != ''"
                 )
-            existing = {row["id"]: row for row in cur.fetchall()}
+            existing = {_zw(row["id"]): row for row in cur.fetchall()}
 
         prev_total = sum(row["재고"] or 0 for row in existing.values())
 

@@ -40,7 +40,14 @@ def test_no_bl_returns_none():
     assert _azy_uid("", "86R", "", "우건", "SWC") is None
 
 
+def test_zero_width_space_in_bl_matches_legacy_id():
+    # DB 콜레이션이 ​를 무시하므로 Python id도 같아야 함(2026-10-28 서버 이전 사고)
+    assert _azy_uid("HDMUHAMA63895500​", "00688EG", "3P", "삼겹", "CS") == \
+        _azy_uid("HDMUHAMA63895500", "00688EG", "3P", "삼겹", "CS")
+
+
 if __name__ == "__main__":
+    test_zero_width_space_in_bl_matches_legacy_id()
     test_normal_row_keeps_legacy_id_format()
     test_damaged_lot_gets_distinct_id_from_normal_lot()
     test_non_qualifier_memo_also_splits_lot()
