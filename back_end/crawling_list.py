@@ -81,8 +81,8 @@ SPECIAL_SITES = {
     },
 
     "제니스(곤지암)": {
-        "login": "http://211.239.173.91:8080/jnsdst3/login.do",
-        "data":  "http://211.239.173.91:8080/jnsdst3/rtv_stock01.do"
+        "login": "http://211.239.173.90/jnsdst/login.do",
+        "data":  "http://211.239.173.90/jnsdst/rtv_stock01.do"
     },
 
     "SWC": {
