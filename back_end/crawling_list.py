@@ -46,8 +46,8 @@ def get_users(row):
 
 SPECIAL_SITES = {
     "베이지박스투": {
-        "login": "http://211.239.173.91:8080/bbtdst/login.do",
-        "data": "http://211.239.173.91:8080/bbtdst/rtv_stock.do"
+        "login": "http://211.239.173.90:8080/bbtdst/login.do",
+        "data": "http://211.239.173.90:8080/bbtdst/rtv_stock.do"
     },
 
     "삼일물류": {
@@ -81,8 +81,8 @@ SPECIAL_SITES = {
     },
 
     "제니스(곤지암)": {
-        "login": "http://211.239.173.90/jnsdst/login.do",
-        "data":  "http://211.239.173.90/jnsdst/rtv_stock01.do"
+        "login": "http://211.239.173.90:8080/jnsdst/login.do",
+        "data":  "http://211.239.173.90:8080/jnsdst/rtv_stock01.do"
     },
 
     "SWC": {
@@ -107,8 +107,8 @@ SPECIAL_SITES = {
     # ip포트/약식주소는 예전 값(91:8080/hdtdst) 그대로 두고 여기서 override — 로그인
     # 계정은 기존과 동일(사용자 확인), 직접 로그인+조회 테스트로 정상 동작 확인함.
     "한라동탄": {
-        "login": "http://211.239.173.90/hdtdst/login.do",
-        "data": "http://211.239.173.90/hdtdst/rtv_stock02.do"
+        "login": "http://211.239.173.90:8080/hdtdst/login.do",
+        "data": "http://211.239.173.90:8080/hdtdst/rtv_stock02.do"
     }
 }
 
