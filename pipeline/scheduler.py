@@ -209,8 +209,10 @@ def _upload_azy(azy_df, warehouse_scope=None):
             azy_df["재고수량"].astype(str).str.replace(",", "", regex=False), errors="coerce"
         ).fillna(0)
         totals = raw_qty.groupby(azy_df["창고"]).sum().astype(int).to_dict()
+        # 크롤은 성공했는데 0행인 창고 — 화면 원본재고만 0으로(재시도용 qty는 유지)
+        empty = [w for w in (warehouse_scope or []) if w not in totals]
         with get_conn() as _conn:
-            _record_crawl_totals(_conn, totals)
+            _record_crawl_totals(_conn, totals, empty)
     except Exception as _e:
         log.warning(f"크롤링 탭 원본재고 기록 실패: {_e}")
 

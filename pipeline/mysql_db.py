@@ -2284,13 +2284,22 @@ def get_pipeline_status(conn) -> list[dict]:
 # 재고수량 합을 여기 남겨두고, azy_inventory의 현재 합계와 나란히 보여주면
 # EDA/중복합산 단계에서 수량이 새는 문제(예: 우부채/부채살 분리 건)를 화면에서
 # 바로 알아챌 수 있다.
-def record_crawl_source_totals(conn, totals: dict) -> None:
+# qty는 crawler.py의 "빈 결과면 재시도" 판단용이라 0행 성공 시에도 마지막 값을
+# 유지하고, 화면 표시는 display_qty로 분리(2026-10-28) — empty에 넘긴 창고(크롤은
+# 성공했는데 0행)는 화면에만 0으로 찍힌다.
+def record_crawl_source_totals(conn, totals: dict, empty=()) -> None:
     with conn.cursor() as cur:
         for wh, qty in totals.items():
             cur.execute(
-                "INSERT INTO crawl_source_totals (창고, qty, updated_at) VALUES (%s, %s, NOW()) "
-                "ON DUPLICATE KEY UPDATE qty=%s, updated_at=NOW()",
-                (wh, qty, qty),
+                "INSERT INTO crawl_source_totals (창고, qty, display_qty, updated_at) VALUES (%s, %s, %s, NOW()) "
+                "ON DUPLICATE KEY UPDATE qty=%s, display_qty=%s, updated_at=NOW()",
+                (wh, qty, qty, qty, qty),
+            )
+        for wh in empty:
+            cur.execute(
+                "INSERT INTO crawl_source_totals (창고, qty, display_qty, updated_at) VALUES (%s, 0, 0, NOW()) "
+                "ON DUPLICATE KEY UPDATE display_qty=0, updated_at=NOW()",
+                (wh,),
             )
 
 
@@ -2303,7 +2312,7 @@ def get_crawl_source_totals(conn) -> list[dict]:
     # 곤으로 시작하는 창고는 전부 제니스 쪽으로 이미 구분되므로 여기 합치지 않는다.
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT s.창고 AS 창고, s.qty AS 원본재고, s.updated_at AS updated_at, "
+            "SELECT s.창고 AS 창고, COALESCE(s.display_qty, s.qty) AS 원본재고, s.updated_at AS updated_at, "
             "CASE WHEN s.창고 = '제니스' "
             "     THEN (SELECT COALESCE(SUM(재고), 0) FROM inventory WHERE 창고 LIKE '곤%') "
             "     ELSE COALESCE(i.qty, 0) END AS 시스템재고 "
