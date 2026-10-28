@@ -124,7 +124,10 @@ export async function fetchAllData() {
                 ...movingRows,
             ];
         }
-        renderTable();
+        // 재고장 비고 인라인 입력 중이면 표를 다시 그리지 않는다(2026-10-28) — 5초 폴링이
+        // 표를 통째로 다시 그리면서 입력 중인 칸을 날려버렸음. 데이터는 이미 state에
+        // 들어갔으니 입력이 끝난 뒤(엔터/포커스 이탈 시 renderTable 호출) 반영된다.
+        if (!document.activeElement?.classList.contains("inventory-memo-input")) renderTable();
         renderWarehouseOptions();
         renderBrandOptions();
         renderProductNameOptions();
