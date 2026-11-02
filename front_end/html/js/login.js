@@ -64,9 +64,12 @@ export function hasWarehouseMovesAccess() {
 // 팀장이 아니어도 전 직원 예약을 볼 수 있게. table.js의 renderReservationsTab
 // (실제 필터링)과 이 파일의 탭 라벨 표시가 항상 같이 움직이도록 여기 한 곳에서
 // 공유한다.
+// 2026-11-02: 직급 팀장/대표이사/총괄도 전 직원 예약 조회(팀장은 같은 부서 → 전체로 확대).
 const RESERVATIONS_FULL_ACCESS_NAMES = new Set(["제갈준", "박성찬"]);
+const RESERVATIONS_FULL_ACCESS_RANKS = new Set(["팀장", "대표이사", "총괄"]);
 export function hasReservationsFullAccess() {
-    return RESERVATIONS_FULL_ACCESS_NAMES.has(getStoredUser()?.이름);
+    const u = getStoredUser();
+    return RESERVATIONS_FULL_ACCESS_NAMES.has(u?.이름) || RESERVATIONS_FULL_ACCESS_RANKS.has(u?.직급);
 }
 
 function closePopover() {

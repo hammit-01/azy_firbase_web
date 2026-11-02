@@ -1550,7 +1550,7 @@ export async function renderReservationsTab(useCache = false) {
     rows = applyReservationSort(rows, state.reservationsSortColumns);
     const searchHadFocus = document.activeElement?.id === "reservations-search";
 
-    if (isEditor || isTeamLead) {
+    if (isEditor || isTeamLead || seesAllReservations) {
         const groups = {};
         rows.forEach(r => {
             const key = r.담당자 || "(미지정)";
