@@ -90,8 +90,8 @@ SPECIAL_SITES = {
         "data": "http://nwill.net:8080/nswdst/rtv_stock.do"
     },
     "대재": {
-        "login": "http://nwill.net:8080/djedst/login.do",
-        "data": "http://nwill.net:8080/djedst/rtv_stock.do"
+        "login": "http://211.239.173.90/djedst/login.do",
+        "data": "http://211.239.173.90/djedst/rtv_stock.do"
     },
     "아이린냉장": {
         "login": "http://211.239.173.91:8080/irndst/login.do",
