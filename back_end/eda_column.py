@@ -119,7 +119,7 @@ def daechung(df):
     return _wms_new_style(df, "daechung")
 
 def daejae(df):
-    return _apply_schema(df, columns_a, "대재")
+    return _apply_schema(df, columns_b, "대재")
 
 def hanladt(df):
     # 한라동탄 사이트 이전(2026-09-30) 이후 "B/L NO"와 "식별번호"가 합쳐진 한
