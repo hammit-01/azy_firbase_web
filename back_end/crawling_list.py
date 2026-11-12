@@ -51,13 +51,13 @@ SPECIAL_SITES = {
     },
 
     "삼일물류": {
-        "login": "http://nwill.net:8080/sidst/login.do",
-        "data": "http://nwill.net:8080/sidst/rtv_stock.do"
+        "login": "http://211.239.173.90:8080/sidst/login.do",
+        "data": "http://211.239.173.90:8080/sidst/rtv_stock.do"
     },
 
     "신우냉장": {
-        "login": "http://nwill.net:8080/swdst/login.do",
-        "data": "http://nwill.net:8080/swdst/rtv_stock.do"
+        "login": "http://211.239.173.90:8080/swdst/login.do",
+        "data": "http://211.239.173.90:8080/swdst/rtv_stock.do"
     },
 
     "오로라CS": {
@@ -66,8 +66,8 @@ SPECIAL_SITES = {
     },
 
     "이스트밸리": {
-        "login": "http://nwill.net:8080/estdst/login.do",
-        "data": "http://nwill.net:8080/estdst/rtv_stock.do"
+        "login": "http://211.239.173.90:8080/estdst/login.do",
+        "data": "http://211.239.173.90:8080/estdst/rtv_stock.do"
     },
 
     "효성냉장": {
@@ -76,8 +76,8 @@ SPECIAL_SITES = {
     },
 
     "희창냉장": {
-        "login": "http://nwill.net/hcy1dst/login.do",
-        "data": "http://nwill.net/hcy1dst/rtv_stock.do"
+        "login": "http://211.239.173.90:8080/hcydst/login.do",
+        "data": "http://211.239.173.90:8080/hcydst/rtv_stock.do"
     },
 
     "제니스(곤지암)": {
@@ -86,8 +86,8 @@ SPECIAL_SITES = {
     },
 
     "SWC": {
-        "login": "http://nwill.net:8080/nswdst/login.do",
-        "data": "http://nwill.net:8080/nswdst/rtv_stock.do"
+        "login": "http://211.239.173.90:8080/nswdst/login.do",
+        "data": "http://211.239.173.90:8080/nswdst/rtv_stock.do"
     },
     "대재": {
         "login": "http://211.239.173.90:8080/djedst/login.do",
@@ -279,7 +279,7 @@ def get_eastbelly_brand_map(session, scustcd, scmdept) -> dict:
     브랜드가 있는 rtv_stock02.do(nav_num=0107)를 별도로 조회해 "B/L No+식별번호" 키로
     매핑을 만든다. 값 형식이 "IBP (N)", "OLYMEL(270A)" 처럼 브랜드명 뒤에 괄호가
     붙어있어 괄호 부분은 제거하고 브랜드명만 남긴다."""
-    url = "http://nwill.net:8080/estdst/rtv_stock02.do"
+    url = SPECIAL_SITES["이스트밸리"]["data"].replace("rtv_stock.do", "rtv_stock02.do")
     payload = {
         "nav_num": "0107",
         "scmdept": scmdept if pd.notna(scmdept) else "00",
@@ -307,7 +307,7 @@ def get_eastbelly_brand_map(session, scustcd, scmdept) -> dict:
             cells = [td.get_text(strip=True) for td in row.find_all("td")]
             if len(cells) <= max(bl_idx, id_idx, brand_idx):
                 continue
-            key = cells[bl_idx] + cells[id_idx]
+            key = (cells[bl_idx] + cells[id_idx]).replace("​", "")
             brand = re.sub(r"\(.*?\)", "", cells[brand_idx]).strip()
             if key and brand:
                 result[key] = brand

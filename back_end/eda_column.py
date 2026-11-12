@@ -72,13 +72,13 @@ def beige(df):
     return _apply_schema(df, columns_a, "베이지박스투")
 
 def samil(df):
-    return _apply_schema(df, columns_a, "삼일물류")
+    return _apply_schema(df, columns_b, "삼일물류")
 
 def sinu(df):
-    return _apply_schema(df, columns_a, "신우냉장")
+    return _apply_schema(df, columns_b, "신우냉장")
 
 def huichang(df):
-    return _apply_schema(df, columns_a, "희창냉장")
+    return _apply_schema(df, columns_b, "희창냉장")
 
 def aurora(df):
     return _apply_schema(df, columns_b, "오로라CS")
@@ -87,10 +87,10 @@ def hyosung(df):
     return _apply_schema(df, columns_b, "효성냉장")
 
 def eastbelly(df):
-    return _apply_schema(df, columns_c, "이스트밸리")
+    return _apply_schema(df, columns_b[:-1] + ["브랜드", "창고"], "이스트밸리")
 
 def swc(df):
-    return _apply_schema(df, columns_d, "SWC")
+    return _apply_schema(df, columns_b, "SWC")
 
 def ch(df):
     return _wms_new_style(df, "시에이치물류")
