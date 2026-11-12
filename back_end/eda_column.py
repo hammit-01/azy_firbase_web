@@ -69,7 +69,7 @@ def _apply_schema(df, schema, name):
     return column_replace(result, name)
 
 def beige(df):
-    return _apply_schema(df, columns_a, "베이지박스투")
+    return _apply_schema(df, columns_b, "베이지박스투")
 
 def samil(df):
     return _apply_schema(df, columns_b, "삼일물류")
