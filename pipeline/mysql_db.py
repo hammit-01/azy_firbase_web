@@ -978,6 +978,11 @@ def _today_iso() -> str:
     return datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d")
 
 
+# 타창고매출현황에 안 나오는 담당자(출고일이 와도 outbound로 안 넘기고, 목록에서도 제외).
+# 2026-11-24 "로봇" 추가.
+_SALES_HIDDEN_MANAGERS = "('제갈준','박성찬','로봇')"
+
+
 def migrate_due_reservations_to_outbound(conn) -> int:
     """ACTIVE 예약 중 출고일이 오늘인 것을 outbound로 옮긴다(원본 삭제).
     sales.html이 목록을 불러올 때마다 먼저 호출해서 그 시점 기준 최신 상태로
@@ -997,7 +1002,7 @@ def migrate_due_reservations_to_outbound(conn) -> int:
         with conn.cursor() as cur:
             cur.execute(
                 f"SELECT * FROM {hr_table} WHERE status='ACTIVE' AND 출고일=%s "
-                f"AND (홀딩 IS NULL OR 홀딩 NOT IN ('제갈준','박성찬')) FOR UPDATE",
+                f"AND (홀딩 IS NULL OR 홀딩 NOT IN {_SALES_HIDDEN_MANAGERS}) FOR UPDATE",
                 (today,),
             )
             rows = cur.fetchall()
@@ -1228,7 +1233,7 @@ def get_all_outbound(conn, date: str | None = None, exclude_managers: bool = Fal
             where.append("출고일=%s")
             params.append(date)
         if exclude_managers:
-            where.append("홀딩 NOT IN ('제갈준','박성찬')")
+            where.append(f"홀딩 NOT IN {_SALES_HIDDEN_MANAGERS}")
         cur.execute(
             "SELECT id, pk, 수량, 원수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, status, 전달사항, 등록, 비고, 수량내림, 수정자, 전표, 배송취소, "
             "상품명, 브랜드, 창고, BL, ESTNO, 등급 "
@@ -1245,7 +1250,7 @@ def get_all_outbound(conn, date: str | None = None, exclude_managers: bool = Fal
                 where2.append("출고일=%s")
                 params2.append(date)
             if exclude_managers:
-                where2.append("홀딩 NOT IN ('제갈준','박성찬')")
+                where2.append(f"홀딩 NOT IN {_SALES_HIDDEN_MANAGERS}")
             cur.execute(
                 f"SELECT id, pk, 수량, 홀딩 AS 담당자, 메모 AS 거래처, 홀딩일자, 출고일, 전달사항, 비고, 등록, 수정자, 수량내림, 원수량 "
                 f"FROM {hr_table} WHERE {' AND '.join(where2)}",
