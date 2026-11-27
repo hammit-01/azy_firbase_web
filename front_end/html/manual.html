@@ -7,21 +7,26 @@
 <!-- 매뉴얼 탭(2026-11-27) — warehouse_main.html의 매뉴얼 탭이 iframe으로 띄우는 독립 페이지.
      재고장 CSS와 섞이지 않도록 스타일을 여기 안에만 둔다. -->
 <style>
+/* 색·글꼴은 재고장(css/warehouse_main.css)과 같은 slate 계열로 맞춤(2026-11-27) */
 :root {
-  --bg: #f3f6f8; --surface: #ffffff; --ink: #15212b; --muted: #5a6b78; --line: #d3dde4;
-  --frost: #0e7c9b; --frost-soft: #dcf0f5; --warn: #b5541c; --warn-soft: #fbe9dd; --ok: #2c7a4b;
-  --font-body: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --bg: #ffffff; --surface: #f8fafc; --ink: #1e293b; --muted: #64748b; --line: #e2e8f0;
+  --frost: #475569; --frost-soft: #f1f5f9; --warn: #c2410c; --warn-soft: #ffedd5; --ok: #16a34a;
+  --accent: #166534; --accent-soft: #dcfce7;
+  --font-body: "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif;
   --font-mono: ui-monospace, Consolas, monospace;
 }
 * { box-sizing: border-box; }
 body {
-  margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body);
-  font-size: 16px; line-height: 1.65; padding: 0 16px;
+  margin: 0; background: var(--bg); color: #334155; font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  font-size: 15px; line-height: 1.65; padding: 0 4px;
+  scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;
 }
-.wrap { max-width: 760px; margin: 0 auto; padding-block: 32px 64px; display: grid; gap: 40px; }
-h1, h2 { line-height: 1.3; margin: 0; }
-h1 { font-size: 1.9rem; font-weight: 700; }
-h2 { font-size: 1.25rem; font-weight: 700; }
+.wrap { max-width: 880px; padding-block: 4px 48px; display: grid; gap: 36px; }
+h1, h2 { line-height: 1.3; margin: 0; color: var(--ink); letter-spacing: -0.3px; }
+h1 { font-size: 28px; font-weight: 800; }
+h2 { font-size: 18px; font-weight: 700; }
+h3 { color: var(--ink); }
 p { margin: 0; }
 .lead { color: var(--muted); max-width: 62ch; margin-top: 10px; }
 .eyebrow { font-family: var(--font-mono); font-size: .75rem; letter-spacing: .08em; color: var(--frost); }
@@ -29,10 +34,12 @@ p { margin: 0; }
 
 /* 목차 */
 .toc { display: flex; flex-wrap: wrap; gap: 8px; }
-.toc a { font-size: .9rem; padding: 6px 14px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); text-decoration: none; }
-.toc a:hover { border-color: var(--frost); color: var(--frost); }
-.chapter { display: grid; gap: 32px; padding-top: 8px; border-top: 2px solid var(--line); }
-.chapter-title { font-size: 1.5rem; }
+/* 목차 — 재고장 탭 버튼과 같은 모양(9px 둥근 모서리, 굵은 글씨) */
+.toc a { font-size: 14px; font-weight: 700; padding: 8px 16px; border-radius: 9px; background: var(--accent-soft); color: var(--accent); text-decoration: none; transition: background .15s; }
+.toc a:hover { background: #bbf7d0; }
+.chapter { display: grid; gap: 28px; padding-top: 20px; border-top: 2px solid var(--line); }
+.chapter-title { font-size: 22px; font-weight: 800; }
+.eyebrow { font-weight: 700; }
 
 .analogy { background: var(--frost-soft); border-radius: 10px; padding: 18px 20px; display: grid; gap: 6px; }
 .analogy b { color: var(--frost); }
@@ -110,8 +117,11 @@ p { margin: 0; }
 .sched-card p { color: var(--muted); font-size: .88rem; }
 .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
 .sites { width: 100%; border-collapse: collapse; font-size: .88rem; }
-.sites th { text-align: left; font-weight: 500; color: var(--muted); font-size: .78rem; padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-.sites td { padding: 10px 12px; border-top: 1px solid var(--line); vertical-align: top; }
+/* 표 — 재고장 표처럼 남색 헤더 + 흰 글씨 */
+.sites thead { background: #475569; color: #fff; }
+.sites th { text-align: left; font-weight: 700; font-size: 13px; padding: 10px 12px; white-space: nowrap; }
+.sites td { padding: 10px 12px; border-top: 1px solid #f1f5f9; vertical-align: top; background: #fff; }
+.sites tr:nth-child(even) td { background: var(--surface); }
 .sites tr:first-child td { border-top: 0; }
 .sites td:nth-child(2) { color: var(--muted); min-width: 10em; }
 .sites td:last-child { white-space: nowrap; font-weight: 500; }
