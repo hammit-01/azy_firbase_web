@@ -16,29 +16,31 @@
   --font-mono: ui-monospace, Consolas, monospace;
 }
 * { box-sizing: border-box; }
+html { font-size: 18px; }  /* 기본 글자 크기 — rem 단위 전부 이 기준(2026-11-27 키움) */
+.cases { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; align-items: start; }
 body {
   margin: 0; background: var(--bg); color: #334155; font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
-  font-size: 15px; line-height: 1.65; padding: 0 4px;
+  font-size: 1rem; line-height: 1.65; padding: 0 4px;
   scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;
 }
-.wrap { max-width: 880px; padding-block: 4px 48px; display: grid; gap: 36px; }
+.wrap { padding-block: 4px 48px; display: grid; gap: 40px; }
 h1, h2 { line-height: 1.3; margin: 0; color: var(--ink); letter-spacing: -0.3px; }
-h1 { font-size: 28px; font-weight: 800; }
-h2 { font-size: 18px; font-weight: 700; }
+h1 { font-size: 1.9rem; font-weight: 800; }
+h2 { font-size: 1.35rem; font-weight: 700; }
 h3 { color: var(--ink); }
 p { margin: 0; }
-.lead { color: var(--muted); max-width: 62ch; margin-top: 10px; }
+.lead { color: var(--muted); margin-top: 10px; }
 .eyebrow { font-family: var(--font-mono); font-size: .75rem; letter-spacing: .08em; color: var(--frost); }
 .mono { font-family: var(--font-mono); font-size: .85em; }
 
 /* 목차 */
 .toc { display: flex; flex-wrap: wrap; gap: 8px; }
 /* 목차 — 재고장 탭 버튼과 같은 모양(9px 둥근 모서리, 굵은 글씨) */
-.toc a { font-size: 14px; font-weight: 700; padding: 8px 16px; border-radius: 9px; background: var(--accent-soft); color: var(--accent); text-decoration: none; transition: background .15s; }
+.toc a { font-size: .9rem; font-weight: 700; padding: 8px 16px; border-radius: 9px; background: var(--accent-soft); color: var(--accent); text-decoration: none; transition: background .15s; }
 .toc a:hover { background: #bbf7d0; }
 .chapter { display: grid; gap: 28px; padding-top: 20px; border-top: 2px solid var(--line); }
-.chapter-title { font-size: 22px; font-weight: 800; }
+.chapter-title { font-size: 1.6rem; font-weight: 800; }
 .eyebrow { font-weight: 700; }
 
 .analogy { background: var(--frost-soft); border-radius: 10px; padding: 18px 20px; display: grid; gap: 6px; }
@@ -67,27 +69,27 @@ p { margin: 0; }
 .branch-item p { font-size: .92rem; }
 
 /* 크롤링 흐름 레인 */
-.lane { list-style: none; margin: 0; padding: 0; display: grid; }
-.step { display: grid; grid-template-columns: 52px 1fr; gap: 16px; }
+.lane { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 14px; }
+.step { display: grid; grid-template-columns: 52px 1fr; gap: 14px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
 .rail { display: flex; flex-direction: column; align-items: center; }
 .dot { width: 44px; height: 44px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--surface); border: 2px solid var(--frost); color: var(--frost); }
 .dot svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.pipe { flex: 1; width: 2px; background: repeating-linear-gradient(var(--frost) 0 6px, transparent 6px 12px); min-height: 24px; }
+.pipe { display: none; }
 .step:last-child .pipe { display: none; }
-.body { padding-bottom: 28px; min-width: 0; display: grid; gap: 8px; }
-.body h3 { margin: 8px 0 0; font-size: 1.08rem; }
+.body { min-width: 0; display: grid; gap: 8px; align-content: start; }
+.body h3 { margin: 6px 0 0; font-size: 1.08rem; }
 .body p { color: var(--muted); }
 .tag { justify-self: start; font-family: var(--font-mono); font-size: .74rem; border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; color: var(--muted); background: var(--surface); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { font-size: .8rem; padding: 2px 9px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
-.table-demo { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; }
+.table-demo { display: grid; grid-template-columns: 1fr auto 1.3fr; gap: 10px; align-items: center; }
 .cell-box { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: .82rem; min-width: 0; overflow-wrap: anywhere; }
 .cell-box small { display: block; color: var(--muted); font-size: .72rem; margin-bottom: 4px; }
 .arrow { color: var(--frost); font-weight: 700; }
 .fields { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; }
 .fields span:nth-child(odd) { color: var(--muted); }
 
-.faults { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.faults { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
 .fault { background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--warn); border-radius: 8px; padding: 16px; display: grid; gap: 6px; align-content: start; }
 .fault h3 { margin: 0; font-size: 1rem; }
 .fault p { color: var(--muted); font-size: .92rem; }
@@ -119,7 +121,7 @@ p { margin: 0; }
 .sites { width: 100%; border-collapse: collapse; font-size: .88rem; }
 /* 표 — 재고장 표처럼 남색 헤더 + 흰 글씨 */
 .sites thead { background: #475569; color: #fff; }
-.sites th { text-align: left; font-weight: 700; font-size: 13px; padding: 10px 12px; white-space: nowrap; }
+.sites th { text-align: left; font-weight: 700; font-size: .85rem; padding: 10px 12px; white-space: nowrap; }
 .sites td { padding: 10px 12px; border-top: 1px solid #f1f5f9; vertical-align: top; background: #fff; }
 .sites tr:nth-child(even) td { background: var(--surface); }
 .sites tr:first-child td { border-top: 0; }
@@ -175,6 +177,7 @@ p { margin: 0; }
     </div>
     <div class="formula">가용재고 = 실재고 − 예약수량</div>
 
+    <div class="cases">
     <div class="case">
       <span class="num">1번째 경우</span>
       <h3>전량 예약했을 때</h3>
@@ -206,6 +209,7 @@ p { margin: 0; }
           <p>→ <b>다른 직원이 해당 예약을 사용했는지</b> 확인해야 합니다.</p>
         </div>
       </div>
+    </div>
     </div>
   </section>
 
