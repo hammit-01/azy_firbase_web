@@ -351,6 +351,43 @@ def delete_azy_inventory(conn, ids: list[str]):
         cur.execute(f"DELETE FROM azy_inventory WHERE id IN ({placeholders})", ids)
 
 
+def purge_zero_inventory(conn) -> dict:
+    """재고·예약·가용이 모두 0인 재고 행 삭제(2026-11-27 사용자 요청, 평일 20:00).
+
+    이런 행은 크롤에서 사라졌지만 출고 이력(outbound, 완료/취소 포함)이 pk로
+    가리키고 있어서 파이프라인이 일부러 재고 0으로 남겨둔 것이다
+    (mysql_updater / scheduler의 stale 보호). 타창고매출현황 과거 이력이 상품명을
+    이 행에서 가져오므로, 지우기 전에 outbound 행 자체의 상품명/브랜드/창고를
+    채워 둔다. ACTIVE 예약·ACTIVE 출고·미처리 창고이동이 걸린 행은 건드리지 않는다.
+    파이프라인은 DB 기준으로 비교하므로 지운 행은 원본에 다시 나타날 때만 신규로 생긴다."""
+    result = {}
+    for inv, hr in (("inventory", "holding_records"), ("azy_inventory", "azy_holding_records")):
+        with conn.cursor() as cur:
+            cur.execute(
+                f"SELECT id FROM {inv} i WHERE COALESCE(i.재고, 0) = 0 "
+                f"AND NOT EXISTS (SELECT 1 FROM {hr} h WHERE h.pk = i.id AND h.status = 'ACTIVE') "
+                "AND NOT EXISTS (SELECT 1 FROM outbound o WHERE o.pk = i.id AND o.status = 'ACTIVE') "
+                # warehouse_moves만 콜레이션이 달라(unicode_ci vs 0900_ai_ci) 맞춰서 비교
+                "AND NOT EXISTS (SELECT 1 FROM warehouse_moves m "
+                "                WHERE m.pk COLLATE utf8mb4_unicode_ci = i.id COLLATE utf8mb4_unicode_ci "
+                "                AND COALESCE(m.처리, 0) = 0 AND COALESCE(m.취소, 0) = 0)"
+            )
+            ids = [r["id"] for r in cur.fetchall()]
+            if ids:
+                ph = ", ".join(["%s"] * len(ids))
+                cur.execute(
+                    f"UPDATE outbound o JOIN {inv} i ON o.pk = i.id SET "
+                    "o.상품명 = COALESCE(NULLIF(o.상품명, ''), i.상품명), "
+                    "o.브랜드 = COALESCE(NULLIF(o.브랜드, ''), i.브랜드), "
+                    "o.창고 = COALESCE(NULLIF(o.창고, ''), i.창고) "
+                    f"WHERE i.id IN ({ph})",
+                    ids,
+                )
+                cur.execute(f"DELETE FROM {inv} WHERE id IN ({ph})", ids)
+        result[inv] = ids
+    return result
+
+
 def snapshot_daily(conn):
     """하루 마감 시점(평일 17:10)의 inventory/azy_inventory를 yesterday_* 테이블로
     통째로 복사(교체) — 업데이트 탭이 다음날 "어제 대비 뭐가 바뀌었나"를 비교하는 기준.

@@ -685,6 +685,18 @@ def run_ace_pipeline():
         _record_status("run_ace_pipeline", "ERROR")
 
 
+def run_zero_inventory_purge():
+    """평일 20:00 — 재고·예약·가용 모두 0인 행 정리(2026-11-27)."""
+    try:
+        from pipeline.mysql_db import get_conn, purge_zero_inventory
+        with get_conn() as conn:
+            res = purge_zero_inventory(conn)
+        for table, ids in res.items():
+            log.info(f"0재고 행 삭제 [{table}] {len(ids)}건: {ids}")
+    except Exception as e:
+        log.error(f"0재고 행 삭제 실패: {e}", exc_info=True)
+
+
 def run_daily_snapshot():
     """평일 장 마감(17:10) 직후 1회 — 오늘 최종 재고를 yesterday_* 테이블로 복사.
     업데이트 탭이 다음날 이 스냅샷과 비교해서 "어제 대비 뭐가 바뀌었나"를 보여준다.
@@ -812,6 +824,14 @@ def main():
         run_daily_snapshot,
         CronTrigger(hour="19", minute="10", day_of_week="mon-fri", timezone="Asia/Seoul"),
         id="daily_snapshot",
+    )
+
+    # 평일 20:00 — 재고·예약·가용 모두 0인 행 삭제(2026-11-27, 주말 제외)
+    scheduler.add_job(
+        run_zero_inventory_purge,
+        CronTrigger(hour="20", minute="0", day_of_week="mon-fri", timezone="Asia/Seoul"),
+        misfire_grace_time=600,
+        id="zero_inventory_purge",
     )
 
     # 매시간 정각 — 재고장/예약현황/타창고매출현황/단가표 Drive 백업(2026-09-09)
