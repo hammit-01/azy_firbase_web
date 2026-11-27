@@ -52,6 +52,42 @@ function renderManualTab() {
     if (frame && !frame.src) frame.src = frame.dataset.src;
 }
 
+// 팝업 방향키 이동(2026-11-27) — 예약·재고 추가·수정·이동 팝업(.popup-grid).
+// ←→ 같은 상품(행)의 앞뒤 칸, ↑↓ 위아래 상품(행)의 같은 칸.
+// 글자 칸은 글자 사이 커서 이동을 살리려고 커서가 맨 앞/뒤일 때만 넘어간다.
+// 숫자·날짜 칸은 방향키가 값을 바꾸는 대신 칸 이동. 선택 목록(담당자·상태 등)과
+// 자동완성 칸(담당자 이름 입력 등)은 ↑↓를 원래대로(목록 고르기) 둔다.
+document.addEventListener("keydown", (e) => {
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key) || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    const el = e.target;
+    const grid = el.closest?.(".popup-grid");
+    if (!grid || !el.matches("input:not([type=hidden]), select")) return;
+    const fieldsOf = g => [...g.querySelectorAll("input:not([type=hidden]), select")].filter(f => f.offsetParent !== null);
+    const focusField = f => { f.focus(); try { f.select?.(); } catch {} };
+    const idx = fieldsOf(grid).indexOf(el);
+
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        if (el.type === "text") {
+            const atStart = el.selectionStart === 0 && el.selectionEnd === 0;
+            const atEnd = el.selectionStart === el.value.length;
+            if ((e.key === "ArrowLeft" && !atStart) || (e.key === "ArrowRight" && !atEnd)) return;
+        }
+        const next = fieldsOf(grid)[idx + (e.key === "ArrowRight" ? 1 : -1)];
+        e.preventDefault();
+        if (next) focusField(next);
+        return;
+    }
+    if (el.tagName === "SELECT" || el.hasAttribute("list")) return;
+    e.preventDefault();
+    const scope = el.closest(".confirm-overlay") || document;
+    const grids = [...scope.querySelectorAll(".popup-grid")];
+    const other = grids[grids.indexOf(grid) + (e.key === "ArrowDown" ? 1 : -1)];
+    if (!other) return;
+    const fields = fieldsOf(other);
+    const target = fields[Math.min(idx, fields.length - 1)];
+    if (target) focusField(target);
+});
+
 // 받은 알림 행 클릭(2026-11-27) → 알림 화면을 닫고 재고장에서 그 상품만 걸러 보여준 뒤,
 // 해당 재고 행을 선택하고 예약 창을 바로 연다. 행을 못 찾으면(이미 빠졌거나 예전 알림)
 // 조건으로 걸러 보여주기만 하고 고르는 건 사용자에게 맡긴다.

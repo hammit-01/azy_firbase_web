@@ -281,8 +281,9 @@ export function showMoveToWarehouseModal(current) {
 // 그대로 맞춤), 취소/바깥클릭이면 null.
 export function showInventoryInsertModal() {
     return new Promise(resolve => {
+        // 두 줄 배치(2026-11-27): 상품명·브랜드·등급·ESTNO·재고 / BL·창고·유통기한·평중·상태·비고
         const rowFieldsHtml = () => `
-            <div class="edit-reservation-form">
+            <div class="edit-reservation-form insert-grid popup-grid">
                 <label class="mi-field-lg">상품명<input type="text" class="mi-name" placeholder="상품명"></label>
                 <label class="mi-field-md">브랜드<input type="text" class="mi-brand"></label>
                 <label class="mi-field-xs">등급<input type="text" class="mi-grade"></label>

@@ -3121,3 +3121,46 @@ tr.insert-card .remove-insert-btn:hover {
     white-space: pre-wrap;
     word-break: break-all;
 }
+
+/* ── 팝업 입력(2026-11-27) — 예약·수정·이동(.bulk-edit-modal)과 재고 추가(.multi-insert-modal) 글씨 키움.
+      .popup-grid가 든 팝업만(다른 팝업은 그대로). 방향키 이동은 events.js ── */
+.bulk-edit-modal:has(.popup-grid) { max-width: min(94vw, 920px); }
+.bulk-edit-modal:has(.popup-grid) .confirm-msg,
+.multi-insert-modal:has(.insert-grid) .confirm-msg { font-size: 18px; }
+.bulk-edit-modal:has(.popup-grid) .bulk-edit-card-title { font-size: 17px; }
+.bulk-edit-modal:has(.popup-grid) .bulk-edit-card-sub,
+.bulk-edit-modal:has(.popup-grid) .bulk-edit-card-meta { font-size: 14px; }
+.bulk-edit-grid.popup-grid label { font-size: 13px; }
+.bulk-edit-grid.popup-grid input,
+.bulk-edit-grid.popup-grid select { height: 40px; font-size: 16px; margin-top: 0; }
+/* 예약: 담당자·수량·거래처·단가·출고일자 한 줄 */
+.bulk-edit-grid.holding-grid { grid-template-columns: 1.2fr 0.8fr 1.6fr 1fr 1.3fr; }
+.hold-note-fixed { display: flex; align-items: center; height: 40px; padding: 0 10px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f1f5f9; font-size: 16px; font-weight: 700; color: #1e293b; text-transform: none; }  /* 고정 담당자(일반 권한) - 연회색 */
+
+/* 재고 추가: 12칸 격자 두 줄 — 상품명3 브랜드3 등급2 ESTNO2 재고2 / BL3 창고2 유통기한2 평중1 상태2 비고2 */
+.multi-insert-modal:has(.insert-grid) { max-width: min(94vw, 980px); }
+.multi-insert-row .edit-reservation-form.insert-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 10px 12px; }
+.multi-insert-row .edit-reservation-form.insert-grid label { flex: none; min-width: 0; max-width: none; font-size: 13px; grid-column: span 2; }
+.multi-insert-row .edit-reservation-form.insert-grid label:nth-child(1),
+.multi-insert-row .edit-reservation-form.insert-grid label:nth-child(2),
+.multi-insert-row .edit-reservation-form.insert-grid label:nth-child(6) { grid-column: span 3; }
+.multi-insert-row .edit-reservation-form.insert-grid label:nth-child(9) { grid-column: span 1; }
+.edit-reservation-form.insert-grid input,
+.edit-reservation-form.insert-grid select { height: 40px; font-size: 16px; padding: 0 10px; margin-top: 0; }
+
+/* 팝업 폼의 선택 목록(상태 등)을 글자 입력칸과 같은 모양으로 — 기본 select 모양이 튀던 문제 */
+.edit-reservation-form select {
+    box-sizing: border-box; width: 100%; height: 40px; padding: 0 10px;
+    border: 1.5px solid #e2e8f0; border-radius: 8px;  /* 선택 목록 테두리 - 연회색(입력칸과 동일) */
+    font-size: 14.5px; font-weight: 500; color: #1e293b; background: #f9fafb;  /* 글자 진남색 / 배경 연회색 */
+    outline: none; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+.edit-reservation-form select:hover { border-color: #cbd5e1; }
+.edit-reservation-form select:focus { border-color: #0d9488; background: #fff; box-shadow: 0 0 0 3px rgba(13,148,136,0.15); }  /* 포커스 - 청록(입력칸과 동일) */
+
+@media (max-width: 640px) {
+    .bulk-edit-grid.holding-grid { grid-template-columns: 1fr 1fr; }
+    .multi-insert-row .edit-reservation-form.insert-grid { grid-template-columns: 1fr 1fr; }
+    .multi-insert-row .edit-reservation-form.insert-grid label,
+    .multi-insert-row .edit-reservation-form.insert-grid label:nth-child(n) { grid-column: span 1; }
+}

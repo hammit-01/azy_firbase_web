@@ -365,7 +365,7 @@ export function createUpdateCard(item) {
                 <span class="bulk-edit-card-sub">${safeValue(item.BL)}</span>
                 <button type="button" class="bulk-edit-card-remove" data-id="${id}" title="이 상품 취소">✕</button>
             </div>
-            <div class="bulk-edit-grid">
+            <div class="bulk-edit-grid popup-grid">
                 <label>상품명<input type="text" class="update-name cell-input" data-id="${id}" value="${safeValue(item.상품명)}"></label>
                 <label>브랜드<input type="text" class="update-brand cell-input" data-id="${id}" value="${safeValue(item.브랜드)}"></label>
                 <label>등급<input type="text" class="update-grade cell-input" data-id="${id}" value="${safeValue(item.등급)}"></label>
@@ -387,8 +387,9 @@ export function createUpdateCard(item) {
 export function createHoldingCard(item) {
     const id = item.id;
     const user = getStoredUser();
+    // 일반 권한은 담당자가 본인으로 고정 — 빈칸 대신 이름을 보여줌(값은 hidden으로 전달)
     const assigneeField = user?.권한 === "일반"
-        ? `<input type="hidden" class="hold-note" data-id="${id}" value="${user.이름}">`
+        ? `<span class="hold-note-fixed">${safeValue(user.이름)}</span><input type="hidden" class="hold-note" data-id="${id}" value="${user.이름}">`
         : employeeSelect("hold-note", id, "");
     return `
         <div class="bulk-edit-card" data-id="${id}">
@@ -404,12 +405,13 @@ export function createHoldingCard(item) {
                 <span>유통기한 ${safeValue(item.유통기한)}</span>
                 <span class="bulk-edit-card-bl">${safeValue(item.BL)}</span>
             </div>
-            <div class="bulk-edit-grid">
+            <!-- 예약 팝업 입력칸(2026-11-27): 담당자·수량·거래처·단가·출고일자 순 한 줄, 방향키로 칸 이동(events.js) -->
+            <div class="bulk-edit-grid holding-grid popup-grid">
                 <label>담당자${assigneeField}</label>
-                <label>출고일자<input type="date" class="hold-releaseDate cell-input" data-id="${id}"></label>
                 <label>수량<input type="number" class="hold-qty cell-input" data-id="${id}" placeholder="수량"></label>
                 <label>거래처<input type="text" class="hold-client cell-input" data-id="${id}" placeholder="거래처명"></label>
                 <label>단가<input type="number" class="hold-price cell-input" data-id="${id}" placeholder="단가"></label>
+                <label>출고일자<input type="date" class="hold-releaseDate cell-input" data-id="${id}"></label>
             </div>
         </div>
     `;
@@ -437,7 +439,7 @@ export function createMoveCard(item) {
                 <span>가용 <b>${availableCell(item.가용재고)}</b></span>
                 <span class="bulk-edit-card-bl">${safeValue(item.BL)}</span>
             </div>
-            <div class="bulk-edit-grid">
+            <div class="bulk-edit-grid popup-grid">
                 <label>수량<input type="number" class="move-qty cell-input" data-id="${id}" placeholder="수량" value="${safeValue(item.재고)}"></label>
                 <label>배차자${dispatcherSelect("move-dispatcher", id)}</label>
                 <label class="move-date-field" data-id="${id}">이동일자<input type="date" class="move-date cell-input" data-id="${id}" value="${tomorrowISOStr()}"></label>
