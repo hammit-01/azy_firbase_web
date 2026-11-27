@@ -1153,7 +1153,7 @@ function reservationCardHtml(r, isSalesPage = false) {
     // 보든 항상 같은 색으로 보인다.
     const managerColorClass = (isSalesPage && !completed && !cancelled && r.등록) ? managerRowColorClass(r.수정자) : "";
     return `
-        <div class="mobile-card reservation-card${cancelled ? " sales-cancelled-row" : completed ? " sales-completed-row" : managerColorClass ? ` ${managerColorClass}` : ""}" data-reservation-id="${r.id}">
+        <div class="mobile-card reservation-card${cancelled ? " sales-cancelled-row" : completed ? " sales-completed-row" : managerColorClass ? ` ${managerColorClass}` : ""}" data-reservation-id="${r.id}"${!isSalesPage && r.pk ? ` data-pk="${attrEscape(r.pk)}"` : ""}>
             <div class="mc-header">
                 ${noteBtn(r, isSalesPage && !isPreview, access.canEditNote)}
                 ${!limitedActions && !cancelled && isSalesPage && access.canOthers ? `<label class="mc-register-label">${registerCheckboxHtml(r, access.canOthers)} 수정중</label>` : ""}
@@ -1253,7 +1253,7 @@ function reservationRowHtml(r, isSalesPage = false) {
     const managerColorClass = (isSalesPage && !completed && !cancelled && r.등록) ? managerRowColorClass(r.수정자) : "";
     const rowClass = cancelled ? "sales-cancelled-row" : completed ? "sales-completed-row" : managerColorClass;
     return `
-        <tr data-reservation-id="${r.id}"${rowClass ? ` class="${rowClass}"` : ""}>
+        <tr data-reservation-id="${r.id}"${!isSalesPage && r.pk ? ` data-pk="${attrEscape(r.pk)}"` : ""}${rowClass ? ` class="${rowClass}"` : ""}>
             <td class="reservation-note-cell">${noteBtn(r, isSalesPage && !isPreview, access.canEditNote)}</td>
             ${isSalesPage ? `<td class="${access.canEditRemark ? "sales-remark-cell" : ""}" data-id="${r.id}" data-remark="${attrEscape(r.비고)}" data-preview="${isPreview ? "1" : ""}" title="${access.canEditRemark ? "더블클릭해서 수정" : ""}">${r.수량내림 && r.비고 ? `<span class="qty-dropped">${safeValue(r.비고)}</span>` : safeValue(r.비고)}</td>` : ""}
             ${isSalesPage ? `<td class="reservation-register-cell">${limitedActions || cancelled ? "" : registerCheckboxHtml(r, access.canOthers)}</td>` : ""}

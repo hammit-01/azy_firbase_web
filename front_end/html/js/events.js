@@ -1480,6 +1480,18 @@ async function handleClick(e) {
         return;
     }
 
+    // 예약현황 행 클릭 → 같은 재고(pk)에 걸린 다른 직원 예약/출고까지 상세 팝업
+    // (2026-11-27, 일반 권한은 본인 예약만 보여서 누가 같이 잡았는지 확인용).
+    // mouseup 핸들러라 왼쪽 클릭만, 글자 드래그 선택 중이면 무시.
+    if (e.button === 0 && !window.getSelection()?.toString() && !e.target.closest("button, input, select, textarea, a, label, .reservation-row-actions-cell")) {
+        const row = e.target.closest(".reservations-container [data-reservation-id][data-pk]");
+        if (row) {
+            const reservations = await getReservationsByPk(row.dataset.pk);
+            await showReservationDetailModal(reservations);
+            return;
+        }
+    }
+
     // 행 복사(2026-09-18 사용자 요청) — 상품명~창고(7칸)를 탭 구분 텍스트로
     // 클립보드에 복사해 엑셀 등에 그대로 붙여넣을 수 있게. state 조회 대신
     // 화면에 실제로 찍힌 셀 값을 그대로 읽어서(whTag 등 표시용 가공과 항상
