@@ -8,7 +8,7 @@ import { fetchPipelineStatus, fetchCrawlTotals, fetchPipelineLogs, fetchGhostInv
 // 영문 브랜드를 한글 표기로 쳐도 검색되게 하는 별칭 테이블(2026-08-14).
 // key: 한글 표기, value: 실제 데이터의 영문 브랜드값 — 데이터에 실제로 존재하는
 // 브랜드 기준으로 만들었음. 새 브랜드 생기면 여기 추가.
-const BRAND_ALIASES = {
+export const BRAND_ALIASES = {
     "파이브스타": "5 STAR", "오스타": "5 STAR", "파이브": "5 STAR",
     "에이씨씨": "ACC", "에씨씨": "ACC",
     "아프코": "AFFCO",
@@ -40,7 +40,7 @@ const BRAND_ALIASES = {
     "오키": "OAKEY",
     "올리멜": "OLYMEL", "올리맬": "OLYMEL",
     "오마하": "OMAHA",
-    "파itel": "PATEL", "바텔": "PATEL",
+    "파텔": "PATEL", "바텔": "PATEL",
     "페르디가오": "PERDIGAO", "페르디": "PERDIGAO",
     "피피씨에스": "PPCS","피피씨": "PPCS",
     "프로안": "PROAN",
@@ -60,6 +60,41 @@ const BRAND_ALIASES = {
     "비브라": "VIBRA",
     "홀스톤": "WHOLESTONE",
     "윙햄": "WINGHAM",
+    // 2026-11-27 사용자 제공 브랜드 한글 표기 추가분
+    "애이에프지": "AFG", "에이애프지": "AFG", "애이애프지": "AFG",
+    "아그로슈퍼": "AGROSUPER",
+    "알래한드로": "ALEJANDRO",
+    "애이앰애이치": "AMH", "애이엠에이치": "AMH",
+    "애이앰피": "AMP",
+    "에니멕스": "ANIMEX", "애니멕스": "ANIMEX", "애니맥스": "ANIMEX",
+    "쎌라": "CELRA",
+    "뎀코타": "DEMKOTA", "댐코타": "DEMKOTA",
+    "액샐": "EXCEL",
+    "프리빈": "FRIBIN",
+    "이베리코": "IBERICO", "이배리코": "IBERICO",
+    "아이시피": "ICP",
+    "잉카롭싸": "INCARLOPSA", "인카롭사": "INCARLOPSA", "인카롭싸": "INCARLOPSA",
+    "인테르간": "INTERGAN", "잉테르간": "INTERGAN", "인태르간": "INTERGAN", "잉태르간": "INTERGAN",
+    "캐캔": "KEKEN", "캐켄": "KEKEN",
+    "키니톤": "KINITON",
+    "케이브이에스": "KVS", "캐이브이에스": "KVS", "캐이브애스": "KVS",
+    "리태라": "LITERA",
+    "마프리제스": "MAFRIGES", "마프리재스": "MAFRIGES",
+    "멕스아그로": "MAXAGRO", "맥스아그로": "MAXAGRO",
+    "메라미스트": "MERAMIST", "매라미스트": "MERAMIST",
+    "놀란": "NOLAN",
+    "패르디가오": "PERDIGAO", "패르디": "PERDIGAO",
+    "피피시에스": "PPCS", "피피씨애스": "PPCS", "피피시애스": "PPCS",
+    "로스대라": "ROSDERRA",
+    "싸디아": "SADIA",
+    "씨보드": "SEABOARD", "시보드": "SEABOARD",
+    "씨애라": "SEARA", "시애라": "SEARA",
+    "쇼케이스": "SHOWCASE", "쇼캐이스": "SHOWCASE",
+    "스탠부르크": "STANBROKE", "스텐부르크": "STANBROKE", "스텐부루크": "STANBROKE", "스탠부루크": "STANBROKE",
+    "애스티액스": "STX", "애스티엑스": "STX",
+    "스카르네": "SUKARNE",
+    "테니시": "TONNIES", "테니스": "TONNIES",
+    "윙헴": "WINGHAM",
 };
 
 const WH_CLASS = {

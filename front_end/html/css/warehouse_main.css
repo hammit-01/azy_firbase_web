@@ -441,6 +441,112 @@ th.sort-active {
     gap: 6px;
 }
 
+/* 알림 종 버튼(2026-11-27) — 로그인 팝오버 왼쪽 위 모서리 */
+.notify-bell-btn {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 9px;
+    background: transparent;  /* 종 버튼 배경 없음 */
+    font-size: 16px;
+    line-height: 32px;
+    padding: 0;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+.notify-bell-btn:hover { opacity: 0.7; }  /* 종 버튼 호버 - 살짝 흐리게 */
+
+/* 알림 화면 */
+.notify-list-table .notify-empty { text-align: center; color: #94a3b8; padding: 28px 8px; }  /* 빈 목록 안내 - 연회색 */
+.reservations-table.notify-list-table td.nf-wrap { white-space: normal; min-width: 120px; }  /* 상품·알림 내용·받는 사람만 줄바꿈(나머지 칸·버튼은 한 줄) */
+.notify-list-table button { white-space: nowrap; }
+.notify-inbox-row { cursor: pointer; }
+/* 받은 알림 — 칸 너비·행 높이 고정(읽음/안읽음에 따라 높이가 바뀌지 않게, 2026-11-27).
+   긴 상품명은 줄바꿈 대신 …로 줄인다. */
+.reservations-table.notify-inbox-table { table-layout: fixed; width: 100%; }
+.notify-inbox-table th:nth-child(1) { width: 64px; }
+.notify-inbox-table th:nth-child(2) { width: 92px; }
+.notify-inbox-table th:nth-child(4) { width: 92px; }
+.notify-inbox-table th:nth-child(5) { width: 84px; }
+.notify-inbox-table th:nth-child(6) { width: 132px; }
+.reservations-table.notify-inbox-table tr.notify-inbox-row td { height: 58px; padding-top: 0; padding-bottom: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.notify-inbox-table td.nf-wrap .nf-prod-name, .notify-inbox-table td.nf-wrap .nf-prod-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notify-inbox-table .nf-read-btn { min-width: 58px; }  /* 읽음/안읽음 같은 너비 */
+.notify-inbox-row:hover td { background: #eef2ff; }  /* 알림 행 호버 - 연한 남보라(클릭 가능 표시) */
+.notify-left { display: grid; gap: 8px; }
+.notify-list-table tr.notify-unread td { font-weight: 700; color: #1e293b; background: #fef2f2; }  /* 안 읽은 알림 - 굵게/연한 빨강 */
+/* 왼쪽(받은 알림 + 알림 예약 목록) : 오른쪽(알림 설정하기) = 2:3, 좁은 화면은 위아래 */
+.notify-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 24px; align-items: start; }
+@media (max-width: 1100px) { .notify-layout { grid-template-columns: 1fr; } }
+.notify-left, .notify-right { min-width: 0; }
+/* 목록이 길면 칸 안에서 스크롤(헤더는 고정) */
+.crawling-totals-wrap.notify-scroll { height: 320px; max-height: 320px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; border: 1px solid #e2e8f0; border-radius: 10px; }  /* 목록 스크롤 칸 - 연회색 테두리 */
+.notify-scroll::-webkit-scrollbar { width: 8px; }
+.notify-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }  /* 스크롤바 손잡이 - 회색 */
+.notify-scroll .reservations-table { margin-bottom: 0; }
+/* 좁은 화면(≤768px)은 .reservations-table을 숨기고 카드로 바꾸는데(예약현황용), 알림 표는 카드가 없으니 항상 표로 */
+.reservations-table.notify-list-table { display: table; }
+/* 받은 알림 칸(2026-11-27) — 날짜 묶음 / 시각 / 창고 / 상품 / 입고 수량 / 현재 재고 */
+.notify-list-table tr.notify-day-row td { background: #f1f5f9; font-size: 13px; font-weight: 700; color: #475569; padding: 6px 8px; }  /* 날짜 묶음 줄 - 연회색 */
+.notify-list-table .nf-col-time { width: 70px; color: #64748b; font-variant-numeric: tabular-nums; }  /* 시각 - 회색 */
+.notify-list-table .nf-col-wh { width: 120px; font-weight: 700; color: #1e293b; }  /* 창고 - 굵게 */
+.notify-list-table .nf-col-qty { width: 100px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.notify-list-table .nf-inc { font-size: 16px; font-weight: 800; color: #16a34a; }  /* 입고 수량 - 초록 */
+.nf-prod-name { display: block; font-size: 15px; font-weight: 700; color: #1e293b; }  /* 상품명 - 진남색 */
+.nf-prod-meta { display: block; font-size: 12px; color: #64748b; }  /* 브랜드·등급·EST - 회색 */
+.notify-unread-count { margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: #dc2626; color: #fff; font-size: 12px; }  /* 새 알림 수 - 빨강 */
+.notify-setup { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 16px; border: 1.5px solid #e2e8f0; border-radius: 10px; background: #f8fafc; }  /* 설정 카드 - 연회색 테두리/배경 */
+.notify-setup-desc { margin: 0; font-size: 14px; color: #64748b; }  /* 설정 안내문 - 회색 */
+.notify-new-btn { height: 40px; padding: 0 18px; border: none; border-radius: 9px; font-size: 15px; font-weight: 700; cursor: pointer; background: #475569; color: #fff; }  /* 새 알림 버튼 - 남색/흰색 */
+.notify-new-btn:hover { background: #334155; }  /* 새 알림 버튼 호버 - 진남색 */
+
+/* 알림 설정 폼(2026-11-27) */
+.notify-form { display: grid; gap: 16px; padding: 18px; border: 1.5px solid #e2e8f0; border-radius: 10px; background: #f8fafc; }  /* 설정 폼 카드 - 연회색 */
+.nf-row { display: grid; grid-template-columns: 72px 1fr; gap: 12px; align-items: start; }
+.nf-label { font-size: 14px; font-weight: 700; color: #334155; padding-top: 8px; }  /* 폼 항목 이름 - 진회색 */
+.notify-form .nf-event, .notify-form .nf-input { height: 38px; padding: 0 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px; background: #fff; box-sizing: border-box; margin: 0; }  /* 입력칸 - 연회색 테두리 */
+.nf-event { max-width: 320px; }
+/* 창고·받는 사람 — 같은 크기 칸으로 정렬(2026-11-27 정리) */
+.nf-groups { display: grid; gap: 12px; }
+.nf-group { display: grid; gap: 6px; }
+.nf-group-title { font-size: 12px; font-weight: 700; color: #64748b; }  /* 창고 묶음 제목 - 회색 */
+/* 조건 옆에 받는 사람을 한 줄로(좁으면 아래로 줄바꿈) */
+.nf-inline { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.nf-inline .nf-label { white-space: nowrap; margin-left: 12px; }
+.nf-to-grid { flex: 1; min-width: 300px; }
+.nf-chip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 6px; }
+.nf-chip { display: block; cursor: pointer; }
+.nf-chip input { display: none; }
+.nf-chip span { display: block; padding: 7px 8px; border-radius: 8px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 13px; color: #334155; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }  /* 칩 - 흰색 */
+.nf-chip span:hover { border-color: #94a3b8; }  /* 칩 호버 - 회색 테두리 */
+.nf-chip input:checked + span { background: #475569; border-color: #475569; color: #fff; font-weight: 700; }  /* 선택된 칩 - 남색 */
+/* 브랜드·등급·상품명·ESTNO — 같은 너비 4칸(좁은 화면은 2칸) */
+.nf-inputs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; max-width: 880px; }
+@media (max-width: 768px) { .nf-inputs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.nf-inputs .nf-input { width: 100%; }
+.nf-inputs label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #64748b; }  /* 입력칸 이름 - 회색 */
+.nf-hint { margin: 0; font-size: 12px; color: #94a3b8; }  /* 도움말 - 연회색 */
+.nf-preview { margin: 0; font-size: 14px; font-weight: 700; color: #166534; }  /* 미리보기 - 진초록 */
+.nf-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.nf-actions button, .nf-delete-btn { height: 36px; padding: 0 16px; border: none; border-radius: 9px; font-size: 14px; font-weight: 700; cursor: pointer; }
+.nf-cancel-btn { background: #e2e8f0; color: #334155; }  /* 취소 - 회색 */
+.nf-delete-btn { background: #dc2626; color: #fff; }  /* 삭제 - 빨강 */
+.nf-delete-btn:hover { background: #b91c1c; }  /* 삭제 호버 - 진빨강 */
+.notify-list-table .nf-col-del { width: 1%; text-align: right; white-space: nowrap; }  /* 삭제 칸 - 맨 오른쪽 */
+.nf-save-btn { background: #475569; color: #fff; }  /* 저장 - 남색 */
+.nf-delete-btn { height: 30px; padding: 0 14px; font-size: 13px; }
+/* 받은 알림 읽음/안읽음·삭제·모두 읽음(2026-11-27) */
+.nf-read-btn, .nf-inbox-del-btn, .nf-read-all-btn { height: 28px; padding: 0 10px; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; }
+.nf-read-btn { background: #e2e8f0; color: #334155; }  /* 읽음 전환 - 회색 */
+.nf-read-btn:hover { background: #cbd5e1; }
+.nf-inbox-del-btn { background: #dc2626; color: #fff; margin-left: 4px; }  /* 받은 알림 삭제 - 빨강 */
+.nf-inbox-del-btn:hover { background: #b91c1c; }
+.nf-read-all-btn { margin-left: 8px; background: #475569; color: #fff; vertical-align: middle; }  /* 모두 읽음 - 남색 */
+.nf-read-all-btn:hover { background: #334155; }
+
 .login-profile-name {
     font-size: 16px;
     font-weight: 800;
@@ -844,8 +950,9 @@ th.sort-active {
 .manual-tab-btn.active { background: #166534; color: #fff; }  /* 매뉴얼 탭 활성 배경/글자 - 진초록/흰색 */
 .manual-container { display: flex; flex-direction: column; overflow: hidden; }  /* 매뉴얼 탭 - iframe이 패널을 꽉 채우고 스크롤은 iframe 안에서 */
 .manual-frame { flex: 1; width: 100%; min-height: 0; border: 0; display: block; }  /* 매뉴얼 페이지 iframe */
-.crawling-tab-btn.has-alert { position: relative; }
-.crawling-tab-btn.has-alert::after {  /* 원본 vs 시스템 차이 창고 수 배지 - 빨강 */
+.crawling-tab-btn.has-alert, .login-btn.has-alert { position: relative; }
+/* 빨간 숫자 배지 — 크롤링 차이 창고 수 / 안 읽은 입고 알림 수(로그인 버튼·종 버튼) */
+.crawling-tab-btn.has-alert::after, .login-btn.has-alert::after, .notify-bell-btn.has-alert::after {
     content: attr(data-alert);
     position: absolute; top: -6px; right: -6px;
     min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
@@ -912,7 +1019,7 @@ th.sort-active {
 /* ── 예약 현황 / 타창고매출현황 / 전략단가 / 발주장 탭(2026-08-18, sales.html·
    price.html에서 이관; 발주장은 2026-08-24 추가인데 이 규칙에서 빠져있어서
    overflow:auto가 안 걸리고 스크롤바가 안 생기던 문제를 2026-08-26에 수정) ── */
-.reservations-container, .sales-container, .moves-container, .price-container, .order-sheet-container, .manual-container {
+.reservations-container, .sales-container, .moves-container, .price-container, .order-sheet-container, .manual-container, .notify-container {
     flex: 1;
     overflow-y: auto;
     /* 액션 버튼이 3개(수량변경/사용완료/홀딩취소)로 늘어나면서 표가 컨테이너보다

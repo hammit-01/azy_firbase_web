@@ -697,6 +697,19 @@ def run_zero_inventory_purge():
         log.error(f"0재고 행 삭제 실패: {e}", exc_info=True)
 
 
+def run_notify_check():
+    """입고 알림 감지(2026-11-27) — 매분, 수집 시간대에만."""
+    try:
+        from pipeline.mysql_db import get_conn
+        from pipeline.notify import check_rules
+        with get_conn() as conn:
+            n = check_rules(conn)
+        if n:
+            log.info(f"입고 알림 {n}건 생성")
+    except Exception as e:
+        log.error(f"입고 알림 확인 실패: {e}", exc_info=True)
+
+
 def run_daily_snapshot():
     """평일 장 마감(17:10) 직후 1회 — 오늘 최종 재고를 yesterday_* 테이블로 복사.
     업데이트 탭이 다음날 이 스냅샷과 비교해서 "어제 대비 뭐가 바뀌었나"를 보여준다.
@@ -824,6 +837,18 @@ def main():
         run_daily_snapshot,
         CronTrigger(hour="19", minute="10", day_of_week="mon-fri", timezone="Asia/Seoul"),
         id="daily_snapshot",
+    )
+
+    # 평일 07:00~19:05 매분 — 입고 알림 감지(2026-11-27). 수집이 끝난 뒤의 재고를 보도록 30초에.
+    scheduler.add_job(
+        run_notify_check,
+        OrTrigger([
+            CronTrigger(hour="7-18", minute="*", second="30", day_of_week="mon-fri", timezone="Asia/Seoul"),
+            CronTrigger(hour="19", minute="0-5", second="30", day_of_week="mon-fri", timezone="Asia/Seoul"),
+        ]),
+        max_instances=1,
+        coalesce=True,
+        id="notify_check",
     )
 
     # 평일 20:00 — 재고·예약·가용 모두 0인 행 삭제(2026-11-27, 주말 제외)

@@ -96,6 +96,7 @@ function _currentTabName() {
     if (document.querySelector(".order-sheet-container")?.style.display === "") return "order-sheet";
     if (document.querySelector(".changes-container")?.style.display === "") return "changes";
     if (document.querySelector(".manual-container")?.style.display === "") return "manual";
+    if (document.querySelector(".notify-container")?.style.display === "") return "manual"; // 버튼 숨김 규칙은 매뉴얼과 동일
     return "main";
 }
 
@@ -168,6 +169,9 @@ function renderLoggedIn(user) {
     document.querySelector(".login-profile").style.display = "flex";
     document.querySelector(".login-profile-name").textContent = `${user.이름}님`;
     document.querySelector(".login-profile-role").textContent = user.권한 || "";
+    // 알림 종 버튼(2026-11-27) — 로그인하면 표시
+    const bell = document.querySelector(".notify-bell-btn");
+    if (bell) bell.style.display = "";
 }
 
 // 추가/수정/홀딩 중이던 행은 담당자 자동입력 등 로그인 상태에 따라 내용이 달라지므로,

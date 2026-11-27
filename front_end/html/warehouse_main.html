@@ -37,6 +37,8 @@
                     <button class="login-submit-btn">로그인</button>
                 </div>
                 <div class="login-profile" style="display:none">
+                    <!-- 알림(2026-11-27) — 누르면 알림 화면으로 전환 -->
+                    <button class="notify-bell-btn" title="알림" aria-label="알림" style="display:none">🔔</button>
                     <div class="login-profile-name"></div>
                     <div class="login-profile-role"></div>
                     <button class="logout-btn">로그아웃</button>
@@ -206,6 +208,12 @@
 
         <!-- ── 매뉴얼 탭(2026-11-27) — 전 직원 공개. 내용은 manual.html(독립 페이지)이라
              스타일이 재고장 CSS와 섞이지 않게 iframe으로 띄움. 처음 열 때 로드. ── -->
+        <!-- ── 알림 화면(2026-11-27) — 로그인 팝오버의 종 버튼으로 진입.
+             받은 알림 · 알림 예약 목록 · 알림 설정하기(js/notify.js). ── -->
+        <div class="notify-container" style="display:none">
+            <div id="notify-view"></div>
+        </div>
+
         <div class="manual-container" style="display:none">
             <iframe class="manual-frame" title="매뉴얼" data-src="./manual.html?v=2"></iframe>
         </div>

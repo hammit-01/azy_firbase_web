@@ -11,6 +11,7 @@ import { fetchAllData } from "./firebase.js";
 import { showToast, showError, showConfirm, showEditReservationModal, showRegisterOutboundModal, showNoteModal, showCancelOutboundModal, showAlertModal, showPriceExportModal, showEditPriceModal, showReservationDetailModal, showBulkEditModal, showMoveToWarehouseModal, showOutboundManualInsertModal, showMoveManualInsertModal, showInventoryInsertModal, showOrderSheetInsertModal } from "./ui.js";
 import { getStoredUser, applyRoleVisibility, hasPriceEditAccess, hasWarehouseMovesAccess } from "./login.js";
 import { apiLogActivity, deleteGhostInventoryRow } from "./api.js";
+import { renderNotifyTab, setNotifyNavigator } from "./notify.js";
 
 // 예약현황/타창고매출현황 액션(취소/완료/변경/토글 등) 이후 공용 새로고침(2026-08-19) —
 // renderSalesTab()이 renderReservationsTab()에서 분리되며(2026-08-18) 각 액션
@@ -41,14 +42,38 @@ function _logActivity(tableName, recordId, action, before, after, summary = "") 
 // 재고장 표와 배타적으로 토글되는 탭들(업데이트/예약현황/타창고매출현황/전략단가,
 // 2026-08-18) — 하나 열면 나머지는 다 닫힌다. 열릴 때만 render를 부르므로(이미
 // 열려있으면 콘텐츠 그대로 두고 숨기기만 함) 매번 다시 불러오지 않는다.
-const TAB_CONTAINERS = [".changes-container", ".reservations-container", ".sales-container", ".moves-container", ".price-container", ".order-sheet-container", ".crawling-container", ".manual-container"];
-const TAB_BUTTONS = [".changes-tab-btn", ".reservations-tab-btn", ".sales-tab-btn", ".moves-tab-btn", ".price-tab-btn", ".order-sheet-tab-btn", ".crawling-tab-btn", ".manual-tab-btn"];
+const TAB_CONTAINERS = [".changes-container", ".reservations-container", ".sales-container", ".moves-container", ".price-container", ".order-sheet-container", ".crawling-container", ".manual-container", ".notify-container"];
+const TAB_BUTTONS = [".changes-tab-btn", ".reservations-tab-btn", ".sales-tab-btn", ".moves-tab-btn", ".price-tab-btn", ".order-sheet-tab-btn", ".crawling-tab-btn", ".manual-tab-btn", ".notify-bell-btn"];
+
 
 // 매뉴얼 탭(2026-11-27) — iframe은 처음 열 때만 src를 채워 재고장 첫 로딩을 늦추지 않음.
 function renderManualTab() {
     const frame = document.querySelector(".manual-frame");
     if (frame && !frame.src) frame.src = frame.dataset.src;
 }
+
+// 받은 알림 행 클릭(2026-11-27) → 알림 화면을 닫고 재고장에서 그 상품만 걸러 보여준 뒤,
+// 해당 재고 행을 선택하고 예약 창을 바로 연다. 행을 못 찾으면(이미 빠졌거나 예전 알림)
+// 조건으로 걸러 보여주기만 하고 고르는 건 사용자에게 맡긴다.
+setNotifyNavigator((n) => {
+    if (document.querySelector(".notify-container")?.style.display === "") {
+        switchTab("notify-bell-btn", ".notify-container", renderNotifyTab);  // 열려 있으면 닫힘(토글)
+    }
+    const wh = document.querySelector(".show-warehouse");
+    if (wh && [...wh.options].some(o => o.value === n.창고)) wh.value = n.창고;
+    if (dom.searchInput) dom.searchInput.value = [n.상품명, n.브랜드, n.ESTNO].filter(Boolean).join(" ");
+    state.selectedItems.clear();
+    state.crudData = null;
+    const item = n.itemId && state.allData.find(d => d.id === n.itemId);
+    if (!item) {
+        renderAll();
+        showToast("재고장에서 이 상품을 걸러 보여줍니다 — 예약할 행을 골라 주세요");
+        return;
+    }
+    addSelectedItem(state, item.id, item);
+    renderAll();
+    document.querySelector(".holding-btn")?.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, button: 0 }));
+});
 
 // 탭별 컨테이너/렌더 함수 매핑(2026-08-25) — 새로고침해도 열려있던 탭을 그대로
 // 유지하기 위해 클릭 핸들러와 restoreLastTab() 둘 다 이 표를 같이 쓴다.
@@ -61,6 +86,7 @@ const TAB_SWITCH_MAP = {
     "order-sheet-tab-btn": [".order-sheet-container", () => renderOrderSheetTab()],
     "crawling-tab-btn": [".crawling-container", () => renderCrawlingTab()],
     "manual-tab-btn": [".manual-container", () => renderManualTab()],
+    "notify-bell-btn": [".notify-container", () => renderNotifyTab()],
 };
 const ACTIVE_TAB_KEY = "azy_active_tab";
 
@@ -69,10 +95,64 @@ const ACTIVE_TAB_KEY = "azy_active_tab";
 // 데이터(subscribeData)가 아직 안 왔어도 각 render 함수가 자체적으로 API를
 // 불러오므로 순서 문제 없음.
 export function restoreLastTab() {
+    if (URL_ROUTING) { restoreFromUrl(); return; }
     const btnClass = localStorage.getItem(ACTIVE_TAB_KEY);
     const entry = btnClass && TAB_SWITCH_MAP[btnClass];
     if (!entry) return;
     switchTab(btnClass, entry[0], entry[1]);
+}
+
+// ── 탭별 주소(2026-11-27) ─────────────────────────────────────────────
+// 탭을 바꿀 때마다 /reservations 같은 주소를 브라우저 방문 기록에 남겨서 뒤로가기·
+// 앞으로가기·즐겨찾기·새로고침이 탭 단위로 되게 한다. 서버(api_server.py _TAB_PATHS)가
+// 이 주소들에 재고장 페이지를 돌려준다.
+const URL_ROUTING = true;
+const MAIN_PATH = "/warehouse";
+const TAB_PATHS = {
+    "reservations-tab-btn": "/reservations", "sales-tab-btn": "/sales", "moves-tab-btn": "/moves",
+    "price-tab-btn": "/price", "order-sheet-tab-btn": "/orders", "crawling-tab-btn": "/crawling",
+    "changes-tab-btn": "/changes", "manual-tab-btn": "/manual", "notify-bell-btn": "/notify",
+};
+const PATH_TO_TAB = Object.fromEntries(Object.entries(TAB_PATHS).map(([btn, path]) => [path, btn]));
+let _switchingFromHistory = false;  // 뒤로가기/주소로 연 경우엔 기록을 또 쌓지 않음
+
+const openTabBtn = () => Object.keys(TAB_SWITCH_MAP).find(btn => document.querySelector(TAB_SWITCH_MAP[btn][0])?.style.display === "");
+// 권한상 숨겨진 탭(크롤링·창고이동·알림 등)은 주소로 직접 와도 열지 않는다
+const tabAllowed = btn => document.querySelector(`.${btn}`)?.style.display !== "none";
+
+// 탭 상태를 주소에 맞춘다(btn=null이면 재고장). 기록은 쌓지 않음.
+function showTabForPath(btn) {
+    const cur = openTabBtn() || null;
+    if (btn === cur) return;
+    _switchingFromHistory = true;
+    try {
+        if (btn) switchTab(btn, ...TAB_SWITCH_MAP[btn]);   // 다른 탭은 switchTab이 알아서 닫음
+        else if (cur) switchTab(cur, ...TAB_SWITCH_MAP[cur]); // 열린 탭을 닫으면 재고장
+    } finally { _switchingFromHistory = false; }
+}
+
+function restoreFromUrl() {
+    const logo = document.querySelector(".logo-link");
+    if (logo) logo.href = MAIN_PATH;
+    let btn = PATH_TO_TAB[location.pathname] || null;
+    // 옛 주소(/warehouse_main.html, /)로 들어오면 예전처럼 마지막 탭을 복원
+    if (!btn && location.pathname !== MAIN_PATH) btn = localStorage.getItem(ACTIVE_TAB_KEY);
+    if (btn && (!TAB_SWITCH_MAP[btn] || !tabAllowed(btn))) btn = null;
+    showTabForPath(btn);
+    history.replaceState({ tab: btn }, "", (btn && TAB_PATHS[btn]) || MAIN_PATH);
+}
+
+if (URL_ROUTING) {
+    window.addEventListener("popstate", () => {
+        const btn = PATH_TO_TAB[location.pathname] || null;
+        showTabForPath(btn && tabAllowed(btn) ? btn : null);
+    });
+}
+
+function pushTabUrl(btnClass, opening) {
+    if (!URL_ROUTING || _switchingFromHistory) return;
+    const path = (opening && TAB_PATHS[btnClass]) || MAIN_PATH;
+    if (location.pathname !== path) history.pushState({ tab: opening ? btnClass : null }, "", path);
 }
 
 // 탭 전환 시 재고장 검색/필터 초기화(2026-08-19) — 재고장에서 검색하다 예약현황/
@@ -120,6 +200,7 @@ function switchTab(btnClass, containerSelector, render) {
     } else {
         localStorage.removeItem(ACTIVE_TAB_KEY);
     }
+    pushTabUrl(btnClass, opening);
 
     clearSearchAndFilters();
     renderTable();
@@ -1922,7 +2003,12 @@ async function handleClick(e) {
     if (e.target.classList.contains("order-sheet-tab-btn")) { switchTab("order-sheet-tab-btn", ".order-sheet-container", renderOrderSheetTab); return; }
     if (e.target.classList.contains("crawling-tab-btn")) { switchTab("crawling-tab-btn", ".crawling-container", renderCrawlingTab); return; }
     if (e.target.classList.contains("manual-tab-btn")) { switchTab("manual-tab-btn", ".manual-container", renderManualTab); return; }
-
+    if (e.target.classList.contains("notify-bell-btn")) {
+        document.querySelector(".login-popover")?.classList.remove("open");
+        document.querySelector(".login-btn")?.classList.remove("active");
+        switchTab("notify-bell-btn", ".notify-container", renderNotifyTab);
+        return;
+    }
     // 크롤링 탭 — 유령 데이터(수기 입력, 수집일 없음) 행 직접 삭제(2026-09-16)
     if (e.target.classList.contains("ghost-delete-btn")) {
         (async () => {

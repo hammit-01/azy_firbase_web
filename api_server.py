@@ -1008,10 +1008,100 @@ def create_warehouse_move_from_reservation_endpoint(rec_id: str, body: MoveFromR
     return rec
 
 
+# ── 입고 알림(2026-11-27) — 규칙 CRUD + 받은 알림. 감지는 파이프라인
+#    (pipeline/notify.py check_rules). 사용자 식별은 다른 API처럼 프론트가 넘긴 이름.
+class NotifyRuleBody(BaseModel):
+    창고: list[str] = []
+    상품명: str = ""
+    브랜드: str = ""
+    등급: str = ""
+    ESTNO: str = ""
+    대상: list[str] = []
+    생성자: str
+
+
+class NotifyReadBody(BaseModel):
+    user: str
+
+
+@app.get("/api/notify/rules")
+def notify_list_rules(user: str):
+    from pipeline.notify import list_rules
+    with get_conn() as conn:
+        return {"data": list_rules(conn, user)}
+
+
+@app.post("/api/notify/rules")
+def notify_create_rule(body: NotifyRuleBody):
+    from pipeline.notify import create_rule
+    with get_conn() as conn:
+        try:
+            return create_rule(conn, body.dict())
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+
+
+@app.delete("/api/notify/rules/{rule_id}")
+def notify_delete_rule(rule_id: str):
+    from pipeline.notify import delete_rule
+    with get_conn() as conn:
+        delete_rule(conn, rule_id)
+    return {"ok": True}
+
+
+@app.get("/api/notify/inbox")
+def notify_inbox(user: str):
+    from pipeline.notify import list_inbox
+    with get_conn() as conn:
+        return list_inbox(conn, user)
+
+
+@app.post("/api/notify/inbox/read")
+def notify_mark_read(body: NotifyReadBody):
+    """받은 알림 모두 읽음."""
+    from pipeline.notify import mark_read
+    with get_conn() as conn:
+        mark_read(conn, body.user)
+    return {"ok": True}
+
+
+class NotifySetReadBody(BaseModel):
+    user: str
+    read: bool
+
+
+@app.post("/api/notify/inbox/{notif_id}/read")
+def notify_set_read(notif_id: int, body: NotifySetReadBody):
+    from pipeline.notify import set_read
+    with get_conn() as conn:
+        set_read(conn, body.user, notif_id, body.read)
+    return {"ok": True}
+
+
+@app.delete("/api/notify/inbox/{notif_id}")
+def notify_delete(notif_id: int, user: str):
+    from pipeline.notify import delete_notification
+    with get_conn() as conn:
+        delete_notification(conn, user, notif_id)
+    return {"ok": True}
+
+
 # ── 정적 파일 (프론트엔드) ───────────────────────────────────
 @app.get("/")
 def root():
     return RedirectResponse(url="/warehouse_main.html")
+
+
+# 탭별 주소(2026-11-27) — /reservations 등으로 바로 열거나 새로고침해도
+# 재고장 페이지 하나를 돌려주고, 어느 탭을 열지는 프론트(events.js TAB_PATHS)가 주소를 보고 정한다.
+# 탭 주소는 한 단계라 화면 파일의 상대 경로(./css, ./js)가 그대로 맞는다.
+from fastapi.responses import FileResponse
+
+_TAB_PATHS = ("warehouse", "reservations", "sales", "moves", "price", "orders",
+              "crawling", "changes", "manual", "notify")
+for _p in _TAB_PATHS:
+    app.add_api_route(f"/{_p}", lambda: FileResponse("front_end/html/warehouse_main.html"),
+                      methods=["GET"], include_in_schema=False)
 
 app.mount("/", StaticFiles(directory="front_end/html", html=True), name="static")
 
