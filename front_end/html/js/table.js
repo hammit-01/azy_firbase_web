@@ -684,11 +684,11 @@ export function renderTable() {
     if (dataState && dataState !== "non") {
         // "예약"(value=holding)은 더 이상 상태 컬럼에 안 찍힘(예약이 실재고 행과 분리돼서
         // 별도 표시 행을 안 만듦) — 예약수량 > 0인 행을 보여주는 걸로 대체
-        // "냉장"은 상태 값이 아니라 상품명에 "냉장"이 들어간 행(2026-11-27)
+        // "냉장"/"작업"은 상태 값이 아니라 상품명에 그 단어가 들어간 행(2026-11-27)
         data = dataState === "holding"
             ? data.filter(item => Number(item.예약수량) > 0)
-            : dataState === "냉장"
-            ? data.filter(item => String(item.상품명 ?? "").includes("냉장"))
+            : dataState === "냉장" || dataState === "작업"
+            ? data.filter(item => String(item.상품명 ?? "").includes(dataState))
             : data.filter(item => item.상태 === dataState);
     }
 
