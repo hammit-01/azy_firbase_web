@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>매뉴얼</title>
+<!-- 매뉴얼 탭(2026-11-27) — warehouse_main.html의 매뉴얼 탭이 iframe으로 띄우는 독립 페이지.
+     재고장 CSS와 섞이지 않도록 스타일을 여기 안에만 둔다. -->
+<style>
+:root {
+  --bg: #f3f6f8; --surface: #ffffff; --ink: #15212b; --muted: #5a6b78; --line: #d3dde4;
+  --frost: #0e7c9b; --frost-soft: #dcf0f5; --warn: #b5541c; --warn-soft: #fbe9dd; --ok: #2c7a4b;
+  --font-body: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-mono: ui-monospace, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body);
+  font-size: 16px; line-height: 1.65; padding: 0 16px;
+}
+.wrap { max-width: 760px; margin: 0 auto; padding-block: 32px 64px; display: grid; gap: 40px; }
+h1, h2 { line-height: 1.3; margin: 0; }
+h1 { font-size: 1.9rem; font-weight: 700; }
+h2 { font-size: 1.25rem; font-weight: 700; }
+p { margin: 0; }
+.lead { color: var(--muted); max-width: 62ch; margin-top: 10px; }
+.eyebrow { font-family: var(--font-mono); font-size: .75rem; letter-spacing: .08em; color: var(--frost); }
+.mono { font-family: var(--font-mono); font-size: .85em; }
+
+/* 목차 */
+.toc { display: flex; flex-wrap: wrap; gap: 8px; }
+.toc a { font-size: .9rem; padding: 6px 14px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); text-decoration: none; }
+.toc a:hover { border-color: var(--frost); color: var(--frost); }
+.chapter { display: grid; gap: 32px; padding-top: 8px; border-top: 2px solid var(--line); }
+.chapter-title { font-size: 1.5rem; }
+
+.analogy { background: var(--frost-soft); border-radius: 10px; padding: 18px 20px; display: grid; gap: 6px; }
+.analogy b { color: var(--frost); }
+
+/* 용어 */
+.terms { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.term { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 4px; }
+.term .name { font-weight: 700; color: var(--frost); }
+.term .col { font-size: .78rem; color: var(--muted); }
+.term p { font-size: .92rem; }
+.formula { font-family: var(--font-mono); background: var(--surface); border: 1px dashed var(--frost); border-radius: 8px; padding: 10px 14px; font-size: .92rem; justify-self: start; }
+
+/* 경우별 카드 */
+.case { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--frost); border-radius: 8px; padding: 18px; display: grid; gap: 10px; }
+.case h3 { margin: 0; font-size: 1.05rem; }
+.case .num { font-family: var(--font-mono); font-size: .78rem; color: var(--frost); }
+.case .rule { font-family: var(--font-mono); font-size: .9rem; background: var(--frost-soft); border-radius: 6px; padding: 8px 12px; }
+.case p { color: var(--muted); font-size: .94rem; }
+.case p b { color: var(--ink); }
+.ex { font-size: .85rem; background: var(--warn-soft); color: var(--ink); border-radius: 6px; padding: 8px 12px; }
+.ex.ok { background: var(--frost-soft); }
+.branch { display: grid; gap: 10px; }
+.branch-item { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 6px; }
+.branch-item .when { font-weight: 700; font-size: .95rem; }
+.branch-item p { font-size: .92rem; }
+
+/* 크롤링 흐름 레인 */
+.lane { list-style: none; margin: 0; padding: 0; display: grid; }
+.step { display: grid; grid-template-columns: 52px 1fr; gap: 16px; }
+.rail { display: flex; flex-direction: column; align-items: center; }
+.dot { width: 44px; height: 44px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--surface); border: 2px solid var(--frost); color: var(--frost); }
+.dot svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.pipe { flex: 1; width: 2px; background: repeating-linear-gradient(var(--frost) 0 6px, transparent 6px 12px); min-height: 24px; }
+.step:last-child .pipe { display: none; }
+.body { padding-bottom: 28px; min-width: 0; display: grid; gap: 8px; }
+.body h3 { margin: 8px 0 0; font-size: 1.08rem; }
+.body p { color: var(--muted); }
+.tag { justify-self: start; font-family: var(--font-mono); font-size: .74rem; border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; color: var(--muted); background: var(--surface); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: .8rem; padding: 2px 9px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+.table-demo { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; }
+.cell-box { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: .82rem; min-width: 0; overflow-wrap: anywhere; }
+.cell-box small { display: block; color: var(--muted); font-size: .72rem; margin-bottom: 4px; }
+.arrow { color: var(--frost); font-weight: 700; }
+.fields { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; }
+.fields span:nth-child(odd) { color: var(--muted); }
+
+.faults { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.fault { background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--warn); border-radius: 8px; padding: 16px; display: grid; gap: 6px; align-content: start; }
+.fault h3 { margin: 0; font-size: 1rem; }
+.fault p { color: var(--muted); font-size: .92rem; }
+
+.timeline { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.tl-item { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 6px; align-content: start; }
+.tl-item:last-child { border-color: var(--frost); }
+.tl-when { font-family: var(--font-mono); font-size: .78rem; color: var(--frost); }
+.tl-what { font-size: .92rem; }
+.tl-ours { font-size: .88rem; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 6px; }
+.tl-ours b { color: var(--ink); }
+.tl-ours small { font-size: .78rem; }
+.sub { margin: 8px 0 0; font-size: 1.08rem; }
+
+.howto { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; align-items: start; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 12px; min-width: 0; }
+.card-head { display: grid; gap: 6px; }
+.card h3 { margin: 0; font-size: 1.05rem; }
+.badge { justify-self: start; font-size: .74rem; font-weight: 500; padding: 1px 9px; border-radius: 999px; background: var(--frost-soft); color: var(--frost); }
+.badge.warn-b { background: var(--warn-soft); color: var(--warn); }
+.checks { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; font-size: .92rem; color: var(--muted); }
+.checks b { color: var(--ink); font-weight: 500; display: block; }
+
+.sched { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.sched-card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 4px; align-content: start; }
+.freq { font-weight: 700; color: var(--frost); }
+.sched-card p { color: var(--muted); font-size: .88rem; }
+.table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.sites { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.sites th { text-align: left; font-weight: 500; color: var(--muted); font-size: .78rem; padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.sites td { padding: 10px 12px; border-top: 1px solid var(--line); vertical-align: top; }
+.sites tr:first-child td { border-top: 0; }
+.sites td:nth-child(2) { color: var(--muted); min-width: 10em; }
+.sites td:last-child { white-space: nowrap; font-weight: 500; }
+
+.where-row { display: grid; grid-template-columns: 9.5em 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); font-size: .92rem; }
+.where-row:last-child { border-bottom: 1px solid var(--line); }
+.where-row span:first-child { font-weight: 500; }
+.where-row span:last-child { color: var(--muted); min-width: 0; overflow-wrap: anywhere; }
+
+@media (max-width: 520px) {
+  h1 { font-size: 1.55rem; }
+  .table-demo { grid-template-columns: 1fr; }
+  .arrow { justify-self: center; transform: rotate(90deg); }
+  .where-row { grid-template-columns: 1fr; gap: 2px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">창고 재고 시스템 · 매뉴얼</div>
+    <h1>매뉴얼</h1>
+    <p class="lead">재고장을 쓰다가 자주 생기는 궁금증과, 재고가 화면에 올라오는 방식을 정리했습니다.</p>
+    <nav class="toc" style="margin-top:16px">
+      <a href="#reservation">내가 예약한 재고가 왜 모자라지?</a>
+      <a href="#crawling">창고 재고 크롤링 흐름</a>
+    </nav>
+  </header>
+
+  <!-- ═══════════ 1. 예약 재고 ═══════════ -->
+  <section class="chapter" id="reservation">
+    <div>
+      <div class="eyebrow">1</div>
+      <h2 class="chapter-title">내가 예약한 재고가 왜 모자라지?</h2>
+      <p class="lead">재고장에서 가용이 마이너스(−)로 보이거나, 예약한 만큼 재고가 없을 때 아래 순서로 확인합니다.</p>
+    </div>
+
+    <div class="terms">
+      <div class="term">
+        <span class="name">예약수량</span><span class="col">재고장 "예약" 열</span>
+        <p>예약한 수량</p>
+      </div>
+      <div class="term">
+        <span class="name">실재고</span><span class="col">재고장 "재고" 열</span>
+        <p>현재 창고에 있는 실제 재고</p>
+      </div>
+      <div class="term">
+        <span class="name">가용재고</span><span class="col">재고장 "가용" 열</span>
+        <p>실재고에서 예약수량을 뺀, 사용 가능한 재고</p>
+      </div>
+    </div>
+    <div class="formula">가용재고 = 실재고 − 예약수량</div>
+
+    <div class="case">
+      <span class="num">1번째 경우</span>
+      <h3>전량 예약했을 때</h3>
+      <div class="rule">예약수량 = 실재고 + |가용재고|</div>
+      <p>이 식이 맞으면 <b>해당 예약분을 가용재고만큼 이미 사용한 것</b>입니다.</p>
+      <div class="ex ok">예: 예약 50박스, 실재고 30박스, 가용 −20 → 50 = 30 + 20 이므로 예약분 중 20박스가 이미 나간 것</div>
+    </div>
+
+    <div class="case">
+      <span class="num">2번째 경우</span>
+      <h3>분할해서 각 거래처마다 같은 상품을 예약했을 때</h3>
+      <div class="rule">예약수량 합 = 실재고 + |가용재고|</div>
+      <p>이 식이 맞으면 <b>분할했던 거래처 중 한 곳으로 가용재고만큼 사용한 것</b>입니다.</p>
+      <div class="ex ok">예: A거래처 30 + B거래처 20 = 예약 50박스, 실재고 40박스, 가용 −10 → 50 = 40 + 10 이므로 A·B 중 한 곳으로 10박스가 나간 것</div>
+    </div>
+
+    <div class="case">
+      <span class="num">3번째 경우</span>
+      <h3>여러 직원이 같은 상품을 예약했을 때</h3>
+      <div class="branch">
+        <div class="branch-item">
+          <span class="when">수탁, 이고, 마장 중 하나가 껴 있다</span>
+          <p>→ 해당 건이 <b>출고되었는지</b> 확인합니다.</p>
+          <p><b>출고되었는데 예약이 그대로 있다면</b>: 실재고 그 자체가 남은 재고입니다. 출고되면 예약분을 <b>사용완료</b> 처리해야 하는데 안 해서, 이미 출고로 빠진 재고에서 예약분이 한 번 더 차감된 것입니다.</p>
+          <div class="ex">조치: 예약현황에서 출고된 예약을 "사용완료"로 처리하면 가용이 다시 맞춰집니다.</div>
+        </div>
+        <div class="branch-item">
+          <span class="when">그 외</span>
+          <p>→ <b>다른 직원이 해당 예약을 사용했는지</b> 확인해야 합니다.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 2. 크롤링 흐름 ═══════════ -->
+  <section class="chapter" id="crawling">
+    <div>
+      <div class="eyebrow">2</div>
+      <h2 class="chapter-title">창고 재고는 어떻게 우리 화면에 올라올까</h2>
+      <p class="lead">여러 냉동·냉장 창고에 흩어진 재고를 프로그램이 1분마다 모아서, 직원들이 보는 재고장 화면 하나로 합칩니다. 아래는 그 과정을 순서대로 그린 것입니다.</p>
+    </div>
+
+    <div class="analogy">
+      <b>한 줄로 말하면</b>
+      <p>예전에는 사람이 창고 사이트마다 로그인해서 재고표를 보고 엑셀에 옮겨 적었습니다. 지금은 프로그램이 같은 일을 평일 낮 동안 1분마다 대신합니다.</p>
+    </div>
+
+    <div>
+      <h2>재고가 화면에 오기까지 6단계</h2>
+      <ol class="lane" style="margin-top:20px">
+        <li class="step">
+          <div class="rail"><div class="dot"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div class="pipe"></div></div>
+          <div class="body">
+            <h3>1. 시계가 출발 신호를 줍니다</h3>
+            <p>평일 오전 7시부터 오후 6시까지 매분, 그리고 저녁 7시에 한 번 더 작업이 시작됩니다. 서버 컴퓨터가 켜지면 이 작업도 자동으로 같이 켜집니다.</p>
+            <span class="tag">평일 07:00–18:59 매분 + 19:00</span>
+          </div>
+        </li>
+        <li class="step">
+          <div class="rail"><div class="dot"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div><div class="pipe"></div></div>
+          <div class="body">
+            <h3>2. 창고 사이트에 로그인합니다</h3>
+            <p>창고마다 아이디·비밀번호·사이트 주소가 데이터베이스의 <b>창고 로그인 명부</b>에 적혀 있습니다. 프로그램은 이 명부를 보고 사람처럼 로그인합니다. 비밀번호가 바뀌면 명부만 고치면 됩니다.</p>
+            <span class="tag">명부: warehouse_login</span>
+          </div>
+        </li>
+        <li class="step">
+          <div class="rail"><div class="dot"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 4v16"/></svg></div><div class="pipe"></div></div>
+          <div class="body">
+            <h3>3. 재고표를 통째로 가져옵니다</h3>
+            <p>로그인한 뒤 각 창고의 "재고 현황" 페이지에서 표를 그대로 받아옵니다. 대부분은 같은 회사가 만든 창고 관리 사이트라 방식이 비슷하고, 효성냉장·도지냉장처럼 자체 사이트인 곳은 따로 맞춰 둡니다.</p>
+            <div class="chips">
+              <span class="chip">211.239.173.90 서버 19곳</span>
+              <span class="chip">211.239.173.91 서버 1곳</span>
+              <span class="chip">자체 사이트 2곳</span>
+              <span class="chip">로봇 브라우저 7곳</span>
+            </div>
+          </div>
+        </li>
+        <li class="step">
+          <div class="rail"><div class="dot"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></svg></div><div class="pipe"></div></div>
+          <div class="body">
+            <h3>4. 제각각인 표를 같은 모양으로 정리합니다</h3>
+            <p>창고마다 열 순서와 적는 방식이 다릅니다. 프로그램이 열을 맞추고, 한 칸에 뭉쳐 있는 상품 정보를 상품명·등급·브랜드·ESTNO로 나누고, 같은 상품을 같은 이름으로 통일합니다.</p>
+            <div class="table-demo">
+              <div class="cell-box"><small>창고 사이트에 적힌 그대로</small>백립 CH SWIFT 969<br>24.55KG · 39 BOX</div>
+              <div class="arrow" aria-hidden="true">→</div>
+              <div class="cell-box fields">
+                <span>상품명</span><span>탕갈비</span>
+                <span>등급</span><span>CH</span>
+                <span>브랜드</span><span>SWIFT</span>
+                <span>ESTNO</span><span>969</span>
+                <span>재고</span><span>39박스</span>
+              </div>
+            </div>
+          </div>
+        </li>
+        <li class="step">
+          <div class="rail"><div class="dot"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/></svg></div><div class="pipe"></div></div>
+          <div class="body">
+            <h3>5. 기존 재고와 비교해서 저장합니다</h3>
+            <p>방금 가져온 재고를 지난번 기록과 비교해 수량이 바뀐 것, 새로 들어온 것, 빠진 것을 반영합니다. 창고 이동(이고) 수량도 이때 함께 계산합니다.</p>
+            <span class="tag">제니스(곤지암)·에이스는 별도 작업으로 저장</span>
+          </div>
+        </li>
+        <li class="step">
+          <div class="rail"><div class="dot"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div><div class="pipe"></div></div>
+          <div class="body">
+            <h3>6. 직원 화면에 나타납니다</h3>
+            <p>재고장 웹사이트가 데이터베이스를 주기적으로 다시 읽어서 최신 재고를 보여 줍니다. 직원은 여기서 예약, 출고, 메모를 합니다. 가용재고는 이 화면을 열 때마다 "실재고 − 예약"으로 새로 계산됩니다.</p>
+            <span class="tag">재고장 웹사이트</span>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <div style="display:grid; gap:16px">
+      <div>
+        <h2>재고 숫자는 창고 사이트 기준을 그대로 따릅니다</h2>
+        <p class="lead">우리 재고장은 창고 사이트에 보이는 숫자를 그대로 옮겨 오는 방식입니다. 그래서 입고·출고가 언제 재고에 반영되는지는 우리가 아니라 <b>각 창고 사이트의 기준</b>이 정합니다. 사이트에서 아직 안 빠진 출고는 우리 화면에서도 안 빠집니다.</p>
+      </div>
+      <div class="analogy">
+        <b>우리는 "오늘 날짜" 재고를 조회합니다</b>
+        <p>프로그램은 창고 사이트에 매번 오늘 날짜를 넣어 재고를 조회합니다. 사이트에서는 출고일이 내일인 출고는 내일 날짜로 조회해야 빠지기 때문에, 오늘 화면에는 아직 남아 있는 것으로 보입니다.</p>
+      </div>
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-when">11/11 (화) 15:00</div>
+          <div class="tl-what">창고 사이트에 <b>11/12 출고</b> 10박스를 미리 내림</div>
+          <div class="tl-ours">우리 화면: <b>그대로 100박스</b><br><small>오늘 날짜로 조회하니 아직 안 빠짐</small></div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-when">11/11 (화) 19:00</div>
+          <div class="tl-what">그날 마지막 수집</div>
+          <div class="tl-ours">우리 화면: <b>여전히 100박스</b></div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-when">11/12 (수) 07:00</div>
+          <div class="tl-what">다음 날 첫 수집 (조회 날짜가 11/12로 바뀜)</div>
+          <div class="tl-ours">우리 화면: <b>90박스</b><br><small>이때 처음으로 출고가 빠짐</small></div>
+        </div>
+      </div>
+      <p class="lead" style="margin-top:0">전날 미리 내린 출고는 그날 저녁까지 우리 화면에 남아 있습니다. 그 사이에 같은 재고를 다른 사람이 잡지 않도록 주의해야 합니다.</p>
+
+      <div>
+        <h3 class="sub">익일 출고분을 따로 조회해서 합치면 생기는 문제</h3>
+        <p class="lead">"오늘 날짜 재고"와 "내일 날짜로 조회한 재고(익일 출고분)"를 따로 가져와 섞으면 아래 문제가 생길 수 있습니다. 현재는 이런 이유로 오늘 날짜 한 가지로만 조회합니다.</p>
+      </div>
+      <div class="faults">
+        <div class="fault">
+          <h3>무엇이 익일 출고인지 정확히 못 가려냄</h3>
+          <p>사이트는 출고 목록이 아니라 남은 재고만 보여 줍니다. 오늘 조회와 내일 조회의 차이를 익일 출고로 보면, 그 사이에 들어온 입고나 당일 출고 수정까지 섞여서 숫자가 틀어집니다.</p>
+        </div>
+        <div class="fault">
+          <h3>두 번 빠지는 이중 차감</h3>
+          <p>익일 출고분을 미리 빼 두면, 다음 날 아침 조회 날짜가 바뀌면서 사이트에서도 빠집니다. 날짜가 넘어가는 순간을 정확히 맞추지 못하면 같은 출고가 한 번 더 빠집니다. 우리 사이트의 출고 예약으로 이미 빼 둔 건과도 겹칠 수 있습니다.</p>
+        </div>
+        <div class="fault">
+          <h3>품목이 통째로 사라진 것처럼 보임</h3>
+          <p>익일 출고로 남는 박스가 0이 되면 내일 날짜 조회에서는 그 줄 자체가 안 나옵니다. 이걸 삭제로 받아들이면 오늘 실제로 창고에 있는 재고가 화면에서 없어집니다.</p>
+        </div>
+        <div class="fault">
+          <h3>출고 취소·변경이 늦게 반영됨</h3>
+          <p>미리 내린 출고가 취소되거나 수량이 바뀌어도, 이미 빼 둔 숫자가 맞는지 다시 맞춰 볼 기준이 없습니다. 실물은 창고에 있는데 화면에는 없는 상태가 생깁니다.</p>
+        </div>
+        <div class="fault">
+          <h3>창고마다 기준이 섞임</h3>
+          <p>날짜를 넣어 조회할 수 없는 사이트(로봇 브라우저로 들어가는 창고 등)는 익일 출고분을 따로 가져올 수 없습니다. 어떤 창고는 미리 빠지고 어떤 창고는 안 빠져서 화면 기준이 창고마다 달라집니다.</p>
+        </div>
+        <div class="fault">
+          <h3>수집 시간과 사이트 부담이 두 배</h3>
+          <p>창고마다 조회를 두 번씩 하게 되어 1분 주기를 지키기 어렵고, 에이스처럼 한 번에 한 명만 접속되는 사이트는 사실상 불가능합니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid; gap:16px">
+      <div>
+        <h2>자주 생기는 문제와 실제 사례</h2>
+        <p class="lead">창고 쪽 사정이 바뀌면 프로그램이 따라가지 못해 재고가 0으로 보이거나 빠질 수 있습니다. 크롤링 탭 버튼에 빨간 숫자가 뜨면 원본 사이트와 우리 재고가 다른 창고가 있다는 뜻입니다.</p>
+      </div>
+      <div class="faults">
+        <div class="fault">
+          <h3>비밀번호가 바뀜</h3>
+          <p>로그인이 안 되어 그 창고만 수집에 실패합니다. 명부의 비밀번호만 고치면 바로 해결됩니다.</p>
+          <div class="ex">11/11 효성냉장 비밀번호 변경</div>
+        </div>
+        <div class="fault">
+          <h3>사이트 주소가 바뀜</h3>
+          <p>예전 주소로 접속하면 "페이지 없음"이 떠서 그 창고 재고를 못 가져옵니다.</p>
+          <div class="ex">11/11~12 대재·삼일·신우·희창·SWC·이스트밸리 서버 이전</div>
+        </div>
+        <div class="fault">
+          <h3>재고표 모양이 바뀜</h3>
+          <p>열이 하나만 늘어도 칸이 밀려서 수량을 엉뚱한 칸에서 읽고, 재고가 0으로 들어가거나 빠질 수 있습니다.</p>
+          <div class="ex">11/12 베이지박스투 열 추가로 1,302박스 누락 → 복구</div>
+        </div>
+        <div class="fault">
+          <h3>프로그램이 두 개 돌아감</h3>
+          <p>예전 버전과 새 버전이 같은 장부에 번갈아 적어서 고친 내용이 자꾸 되돌아갑니다.</p>
+          <div class="ex">11/10 서버 강제 종료 후 예전 작업이 같이 켜짐</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid; gap:16px">
+      <div>
+        <h2>주소·비밀번호가 바뀌면 이렇게 합니다</h2>
+        <p class="lead">창고에서 바뀐다고 연락이 오면 아래 순서대로 처리합니다. 담당자에게는 바뀌는 시각과 새 정보만 정확히 전달하면 됩니다.</p>
+      </div>
+      <div class="howto">
+        <div class="card">
+          <div class="card-head"><span class="badge">5분 이내</span><h3>비밀번호가 바뀔 때</h3></div>
+          <ol class="checks">
+            <li><b>새 비밀번호와 바뀌는 시각을 받습니다.</b> 창고 사이트 쪽 변경 시각과 맞추는 게 중요합니다.</li>
+            <li><b>그 시각에 명부의 비밀번호를 고칩니다.</b> 시각을 정해 두면 그때 자동으로 바뀌게 예약할 수도 있습니다.</li>
+            <li><b>프로그램 재시작은 필요 없습니다.</b> 다음 수집부터 새 비밀번호로 로그인합니다.</li>
+            <li><b>기록에서 "로그인 성공"을 확인합니다.</b> 이미 로그인된 상태는 만료될 때까지 그대로 쓰여서 바로 실패하지는 않습니다.</li>
+          </ol>
+          <div class="ex ok">예: 11/11 효성냉장, 11:40에 예약 변경 후 확인</div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="badge warn-b">30분 안팎</span><h3>사이트 주소가 바뀔 때</h3></div>
+          <ol class="checks">
+            <li><b>새 로그인 주소를 받습니다.</b> 아이디·비밀번호가 그대로인지도 같이 확인합니다.</li>
+            <li><b>새 주소로 접속과 로그인을 시험합니다.</b> 응답 속도도 같이 봅니다.</li>
+            <li><b>코드의 주소 목록과 명부의 주소를 둘 다 고칩니다.</b> 한쪽만 고치면 예전 주소로 계속 접속합니다.</li>
+            <li><b>재고표 모양이 그대로인지 봅니다.</b> 사이트를 옮기면서 열이 늘어나는 경우가 많습니다. 기록에 "열 초과" 경고가 뜨면 열 순서 정의도 고칩니다.</li>
+            <li><b>운영 서버에 반영하고 파이프라인을 재시작합니다.</b> 코드가 바뀌는 일이라 재시작이 필요합니다.</li>
+            <li><b>다음 수집에서 재고 수량이 0이 아닌지 확인합니다.</b> 건수만 맞고 수량이 0이면 열이 밀린 것입니다.</li>
+          </ol>
+          <div class="ex">예: 11/11 대재, 주소와 표 모양이 함께 바뀜</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid; gap:16px">
+      <div>
+        <h2>창고별 수집 주기</h2>
+        <p class="lead">평일(월~금)에만 수집합니다. 주말에는 돌지 않고, 평일 저녁 7시 10분에 하루 마감 기록을 남깁니다.</p>
+      </div>
+      <div class="sched">
+        <div class="sched-card">
+          <div class="freq">1분마다</div>
+          <p>평일 07:00–18:59 매분, 19:00 마지막</p>
+        </div>
+        <div class="sched-card">
+          <div class="freq">1분마다 · 별도 작업</div>
+          <p>제니스(곤지암)는 다른 창고와 따로 돌아서 서로 기다리지 않습니다</p>
+        </div>
+        <div class="sched-card">
+          <div class="freq">1시간마다</div>
+          <p>에이스 3곳은 매 정각 07–18시, 마지막 18:59. 한 번에 한 명만 접속되는 사이트라서 자주 못 들어갑니다</p>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="sites">
+          <thead><tr><th>창고</th><th>접속 서버</th><th>주기</th></tr></thead>
+          <tbody>
+            <tr><td>CS · 강동1 · 강동2 · 경인 · 대재 · 대청 · 베이지박스투 · 삼일물류 · 삼진1 · 삼진2 · 시에이치물류 · 신우냉장 · 오로라CS · 이스트밸리 · 프라자로지스 · 한라 · 한라동탄 · 희창냉장 · SWC</td><td class="mono">211.239.173.90:8080</td><td>1분</td></tr>
+            <tr><td>아이린냉장</td><td class="mono">211.239.173.91:8080</td><td>1분</td></tr>
+            <tr><td>효성냉장</td><td class="mono">coldwms.hyosung.com</td><td>1분</td></tr>
+            <tr><td>도지냉장</td><td class="mono">wms.pentascan.com</td><td>1분</td></tr>
+            <tr><td>고려 · 유상 · 견우오아시스 · 미빙냉장</td><td>각 창고 사이트 (로봇 브라우저로 접속)</td><td>1분</td></tr>
+            <tr><td>제니스(곤지암)</td><td class="mono">211.239.173.90:8080</td><td>1분 · 별도</td></tr>
+            <tr><td>에이스기흥 · 에이스처인 · 에이스용인</td><td>에이스 사이트 (로봇 브라우저로 접속)</td><td>1시간</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="display:grid; gap:8px">
+      <h2>무엇을 어디서 고치나</h2>
+      <div>
+        <div class="where-row"><span>비밀번호·아이디</span><span>데이터베이스 창고 로그인 명부 (프로그램 재시작 필요 없음)</span></div>
+        <div class="where-row"><span>사이트 주소</span><span>명부의 주소 + 크롤링 코드의 주소 목록 <span class="mono">crawling_list.py</span></span></div>
+        <div class="where-row"><span>재고표 모양</span><span>창고별 열 순서 정의 <span class="mono">eda_column.py</span></span></div>
+        <div class="where-row"><span>상품 이름 통일</span><span>이름 바꾸기 규칙 <span class="mono">replace_name.py</span></span></div>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

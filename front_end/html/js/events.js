@@ -41,8 +41,14 @@ function _logActivity(tableName, recordId, action, before, after, summary = "") 
 // 재고장 표와 배타적으로 토글되는 탭들(업데이트/예약현황/타창고매출현황/전략단가,
 // 2026-08-18) — 하나 열면 나머지는 다 닫힌다. 열릴 때만 render를 부르므로(이미
 // 열려있으면 콘텐츠 그대로 두고 숨기기만 함) 매번 다시 불러오지 않는다.
-const TAB_CONTAINERS = [".changes-container", ".reservations-container", ".sales-container", ".moves-container", ".price-container", ".order-sheet-container", ".crawling-container"];
-const TAB_BUTTONS = [".changes-tab-btn", ".reservations-tab-btn", ".sales-tab-btn", ".moves-tab-btn", ".price-tab-btn", ".order-sheet-tab-btn", ".crawling-tab-btn"];
+const TAB_CONTAINERS = [".changes-container", ".reservations-container", ".sales-container", ".moves-container", ".price-container", ".order-sheet-container", ".crawling-container", ".manual-container"];
+const TAB_BUTTONS = [".changes-tab-btn", ".reservations-tab-btn", ".sales-tab-btn", ".moves-tab-btn", ".price-tab-btn", ".order-sheet-tab-btn", ".crawling-tab-btn", ".manual-tab-btn"];
+
+// 매뉴얼 탭(2026-11-27) — iframe은 처음 열 때만 src를 채워 재고장 첫 로딩을 늦추지 않음.
+function renderManualTab() {
+    const frame = document.querySelector(".manual-frame");
+    if (frame && !frame.src) frame.src = frame.dataset.src;
+}
 
 // 탭별 컨테이너/렌더 함수 매핑(2026-08-25) — 새로고침해도 열려있던 탭을 그대로
 // 유지하기 위해 클릭 핸들러와 restoreLastTab() 둘 다 이 표를 같이 쓴다.
@@ -54,6 +60,7 @@ const TAB_SWITCH_MAP = {
     "price-tab-btn": [".price-container", () => renderPriceTab()],
     "order-sheet-tab-btn": [".order-sheet-container", () => renderOrderSheetTab()],
     "crawling-tab-btn": [".crawling-container", () => renderCrawlingTab()],
+    "manual-tab-btn": [".manual-container", () => renderManualTab()],
 };
 const ACTIVE_TAB_KEY = "azy_active_tab";
 
@@ -1902,6 +1909,7 @@ async function handleClick(e) {
     if (e.target.classList.contains("price-tab-btn")) { switchTab("price-tab-btn", ".price-container", renderPriceTab); return; }
     if (e.target.classList.contains("order-sheet-tab-btn")) { switchTab("order-sheet-tab-btn", ".order-sheet-container", renderOrderSheetTab); return; }
     if (e.target.classList.contains("crawling-tab-btn")) { switchTab("crawling-tab-btn", ".crawling-container", renderCrawlingTab); return; }
+    if (e.target.classList.contains("manual-tab-btn")) { switchTab("manual-tab-btn", ".manual-container", renderManualTab); return; }
 
     // 크롤링 탭 — 유령 데이터(수기 입력, 수집일 없음) 행 직접 삭제(2026-09-16)
     if (e.target.classList.contains("ghost-delete-btn")) {

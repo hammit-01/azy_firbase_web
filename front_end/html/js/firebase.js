@@ -1,6 +1,6 @@
 // firebase.js — MySQL API 버전 (Firebase SDK 제거)
 import { state } from "./state.js";
-import { renderTable, renderWarehouseOptions, renderBrandOptions, renderProductNameOptions } from "./table.js";
+import { renderTable, renderWarehouseOptions, renderBrandOptions, renderProductNameOptions, refreshCrawlingAlert } from "./table.js";
 import { renderSelectData } from "./panel.js";
 import { fetchAllInventory, fetchEmployees, fetchClients, fetchMovingInventory, fetchYesterdayInventory } from "./api.js";
 
@@ -128,6 +128,7 @@ export async function fetchAllData() {
         // 표를 통째로 다시 그리면서 입력 중인 칸을 날려버렸음. 데이터는 이미 state에
         // 들어갔으니 입력이 끝난 뒤(엔터/포커스 이탈 시 renderTable 호출) 반영된다.
         if (!document.activeElement?.classList.contains("inventory-memo-input")) renderTable();
+        refreshCrawlingAlert();
         renderWarehouseOptions();
         renderBrandOptions();
         renderProductNameOptions();

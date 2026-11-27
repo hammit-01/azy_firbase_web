@@ -638,6 +638,8 @@ export function renderTable() {
 
     const matchesKeyword = (item, kw) =>
         SEARCHABLE_KEYS.some(key => {
+            // "냉장" 검색은 상품명 기준 — 창고명(신우냉장 등)에 걸리면 안 됨(2026-11-27)
+            if (kw === "냉장" && key === "창고") return false;
             const value = item[key];
 
             if (value == null)
@@ -682,8 +684,11 @@ export function renderTable() {
     if (dataState && dataState !== "non") {
         // "예약"(value=holding)은 더 이상 상태 컬럼에 안 찍힘(예약이 실재고 행과 분리돼서
         // 별도 표시 행을 안 만듦) — 예약수량 > 0인 행을 보여주는 걸로 대체
+        // "냉장"은 상태 값이 아니라 상품명에 "냉장"이 들어간 행(2026-11-27)
         data = dataState === "holding"
             ? data.filter(item => Number(item.예약수량) > 0)
+            : dataState === "냉장"
+            ? data.filter(item => String(item.상품명 ?? "").includes("냉장"))
             : data.filter(item => item.상태 === dataState);
     }
 
@@ -2075,6 +2080,25 @@ async function renderCrawlingLogs(job) {
     }
 }
 
+// 크롤링 탭 버튼 알림(2026-11-27) — 원본 vs 시스템 재고 차이가 있는 창고 수를 버튼에 배지로.
+let _crawlAlertCheckedAt = 0;
+function setCrawlingAlert(rows) {
+    const btn = document.querySelector(".crawling-tab-btn");
+    if (!btn) return;
+    const bad = rows.filter(r => r.원본재고 - r.시스템재고 !== 0).length;
+    btn.classList.toggle("has-alert", bad > 0);
+    btn.dataset.alert = bad || "";
+    btn.title = bad ? `원본과 시스템 재고 차이: ${bad}개 창고` : "";
+}
+
+// 데이터 폴링마다 불리지만 실제 조회는 1분에 한 번, 버튼이 보이는 사람(관리자·운영팀)만.
+export async function refreshCrawlingAlert() {
+    const btn = document.querySelector(".crawling-tab-btn");
+    if (!btn || btn.style.display === "none" || Date.now() - _crawlAlertCheckedAt < 60000) return;
+    _crawlAlertCheckedAt = Date.now();
+    try { setCrawlingAlert(await fetchCrawlTotals()); } catch {}
+}
+
 export async function renderCrawlingTab() {
     const container = document.querySelector(".crawling-container");
     const listEl = document.getElementById("crawling-list");
@@ -2087,6 +2111,7 @@ export async function renderCrawlingTab() {
         listEl.innerHTML = `<p class="reservations-empty">크롤링 정보를 불러오지 못했습니다.</p>`;
         return;
     }
+    setCrawlingAlert(totalsRows);
 
     const byJob = Object.fromEntries(statusRows.map(r => [r.job, r]));
     const statusHtml = `

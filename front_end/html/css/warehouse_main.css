@@ -760,7 +760,7 @@ th.sort-active {
 .rl-field-strong { font-weight: 700; color: #1e293b; }  /* rl-field-strong 텍스트색 - 진남색 */
 /* ── 툴바 액션 버튼 ── */
 .rollback-btn, .clear-btn, .all-delete-btn, .changes-tab-btn, .reservations-tab-btn,
-.sales-tab-btn, .price-tab-btn, .order-sheet-tab-btn, .moves-tab-btn, .crawling-tab-btn,
+.sales-tab-btn, .price-tab-btn, .order-sheet-tab-btn, .moves-tab-btn, .crawling-tab-btn, .manual-tab-btn,
 .insert-btn, .update-btn, .holding-btn, .move-btn, .main-download-btn, .main-tab-btn {
     height: 42px;
     padding: 0 18px;
@@ -839,6 +839,17 @@ th.sort-active {
 .crawling-tab-btn { background: #e2e8f0; color: #334155; }  /* 크롤링 탭 버튼 - 회색 */
 .crawling-tab-btn:hover { background: #cbd5e1; }  /* 크롤링 탭 호버 배경 - 진회색 */
 .crawling-tab-btn.active { background: #475569; color: #fff; }  /* 크롤링 탭 활성 배경/글자 - 진남색/흰색 */
+.manual-tab-btn { background: #dcfce7; color: #166534; }  /* 매뉴얼 탭 버튼 - 연초록 */
+.manual-tab-btn:hover { background: #bbf7d0; }  /* 매뉴얼 탭 호버 배경 - 초록 */
+.manual-tab-btn.active { background: #166534; color: #fff; }  /* 매뉴얼 탭 활성 배경/글자 - 진초록/흰색 */
+.manual-frame { width: 100%; height: calc(100vh - 140px); border: 0; display: block; }  /* 매뉴얼 페이지 iframe */
+.crawling-tab-btn.has-alert { position: relative; }
+.crawling-tab-btn.has-alert::after {  /* 원본 vs 시스템 차이 창고 수 배지 - 빨강 */
+    content: attr(data-alert);
+    position: absolute; top: -6px; right: -6px;
+    min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+    background: #dc2626; color: #fff; font-size: 11px; line-height: 16px; text-align: center;
+}
 
 .main-download-btn { background: #dcfce7; color: #15803d; }  /* 엑셀 다운로드 버튼 - 초록 */
 .main-download-btn:hover { background: #bbf7d0; }  /* 다운로드 호버 배경 - 연초록 */
@@ -2396,7 +2407,7 @@ tr.insert-card .remove-insert-btn:hover {
 
     .rollback-btn, .clear-btn, .all-delete-btn, .changes-tab-btn, .reservations-tab-btn,
     .insert-btn, .update-btn, .holding-btn, .move-btn, .main-download-btn, .sales-tab-btn,
-    .price-tab-btn, .order-sheet-tab-btn, .moves-tab-btn, .crawling-tab-btn, .main-tab-btn {
+    .price-tab-btn, .order-sheet-tab-btn, .moves-tab-btn, .crawling-tab-btn, .manual-tab-btn, .main-tab-btn {
         font-size: 13px;
         padding: 0 10px;
         height: 36px;

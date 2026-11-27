@@ -54,6 +54,7 @@
                     <button class="moves-tab-btn" style="display:none">창고이동</button>
                     <button class="crawling-tab-btn" style="display:none">크롤링</button>
                     <button class="changes-tab-btn">업데이트</button>
+                    <button class="manual-tab-btn">매뉴얼</button>
                 </div>
             </div>
             <div class="table_size"></div>
@@ -103,6 +104,7 @@
                             <option value="stopped">사용불가</option>
                             <option value="moving">이고</option>
                             <option value="특이품">특이품</option>
+                            <option value="냉장">냉장</option>
                             <option value="null">null(정보누락)</option>
                         </select>
                         <input id="searchInput" class="search-input" placeholder="검색(띄어쓰기/쉼표로 여러 단어)">
@@ -200,6 +202,12 @@
              재고 비교 + 파이프라인 잡 상태/로그 조회. ── -->
         <div class="crawling-container" style="display:none">
             <div id="crawling-list"></div>
+        </div>
+
+        <!-- ── 매뉴얼 탭(2026-11-27) — 전 직원 공개. 내용은 manual.html(독립 페이지)이라
+             스타일이 재고장 CSS와 섞이지 않게 iframe으로 띄움. 처음 열 때 로드. ── -->
+        <div class="manual-container" style="display:none">
+            <iframe class="manual-frame" title="매뉴얼" data-src="./manual.html?v=1"></iframe>
         </div>
 
         <!-- ── 전략단가 탭(2026-08-18 price.html에서 이관, 2026-08-19 mysql price

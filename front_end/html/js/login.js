@@ -95,6 +95,7 @@ function _currentTabName() {
     if (document.querySelector(".price-container")?.style.display === "") return "price";
     if (document.querySelector(".order-sheet-container")?.style.display === "") return "order-sheet";
     if (document.querySelector(".changes-container")?.style.display === "") return "changes";
+    if (document.querySelector(".manual-container")?.style.display === "") return "manual";
     return "main";
 }
 
@@ -135,7 +136,7 @@ export function applyRoleVisibility(role) {
     const rollbackBtn = document.querySelector(".rollback-btn");
     // 전략단가 탭의 "추가"는 관리자만(2026-08-20) — 다른 탭은 기존처럼 편집자도 가능.
     const canAddOnTab = tab === "price" ? hasPriceEditAccess() : isEditor;
-    if (insertBtn) insertBtn.style.display = (tab !== "reservations" && tab !== "changes" && canAddOnTab) ? "" : "none";
+    if (insertBtn) insertBtn.style.display = (tab !== "reservations" && tab !== "changes" && tab !== "manual" && canAddOnTab) ? "" : "none";
     if (updateBtn) updateBtn.style.display = (mainOnly && isEditor) ? "" : "none";
     if (holdingBtn) holdingBtn.style.display = (mainOnly && !!role) ? "" : "none";
     if (moveBtn) moveBtn.style.display = (mainOnly && movesEditEnabled) ? "" : "none";
@@ -144,7 +145,7 @@ export function applyRoleVisibility(role) {
     if (clearBtn) clearBtn.style.display = mainOnly ? "" : "none";
     if (allDeleteBtn) allDeleteBtn.style.display = (mainOnly && isEditor) ? "" : "none";
     // 되돌리기 — 업데이트 탭에서는 숨김(2026-08-20, 되돌릴 CRUD 자체가 없는 탭).
-    if (rollbackBtn) rollbackBtn.style.display = (!!role && tab !== "changes") ? "" : "none";
+    if (rollbackBtn) rollbackBtn.style.display = (!!role && tab !== "changes" && tab !== "manual") ? "" : "none";
 
     // 재고장 검색/필터(상품명·브랜드·창고·상태 + 검색1·검색2) — 전략단가/예약현황/
     // 타창고매출현황 탭은 각자 자체 검색/필터를 따로 쓰므로 이 재고장용 툴바는
